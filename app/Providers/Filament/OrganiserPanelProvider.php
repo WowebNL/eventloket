@@ -19,15 +19,13 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
-class AdminPanelProvider extends PanelProvider
+class OrganiserPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->default()
-            ->id('admin')
-            ->path('admin')
-            ->login()
+            ->id('organiser')
+            ->path('organiser')
             ->colors([
                 'primary' => Color::Blue,
             ])
@@ -35,12 +33,12 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('images/logos/logo-dark.svg'))
             ->darkModeBrandLogo(asset('images/logos/logo-light.svg'))
             ->brandLogoHeight('2.5rem')
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            ->discoverResources(in: app_path('Filament/Organiser/Resources'), for: 'App\\Filament\\Organiser\\Resources')
+            ->discoverPages(in: app_path('Filament/Organiser/Pages'), for: 'App\\Filament\\Organiser\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
             ])
