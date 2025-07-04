@@ -46,8 +46,9 @@ This platform streamlines the entire permit application process for events in th
    ./vendor/bin/sail up -d
    ```
 
-4. Run migrations and install dependencies:
+4. Generate an app key, run migrations and install dependencies:
    ```bash
+   ./vendor/bin/sail artisan key:generate
    ./vendor/bin/sail artisan migrate
    ./vendor/bin/sail npm install && ./vendor/bin/sail npm run dev
    ```
