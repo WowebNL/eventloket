@@ -1,0 +1,15 @@
+#!/bin/sh
+
+echo "Running Laravel Pint ..."
+./vendor/bin/sail pint || exit 1
+
+echo "Running PHPStan ..."
+./vendor/bin/sail php ./vendor/bin/phpstan analyse --memory-limit=2G || exit 1
+
+echo "Running Rector ..."
+./vendor/bin/sail php vendor/bin/rector process --dry-run || exit 1
+
+echo "Running Pest ..."
+./vendor/bin/sail pest || exit 1
+
+echo "✅ All checks passed!"
