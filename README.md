@@ -2,14 +2,14 @@
 
 ## About
 
-The Evenement Applicatie is a web application developed for Veiligheidsregio Zuid Limburg that manages permit applications for events. The system serves different user groups including:
+The Evenement Applicatie is a web application developed for Veiligheidsregio Zuid-Limburg that manages permit applications for events. The system serves different user groups including:
 
 - Event organizers
 - Permit processors
 - OOV (Public Order and Safety) staff
 - Application administrators
 
-This platform streamlines the entire permit application process for events in the South Limburg safety region.
+This platform streamlines the entire permit application process for events in the South Limburg safety region. This application is developed in line with the [Common Ground](https://commonground.nl/) principles.
 
 ## Technical Stack
 
@@ -120,4 +120,4 @@ You can find the hook script inside the `.githooks/` directory.
 
 ## License
 
-This is a proprietary application developed for Veiligheidsregio Zuid Limburg.
+This is a developed based on the instructions of [Veiligheidsregio Zuid-Limburg](https://www.vrzl.nl/) and has a [EUPL license](LICENSE.MD).
