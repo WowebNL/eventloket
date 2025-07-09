@@ -29,7 +29,7 @@ class OrganisationInviteMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: __('mail.organisation-invite.subject'),
+            subject: __('mail/organisation-invite.subject'),
         );
     }
 

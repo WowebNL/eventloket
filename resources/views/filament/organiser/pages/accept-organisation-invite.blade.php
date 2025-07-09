@@ -2,20 +2,15 @@
     @if(auth()->check())
 
         <x-filament::button wire:click="acceptInvite">
-            Accept Invite
+            {{ __('organiser/pages/auth/accept-organisation-invite.button') }}
         </x-filament::button>
     @else
         <x-filament-panels::form wire:submit="create">
             {{ $this->form }}
 
             <x-filament::button type="submit">
-                Accept Invite
+                {{ __('organiser/pages/auth/accept-organisation-invite.button') }}
             </x-filament::button>
-
-            {{--        <x-filament-panels::form.actions--}}
-            {{--            :actions="$this->getCachedFormActions()"--}}
-            {{--            :full-width="true"--}}
-            {{--        />--}}
         </x-filament-panels::form>
     @endif
 </x-filament-panels::page.simple>
