@@ -17,7 +17,11 @@ class OrganisationFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => fake()->company,
+            'coc_number' => fake()->numerify('########'),
+            'address' => fake()->address,
+            'email' => fake()->companyEmail,
+            'phone' => fake()->phoneNumber,
         ];
     }
 }

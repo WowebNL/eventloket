@@ -86,12 +86,11 @@ class AcceptOrganisationInvite extends SimplePage
             'email' => $this->organisationInvite->email,
             'email_verified_at' => now(),
             'phone' => $data['phone'],
-            'password' => Hash::make($data['password']),
-            'role' => $this->organisationInvite->role,
+            'password' => $data['password'],
         ]);
 
         /** @phpstan-ignore-next-line */
-        $this->organisationInvite->organisation->users()->attach(auth()->user(), [
+        $this->organisationInvite->organisation->users()->attach($user, [
             'role' => $this->organisationInvite->role,
         ]);
 
