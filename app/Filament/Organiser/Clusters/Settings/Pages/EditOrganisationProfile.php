@@ -1,18 +1,16 @@
 <?php
 
-namespace App\Filament\Organiser\Pages\Tenancy;
+namespace App\Filament\Organiser\Clusters\Settings\Pages;
 
-use App\Enums\OrganisationRole;
-use App\Models\Organisation;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
-use Filament\Pages\Tenancy\RegisterTenant;
+use Filament\Pages\Tenancy\EditTenantProfile;
 
-class RegisterOrganisation extends RegisterTenant
+class EditOrganisationProfile extends EditTenantProfile
 {
     public static function getLabel(): string
     {
-        return __('organiser/pages/tenancy/register.label');
+        return __('organiser/pages/tenancy/profile.label');
     }
 
     public function form(Form $form): Form
@@ -25,6 +23,7 @@ class RegisterOrganisation extends RegisterTenant
                     ->maxLength(255),
                 TextInput::make('coc_number')
                     ->label(__('organiser/pages/tenancy/register.form.coc_number.label'))
+                    ->disabled()
                     ->unique()
                     ->validationMessages([
                         'unique' => __('organiser/pages/tenancy/register.form.coc_number.validation.unique'),
@@ -43,16 +42,5 @@ class RegisterOrganisation extends RegisterTenant
                     ->label(__('organiser/pages/tenancy/register.form.phone.label'))
                     ->maxLength(255),
             ]);
-    }
-
-    protected function handleRegistration(array $data): Organisation
-    {
-        $organisation = Organisation::create($data);
-
-        $organisation->users()->attach(auth()->user(), [
-            'role' => OrganisationRole::Admin,
-        ]);
-
-        return $organisation;
     }
 }

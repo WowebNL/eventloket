@@ -1,7 +1,8 @@
 <?php
 
+use App\Filament\Organiser\Pages\AcceptOrganisationInvite;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::middleware('signed')
+    ->get('organiser/organisation-invites/{token}', AcceptOrganisationInvite::class)
+    ->name('organisation-invites.accept');

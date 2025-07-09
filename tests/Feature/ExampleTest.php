@@ -1,7 +1,7 @@
 <?php
 
 test('the application returns a successful response', function () {
-    $response = $this->get('/');
+    $response = $this->get('/organiser/login');
 
     $response->assertStatus(200);
 });

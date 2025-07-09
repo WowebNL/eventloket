@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Filament\Organiser\Resources;
+namespace App\Filament\Organiser\Clusters\Settings\Resources;
 
-use App\Filament\Organiser\Resources\UserResource\Pages;
+use App\Filament\Organiser\Clusters\Settings;
+use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages;
 use App\Models\User;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -11,11 +12,23 @@ use Filament\Tables\Table;
 
 class UserResource extends Resource
 {
+    protected static ?string $cluster = Settings::class;
+
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
     protected static ?string $tenantOwnershipRelationshipName = 'organisations';
+
+    public static function getModelLabel(): string
+    {
+        return __('organiser/resources/user.label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('organiser/resources/user.plural_label');
+    }
 
     public static function form(Form $form): Form
     {
@@ -30,20 +43,20 @@ class UserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label(__('organiser/resources/user.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
                     ->searchable(),
-                Tables\Columns\TextColumn::make('pivot.role'),
+                Tables\Columns\TextColumn::make('pivot.role')
+                    ->label(__('organiser/resources/user.columns.admin.label')),
             ])
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                //
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                //
             ]);
     }
 
@@ -58,8 +71,6 @@ class UserResource extends Resource
     {
         return [
             'index' => Pages\ListUsers::route('/'),
-            'create' => Pages\CreateUser::route('/create'),
-            'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 }

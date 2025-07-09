@@ -37,7 +37,7 @@ class OrganisationPolicy
      */
     public function update(User $user, Organisation $organisation): bool
     {
-        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Owner);
+        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
     }
 
     /**
@@ -45,7 +45,7 @@ class OrganisationPolicy
      */
     public function delete(User $user, Organisation $organisation): bool
     {
-        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Owner);
+        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
     }
 
     /**
@@ -53,7 +53,7 @@ class OrganisationPolicy
      */
     public function restore(User $user, Organisation $organisation): bool
     {
-        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Owner);
+        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
     }
 
     /**
@@ -61,6 +61,6 @@ class OrganisationPolicy
      */
     public function forceDelete(User $user, Organisation $organisation): bool
     {
-        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Owner);
+        return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
     }
 }
