@@ -2,9 +2,11 @@
 
 namespace App\Filament\Organiser\Clusters\Settings\Resources;
 
+use App\Enums\OrganisationRole;
 use App\Filament\Organiser\Clusters\Settings;
 use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages;
 use App\Models\User;
+use Filament\Facades\Filament;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -46,8 +48,17 @@ class UserResource extends Resource
                     ->label(__('organiser/resources/user.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
                     ->searchable(),
-                Tables\Columns\TextColumn::make('pivot.role')
-                    ->label(__('organiser/resources/user.columns.admin.label')),
+                Tables\Columns\TextColumn::make('role')
+                    ->getStateUsing(function (User $record) {
+                        /** @var \App\Models\Organisation $tenant */
+                        $tenant = Filament::getTenant();
+
+                        /** @phpstan-ignore-next-line */
+                        $role = $record->organisations->firstWhere('id', $tenant->id)?->pivot->role;
+
+                        return OrganisationRole::from($role);
+                    })
+                    ->label(__('organiser/resources/user.columns.role.label')),
             ])
             ->filters([
                 //

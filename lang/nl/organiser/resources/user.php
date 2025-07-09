@@ -10,8 +10,8 @@ return [
             'label' => 'Naam',
         ],
 
-        'admin' => [
-            'label' => 'Beheerder',
+        'role' => [
+            'label' => 'Rol',
         ],
 
     ],
