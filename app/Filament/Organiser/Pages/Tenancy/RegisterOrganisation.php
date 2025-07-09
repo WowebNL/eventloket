@@ -30,7 +30,7 @@ class RegisterOrganisation extends RegisterTenant
                         'unique' => __('organiser/pages/tenancy/register.form.coc_number.validation.unique'),
                     ])
                     ->required()
-                    ->maxLength(8),
+                    ->length(8),
                 TextInput::make('address')
                     ->label(__('organiser/pages/tenancy/register.form.address.label'))
                     ->required()
