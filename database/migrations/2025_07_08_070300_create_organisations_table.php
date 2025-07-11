@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('organisations', function (Blueprint $table) {
             $table->id();
+            $table->string('type');
             $table->string('name');
-            $table->string('coc_number', 8)->unique();
-            $table->string('address');
+            $table->string('coc_number', 8)->unique()->nullable();
+            $table->string('address')->nullable();
             $table->string('bag_id')->nullable();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();

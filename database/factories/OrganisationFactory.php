@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\OrganisationType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -17,6 +18,7 @@ class OrganisationFactory extends Factory
     public function definition(): array
     {
         return [
+            'type' => fake()->randomElement(OrganisationType::cases()),
             'name' => fake()->company,
             'coc_number' => fake()->numerify('########'),
             'address' => fake()->address,

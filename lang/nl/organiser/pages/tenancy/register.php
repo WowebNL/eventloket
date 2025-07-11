@@ -31,4 +31,12 @@ return [
 
     ],
 
+    'actions' => [
+
+        'no_organisation' => [
+            'label' => 'doorgaan zonder organisatie',
+        ],
+
+    ],
+
 ];

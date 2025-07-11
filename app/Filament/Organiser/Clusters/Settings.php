@@ -3,6 +3,7 @@
 namespace App\Filament\Organiser\Clusters;
 
 use App\Enums\OrganisationRole;
+use App\Enums\OrganisationType;
 use Filament\Clusters\Cluster;
 use Filament\Facades\Filament;
 
@@ -25,6 +26,6 @@ class Settings extends Cluster
         /** @var \App\Models\Organisation $tenant */
         $tenant = Filament::getTenant();
 
-        return auth()->user()->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
+        return $tenant->type != OrganisationType::Personal && auth()->user()->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
     }
 }
