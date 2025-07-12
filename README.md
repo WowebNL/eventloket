@@ -1,8 +1,8 @@
-# Evenement Applicatie
+# Eventloket
 
 ## About
 
-The Evenement Applicatie is a web application developed for Veiligheidsregio Zuid-Limburg that manages permit applications for events. The system serves different user groups including:
+The Eventloket is a web application developed for Veiligheidsregio Zuid-Limburg that manages permit applications for events. The system serves different user groups including:
 
 - Event organizers
 - Permit processors
@@ -33,7 +33,7 @@ This platform streamlines the entire permit application process for events in th
 1. Clone the repository:
    ```bash
    git clone [repository-url]
-   cd evenement-applicatie
+   cd eventloket
    ```
 
 2. Copy the environment file and set your settings:

@@ -2,6 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Organiser\Clusters\Settings\Pages\EditOrganisationProfile;
+use App\Filament\Organiser\Pages\Register;
+use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
+use App\Models\Organisation;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -33,11 +37,20 @@ class OrganiserPanelProvider extends PanelProvider
             ->brandLogo(asset('images/logos/logo-dark.svg'))
             ->darkModeBrandLogo(asset('images/logos/logo-light.svg'))
             ->brandLogoHeight('2.5rem')
+            ->tenant(Organisation::class)
             ->discoverResources(in: app_path('Filament/Organiser/Resources'), for: 'App\\Filament\\Organiser\\Resources')
             ->discoverPages(in: app_path('Filament/Organiser/Pages'), for: 'App\\Filament\\Organiser\\Pages')
+            ->discoverClusters(in: app_path('Filament/Organiser/Clusters'), for: 'App\\Filament\\Organiser\\Clusters')
             ->pages([
                 Pages\Dashboard::class,
             ])
+            ->login()
+            ->registration(Register::class)
+            ->tenantRegistration(RegisterOrganisation::class)
+            ->tenantProfile(EditOrganisationProfile::class)
+            ->passwordReset()
+            ->emailVerification()
+            ->profile()
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
