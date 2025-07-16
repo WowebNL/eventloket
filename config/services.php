@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'open_forms' => [
+        'base_url' => env('OPEN_FORMS_BASE_URL'),
+    ],
+
 ];
