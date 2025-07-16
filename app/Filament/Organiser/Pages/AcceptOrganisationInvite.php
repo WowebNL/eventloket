@@ -2,6 +2,7 @@
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Enums\Role;
 use App\Models\OrganisationInvite;
 use App\Models\User;
 use Filament\Events\Auth\Registered;
@@ -87,6 +88,7 @@ class AcceptOrganisationInvite extends SimplePage
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
+            'role' => Role::Organiser,
         ]);
 
         /** @phpstan-ignore-next-line */
