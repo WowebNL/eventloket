@@ -22,6 +22,12 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->primary(['advisory_id', 'user_id']);
         });
+
+        Schema::create('advisory_municipality', function (Blueprint $table) {
+            $table->foreignId('advisory_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('municipality_id')->constrained()->cascadeOnDelete();
+            $table->primary(['advisory_id', 'municipality_id']);
+        });
     }
 
     /**

@@ -19,4 +19,9 @@ class Municipality extends Model
     {
         return $this->belongsToMany(User::class);
     }
+
+    public function advisories()
+    {
+        return $this->belongsToMany(Advisory::class);
+    }
 }

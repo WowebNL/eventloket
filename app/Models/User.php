@@ -63,6 +63,11 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         return $this->belongsToMany(Municipality::class);
     }
 
+    public function advisories(): BelongsToMany
+    {
+        return $this->belongsToMany(Advisory::class);
+    }
+
     public function organisations(): BelongsToMany
     {
         return $this->belongsToMany(Organisation::class)->withPivot('role');
@@ -82,7 +87,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
     {
         return match ($panel->getId()) {
             'admin' => $this->role === Role::Admin ? Municipality::orderBy('name')->get() : $this->municipalities,
-            'advisor' => $this->municipalities,
+            'advisor' => $this->advisories,
             'organiser' => $this->organisations,
             default => null,
         };
@@ -92,6 +97,7 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
     {
         return match (get_class($tenant)) {
             Municipality::class => $this->canAccessMunicipality($tenant->id),
+            Advisory::class => $this->canAccessAdvisory($tenant->id),
             Organisation::class => $this->canAccessOrganisation($tenant->id),
             default => false,
         };
@@ -104,6 +110,11 @@ class User extends Authenticatable implements FilamentUser, HasTenants, MustVeri
         }
 
         return $this->municipalities->contains($municipalityId);
+    }
+
+    public function canAccessAdvisory(int $advisoryId): bool
+    {
+        return $this->advisories->contains($advisoryId);
     }
 
     public function canAccessOrganisation(int $organisationId, ?OrganisationRole $role = null): bool

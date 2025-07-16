@@ -71,7 +71,8 @@ class AdvisoryResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            AdvisoryResource\RelationManagers\UsersRelationManager::class,
+            AdvisoryResource\RelationManagers\MunicipalitiesRelationManager::class,
         ];
     }
 
