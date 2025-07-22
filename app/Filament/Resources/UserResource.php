@@ -17,7 +17,7 @@ class UserResource extends Resource
 
     protected static ?int $navigationSort = 0;
 
-    protected static ?string $tenantOwnershipRelationshipName = 'organisations';
+    protected static ?string $tenantOwnershipRelationshipName = 'municipalities';
 
     public static function getModelLabel(): string
     {
@@ -41,7 +41,10 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                //
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('organiser/resources/user.columns.name.label'))
+                    ->description(fn (User $record): string => $record->email)
+                    ->searchable(),
             ])
             ->filters([
                 //

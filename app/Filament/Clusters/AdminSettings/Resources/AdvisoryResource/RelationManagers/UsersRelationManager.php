@@ -4,7 +4,6 @@ namespace App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Relatio
 
 use App\Mail\AdvisoryInviteMail;
 use App\Models\AdvisoryInvite;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
@@ -70,11 +69,11 @@ class UsersRelationManager extends RelationManager
                             ->required(),
                     ])
                     ->action(function ($data) {
-                        /** @var \App\Models\Organisation $tenant */
-                        $tenant = Filament::getTenant();
+                        /** @var \App\Models\Advisory $advisory */
+                        $advisory = $this->ownerRecord;
 
                         $advisoryInvite = AdvisoryInvite::create([
-                            'advisory_id' => $tenant->id,
+                            'advisory_id' => $advisory->id,
                             'email' => $data['email'],
                             'token' => Str::uuid(),
                         ]);
