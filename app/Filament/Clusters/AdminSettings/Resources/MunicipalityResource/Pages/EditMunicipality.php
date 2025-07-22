@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\MunicipalityResource\Pages;
+namespace App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages;
 
-use App\Filament\Resources\MunicipalityResource;
+use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 

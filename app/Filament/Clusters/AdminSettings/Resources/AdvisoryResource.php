@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Clusters\AdminSettings\Resources;
 
-use App\Filament\Resources\AdvisoryResource\Pages;
+use App\Filament\Clusters\AdminSettings;
+use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages;
 use App\Models\Advisory;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -14,11 +15,13 @@ class AdvisoryResource extends Resource
 {
     protected static ?string $model = Advisory::class;
 
+    protected static ?string $cluster = AdminSettings::class;
+
     protected static bool $isScopedToTenant = false;
 
     protected static ?string $navigationIcon = 'heroicon-o-lifebuoy';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     public static function getModelLabel(): string
     {

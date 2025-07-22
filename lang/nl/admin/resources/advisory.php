@@ -4,9 +4,14 @@ return [
     'label' => 'Adviesdienst',
     'plural_label' => 'Adviesdiensten',
 
+    'user' => [
+        'label' => 'Adviseur',
+        'plural_label' => 'Adviseurs',
+    ],
+
     'actions' => [
         'invite' => [
-            'label' => 'Gebruiker uitnodigen',
+            'label' => 'Adviseur uitnodigen',
             'modal_submit_action_label' => 'Uitnodiging versturen',
             'form' => [
                 'email' => [

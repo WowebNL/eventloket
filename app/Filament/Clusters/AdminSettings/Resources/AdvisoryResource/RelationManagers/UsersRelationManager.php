@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\AdvisoryResource\RelationManagers;
+namespace App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\RelationManagers;
 
 use App\Mail\AdvisoryInviteMail;
 use App\Models\AdvisoryInvite;
@@ -23,17 +23,17 @@ class UsersRelationManager extends RelationManager
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return __('admin/resources/user.plural_label');
+        return __('admin/resources/advisory.user.plural_label');
     }
 
     public static function getModelLabel(): string
     {
-        return __('admin/resources/user.label');
+        return __('admin/resources/advisory.user.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('admin/resources/user.plural_label');
+        return __('admin/resources/advisory.user.plural_label');
     }
 
     public function form(Form $form): Form

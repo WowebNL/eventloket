@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Resources\AdvisoryResource\Pages;
+namespace App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages;
 
-use App\Filament\Resources\AdvisoryResource;
+use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateAdvisory extends CreateRecord

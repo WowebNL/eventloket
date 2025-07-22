@@ -36,6 +36,7 @@ class AdminPanelProvider extends PanelProvider
             ->darkModeBrandLogo(asset('images/logos/logo-light.svg'))
             ->brandLogoHeight('2.5rem')
             ->tenant(Municipality::class)
+            ->discoverClusters(in: app_path('Filament/Clusters'), for: 'App\\Filament\\Clusters')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([

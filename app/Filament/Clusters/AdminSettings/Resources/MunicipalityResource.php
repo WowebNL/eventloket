@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Clusters\AdminSettings\Resources;
 
-use App\Filament\Resources\MunicipalityResource\Pages;
+use App\Filament\Clusters\AdminSettings;
+use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages;
 use App\Models\Municipality;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -14,11 +15,13 @@ class MunicipalityResource extends Resource
 {
     protected static ?string $model = Municipality::class;
 
+    protected static ?string $cluster = AdminSettings::class;
+
     protected static bool $isScopedToTenant = false;
 
     protected static ?string $navigationIcon = 'heroicon-o-building-library';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = 0;
 
     public static function getModelLabel(): string
     {
