@@ -38,6 +38,7 @@ class AdvisoryResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label(__('admin/resources/advisory.columns.name.label'))
                     ->required()
                     ->maxLength(255),
             ]);
@@ -48,6 +49,7 @@ class AdvisoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin/resources/advisory.columns.name.label'))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -65,9 +67,7 @@ class AdvisoryResource extends Resource
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                //
             ]);
     }
 

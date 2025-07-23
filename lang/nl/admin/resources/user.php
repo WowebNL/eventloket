@@ -4,6 +4,14 @@ return [
     'label' => 'Behandelaar',
     'plural_label' => 'Behandelaren',
 
+    'columns' => [
+
+        'name' => [
+            'label' => 'Naam',
+        ],
+
+    ],
+
     'actions' => [
         'invite' => [
             'label' => 'Behandelaar uitnodigen',

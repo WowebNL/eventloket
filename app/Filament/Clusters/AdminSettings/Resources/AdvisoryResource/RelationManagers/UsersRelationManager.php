@@ -40,6 +40,7 @@ class UsersRelationManager extends RelationManager
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label(__('admin/resources/user.columns.name.label'))
                     ->required()
                     ->maxLength(255),
             ]);
@@ -50,7 +51,8 @@ class UsersRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
-                Tables\Columns\TextColumn::make('name'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin/resources/user.columns.name.label')),
             ])
             ->filters([
                 //
@@ -92,9 +94,7 @@ class UsersRelationManager extends RelationManager
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                //
             ]);
     }
 }

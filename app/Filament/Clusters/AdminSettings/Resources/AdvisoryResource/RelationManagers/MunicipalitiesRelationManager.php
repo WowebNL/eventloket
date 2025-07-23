@@ -33,6 +33,7 @@ class MunicipalitiesRelationManager extends RelationManager
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label(__('admin/resources/municipality.columns.name.label'))
                     ->required()
                     ->maxLength(255),
             ]);
@@ -43,7 +44,8 @@ class MunicipalitiesRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
-                Tables\Columns\TextColumn::make('name'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('admin/resources/municipality.columns.name.label')),
             ])
             ->filters([
                 //

@@ -42,7 +42,7 @@ class UserResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
-                    ->label(__('organiser/resources/user.columns.name.label'))
+                    ->label(__('admin/resources/user.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
                     ->searchable(),
             ])
@@ -53,9 +53,7 @@ class UserResource extends Resource
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                //
             ]);
     }
 

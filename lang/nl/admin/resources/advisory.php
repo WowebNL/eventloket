@@ -4,6 +4,14 @@ return [
     'label' => 'Adviesdienst',
     'plural_label' => 'Adviesdiensten',
 
+    'columns' => [
+
+        'name' => [
+            'label' => 'Naam',
+        ],
+
+    ],
+
     'user' => [
         'label' => 'Adviseur',
         'plural_label' => 'Adviseurs',
