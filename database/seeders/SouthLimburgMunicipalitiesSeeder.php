@@ -14,17 +14,14 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
     {
         $municipalities = [
             'Beek',
+            'Beekdaelen',
             'Brunssum',
             'Eijsden-Margraten',
             'Gulpen-Wittem',
             'Heerlen',
             'Kerkrade',
             'Landgraaf',
-            'Maastricht',
             'Meerssen',
-            'Nuth',
-            'Onderbanken',
-            'Schinnen',
             'Simpelveld',
             'Sittard-Geleen',
             'Stein',
