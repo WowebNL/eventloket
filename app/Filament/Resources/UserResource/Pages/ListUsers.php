@@ -2,9 +2,10 @@
 
 namespace App\Filament\Resources\UserResource\Pages;
 
+use App\Enums\Role;
 use App\Filament\Resources\UserResource;
-use App\Mail\ReviewerInviteMail;
-use App\Models\ReviewerInvite;
+use App\Mail\AdminInviteMail;
+use App\Models\AdminInvite;
 use Filament\Actions;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
@@ -26,6 +27,7 @@ class ListUsers extends ListRecords
                 ->icon('heroicon-o-envelope')
                 ->modalSubmitActionLabel(__('admin/resources/user.actions.invite.modal_submit_action_label'))
                 ->modalWidth(MaxWidth::Medium)
+                ->visible(fn (): bool => in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin]))
                 ->form([
                     TextInput::make('email')
                         ->label(__('admin/resources/user.actions.invite.form.email.label'))
@@ -36,14 +38,15 @@ class ListUsers extends ListRecords
                     /** @var \App\Models\Organisation $tenant */
                     $tenant = Filament::getTenant();
 
-                    $reviewerInvite = ReviewerInvite::create([
+                    $adminInvite = AdminInvite::create([
                         'municipality_id' => $tenant->id,
                         'email' => $data['email'],
+                        'role' => Role::Reviewer,
                         'token' => Str::uuid(),
                     ]);
 
-                    Mail::to($reviewerInvite->email)
-                        ->send(new ReviewerInviteMail($reviewerInvite));
+                    Mail::to($adminInvite->email)
+                        ->send(new AdminInviteMail($adminInvite));
 
                     Notification::make()
                         ->title(__('admin/resources/user.actions.invite.notification.title'))

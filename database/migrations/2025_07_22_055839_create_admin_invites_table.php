@@ -11,10 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('reviewer_invites', function (Blueprint $table) {
+        Schema::create('admin_invites', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('municipality_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('municipality_id')->nullable()->constrained()->cascadeOnDelete();
             $table->string('email');
+            $table->string('role');
             $table->uuid('token')->unique();
             $table->timestamps();
         });
@@ -25,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('reviewer_invites');
+        Schema::dropIfExists('admin_invites');
     }
 };

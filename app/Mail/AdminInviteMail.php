@@ -2,7 +2,8 @@
 
 namespace App\Mail;
 
-use App\Models\ReviewerInvite;
+use App\Enums\Role;
+use App\Models\AdminInvite;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -10,7 +11,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\URL;
 
-class ReviewerInviteMail extends Mailable
+class AdminInviteMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -18,7 +19,7 @@ class ReviewerInviteMail extends Mailable
      * Create a new message instance.
      */
     public function __construct(
-        protected ReviewerInvite $reviewerInvite,
+        protected AdminInvite $adminInvite,
     ) {
         //
     }
@@ -28,8 +29,11 @@ class ReviewerInviteMail extends Mailable
      */
     public function envelope(): Envelope
     {
+        /** @var Role $role */
+        $role = $this->adminInvite->role;
+
         return new Envelope(
-            subject: __('mail/reviewer-invite.subject'),
+            subject: __('mail/admin-invite.subject', ['role' => strtolower($role->getLabel())]),
         );
     }
 
@@ -38,13 +42,17 @@ class ReviewerInviteMail extends Mailable
      */
     public function content(): Content
     {
+        /** @var Role $role */
+        $role = $this->adminInvite->role;
+
         return new Content(
-            markdown: 'mail.reviewer-invite',
+            markdown: 'mail.admin-invite',
             with: [
-                'municipality' => $this->reviewerInvite->municipality,
+                'role' => strtolower($role->getLabel()),
+                'municipality' => $this->adminInvite->municipality,
                 'acceptUrl' => URL::signedRoute(
-                    'reviewer-invites.accept',
-                    ['token' => $this->reviewerInvite->token],
+                    'admin-invites.accept',
+                    ['token' => $this->adminInvite->token],
                 ),
             ]
         );

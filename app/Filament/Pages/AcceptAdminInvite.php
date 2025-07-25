@@ -3,7 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Enums\Role;
-use App\Models\ReviewerInvite;
+use App\Models\AdminInvite;
 use App\Models\User;
 use Filament\Events\Auth\Registered;
 use Filament\Facades\Filament;
@@ -18,13 +18,13 @@ use Illuminate\Validation\Rules\Password;
 /**
  * @property mixed $form
  */
-class AcceptReviewerInvite extends SimplePage
+class AcceptAdminInvite extends SimplePage
 {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.pages.accept-reviewer-invite';
+    protected static string $view = 'filament.pages.accept-admin-invite';
 
-    public ReviewerInvite $reviewerInvite;
+    public AdminInvite $adminInvite;
 
     public array $data = [];
 
@@ -33,10 +33,10 @@ class AcceptReviewerInvite extends SimplePage
         $panel = Filament::getPanel('admin');
         $panel->boot();
 
-        $this->reviewerInvite = ReviewerInvite::where('token', $token)->firstOrFail();
+        $this->adminInvite = AdminInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
-            'email' => $this->reviewerInvite->email,
+            'email' => $this->adminInvite->email,
         ]);
     }
 
@@ -84,17 +84,19 @@ class AcceptReviewerInvite extends SimplePage
 
         $user = User::create([
             'name' => $data['name'],
-            'email' => $this->reviewerInvite->email,
+            'email' => $this->adminInvite->email,
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
-            'role' => Role::Reviewer,
+            'role' => $this->adminInvite->role,
         ]);
 
-        /** @phpstan-ignore-next-line */
-        $this->reviewerInvite->municipality->users()->attach($user);
+        if ($this->adminInvite->role !== Role::Admin) {
+            /** @phpstan-ignore-next-line */
+            $this->adminInvite->municipality->users()->attach($user);
+        }
 
-        $this->reviewerInvite->delete();
+        $this->adminInvite->delete();
 
         event(new Registered($user));
 
@@ -102,7 +104,7 @@ class AcceptReviewerInvite extends SimplePage
 
         session()->regenerate();
 
-        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $this->reviewerInvite->municipality_id]));
+        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $this->adminInvite->municipality_id]));
     }
 
     public function acceptInvite()
@@ -111,25 +113,30 @@ class AcceptReviewerInvite extends SimplePage
             abort(403);
         }
 
-        if (auth()->user()->email != $this->reviewerInvite->email) {
+        if (auth()->user()->email != $this->adminInvite->email) {
             abort(403);
         }
 
-        /** @phpstan-ignore-next-line */
-        $this->reviewerInvite->municipality->users()->attach(auth()->user());
+        if ($this->adminInvite->role !== Role::Admin) {
+            /** @phpstan-ignore-next-line */
+            $this->adminInvite->municipality->users()->attach(auth()->user());
+        }
 
-        $this->reviewerInvite->delete();
+        $this->adminInvite->delete();
 
-        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $this->reviewerInvite->municipality_id]));
+        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $this->adminInvite->municipality_id]));
     }
 
     public function getHeading(): string|Htmlable
     {
-        return __('admin/pages/auth/accept-reviewer-invite.heading');
+        /** @var Role $role */
+        $role = $this->adminInvite->role;
+
+        return __('admin/pages/auth/accept-admin-invite.heading', ['role' => strtolower($role->getLabel())]);
     }
 
     public function getSubheading(): Htmlable|string|null
     {
-        return __('admin/pages/auth/accept-reviewer-invite.subheading');
+        return __('admin/pages/auth/accept-admin-invite.subheading');
     }
 }

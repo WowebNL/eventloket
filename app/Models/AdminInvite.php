@@ -2,18 +2,20 @@
 
 namespace App\Models;
 
+use App\Enums\Role;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ReviewerInvite extends Model
+class AdminInvite extends Model
 {
-    /** @use HasFactory<\Database\Factories\ReviewerInviteFactory> */
+    /** @use HasFactory<\Database\Factories\AdminInviteFactory> */
     use HasFactory;
 
     protected $fillable = [
         'municipality_id',
         'email',
+        'role',
         'token',
     ];
 
@@ -24,5 +26,12 @@ class ReviewerInvite extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'role' => Role::class,
+        ];
     }
 }

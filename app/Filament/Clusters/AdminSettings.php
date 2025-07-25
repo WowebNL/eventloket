@@ -23,6 +23,6 @@ class AdminSettings extends Cluster
 
     public static function canAccess(): bool
     {
-        return auth()->user()->role === Role::Admin;
+        return in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin]);
     }
 }

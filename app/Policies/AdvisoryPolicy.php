@@ -37,7 +37,18 @@ class AdvisoryPolicy
      */
     public function update(User $user, Advisory $advisory): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user->role === Role::MunicipalityAdmin) {
+            // Check if the user has access to all advisory municipalities
+            return $advisory->municipalities->pluck('id')
+                ->diff($user->municipalities->pluck('id'))
+                ->isEmpty();
+        }
+
+        return false;
     }
 
     /**
@@ -45,7 +56,18 @@ class AdvisoryPolicy
      */
     public function delete(User $user, Advisory $advisory): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user->role === Role::MunicipalityAdmin) {
+            // Check if the user has access to all advisory municipalities
+            return $advisory->municipalities->pluck('id')
+                ->diff($user->municipalities->pluck('id'))
+                ->isEmpty();
+        }
+
+        return false;
     }
 
     /**
@@ -53,7 +75,18 @@ class AdvisoryPolicy
      */
     public function restore(User $user, Advisory $advisory): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user->role === Role::MunicipalityAdmin) {
+            // Check if the user has access to all advisory municipalities
+            return $advisory->municipalities->pluck('id')
+                ->diff($user->municipalities->pluck('id'))
+                ->isEmpty();
+        }
+
+        return false;
     }
 
     /**
@@ -61,6 +94,17 @@ class AdvisoryPolicy
      */
     public function forceDelete(User $user, Advisory $advisory): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user->role === Role::MunicipalityAdmin) {
+            // Check if the user has access to all advisory municipalities
+            return $advisory->municipalities->pluck('id')
+                ->diff($user->municipalities->pluck('id'))
+                ->isEmpty();
+        }
+
+        return false;
     }
 }
