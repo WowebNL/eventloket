@@ -1,0 +1,51 @@
+<?php
+
+return [
+    'label' => 'Beheerder',
+    'plural_label' => 'Beheerders',
+
+    'columns' => [
+
+        'name' => [
+            'label' => 'Naam',
+        ],
+
+        'role' => [
+            'label' => 'Rol',
+        ],
+
+    ],
+
+    'user' => [
+        'label' => 'Adviseur',
+        'plural_label' => 'Adviseurs',
+    ],
+
+    'actions' => [
+        'invite' => [
+            'label' => 'Beheerder uitnodigen',
+            'modal_submit_action_label' => 'Uitnodiging versturen',
+            'form' => [
+                'email' => [
+                    'label' => 'E-mailadres',
+                ],
+                'role' => [
+                    'label' => 'Rol',
+                    'options' => [
+                        'municipality_admin' => [
+                            'label' => 'Gemeentelijk beheerder',
+                            'description' => 'Gemeentelijk beheerders kunnen alleen de gegevens van hun gemeente beheren.',
+                        ],
+                        'admin' => [
+                            'label' => 'Beheerder',
+                            'description' => 'Beheerders kunnen alle organisatiegegevens beheren.',
+                        ],
+                    ],
+                ],
+            ],
+            'notification' => [
+                'title' => 'Uitnodiging verstuurd',
+            ],
+        ],
+    ],
+];
