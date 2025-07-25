@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\Municipality;
 use App\Models\User;
 
@@ -28,7 +29,7 @@ class MunicipalityPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 
     /**
@@ -36,7 +37,7 @@ class MunicipalityPolicy
      */
     public function update(User $user, Municipality $municipality): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 
     /**
@@ -44,7 +45,7 @@ class MunicipalityPolicy
      */
     public function delete(User $user, Municipality $municipality): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 
     /**
@@ -52,7 +53,7 @@ class MunicipalityPolicy
      */
     public function restore(User $user, Municipality $municipality): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 
     /**
@@ -60,6 +61,6 @@ class MunicipalityPolicy
      */
     public function forceDelete(User $user, Municipality $municipality): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 }
