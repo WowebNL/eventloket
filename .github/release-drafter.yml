@@ -1,0 +1,64 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+template: |
+  # What's Changed
+
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+categories:
+  - title: '💥 Breaking changes'
+    label: 'changelog: breaking'
+  - title: '✨ New feautures'
+    label: 'changelog: feature'
+  - title: '🐛 Bug Fixes'
+    label: 'changelog: bug'
+  - title: '📝 Documentation'
+    label: 'changelog: docs'
+  - title: '♻️ Refactor'
+    label: 'changelog: refactor'
+  - title: 'Other changes'
+  - title: '⬆️ Dependency Updates'
+    label: 'changelog: dependencies'
+    collapse-after: 5
+
+version-resolver:
+  major:
+    labels:
+      - 'changelog: breaking'
+  minor:
+    labels:
+      - 'changelog: feature'
+  patch:
+    labels:
+      - 'changelog: bug'
+      - 'changelog: refactor'
+      - 'changelog: docs'
+      - 'changelog: dependencies'
+      - 'changelog: security'
+
+exclude-labels:
+  - 'skip-changelog'
+
+autolabeler:
+  - label: 'changelog: feature'
+    branch:
+      - '/feat\/.+/'
+    title:
+      - '/feat/i'
+  - label: 'changelog: bug'
+    branch:
+      - '/fix\/.+/'
+    title:
+      - '/fix/i'
+  - label: 'changelog: breaking'
+    branch:
+      - '/major\/.+/'
+    body:
+      - '/BREAKING CHANGES/i'
+    title:
+      - '/BREAKING CHANGES/i'
+  - label: 'changelog: dependencies'
+    title:
+      - '/dep:/i'
