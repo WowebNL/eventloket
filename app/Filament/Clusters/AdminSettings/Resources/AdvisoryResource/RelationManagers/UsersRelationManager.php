@@ -65,10 +65,14 @@ class UsersRelationManager extends RelationManager
                     ->modalSubmitActionLabel(__('admin/resources/advisory.actions.invite.modal_submit_action_label'))
                     ->modalWidth(MaxWidth::Medium)
                     ->form([
+                        TextInput::make('name')
+                            ->label(__('admin/resources/advisory.actions.invite.form.name.label'))
+                            ->maxLength(255),
                         TextInput::make('email')
                             ->label(__('admin/resources/advisory.actions.invite.form.email.label'))
                             ->email()
-                            ->required(),
+                            ->required()
+                            ->maxLength(255),
                     ])
                     ->action(function ($data) {
                         /** @var \App\Models\Advisory $advisory */
@@ -76,6 +80,7 @@ class UsersRelationManager extends RelationManager
 
                         $advisoryInvite = AdvisoryInvite::create([
                             'advisory_id' => $advisory->id,
+                            'name' => $data['name'],
                             'email' => $data['email'],
                             'token' => Str::uuid(),
                         ]);

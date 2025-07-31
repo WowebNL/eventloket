@@ -36,6 +36,7 @@ class AcceptOrganisationInvite extends SimplePage
         $this->organisationInvite = OrganisationInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
+            'name' => $this->organisationInvite->name,
             'email' => $this->organisationInvite->email,
         ]);
     }

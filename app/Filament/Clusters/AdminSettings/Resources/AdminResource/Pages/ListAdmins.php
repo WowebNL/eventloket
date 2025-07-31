@@ -29,10 +29,14 @@ class ListAdmins extends ListRecords
                 ->modalSubmitActionLabel(__('admin/resources/admin.actions.invite.modal_submit_action_label'))
                 ->modalWidth(MaxWidth::Medium)
                 ->form([
+                    TextInput::make('name')
+                        ->label(__('admin/resources/admin.actions.invite.form.name.label'))
+                        ->maxLength(255),
                     TextInput::make('email')
                         ->label(__('admin/resources/admin.actions.invite.form.email.label'))
                         ->email()
-                        ->required(),
+                        ->required()
+                        ->maxLength(255),
                     Radio::make('role')
                         ->label(__('admin/resources/admin.actions.invite.form.role.label'))
                         ->visible(fn (): bool => auth()->user()->role == Role::Admin)
@@ -52,6 +56,7 @@ class ListAdmins extends ListRecords
 
                     $adminInvite = AdminInvite::create([
                         'municipality_id' => $tenant->id,
+                        'name' => $data['name'],
                         'email' => $data['email'],
                         'role' => auth()->user()->role == Role::Admin ? $data['role'] : Role::MunicipalityAdmin,
                         'token' => Str::uuid(),

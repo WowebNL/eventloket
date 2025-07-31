@@ -13,6 +13,7 @@ class AdvisoryInvite extends Model
 
     protected $fillable = [
         'advisory_id',
+        'name',
         'email',
         'token',
     ];

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('admin_invites', function (Blueprint $table) {
             $table->id();
             $table->foreignId('municipality_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->string('name')->nullable();
             $table->string('email');
             $table->string('role');
             $table->uuid('token')->unique();

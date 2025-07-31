@@ -14,6 +14,7 @@ class AdminInvite extends Model
 
     protected $fillable = [
         'municipality_id',
+        'name',
         'email',
         'role',
         'token',

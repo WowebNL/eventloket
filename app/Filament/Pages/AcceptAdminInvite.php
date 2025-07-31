@@ -36,6 +36,7 @@ class AcceptAdminInvite extends SimplePage
         $this->adminInvite = AdminInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
+            'name' => $this->adminInvite->name,
             'email' => $this->adminInvite->email,
         ]);
     }

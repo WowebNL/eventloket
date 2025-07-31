@@ -29,10 +29,14 @@ class ListUsers extends ListRecords
                 ->modalWidth(MaxWidth::Medium)
                 ->visible(fn (): bool => in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin]))
                 ->form([
+                    TextInput::make('name')
+                        ->label(__('admin/resources/user.actions.invite.form.name.label'))
+                        ->maxLength(255),
                     TextInput::make('email')
                         ->label(__('admin/resources/user.actions.invite.form.email.label'))
                         ->email()
-                        ->required(),
+                        ->required()
+                        ->maxLength(255),
                 ])
                 ->action(function ($data) {
                     /** @var \App\Models\Organisation $tenant */
@@ -40,6 +44,7 @@ class ListUsers extends ListRecords
 
                     $adminInvite = AdminInvite::create([
                         'municipality_id' => $tenant->id,
+                        'name' => $data['name'],
                         'email' => $data['email'],
                         'role' => Role::Reviewer,
                         'token' => Str::uuid(),

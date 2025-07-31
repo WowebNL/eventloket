@@ -36,6 +36,7 @@ class AcceptAdvisoryInvite extends SimplePage
         $this->advisoryInvite = AdvisoryInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
+            'name' => $this->advisoryInvite->name,
             'email' => $this->advisoryInvite->email,
         ]);
     }
