@@ -2,7 +2,7 @@
 
 return [
     'admin' => [
-        'label' => 'Beheerder',
+        'label' => 'Platformbeheerder',
     ],
     'municipality_admin' => [
         'label' => 'Gemeentelijk beheerder',

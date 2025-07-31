@@ -37,8 +37,8 @@ return [
                             'description' => 'Gemeentelijk beheerders kunnen alleen de gegevens van hun gemeente beheren.',
                         ],
                         'admin' => [
-                            'label' => 'Beheerder',
-                            'description' => 'Beheerders kunnen alle organisatiegegevens beheren.',
+                            'label' => 'Platformbeheerder',
+                            'description' => 'Platformbeheerders kunnen alle organisatiegegevens beheren.',
                         ],
                     ],
                 ],
