@@ -29,10 +29,14 @@ class ListUsers extends ListRecords
                 ->modalSubmitActionLabel(__('organiser/resources/user.actions.invite.modal_submit_action_label'))
                 ->modalWidth(MaxWidth::Medium)
                 ->form([
+                    TextInput::make('name')
+                        ->label(__('organiser/resources/user.actions.invite.form.name.label'))
+                        ->maxLength(255),
                     TextInput::make('email')
                         ->label(__('organiser/resources/user.actions.invite.form.email.label'))
                         ->email()
-                        ->required(),
+                        ->required()
+                        ->maxLength(255),
                     Checkbox::make('makeAdmin')
                         ->label(__('organiser/resources/user.actions.invite.form.make_admin.label'))
                         ->helperText(__('organiser/resources/user.actions.invite.form.make_admin.helper_text')),
@@ -43,6 +47,7 @@ class ListUsers extends ListRecords
 
                     $organisationInvite = OrganisationInvite::create([
                         'organisation_id' => $tenant->id,
+                        'name' => $data['name'],
                         'email' => $data['email'],
                         'role' => $data['makeAdmin'] ? OrganisationRole::Admin : OrganisationRole::Member,
                         'token' => Str::uuid(),

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Enums\Role;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Form;
 use Filament\Pages\Auth\Register as BaseRegister;
@@ -20,5 +21,12 @@ class Register extends BaseRegister
                 $this->getPasswordFormComponent(),
                 $this->getPasswordConfirmationFormComponent(),
             ]);
+    }
+
+    protected function mutateFormDataBeforeRegister(array $data): array
+    {
+        $data['role'] = Role::Organiser;
+
+        return $data;
     }
 }
