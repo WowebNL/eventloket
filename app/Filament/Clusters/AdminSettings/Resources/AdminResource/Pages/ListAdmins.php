@@ -57,10 +57,11 @@ class ListAdmins extends ListRecords
                         ->live(),
                     Select::make('municipalities')
                         ->multiple()
-                        ->options(function() {
-                            if(auth()->user()->role === Role::Admin) {
+                        ->options(function () {
+                            if (auth()->user()->role === Role::Admin) {
                                 return Municipality::pluck('name', 'id');
-                            } 
+                            }
+
                             // If the user is a MunicipalityAdmin, return only the municipalities they are associated with
                             return auth()->user()->municipalities->pluck('name', 'id');
                         })
