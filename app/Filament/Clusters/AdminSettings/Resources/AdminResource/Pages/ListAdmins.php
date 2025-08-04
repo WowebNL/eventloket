@@ -53,10 +53,17 @@ class ListAdmins extends ListRecords
                             Role::MunicipalityAdmin->value => __('admin/resources/admin.actions.invite.form.role.options.municipality_admin.description'),
                             Role::Admin->value => __('admin/resources/admin.actions.invite.form.role.options.admin.description'),
                         ])
+                        ->default(Role::MunicipalityAdmin->value)
                         ->live(),
                     Select::make('municipalities')
                         ->multiple()
-                        ->options(Municipality::pluck('name', 'id'))
+                        ->options(function() {
+                            if(auth()->user()->role === Role::Admin) {
+                                return Municipality::pluck('name', 'id');
+                            } 
+                            // If the user is a MunicipalityAdmin, return only the municipalities they are associated with
+                            return auth()->user()->municipalities->pluck('name', 'id');
+                        })
                         ->label(__('admin/resources/admin.actions.invite.form.municipalities.label'))
                         ->visible(fn (Get $get): bool => $get('role') === Role::MunicipalityAdmin->value)
                         ->preload()
