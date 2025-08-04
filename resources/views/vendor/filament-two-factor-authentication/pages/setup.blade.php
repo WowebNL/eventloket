@@ -11,7 +11,7 @@
 <x-filament-panels::page.simple>
 
     @if($plugin->hasEnabledTwoFactorAuthentication())
-        @livewire(TwoFactorAuthentication::class, ['aside' => false, 'redirectTo' => filament()->getCurrentPanel()->getProfileUrl()])
+        @livewire(TwoFactorAuthentication::class, ['aside' => false, 'redirectTo' => filament()->getCurrentPanel()->getUrl(filament()->getTenant())])
     @endif
 
     @if($plugin->hasEnabledPasskeyAuthentication())
