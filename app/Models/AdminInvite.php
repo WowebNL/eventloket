@@ -5,7 +5,7 @@ namespace App\Models;
 use App\Enums\Role;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class AdminInvite extends Model
 {
@@ -13,7 +13,6 @@ class AdminInvite extends Model
     use HasFactory;
 
     protected $fillable = [
-        'municipality_id',
         'name',
         'email',
         'role',
@@ -24,9 +23,9 @@ class AdminInvite extends Model
         'token',
     ];
 
-    public function municipality(): BelongsTo
+    public function municipalities(): BelongsToMany
     {
-        return $this->belongsTo(Municipality::class);
+        return $this->belongsToMany(Municipality::class, 'admin_invite_municipality');
     }
 
     protected function casts(): array

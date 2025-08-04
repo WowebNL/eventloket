@@ -43,12 +43,13 @@ class ListUsers extends ListRecords
                     $tenant = Filament::getTenant();
 
                     $adminInvite = AdminInvite::create([
-                        'municipality_id' => $tenant->id,
                         'name' => $data['name'],
                         'email' => $data['email'],
                         'role' => Role::Reviewer,
                         'token' => Str::uuid(),
                     ]);
+
+                    $adminInvite->municipalities()->attach($tenant->id);
 
                     Mail::to($adminInvite->email)
                         ->send(new AdminInviteMail($adminInvite));

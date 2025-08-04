@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Enums\Role;
 use App\Models\AdminInvite;
+use App\Models\Municipality;
 use App\Models\User;
 use Filament\Events\Auth\Registered;
 use Filament\Facades\Filament;
@@ -92,9 +93,16 @@ class AcceptAdminInvite extends SimplePage
             'role' => $this->adminInvite->role,
         ]);
 
+        $tenantId = Municipality::first()->id;
         if ($this->adminInvite->role !== Role::Admin) {
-            /** @phpstan-ignore-next-line */
-            $this->adminInvite->municipality->users()->attach($user);
+            foreach ($this->adminInvite->municipalities as $key => $municipality) {
+                if ($key == 0) {
+                    /** @var \App\Models\Municipality $municipality */
+                    $tenantId = $municipality->id;
+                }
+                /** @phpstan-ignore-next-line */
+                $municipality->users()->attach($user);
+            }
         }
 
         $this->adminInvite->delete();
@@ -105,7 +113,7 @@ class AcceptAdminInvite extends SimplePage
 
         session()->regenerate();
 
-        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $this->adminInvite->municipality_id]));
+        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $tenantId]));
     }
 
     public function acceptInvite()
@@ -118,14 +126,21 @@ class AcceptAdminInvite extends SimplePage
             abort(403);
         }
 
+        $tenantId = Municipality::first()->id;
         if ($this->adminInvite->role !== Role::Admin) {
-            /** @phpstan-ignore-next-line */
-            $this->adminInvite->municipality->users()->attach(auth()->user());
+            foreach ($this->adminInvite->municipalities as $key => $municipality) {
+                if ($key == 0) {
+                    /** @var \App\Models\Municipality $municipality */
+                    $tenantId = $municipality->id;
+                }
+                /** @phpstan-ignore-next-line */
+                $municipality->users()->attach(auth()->user());
+            }
         }
 
         $this->adminInvite->delete();
 
-        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $this->adminInvite->municipality_id]));
+        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $tenantId]));
     }
 
     public function getHeading(): string|Htmlable

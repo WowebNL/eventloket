@@ -49,7 +49,7 @@ class AdminInviteMail extends Mailable
             markdown: 'mail.admin-invite',
             with: [
                 'role' => strtolower($role->getLabel()),
-                'municipality' => $this->adminInvite->municipality,
+                'municipalities' => $this->adminInvite->municipalities,
                 'acceptUrl' => URL::signedRoute(
                     'admin-invites.accept',
                     ['token' => $this->adminInvite->token],
