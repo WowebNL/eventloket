@@ -45,6 +45,9 @@ return [
                         ],
                     ],
                 ],
+                'municipalities' => [
+                    'label' => 'Selecteer de gemeente(n) waar de gemeentelijk beheerder toegang tot heeft',
+                ],
             ],
             'notification' => [
                 'title' => 'Uitnodiging verstuurd',

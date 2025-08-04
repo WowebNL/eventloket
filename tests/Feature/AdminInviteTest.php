@@ -51,7 +51,7 @@ test('admin can create a reviewer invite', function () {
 
     $invite = AdminInvite::where('email', $inviteeEmail)->first();
     expect($invite)->not->toBeNull()
-        ->and($invite->municipality_id)->toBe($this->municipality->id)
+        ->and($invite->municipalities()->first()->id)->toBe($this->municipality->id)
         ->and($invite->role)->toBe(Role::Reviewer);
 
     Mail::assertSent(AdminInviteMail::class, function ($mail) use ($inviteeEmail) {
@@ -66,11 +66,12 @@ test('existing user can accept a reviewer invite', function () {
     ]);
 
     $invite = AdminInvite::create([
-        'municipality_id' => $this->municipality->id,
         'email' => $user->email,
         'role' => Role::Reviewer,
         'token' => Str::uuid(),
     ]);
+
+    $invite->municipalities()->attach($this->municipality->id);
 
     // Act
     $this->actingAs($user);
@@ -103,11 +104,12 @@ test('new user can register and accept a reviewer invite', function () {
     // Arrange
     $inviteeEmail = 'newreviewer@example.com';
     $invite = AdminInvite::create([
-        'municipality_id' => $this->municipality->id,
         'email' => $inviteeEmail,
         'role' => Role::Reviewer,
         'token' => Str::uuid(),
     ]);
+
+    $invite->municipalities()->attach($this->municipality->id);
 
     $signedUrl = URL::signedRoute('admin-invites.accept', [
         'token' => $invite->token,
@@ -160,6 +162,7 @@ test('admin can create a municipality admin invite', function () {
         ->callAction('invite', [
             'email' => $inviteeEmail,
             'role' => Role::MunicipalityAdmin,
+            'municipalities' => [$this->municipality->id],
         ]);
 
     // Assert
@@ -167,7 +170,7 @@ test('admin can create a municipality admin invite', function () {
 
     $invite = AdminInvite::where('email', $inviteeEmail)->first();
     expect($invite)->not->toBeNull()
-        ->and($invite->municipality_id)->toBe($this->municipality->id)
+        ->and($invite->municipalities()->first()->id)->toBe($this->municipality->id)
         ->and($invite->role)->toBe(Role::MunicipalityAdmin);
 
     Mail::assertSent(AdminInviteMail::class, function ($mail) use ($inviteeEmail) {
@@ -182,11 +185,12 @@ test('existing user can accept a municipality admin invite', function () {
     ]);
 
     $invite = AdminInvite::create([
-        'municipality_id' => $this->municipality->id,
         'email' => $user->email,
         'role' => Role::MunicipalityAdmin,
         'token' => Str::uuid(),
     ]);
+
+    $invite->municipalities()->attach($this->municipality->id);
 
     // Act
     $this->actingAs($user);
@@ -219,11 +223,12 @@ test('new user can register and accept a municipality admin invite', function ()
     // Arrange
     $inviteeEmail = 'newmunicadmin@example.com';
     $invite = AdminInvite::create([
-        'municipality_id' => $this->municipality->id,
         'email' => $inviteeEmail,
         'role' => Role::MunicipalityAdmin,
         'token' => Str::uuid(),
     ]);
+
+    $invite->municipalities()->attach($this->municipality->id);
 
     $signedUrl = URL::signedRoute('admin-invites.accept', [
         'token' => $invite->token,
@@ -280,10 +285,9 @@ test('admin can create an admin invite', function () {
 
     // Assert
     $response->assertSuccessful();
-
     $invite = AdminInvite::where('email', $inviteeEmail)->first();
+
     expect($invite)->not->toBeNull()
-        ->and($invite->municipality_id)->toBe($this->municipality->id)
         ->and($invite->role)->toBe(Role::Admin);
 
     Mail::assertSent(AdminInviteMail::class, function ($mail) use ($inviteeEmail) {
@@ -298,11 +302,12 @@ test('existing user can accept an admin invite', function () {
     ]);
 
     $invite = AdminInvite::create([
-        'municipality_id' => $this->municipality->id,
         'email' => $user->email,
         'role' => Role::Admin,
         'token' => Str::uuid(),
     ]);
+
+    $invite->municipalities()->attach($this->municipality->id);
 
     // Act
     $this->actingAs($user);
@@ -336,7 +341,6 @@ test('new user can register and accept an admin invite', function () {
     // Arrange
     $inviteeEmail = 'brandnewadmin@example.com';
     $invite = AdminInvite::create([
-        'municipality_id' => $this->municipality->id,
         'email' => $inviteeEmail,
         'role' => Role::Admin,
         'token' => Str::uuid(),
@@ -388,11 +392,12 @@ test('invite cannot be accepted by wrong user', function () {
     ]);
 
     $invite = AdminInvite::create([
-        'municipality_id' => $this->municipality->id,
         'email' => 'differentuser@example.com', // Different email than logged-in user
         'token' => Str::uuid(),
         'role' => Role::Reviewer,
     ]);
+
+    $invite->municipalities()->attach($this->municipality->id);
 
     // Act
     $this->actingAs($user);

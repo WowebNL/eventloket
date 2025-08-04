@@ -6,10 +6,13 @@ use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings\Resources\AdminResource;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
+use App\Models\Municipality;
+use App\Models\User;
 use Filament\Actions;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Support\Enums\MaxWidth;
@@ -36,6 +39,7 @@ class ListAdmins extends ListRecords
                         ->label(__('admin/resources/admin.actions.invite.form.email.label'))
                         ->email()
                         ->required()
+                        ->unique(table: User::class)
                         ->maxLength(255),
                     Radio::make('role')
                         ->label(__('admin/resources/admin.actions.invite.form.role.label'))
@@ -48,19 +52,28 @@ class ListAdmins extends ListRecords
                         ->descriptions([
                             Role::MunicipalityAdmin->value => __('admin/resources/admin.actions.invite.form.role.options.municipality_admin.description'),
                             Role::Admin->value => __('admin/resources/admin.actions.invite.form.role.options.admin.description'),
-                        ]),
+                        ])
+                        ->live(),
+                    Select::make('municipalities')
+                        ->multiple()
+                        ->options(Municipality::pluck('name', 'id'))
+                        ->label(__('admin/resources/admin.actions.invite.form.municipalities.label'))
+                        ->visible(fn (Get $get): bool => $get('role') === Role::MunicipalityAdmin->value)
+                        ->preload()
+                        ->required(),
                 ])
                 ->action(function ($data) {
-                    /** @var \App\Models\Organisation $tenant */
-                    $tenant = Filament::getTenant();
 
                     $adminInvite = AdminInvite::create([
-                        'municipality_id' => $tenant->id,
                         'name' => $data['name'],
                         'email' => $data['email'],
                         'role' => auth()->user()->role == Role::Admin ? $data['role'] : Role::MunicipalityAdmin,
                         'token' => Str::uuid(),
                     ]);
+
+                    if (isset($data['municipalities']) && $data['municipalities']) {
+                        $adminInvite->municipalities()->attach($data['municipalities']);
+                    }
 
                     Mail::to($adminInvite->email)
                         ->send(new AdminInviteMail($adminInvite));
