@@ -21,6 +21,7 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
             'Heerlen',
             'Kerkrade',
             'Landgraaf',
+            'Maastricht',
             'Meerssen',
             'Simpelveld',
             'Sittard-Geleen',
