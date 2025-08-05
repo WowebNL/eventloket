@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\EditProfile;
 use App\Models\Municipality;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -45,6 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->login()
             ->passwordReset()
+            ->profile(EditProfile::class)
             ->plugins([
                 TwoFactorAuthenticationPlugin::make()
                     ->enableTwoFactorAuthentication()
