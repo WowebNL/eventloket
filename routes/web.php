@@ -1,10 +1,20 @@
 <?php
 
+use App\Filament\Advisor\Pages\AcceptAdvisoryInvite;
 use App\Filament\Organiser\Pages\AcceptOrganisationInvite;
+use App\Filament\Pages\AcceptAdminInvite;
 use App\Http\Controllers\OpenFormsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/form', [OpenFormsController::class, 'form']);
+
+Route::middleware('signed')
+    ->get('admin/admin-invites/{token}', AcceptAdminInvite::class)
+    ->name('admin-invites.accept');
+
+Route::middleware('signed')
+    ->get('advisory/advisory-invites/{token}', AcceptAdvisoryInvite::class)
+    ->name('advisory-invites.accept');
 
 Route::middleware('signed')
     ->get('organiser/organisation-invites/{token}', AcceptOrganisationInvite::class)

@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Organiser\Clusters\Settings\Pages\EditOrganisationProfile;
+use App\Filament\Organiser\Pages\EditProfile;
 use App\Filament\Organiser\Pages\Register;
 use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
 use App\Models\Organisation;
@@ -22,6 +23,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Stephenjude\FilamentTwoFactorAuthentication\TwoFactorAuthenticationPlugin;
 
 class OrganiserPanelProvider extends PanelProvider
 {
@@ -50,7 +52,14 @@ class OrganiserPanelProvider extends PanelProvider
             ->tenantProfile(EditOrganisationProfile::class)
             ->passwordReset()
             ->emailVerification()
+            ->profile(EditProfile::class)
             ->profile()
+            ->plugins([
+                TwoFactorAuthenticationPlugin::make()
+                    ->enableTwoFactorAuthentication()
+                    ->addTwoFactorMenuItem()
+                    ->forceTwoFactorSetup(condition: config('app.require_2fa'), requiresPassword: false),
+            ])
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,

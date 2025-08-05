@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Models\Advisory;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -18,6 +19,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Stephenjude\FilamentTwoFactorAuthentication\TwoFactorAuthenticationPlugin;
 
 class AdvisorPanelProvider extends PanelProvider
 {
@@ -33,10 +35,19 @@ class AdvisorPanelProvider extends PanelProvider
             ->brandLogo(asset('images/logos/logo-dark.svg'))
             ->darkModeBrandLogo(asset('images/logos/logo-light.svg'))
             ->brandLogoHeight('2.5rem')
+            ->tenant(Advisory::class)
             ->discoverResources(in: app_path('Filament/Advisor/Resources'), for: 'App\\Filament\\Advisor\\Resources')
             ->discoverPages(in: app_path('Filament/Advisor/Pages'), for: 'App\\Filament\\Advisor\\Pages')
             ->pages([
                 Pages\Dashboard::class,
+            ])
+            ->login()
+            ->passwordReset()
+            ->plugins([
+                TwoFactorAuthenticationPlugin::make()
+                    ->enableTwoFactorAuthentication()
+                    ->addTwoFactorMenuItem()
+                    ->forceTwoFactorSetup(condition: config('app.require_2fa'), requiresPassword: false),
             ])
             ->discoverWidgets(in: app_path('Filament/Advisor/Widgets'), for: 'App\\Filament\\Advisor\\Widgets')
             ->widgets([

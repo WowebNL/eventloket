@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('organisation_invites', function (Blueprint $table) {
             $table->id();
             $table->foreignId('organisation_id')->constrained()->cascadeOnDelete();
+            $table->string('name')->nullable();
             $table->string('email');
             $table->string('role');
             $table->uuid('token')->unique();

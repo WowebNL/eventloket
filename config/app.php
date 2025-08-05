@@ -123,4 +123,12 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | EventLoket specific configurations
+    |--------------------------------------------------------------------------
+    |
+    */
+
+    'require_2fa' => env('APP_REQUIRE_2FA', true),
 ];

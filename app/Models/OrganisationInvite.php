@@ -13,6 +13,7 @@ class OrganisationInvite extends Model
 
     protected $fillable = [
         'organisation_id',
+        'name',
         'email',
         'role',
         'token',

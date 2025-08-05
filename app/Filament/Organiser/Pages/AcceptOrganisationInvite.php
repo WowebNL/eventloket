@@ -2,6 +2,7 @@
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Enums\Role;
 use App\Models\OrganisationInvite;
 use App\Models\User;
 use Filament\Events\Auth\Registered;
@@ -35,6 +36,7 @@ class AcceptOrganisationInvite extends SimplePage
         $this->organisationInvite = OrganisationInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
+            'name' => $this->organisationInvite->name,
             'email' => $this->organisationInvite->email,
         ]);
     }
@@ -67,7 +69,8 @@ class AcceptOrganisationInvite extends SimplePage
                     ->rule(Password::default())
                     ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                     ->same('passwordConfirmation')
-                    ->validationAttribute(__('filament-panels::pages/auth/register.form.password.validation_attribute')),
+                    ->validationAttribute(__('filament-panels::pages/auth/register.form.password.validation_attribute'))
+                    ->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 TextInput::make('passwordConfirmation')
                     ->label(__('filament-panels::pages/auth/register.form.password_confirmation.label'))
                     ->password()
@@ -87,6 +90,7 @@ class AcceptOrganisationInvite extends SimplePage
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
+            'role' => Role::Organiser,
         ]);
 
         /** @phpstan-ignore-next-line */

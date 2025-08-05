@@ -21,6 +21,9 @@ return [
             'label' => 'Gebruiker uitnodigen',
             'modal_submit_action_label' => 'Uitnodiging versturen',
             'form' => [
+                'name' => [
+                    'label' => 'Naam',
+                ],
                 'email' => [
                     'label' => 'E-mailadres',
                 ],
