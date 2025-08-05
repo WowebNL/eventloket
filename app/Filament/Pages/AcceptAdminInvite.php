@@ -70,7 +70,8 @@ class AcceptAdminInvite extends SimplePage
                     ->rule(Password::default())
                     ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                     ->same('passwordConfirmation')
-                    ->validationAttribute(__('filament-panels::pages/auth/register.form.password.validation_attribute')),
+                    ->validationAttribute(__('filament-panels::pages/auth/register.form.password.validation_attribute'))
+                    ->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 TextInput::make('passwordConfirmation')
                     ->label(__('filament-panels::pages/auth/register.form.password_confirmation.label'))
                     ->password()
@@ -100,7 +101,7 @@ class AcceptAdminInvite extends SimplePage
                     /** @var \App\Models\Municipality $municipality */
                     $tenantId = $municipality->id;
                 }
-                /** @phpstan-ignore-next-line */
+                /** @var \App\Models\Municipality $municipality */
                 $municipality->users()->attach($user);
             }
         }
