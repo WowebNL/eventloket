@@ -8,7 +8,6 @@ use App\Models\Municipality;
 use App\Models\User;
 use App\Policies\AdvisoryPolicy;
 use Filament\Facades\Filament;
-use Illuminate\Support\Facades\Config;
 
 use function Pest\Livewire\livewire;
 
