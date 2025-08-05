@@ -49,7 +49,7 @@ class AdminPanelProvider extends PanelProvider
                 TwoFactorAuthenticationPlugin::make()
                     ->enableTwoFactorAuthentication()
                     ->addTwoFactorMenuItem()
-                    ->forceTwoFactorSetup(requiresPassword: false),
+                    ->forceTwoFactorSetup(condition: config('app.require_2fa'), requiresPassword: false),
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([

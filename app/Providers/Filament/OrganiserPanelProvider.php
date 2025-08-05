@@ -58,7 +58,7 @@ class OrganiserPanelProvider extends PanelProvider
                 TwoFactorAuthenticationPlugin::make()
                     ->enableTwoFactorAuthentication()
                     ->addTwoFactorMenuItem()
-                    ->forceTwoFactorSetup(requiresPassword: false),
+                    ->forceTwoFactorSetup(condition: config('app.require_2fa'), requiresPassword: false),
             ])
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
             ->widgets([
