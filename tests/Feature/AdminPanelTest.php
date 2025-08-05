@@ -8,6 +8,7 @@ use App\Models\Municipality;
 use App\Models\User;
 use App\Policies\AdvisoryPolicy;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Config;
 
 use function Pest\Livewire\livewire;
 
@@ -25,6 +26,15 @@ beforeEach(function () {
     $this->admin = User::factory()->create([
         'email' => 'admin@example.com',
         'role' => Role::Admin,
+    ]);
+
+    $this->loginAdmin = User::factory()->create([
+        'email' => 'adminlogin@example.com',
+        'password' => 'password',
+        'role' => Role::Admin,
+        'two_factor_secret' => null,
+        'two_factor_recovery_codes' => null,
+        'two_factor_confirmed_at' => null,
     ]);
 
     $this->municipalityAdmin = User::factory()->create([
@@ -141,4 +151,16 @@ test('reviewer cannot edit advisories', function () {
     $this->actingAs($this->reviewer);
 
     $this->assertFalse(app()->make(AdvisoryPolicy::class)->update($this->reviewer, $this->advisory1));
+});
+
+test('2fa is enforced by default for admin panel', function () {
+
+    expect(Filament::getPanel()->hasPlugin('filament-two-factor-authentication'))
+        ->toBeTrue();
+
+    $this->actingAs($this->loginAdmin);
+
+    // Ensure that the user is redirected to the 2FA setup page
+    $this->get('admin')
+        ->assertRedirect(route('filament.admin.two-factor.setup'));
 });

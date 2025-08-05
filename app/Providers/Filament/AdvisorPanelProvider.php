@@ -47,7 +47,7 @@ class AdvisorPanelProvider extends PanelProvider
                 TwoFactorAuthenticationPlugin::make()
                     ->enableTwoFactorAuthentication()
                     ->addTwoFactorMenuItem()
-                    ->forceTwoFactorSetup(requiresPassword: false),
+                    ->forceTwoFactorSetup(condition: config('app.require_2fa'), requiresPassword: false),
             ])
             ->discoverWidgets(in: app_path('Filament/Advisor/Widgets'), for: 'App\\Filament\\Advisor\\Widgets')
             ->widgets([
