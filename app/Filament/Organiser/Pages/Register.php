@@ -18,7 +18,8 @@ class Register extends BaseRegister
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
                     ->maxLength(255),
-                $this->getPasswordFormComponent(),
+                /** @phpstan-ignore-next-line */
+                $this->getPasswordFormComponent()->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 $this->getPasswordConfirmationFormComponent(),
             ]);
     }
