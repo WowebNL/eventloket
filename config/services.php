@@ -37,6 +37,7 @@ return [
 
     'open_forms' => [
         'base_url' => env('OPEN_FORMS_BASE_URL'),
+        'main_form_uuid' => env('OPEN_FORMS_MAIN_FORM_UUID'),
     ],
 
 ];
