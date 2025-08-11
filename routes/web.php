@@ -19,4 +19,4 @@ Route::middleware('signed')
     ->name('organisation-invites.accept');
 
 // Route::get('/', Welcome::class)->name('welcome');
-Route::get('/', fn() => view('welcome'))->name('welcome');
+Route::get('/', fn () => view('welcome'))->name('welcome');
