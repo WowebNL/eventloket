@@ -24,7 +24,7 @@ class EditOrganisationProfile extends EditTenantProfile
                 TextInput::make('coc_number')
                     ->label(__('organiser/pages/tenancy/register.form.coc_number.label'))
                     ->disabled()
-                    ->unique()
+                    ->unique(ignoreRecord: true)
                     ->validationMessages([
                         'unique' => __('organiser/pages/tenancy/register.form.coc_number.validation.unique'),
                     ])
