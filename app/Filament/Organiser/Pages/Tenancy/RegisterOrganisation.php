@@ -49,7 +49,7 @@ class RegisterOrganisation extends RegisterTenant
                     ->maxLength(255),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/tenancy/register.form.phone.label'))
-                    ->maxLength(255),
+                    ->maxLength(20),
             ]);
     }
 

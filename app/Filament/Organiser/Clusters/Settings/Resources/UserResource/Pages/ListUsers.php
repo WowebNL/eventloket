@@ -3,6 +3,7 @@
 namespace App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages;
 
 use App\Enums\OrganisationRole;
+use App\Filament\Organiser\Clusters\Settings;
 use App\Filament\Organiser\Clusters\Settings\Resources\UserResource;
 use App\Mail\OrganisationInviteMail;
 use App\Models\OrganisationInvite;
@@ -18,6 +19,8 @@ use Illuminate\Support\Str;
 
 class ListUsers extends ListRecords
 {
+    protected static ?string $cluster = Settings::class;
+
     protected static string $resource = UserResource::class;
 
     protected function getHeaderActions(): array
