@@ -53,7 +53,6 @@ class OrganiserPanelProvider extends PanelProvider
             ->passwordReset()
             ->emailVerification()
             ->profile(EditProfile::class)
-            ->profile()
             ->plugins([
                 TwoFactorAuthenticationPlugin::make()
                     ->enableTwoFactorAuthentication()
