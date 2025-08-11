@@ -3,7 +3,7 @@
 return [
     'enable' => [
         'header' => 'Je hebt tweestapsverificatie nog niet ingeschakeld.',
-        'description' => 'Wanneer tweestapsverificatie is ingeschakeld, wordt tijdens het inloggen gevraagd om een veilige, willekeurige code. Je kunt deze code ophalen via de Google Authenticator-app op je telefoon.',
+        'description' => 'Wanneer tweestapsverificatie is ingeschakeld, wordt tijdens het inloggen gevraagd om een veilige, willekeurige code. Je kunt deze code ophalen via een authenticator-app op je telefoon.',
     ],
     'logout' => [
         'button' => 'Uitloggen',
@@ -14,7 +14,7 @@ return [
     ],
     'setup_confirmation' => [
         'header' => 'Rond het inschakelen van tweestapsverificatie af.',
-        'description' => 'Wanneer tweestapsverificatie is ingeschakeld, wordt tijdens het inloggen gevraagd om een veilige, willekeurige code. Je kunt deze code ophalen via de Google Authenticator-app op je telefoon.',
+        'description' => 'Wanneer tweestapsverificatie is ingeschakeld, wordt tijdens het inloggen gevraagd om een veilige, willekeurige code. Je kunt deze code ophalen via een authenticator-app op je telefoon.',
         'scan_qr_code' => 'Om het inschakelen van tweestapsverificatie af te ronden, scan je de onderstaande QR-code met een authenticator-app op je telefoon of voer je de instelsleutel in en geef je de gegenereerde OTP-code op.',
     ],
     'base' => [
@@ -26,7 +26,7 @@ return [
         'confirm' => 'Bevestigen',
         'cancel' => 'Annuleren',
         'enable' => 'Inschakelen',
-        'disable' => 'Uitschakelen',
+        'disable' => 'Resetten',
         'confirm_password' => 'Bevestig wachtwoord',
         'wrong_password' => 'Het opgegeven wachtwoord is onjuist.',
         'code' => 'Code',
