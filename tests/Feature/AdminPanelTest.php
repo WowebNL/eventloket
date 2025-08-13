@@ -2,11 +2,13 @@
 
 use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
+use App\Filament\Clusters\AdminSettings\Pages\ManageWelcome;
 use App\Filament\Clusters\AdminSettings\Resources\AdminResource;
 use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Policies\AdvisoryPolicy;
+use App\Settings\WelcomeSettings;
 use Filament\Facades\Filament;
 
 use function Pest\Livewire\livewire;
@@ -162,4 +164,31 @@ test('2fa is enforced by default for admin panel', function () {
     // Ensure that the user is redirected to the 2FA setup page
     $this->get('admin')
         ->assertRedirect(route('filament.admin.two-factor.setup'));
+});
+
+test('only admin can access welcome page settings', function () {
+    $this->actingAs($this->admin);
+    expect(ManageWelcome::canAccess())->toBeTrue();
+
+    $this->actingAs($this->municipalityAdmin);
+    expect(ManageWelcome::canAccess())->toBeFalse();
+
+    $this->actingAs($this->reviewer);
+    expect(ManageWelcome::canAccess())->toBeFalse();
+});
+
+test('admin can update welcome page settings', function () {
+    $this->actingAs($this->admin);
+    Filament::setTenant($this->municipality1);
+
+    livewire(ManageWelcome::class)->fillForm([
+        'title' => 'New Title',
+        'tagline' => 'New Tagline',
+        'intro' => 'New Intro',
+    ])->call('save');
+
+    $settings = app(WelcomeSettings::class);
+    expect($settings->title)->toBe('New Title');
+    expect($settings->tagline)->toBe('New Tagline');
+    expect($settings->intro)->toBe('New Intro');
 });
