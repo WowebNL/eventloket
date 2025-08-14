@@ -17,7 +17,8 @@ class Register extends BaseRegister
                 $this->getEmailFormComponent(),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
-                    ->maxLength(20),
+                    ->maxLength(20)
+                    ->required(),
                 /** @phpstan-ignore-next-line */
                 $this->getPasswordFormComponent()->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 $this->getPasswordConfirmationFormComponent(),

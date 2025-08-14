@@ -60,6 +60,7 @@ class AcceptAdvisoryInvite extends SimplePage
                     ->unique('users'),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
+                    ->required()
                     ->maxLength(20),
                 TextInput::make('password')
                     ->label(__('filament-panels::pages/auth/register.form.password.label'))
