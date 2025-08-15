@@ -1,3 +1,7 @@
+[![PestPHP unit Tests](https://github.com/WowebNL/eventloket/actions/workflows/pest.yml/badge.svg)](https://github.com/WowebNL/eventloket/actions/workflows/pest.yml)
+[![PHPStan Analysis](https://github.com/WowebNL/eventloket/actions/workflows/phpstan.yml/badge.svg)](https://github.com/WowebNL/eventloket/actions/workflows/phpstan.yml)
+[![Licence](https://img.shields.io/badge/Licence-EUPL1.2-blue.svg)](https://github.com/WowebNL/eventloket?tab=License-1-ov-file#readme)
+
 # Eventloket
 
 ## About
