@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'message' => 'Je bent ingelogd maar het lijkt erop dat je een verkeerd onderdeel van de applicatie probeert te bereiken. Met het ingelogde account heb je geen onderdeel tot dit gedeelte. Via onderstaande knoppen kun je naar één van de onderdelen gaan waar je wel toegang tot hebt.',
+    'message' => 'Je bent ingelogd met een account welke geen toegang heeft tot dit gedeelte van de applicatie. Ga naar één van onderstaande pagina\'s om te kijken waar je wel toegang tot hebt.',
     'home' => 'Homepagina',
     'admin' => 'Admin en behandelaars dashboard',
     'advisor' => 'Adviseur dashboard',
