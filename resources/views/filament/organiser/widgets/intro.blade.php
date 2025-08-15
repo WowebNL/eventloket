@@ -1,6 +1,5 @@
 <x-filament-widgets::widget>
     <x-filament::section>
-
-        <h1>Test</h1>
+        {!! str($introContent)->sanitizeHtml() !!}
     </x-filament::section>
 </x-filament-widgets::widget>

@@ -16,11 +16,16 @@ use Filament\Pages\SettingsPage;
 
 class ManageWelcome extends SettingsPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static ?string $navigationIcon = 'heroicon-o-home';
 
     protected static string $settings = WelcomeSettings::class;
 
     protected static ?string $cluster = AdminSettings::class;
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __('admin/clusters/admin_settings.content_group_label');
+    }
 
     public static function canAccess(): bool
     {

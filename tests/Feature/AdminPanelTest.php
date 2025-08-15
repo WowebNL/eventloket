@@ -2,12 +2,14 @@
 
 use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
+use App\Filament\Clusters\AdminSettings\Pages\ManageOrganiserPanel;
 use App\Filament\Clusters\AdminSettings\Pages\ManageWelcome;
 use App\Filament\Clusters\AdminSettings\Resources\AdminResource;
 use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Policies\AdvisoryPolicy;
+use App\Settings\OrganiserPanelSettings;
 use App\Settings\WelcomeSettings;
 use Filament\Facades\Filament;
 
@@ -190,5 +192,18 @@ test('admin can update welcome page settings', function () {
     $settings = app(WelcomeSettings::class);
     expect($settings->title)->toBe('New Title');
     expect($settings->tagline)->toBe('New Tagline');
+    expect($settings->intro)->toBe('New Intro');
+});
+
+test('admin can update organiser panel settings', function () {
+    $this->actingAs($this->admin);
+
+    Filament::setTenant($this->municipality1);
+
+    livewire(ManageOrganiserPanel::class)->fillForm([
+        'intro' => 'New Intro',
+    ])->call('save');
+
+    $settings = app(OrganiserPanelSettings::class);
     expect($settings->intro)->toBe('New Intro');
 });
