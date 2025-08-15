@@ -10,7 +10,7 @@ return [
     ],
     'enabled' => [
         'header' => 'Je hebt tweestapsverificatie ingeschakeld.',
-        'description' => 'Bewaar deze herstelcodes in een veilige wachtwoordmanager. Ze kunnen worden gebruikt om weer toegang te krijgen tot je account als je apparaat voor tweestapsverificatie verloren gaat.',
+        'description' => 'Mocht je app voor tweestapsverificatie niet meer bruikbaar zijn (bijv omdat je GSM defect of kwijt is geraakt) dan is het mogelijk om met herstelcodes weer toegang te krijgen tot je account. Bewaar deze herstelcodes dus goed in een veilige wachtwoordmanager. Via de knop "Nieuwe herstelcodes genereren" kan je de bestaande herstelcodes opvragen of nieuwe genereren.Een nieuwe QR code opvragen om zo een nieuwe registratie te maken in je authenticator kan mbv de knop "Resetten".',
     ],
     'setup_confirmation' => [
         'header' => 'Rond het inschakelen van tweestapsverificatie af.',
