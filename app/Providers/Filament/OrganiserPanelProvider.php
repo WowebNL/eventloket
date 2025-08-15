@@ -6,6 +6,7 @@ use App\Filament\Organiser\Clusters\Settings\Pages\EditOrganisationProfile;
 use App\Filament\Organiser\Pages\EditProfile;
 use App\Filament\Organiser\Pages\Register;
 use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
+use App\Filament\Organiser\Widgets\Intro;
 use App\Models\Organisation;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -61,7 +62,7 @@ class OrganiserPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
+                Intro::class
             ])
             ->middleware([
                 EncryptCookies::class,
