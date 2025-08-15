@@ -2,28 +2,38 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
+use App\Enums\Role;
 use App\Filament\Organiser\Clusters\Settings;
 use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Organiser\Pages\Dashboard;
+use App\Filament\Organiser\Widgets\Intro;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Settings\OrganiserPanelSettings;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Hash;
+use Stephenjude\FilamentTwoFactorAuthentication\TwoFactorAuthenticationPlugin;
 
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    Filament::setCurrentPanel(Filament::getPanel('organiser')->plugins([TwoFactorAuthenticationPlugin::make()
+        ->enableTwoFactorAuthentication(false)]));
 
     $this->businessOrganisation = Organisation::factory(['type' => OrganisationType::Business])->create();
     $this->personalOrganisation = Organisation::factory(['type' => OrganisationType::Personal])->create();
 
-    $this->businessAdminUser = User::factory()->create();
+    $this->businessAdminUser = User::factory(['role' => Role::Organiser])->create();
     $this->businessAdminUser->organisations()->attach($this->businessOrganisation, ['role' => OrganisationRole::Admin->value]);
 
-    $this->businessMemberUser = User::factory()->create();
+    $this->businessMemberUser = User::factory(['role' => Role::Organiser])->create();
     $this->businessMemberUser->organisations()->attach($this->businessOrganisation, ['role' => OrganisationRole::Member->value]);
 
-    $this->personalAdminUser = User::factory()->create();
+    $this->personalAdminUser = User::factory(['role' => Role::Organiser])->create();
     $this->personalAdminUser->organisations()->attach($this->personalOrganisation, ['role' => OrganisationRole::Admin->value]);
+
+    Config::set('app.require_2fa', false);
 });
 
 test('Organisation admin can access organisation settings', function () {
@@ -56,5 +66,29 @@ test('Organisation admin can change other organisation members role', function (
     livewire(ListUsers::class)
         ->assertTableColumnExists('organisations.role')
         ->assertTableSelectColumnHasOptions('organisations.role', OrganisationRole::getOptions(), $memberUser);
+
+});
+
+test('Organiser panel custom dashboard is shown', function () {
+    $this->actingAs($this->businessAdminUser);
+
+    livewire(Dashboard::class)->assertSee($this->businessAdminUser->name); // name in custom title
+});
+
+test('Intro widget has intro text', function () {
+    OrganiserPanelSettings::fake([
+        'intro' => 'Test Intro',
+    ]);
+
+    livewire(Intro::class)->assertSee('Test Intro');
+});
+
+test('Widgets are rendered in organisation dashboard', function () {
+    $this->actingAs($this->businessAdminUser)
+        ->withSession(['login_2fa_challenge_passed_'.$this->businessAdminUser->id => Hash::make($this->businessAdminUser->two_factor_secret)]); // faking 2fa
+
+    $this->get(route('filament.organiser.pages.dashboard', ['tenant' => $this->businessOrganisation->id]))
+        ->assertSee('app.filament.organiser.widgets.intro') // intro widget
+        ->assertSee('app.filament.organiser.widgets.shortlink'); // shortlink widget
 
 });

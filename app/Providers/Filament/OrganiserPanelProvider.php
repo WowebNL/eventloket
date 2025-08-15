@@ -6,17 +6,17 @@ use App\Filament\Organiser\Clusters\Settings\Pages\EditOrganisationProfile;
 use App\Filament\Organiser\Pages\EditProfile;
 use App\Filament\Organiser\Pages\Register;
 use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
+use App\Filament\Organiser\Widgets\Intro;
+use App\Filament\Organiser\Widgets\Shortlink;
 use App\Models\Organisation;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -43,9 +43,6 @@ class OrganiserPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Organiser/Resources'), for: 'App\\Filament\\Organiser\\Resources')
             ->discoverPages(in: app_path('Filament/Organiser/Pages'), for: 'App\\Filament\\Organiser\\Pages')
             ->discoverClusters(in: app_path('Filament/Organiser/Clusters'), for: 'App\\Filament\\Organiser\\Clusters')
-            ->pages([
-                Pages\Dashboard::class,
-            ])
             ->login()
             ->registration(Register::class)
             ->tenantRegistration(RegisterOrganisation::class)
@@ -61,7 +58,8 @@ class OrganiserPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
+                Intro::class,
+                Shortlink::class,
             ])
             ->middleware([
                 EncryptCookies::class,
