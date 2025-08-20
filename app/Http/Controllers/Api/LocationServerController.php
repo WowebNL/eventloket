@@ -2,18 +2,42 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Geospatial\CheckIntersects;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\LocationServerCheckRequest;
-use Illuminate\Support\Facades\Log;
+use Brick\Geo\Io\GeoJsonReader;
+use Brick\Geo\Polygon;
 
 class LocationServerController extends Controller
 {
     public function check(LocationServerCheckRequest $request)
     {
-        Log::info(json_encode($request->all(), JSON_PRETTY_PRINT));
+        $data = $request->validated();
+        $municipalities = collect();
 
-        // $data = $request->validated();
+        if (isset($data['polygons'])) {
+            $polygons = json_decode($data['polygons']);
+            foreach ($polygons as $object) {
+                /** @var Polygon $polygon */
+                $polygon = (new GeoJsonReader)->read(json_encode($object));
 
-        // Process the validated data
+                /** @var array<\App\Models\Municipality> $items */
+                $items = (new CheckIntersects)->checkIntersectsWithModels($polygon);
+
+                $municipalities = $municipalities->merge($items);
+            }
+        }
+
+        if (isset($data['line'])) {
+            $line = (new GeoJsonReader)->read($data['line']);
+            $items = (new CheckIntersects)->checkIntersectsWithModels($line);
+            $$municipalities = $municipalities->merge($items);
+        }
+
+        if (isset($data['addresses'])) {
+            $adressen = json_decode($data['addresses'], true);
+            // TODO get gemeente by adres
+        }
+        // TODO return resource
     }
 }

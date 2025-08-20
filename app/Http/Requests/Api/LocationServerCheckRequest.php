@@ -22,9 +22,9 @@ class LocationServerCheckRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'polygons' => 'required_without_all:addresses,lines',
-            'lines' => 'required_without_all:addresses,polygons',
-            'addresses' => 'required_without_all:lines,polygons',
+            'polygons' => 'required_without_all:addresses,line|json',
+            'line' => 'required_without_all:addresses,polygons|json',
+            'addresses' => 'required_without_all:line,polygons|json',
         ];
     }
 }
