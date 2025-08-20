@@ -18,6 +18,8 @@ class MunicipalityFactory extends Factory
     {
         return [
             'name' => fake()->city,
+            'brk_identification' => fake()->unique()->bothify('GM###'),
+            'geometry' => '{"type":"MultiPolygon","coordinates":[[[[0.5,0.5],[1.5,1.5],[1.5,1.5],[0.5,0.5]]]]}',
         ];
     }
 }

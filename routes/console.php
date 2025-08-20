@@ -1,8 +1,10 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+// Sync with Kadaster
+Schedule::call(function () {
+    foreach (\App\Models\Municipality::all() as $municipality) {
+        \App\Jobs\ProcessSyncGeometryOnMunicipality::dispatch($municipality);
+    }
+})->weekly();

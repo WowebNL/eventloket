@@ -131,4 +131,8 @@ return [
     */
 
     'require_2fa' => env('APP_REQUIRE_2FA', true),
+
+    'api' => [
+        'token_expire_in_days' => env('APP_API_TOKEN_EXPIRE_IN_DAYS', 365),
+    ],
 ];
