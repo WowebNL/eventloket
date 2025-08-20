@@ -2,10 +2,9 @@
 
 namespace App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\RelationManagers;
 
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -16,11 +15,11 @@ class TokensRelationManager extends RelationManager
 {
     protected static string $relationship = 'tokens';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('id')
+        return $schema
+            ->components([
+                TextInput::make('id')
                     ->required()
                     ->maxLength(255),
             ]);
@@ -31,11 +30,11 @@ class TokensRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('id')
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label(__('admin/resources/token.columns.id.label'))
                     ->copyable()
                     ->copyMessage(__('admin/resources/token.columns.id.copy_label')),
-                Tables\Columns\TextColumn::make('client.name')
+                TextColumn::make('client.name')
                     ->label(__('admin/resources/client.columns.name.label')),
                 IconColumn::make('is_active')
                     ->boolean()
@@ -51,7 +50,7 @@ class TokensRelationManager extends RelationManager
                     ->since()
                     ->dateTimeTooltip('d-m-Y H:i')
                     ->label(__('admin/resources/token.columns.expires_at.label')),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
@@ -62,9 +61,9 @@ class TokensRelationManager extends RelationManager
             ])
             ->headerActions([
             ])
-            ->actions([
+            ->recordActions([
             ])
-            ->bulkActions([
+            ->toolbarActions([
             ]);
     }
 }

@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use Database\Factories\AdminInviteFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class AdminInvite extends Model
 {
-    /** @use HasFactory<\Database\Factories\AdminInviteFactory> */
+    /** @use HasFactory<AdminInviteFactory> */
     use HasFactory;
 
     protected $fillable = [

@@ -4,13 +4,16 @@ namespace App\Filament\Clusters\AdminSettings\Resources;
 
 use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource\RelationManagers;
+use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages\CreateAdmin;
+use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages\EditAdmin;
+use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages\ListAdmins;
+use App\Filament\Clusters\AdminSettings\Resources\AdminResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Models\User;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -18,7 +21,7 @@ class AdminResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
     protected static ?int $navigationSort = 0;
 
@@ -26,7 +29,7 @@ class AdminResource extends Resource
 
     public static function isScopedToTenant(): bool
     {
-        if (auth()->user()->role === Role::Admin) {
+        if (auth()->user()?->role === Role::Admin) {
             return false;
         }
 
@@ -45,11 +48,11 @@ class AdminResource extends Resource
         return __('admin/resources/admin.plural_label');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label(__('admin/resources/admin.columns.name.label')),
             ]);
     }
@@ -58,20 +61,20 @@ class AdminResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label(__('admin/resources/admin.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
                     ->searchable(),
-                Tables\Columns\TextColumn::make('role')
+                TextColumn::make('role')
                     ->label(__('admin/resources/admin.columns.role.label')),
             ])
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 //
             ]);
     }
@@ -84,16 +87,16 @@ class AdminResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\MunicipalitiesRelationManager::class,
+            MunicipalitiesRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListAdmins::route('/'),
-            'create' => Pages\CreateAdmin::route('/create'),
-            'edit' => Pages\EditAdmin::route('/{record}/edit'),
+            'index' => ListAdmins::route('/'),
+            'create' => CreateAdmin::route('/create'),
+            'edit' => EditAdmin::route('/{record}/edit'),
         ];
     }
 }

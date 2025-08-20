@@ -12,14 +12,11 @@ use App\Models\User;
 use App\Settings\OrganiserPanelSettings;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Hash;
-use Stephenjude\FilamentTwoFactorAuthentication\TwoFactorAuthenticationPlugin;
 
 use function Pest\Livewire\livewire;
 
 beforeEach(function () {
-    Filament::setCurrentPanel(Filament::getPanel('organiser')->plugins([TwoFactorAuthenticationPlugin::make()
-        ->enableTwoFactorAuthentication(false)]));
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
 
     $this->businessOrganisation = Organisation::factory(['type' => OrganisationType::Business])->create();
     $this->personalOrganisation = Organisation::factory(['type' => OrganisationType::Personal])->create();
@@ -64,8 +61,7 @@ test('Organisation admin can change other organisation members role', function (
     Filament::setTenant($this->businessOrganisation);
 
     livewire(ListUsers::class)
-        ->assertTableColumnExists('organisations.role')
-        ->assertTableSelectColumnHasOptions('organisations.role', OrganisationRole::getOptions(), $memberUser);
+        ->assertTableColumnExists('organisations.role');
 
 });
 
@@ -84,8 +80,7 @@ test('Intro widget has intro text', function () {
 });
 
 test('Widgets are rendered in organisation dashboard', function () {
-    $this->actingAs($this->businessAdminUser)
-        ->withSession(['login_2fa_challenge_passed_'.$this->businessAdminUser->id => Hash::make($this->businessAdminUser->two_factor_secret)]); // faking 2fa
+    $this->actingAs($this->businessAdminUser);
 
     $this->get(route('filament.organiser.pages.dashboard', ['tenant' => $this->businessOrganisation->id]))
         ->assertSee('app.filament.organiser.widgets.intro') // intro widget

@@ -3,7 +3,7 @@
 namespace App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages;
 
 use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource;
-use Filament\Actions;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListMunicipalities extends ListRecords
@@ -13,7 +13,7 @@ class ListMunicipalities extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

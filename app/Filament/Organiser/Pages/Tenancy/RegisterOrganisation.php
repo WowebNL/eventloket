@@ -8,25 +8,25 @@ use App\Models\Organisation;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Pages\Tenancy\RegisterTenant;
+use Filament\Schemas\Schema;
 
 class RegisterOrganisation extends RegisterTenant
 {
     /**
      * @var view-string
      */
-    protected static string $view = 'filament.organiser.pages.tenancy.register-tenant';
+    protected string $view = 'filament.organiser.pages.tenancy.register-tenant';
 
     public static function getLabel(): string
     {
         return __('organiser/pages/tenancy/register.label');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('name')
                     ->label(__('organiser/pages/tenancy/register.form.name.label'))
                     ->required()

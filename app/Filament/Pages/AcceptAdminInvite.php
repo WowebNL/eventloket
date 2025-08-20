@@ -6,12 +6,12 @@ use App\Enums\Role;
 use App\Models\AdminInvite;
 use App\Models\Municipality;
 use App\Models\User;
-use Filament\Events\Auth\Registered;
+use Filament\Auth\Events\Registered;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Form;
 use Filament\Pages\SimplePage;
+use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
@@ -23,7 +23,7 @@ class AcceptAdminInvite extends SimplePage
 {
     use InteractsWithForms;
 
-    protected static string $view = 'filament.pages.accept-admin-invite';
+    protected string $view = 'filament.pages.accept-admin-invite';
 
     public AdminInvite $adminInvite;
 
@@ -42,18 +42,18 @@ class AcceptAdminInvite extends SimplePage
         ]);
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->statePath('data')
-            ->schema([
+            ->components([
                 TextInput::make('name')
-                    ->label(__('filament-panels::pages/auth/register.form.name.label'))
+                    ->label(__('filament-panels::auth/pages/register.form.name.label'))
                     ->required()
                     ->maxLength(255)
                     ->autofocus(),
                 TextInput::make('email')
-                    ->label(__('filament-panels::pages/auth/register.form.email.label'))
+                    ->label(__('filament-panels::auth/pages/register.form.email.label'))
                     ->disabled()
                     ->email()
                     ->required()
@@ -63,17 +63,17 @@ class AcceptAdminInvite extends SimplePage
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
                     ->maxLength(20),
                 TextInput::make('password')
-                    ->label(__('filament-panels::pages/auth/register.form.password.label'))
+                    ->label(__('filament-panels::auth/pages/register.form.password.label'))
                     ->password()
                     ->revealable(filament()->arePasswordsRevealable())
                     ->required()
                     ->rule(Password::default())
                     ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                     ->same('passwordConfirmation')
-                    ->validationAttribute(__('filament-panels::pages/auth/register.form.password.validation_attribute'))
+                    ->validationAttribute(__('filament-panels::auth/pages/register.form.password.validation_attribute'))
                     ->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 TextInput::make('passwordConfirmation')
-                    ->label(__('filament-panels::pages/auth/register.form.password_confirmation.label'))
+                    ->label(__('filament-panels::auth/pages/register.form.password_confirmation.label'))
                     ->password()
                     ->revealable(filament()->arePasswordsRevealable())
                     ->required()
@@ -98,10 +98,10 @@ class AcceptAdminInvite extends SimplePage
         if ($this->adminInvite->role !== Role::Admin) {
             foreach ($this->adminInvite->municipalities as $key => $municipality) {
                 if ($key == 0) {
-                    /** @var \App\Models\Municipality $municipality */
+                    /** @var Municipality $municipality */
                     $tenantId = $municipality->id;
                 }
-                /** @var \App\Models\Municipality $municipality */
+                /** @var Municipality $municipality */
                 $municipality->users()->attach($user);
             }
         }
@@ -131,7 +131,7 @@ class AcceptAdminInvite extends SimplePage
         if ($this->adminInvite->role !== Role::Admin) {
             foreach ($this->adminInvite->municipalities as $key => $municipality) {
                 if ($key == 0) {
-                    /** @var \App\Models\Municipality $municipality */
+                    /** @var Municipality $municipality */
                     $tenantId = $municipality->id;
                 }
                 /** @phpstan-ignore-next-line */

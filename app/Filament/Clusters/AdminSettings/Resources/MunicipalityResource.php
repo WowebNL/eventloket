@@ -3,12 +3,15 @@
 namespace App\Filament\Clusters\AdminSettings\Resources;
 
 use App\Filament\Clusters\AdminSettings;
-use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages;
+use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages\CreateMunicipality;
+use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages\EditMunicipality;
+use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages\ListMunicipalities;
 use App\Models\Municipality;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class MunicipalityResource extends Resource
@@ -19,7 +22,7 @@ class MunicipalityResource extends Resource
 
     protected static bool $isScopedToTenant = false;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-library';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-building-library';
 
     protected static ?int $navigationSort = 0;
 
@@ -33,15 +36,15 @@ class MunicipalityResource extends Resource
         return __('admin/resources/municipality.plural_label');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label(__('admin/resources/municipality.columns.name.label'))
                     ->required()
                     ->maxLength(255),
-                Forms\Components\TextInput::make('brk_identification')
+                TextInput::make('brk_identification')
                     ->label(__('admin/resources/municipality.columns.brk_identification.label'))
                     ->required()
                     ->startsWith('GM')
@@ -54,17 +57,17 @@ class MunicipalityResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label(__('admin/resources/municipality.columns.name.label'))
                     ->searchable(),
-                Tables\Columns\TextColumn::make('brk_identification')
+                TextColumn::make('brk_identification')
                     ->label(__('admin/resources/municipality.columns.brk_identification.label'))
                     ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -72,10 +75,10 @@ class MunicipalityResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 //
             ]);
     }
@@ -90,9 +93,9 @@ class MunicipalityResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListMunicipalities::route('/'),
-            'create' => Pages\CreateMunicipality::route('/create'),
-            'edit' => Pages\EditMunicipality::route('/{record}/edit'),
+            'index' => ListMunicipalities::route('/'),
+            'create' => CreateMunicipality::route('/create'),
+            'edit' => EditMunicipality::route('/{record}/edit'),
         ];
     }
 }

@@ -6,12 +6,13 @@ use App\Enums\Role;
 use App\Filament\Resources\UserResource;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
-use Filament\Actions;
+use App\Models\Organisation;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -22,13 +23,13 @@ class ListUsers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('invite')
+            Action::make('invite')
                 ->label(__('admin/resources/user.actions.invite.label'))
                 ->icon('heroicon-o-envelope')
                 ->modalSubmitActionLabel(__('admin/resources/user.actions.invite.modal_submit_action_label'))
-                ->modalWidth(MaxWidth::Medium)
+                ->modalWidth(Width::Medium)
                 ->visible(fn (): bool => in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin]))
-                ->form([
+                ->schema([
                     TextInput::make('name')
                         ->label(__('admin/resources/user.actions.invite.form.name.label'))
                         ->maxLength(255),
@@ -39,7 +40,7 @@ class ListUsers extends ListRecords
                         ->maxLength(255),
                 ])
                 ->action(function ($data) {
-                    /** @var \App\Models\Organisation $tenant */
+                    /** @var Organisation $tenant */
                     $tenant = Filament::getTenant();
 
                     $adminInvite = AdminInvite::create([

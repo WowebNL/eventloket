@@ -3,7 +3,7 @@
 namespace App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages;
 
 use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource;
-use Filament\Actions;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListAdvisories extends ListRecords
@@ -13,7 +13,7 @@ class ListAdvisories extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

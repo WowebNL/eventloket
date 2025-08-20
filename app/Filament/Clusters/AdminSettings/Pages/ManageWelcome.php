@@ -11,12 +11,12 @@ use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Pages\SettingsPage;
+use Filament\Schemas\Schema;
 
 class ManageWelcome extends SettingsPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-home';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-home';
 
     protected static string $settings = WelcomeSettings::class;
 
@@ -42,10 +42,10 @@ class ManageWelcome extends SettingsPage
         return __('admin/pages/manage-welcome.navigation_label');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('title')
                     ->label(__('admin/pages/manage-welcome.form.title.label'))
                     ->required(),

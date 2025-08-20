@@ -35,7 +35,6 @@ test('advisor users can access advisory they belong to as a tenant', function ()
     // Arrange
     Filament::setCurrentPanel(Filament::getPanel('advisor'));
     $this->actingAs($this->advisor);
-    $this->advisor->setTwoFactorChallengePassed();
 
     // Act
     $response = $this->get(route('filament.advisor.pages.dashboard', ['tenant' => $this->advisory->id]));
@@ -51,7 +50,6 @@ test('advisor users cannot access advisory they do not belong to', function () {
     $otherAdvisory = Advisory::factory()->create(['name' => 'Other Advisory']);
 
     $this->actingAs($this->advisor);
-    $this->advisor->setTwoFactorChallengePassed();
 
     // Act - try to access advisory the user doesn't belong to
     $response = $this->get(route('filament.advisor.pages.dashboard', ['tenant' => $otherAdvisory->id]));

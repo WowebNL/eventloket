@@ -4,27 +4,34 @@ namespace App\Filament\Clusters\AdminSettings\Resources;
 
 use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
-use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages;
+use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages\CreateApplication;
+use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages\EditApplication;
+use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages\ListApplications;
 use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\RelationManagers\ClientsRelationManager;
 use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\RelationManagers\TokensRelationManager;
 use App\Models\Application;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class ApplicationResource extends Resource
 {
     protected static ?string $model = Application::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $cluster = AdminSettings::class;
 
     public static function isScopedToTenant(): bool
     {
-        if (auth()->user()->role === Role::Admin) {
+        if (auth()->user()?->role === Role::Admin) {
             return false;
         }
 
@@ -41,16 +48,16 @@ class ApplicationResource extends Resource
         return __('admin/resources/application.plural_label');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label(__('admin/resources/application.columns.name.label'))
                     ->required()
                     ->maxLength(255)
                     ->columnSpanFull(),
-                Forms\Components\Checkbox::make('all_endpoints')
+                Checkbox::make('all_endpoints')
                     ->label(__('admin/resources/application.columns.all_endpoints.label')),
 
             ]);
@@ -60,22 +67,22 @@ class ApplicationResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label(__('admin/resources/application.columns.name.label'))
                     ->searchable(),
-                Tables\Columns\IconColumn::make('all_endpoints')
+                IconColumn::make('all_endpoints')
                     ->label(__('admin/resources/application.columns.all_endpoints.label'))
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-mark')
                     ->trueColor('info')
                     ->falseColor('warning'),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->label(__('admin/resources/application.columns.created_at.label')),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
@@ -84,12 +91,12 @@ class ApplicationResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -105,9 +112,9 @@ class ApplicationResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListApplications::route('/'),
-            'create' => Pages\CreateApplication::route('/create'),
-            'edit' => Pages\EditApplication::route('/{record}/edit'),
+            'index' => ListApplications::route('/'),
+            'create' => CreateApplication::route('/create'),
+            'edit' => EditApplication::route('/{record}/edit'),
         ];
     }
 }

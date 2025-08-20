@@ -3,7 +3,7 @@
 namespace App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages;
 
 use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource;
-use Filament\Actions;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListApplications extends ListRecords
@@ -18,7 +18,7 @@ class ListApplications extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

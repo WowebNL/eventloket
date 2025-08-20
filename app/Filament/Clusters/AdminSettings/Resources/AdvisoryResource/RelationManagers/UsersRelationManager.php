@@ -3,14 +3,18 @@
 namespace App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\RelationManagers;
 
 use App\Mail\AdvisoryInviteMail;
+use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
-use Filament\Forms;
+use Filament\Actions\Action;
+use Filament\Actions\AttachAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Support\Enums\MaxWidth;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Mail;
@@ -35,11 +39,11 @@ class UsersRelationManager extends RelationManager
         return __('admin/resources/advisory.user.plural_label');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label(__('admin/resources/user.columns.name.label'))
                     ->required()
                     ->maxLength(255),
@@ -51,20 +55,20 @@ class UsersRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('name')
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label(__('admin/resources/user.columns.name.label')),
             ])
             ->filters([
                 //
             ])
             ->headerActions([
-                Tables\Actions\AttachAction::make(),
-                Tables\Actions\Action::make('invite')
+                AttachAction::make(),
+                Action::make('invite')
                     ->label(__('admin/resources/advisory.actions.invite.label'))
                     ->icon('heroicon-o-envelope')
                     ->modalSubmitActionLabel(__('admin/resources/advisory.actions.invite.modal_submit_action_label'))
-                    ->modalWidth(MaxWidth::Medium)
-                    ->form([
+                    ->modalWidth(Width::Medium)
+                    ->schema([
                         TextInput::make('name')
                             ->label(__('admin/resources/advisory.actions.invite.form.name.label'))
                             ->maxLength(255),
@@ -75,7 +79,7 @@ class UsersRelationManager extends RelationManager
                             ->maxLength(255),
                     ])
                     ->action(function ($data) {
-                        /** @var \App\Models\Advisory $advisory */
+                        /** @var Advisory $advisory */
                         $advisory = $this->ownerRecord;
 
                         $advisoryInvite = AdvisoryInvite::create([
@@ -94,11 +98,11 @@ class UsersRelationManager extends RelationManager
                             ->send();
                     }),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 //
             ]);
     }
