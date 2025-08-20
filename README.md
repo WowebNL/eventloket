@@ -115,6 +115,14 @@ This setup will automatically run the following on commit:
 
 You can find the hook script inside the `.githooks/` directory.
 
+## Deploying on server
+Next to running migrations, seeders and npm build you need to run additional commands if you deploy this application on a server.
+
+```bash
+# generate encryption keys for OAuth2 server
+php artisan passport:keys 
+```
+
 ## Contributing
 
 1. Create a feature branch from the `main` branch
