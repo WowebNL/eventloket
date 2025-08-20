@@ -2,6 +2,9 @@
 
 namespace App\Casts;
 
+use Brick\Geo\Geometry;
+use Brick\Geo\Io\GeoJson\Feature;
+use Brick\Geo\Io\GeoJson\FeatureCollection;
 use Brick\Geo\Io\GeoJsonReader;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +14,7 @@ class AsGeoJson implements CastsAttributes
     /**
      * Cast the given value.
      *
-     * @return \Brick\Geo\Geometry|\Brick\Geo\Io\GeoJson\Feature|\Brick\Geo\Io\GeoJson\FeatureCollection|null
+     * @return Geometry|Feature|FeatureCollection|null
      */
     public function get(Model $model, string $key, mixed $value, array $attributes): mixed
     {

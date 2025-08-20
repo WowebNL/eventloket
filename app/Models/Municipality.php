@@ -4,13 +4,15 @@ namespace App\Models;
 
 use App\Casts\AsGeoJson;
 use App\Models\Contracts\HasGeometry;
+use Brick\Geo\Geometry;
+use Database\Factories\MunicipalityFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Municipality extends Model implements HasGeometry
 {
-    /** @use HasFactory<\Database\Factories\MunicipalityFactory> */
+    /** @use HasFactory<MunicipalityFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -24,7 +26,7 @@ class Municipality extends Model implements HasGeometry
         'geometry',
     ];
 
-    public function getGeometry($field = 'geometry'): ?\Brick\Geo\Geometry
+    public function getGeometry($field = 'geometry'): ?Geometry
     {
         return $this->getAttribute($field);
     }

@@ -4,12 +4,12 @@
             {{ __('advisor/pages/auth/accept-advisory-invite.button') }}
         </x-filament::button>
     @else
-        <x-filament-panels::form wire:submit="create">
+        <form wire:submit="create">
             {{ $this->form }}
 
             <x-filament::button type="submit">
                 {{ __('advisor/pages/auth/accept-advisory-invite.button') }}
             </x-filament::button>
-        </x-filament-panels::form>
+        </form>
     @endif
 </x-filament-panels::page.simple>

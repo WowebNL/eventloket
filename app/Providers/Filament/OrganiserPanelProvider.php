@@ -9,6 +9,7 @@ use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
 use App\Filament\Organiser\Widgets\Intro;
 use App\Filament\Organiser\Widgets\Shortlink;
 use App\Models\Organisation;
+use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -23,7 +24,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Stephenjude\FilamentTwoFactorAuthentication\TwoFactorAuthenticationPlugin;
 
 class OrganiserPanelProvider extends PanelProvider
 {
@@ -50,12 +50,10 @@ class OrganiserPanelProvider extends PanelProvider
             ->passwordReset()
             ->emailVerification()
             ->profile(EditProfile::class)
-            ->plugins([
-                TwoFactorAuthenticationPlugin::make()
-                    ->enableTwoFactorAuthentication()
-                    ->addTwoFactorMenuItem()
-                    ->forceTwoFactorSetup(condition: config('app.require_2fa'), requiresPassword: false),
-            ])
+            ->multiFactorAuthentication([
+                AppAuthentication::make()
+                    ->recoverable(),
+            ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
             ->widgets([
                 Intro::class,

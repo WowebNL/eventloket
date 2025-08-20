@@ -161,7 +161,7 @@ test('admin can create a municipality admin invite', function () {
     $response = livewire(ListAdmins::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
-            'role' => Role::MunicipalityAdmin,
+            'role' => Role::MunicipalityAdmin->value,
             'municipalities' => [$this->municipality->id],
         ]);
 

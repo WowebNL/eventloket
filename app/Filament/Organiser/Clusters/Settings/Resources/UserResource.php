@@ -4,12 +4,14 @@ namespace App\Filament\Organiser\Clusters\Settings\Resources;
 
 use App\Enums\OrganisationRole;
 use App\Filament\Organiser\Clusters\Settings;
-use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages;
+use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListUsers;
+use App\Models\Organisation;
 use App\Models\User;
 use Filament\Facades\Filament;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\SelectColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class UserResource extends Resource
@@ -18,7 +20,7 @@ class UserResource extends Resource
 
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
     protected static ?string $tenantOwnershipRelationshipName = 'organisations';
 
@@ -29,7 +31,7 @@ class UserResource extends Resource
      */
     public static function canAccess(): bool
     {
-        /** @var \App\Models\Organisation $tenant */
+        /** @var Organisation $tenant */
         $tenant = Filament::getTenant();
 
         return auth()->user()->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
@@ -45,20 +47,20 @@ class UserResource extends Resource
         return __('organiser/resources/user.plural_label');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 //
             ]);
     }
 
     public static function table(Table $table): Table
     {
-        /** @var \App\Models\Organisation $tenant */
+        /** @var Organisation $tenant */
         $tenant = Filament::getTenant();
         $columns = [
-            Tables\Columns\TextColumn::make('name')
+            TextColumn::make('name')
                 ->label(__('organiser/resources/user.columns.name.label'))
                 ->description(fn (User $record): string => $record->email)
                 ->searchable(),
@@ -67,16 +69,16 @@ class UserResource extends Resource
 
         if (self::userIsOrganisationAdmin(auth()->user())) {
             $columns[] =
-                Tables\Columns\SelectColumn::make('organisations.role')
+                SelectColumn::make('organisations.role')
                     ->label(__('organiser/resources/user.columns.role.label'))
-                    ->options(OrganisationRole::getOptions())
+                    ->options(OrganisationRole::class)
                     ->getStateUsing(fn (User $record) => self::getUserRoleState($record))
                     ->updateStateUsing(fn (User $record, string $state) => $record->organisations()->updateExistingPivot($tenant->id, ['role' => $state]))
                     ->selectablePlaceholder(false)
                     ->disabled(fn (User $record) => $record->id === auth()->id());
         } else {
             $columns[] =
-                Tables\Columns\TextColumn::make('status')
+                TextColumn::make('status')
                     ->label(__('organiser/resources/user.columns.role.label'))
                     ->getStateUsing(fn (User $record) => self::getUserRoleState($record));
         }
@@ -86,10 +88,10 @@ class UserResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
+            ->recordActions([
                 //
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 //
             ]);
     }
@@ -104,13 +106,13 @@ class UserResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListUsers::route('/'),
+            'index' => ListUsers::route('/'),
         ];
     }
 
     private static function userIsOrganisationAdmin(User $user): bool
     {
-        /** @var \App\Models\Organisation $tenant */
+        /** @var Organisation $tenant */
         $tenant = Filament::getTenant();
 
         return $user->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
@@ -119,7 +121,7 @@ class UserResource extends Resource
     private static function getUserRoleState(User $user): OrganisationRole
     {
         /** @phpstan-ignore-next-line */
-        $role = $user->organisations->firstWhere('id', Filament::getTenant()->id)?->pivot->role;
+        $role = $user->organisations->firstWhere('id', Filament::getTenant()->id)?->pivot->role ?? OrganisationRole::Member->value;
 
         return OrganisationRole::from($role);
     }

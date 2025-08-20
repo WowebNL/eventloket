@@ -3,6 +3,7 @@
 namespace App\Actions\Geospatial;
 
 use App\Services\KadasterService;
+use Exception;
 use Illuminate\Database\Eloquent\Model;
 
 class SyncGeometry
@@ -45,16 +46,16 @@ class SyncGeometry
     /**
      * Validate that the model has a geometry attribute.
      *
-     * @throws \Exception
+     * @throws Exception
      */
     private function validateModelHasGeometry(): void
     {
         if (! $this->model->hasAttribute($this->geometryAttribute)) {
-            throw new \Exception("Model does not have a {$this->geometryAttribute} attribute for storing the geometric information");
+            throw new Exception("Model does not have a {$this->geometryAttribute} attribute for storing the geometric information");
         }
 
         if (! $this->model->hasAttribute($this->brkIdentificationAttribute)) {
-            throw new \Exception("Model does not have a {$this->brkIdentificationAttribute} attribute for identifying the BRK identification");
+            throw new Exception("Model does not have a {$this->brkIdentificationAttribute} attribute for identifying the BRK identification");
         }
 
         // todo validate geometry attribute type

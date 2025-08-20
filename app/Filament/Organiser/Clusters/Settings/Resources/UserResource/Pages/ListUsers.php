@@ -6,14 +6,15 @@ use App\Enums\OrganisationRole;
 use App\Filament\Organiser\Clusters\Settings;
 use App\Filament\Organiser\Clusters\Settings\Resources\UserResource;
 use App\Mail\OrganisationInviteMail;
+use App\Models\Organisation;
 use App\Models\OrganisationInvite;
-use Filament\Actions;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -26,12 +27,12 @@ class ListUsers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('invite')
+            Action::make('invite')
                 ->label(__('organiser/resources/user.actions.invite.label'))
                 ->icon('heroicon-o-envelope')
                 ->modalSubmitActionLabel(__('organiser/resources/user.actions.invite.modal_submit_action_label'))
-                ->modalWidth(MaxWidth::Medium)
-                ->form([
+                ->modalWidth(Width::Medium)
+                ->schema([
                     TextInput::make('name')
                         ->label(__('organiser/resources/user.actions.invite.form.name.label'))
                         ->maxLength(255),
@@ -45,7 +46,7 @@ class ListUsers extends ListRecords
                         ->helperText(__('organiser/resources/user.actions.invite.form.make_admin.helper_text')),
                 ])
                 ->action(function ($data) {
-                    /** @var \App\Models\Organisation $tenant */
+                    /** @var Organisation $tenant */
                     $tenant = Filament::getTenant();
 
                     $organisationInvite = OrganisationInvite::create([

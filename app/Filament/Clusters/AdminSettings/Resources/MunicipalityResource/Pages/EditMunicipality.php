@@ -3,7 +3,7 @@
 namespace App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource\Pages;
 
 use App\Filament\Clusters\AdminSettings\Resources\MunicipalityResource;
-use Filament\Actions;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditMunicipality extends EditRecord
@@ -13,7 +13,7 @@ class EditMunicipality extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 }

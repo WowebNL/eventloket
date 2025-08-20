@@ -3,12 +3,17 @@
 namespace App\Filament\Clusters\AdminSettings\Resources;
 
 use App\Filament\Clusters\AdminSettings;
-use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages;
+use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages\CreateAdvisory;
+use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages\EditAdvisory;
+use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages\ListAdvisories;
+use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\RelationManagers\MunicipalitiesRelationManager;
+use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
 use App\Models\Advisory;
-use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class AdvisoryResource extends Resource
@@ -19,7 +24,7 @@ class AdvisoryResource extends Resource
 
     protected static bool $isScopedToTenant = false;
 
-    protected static ?string $navigationIcon = 'heroicon-o-lifebuoy';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-lifebuoy';
 
     protected static ?int $navigationSort = 1;
 
@@ -33,11 +38,11 @@ class AdvisoryResource extends Resource
         return __('admin/resources/advisory.plural_label');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('name')
+        return $schema
+            ->components([
+                TextInput::make('name')
                     ->label(__('admin/resources/advisory.columns.name.label'))
                     ->required()
                     ->maxLength(255),
@@ -48,14 +53,14 @@ class AdvisoryResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label(__('admin/resources/advisory.columns.name.label'))
                     ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
+                TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -63,10 +68,10 @@ class AdvisoryResource extends Resource
             ->filters([
                 //
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 //
             ]);
     }
@@ -74,17 +79,17 @@ class AdvisoryResource extends Resource
     public static function getRelations(): array
     {
         return [
-            AdvisoryResource\RelationManagers\UsersRelationManager::class,
-            AdvisoryResource\RelationManagers\MunicipalitiesRelationManager::class,
+            UsersRelationManager::class,
+            MunicipalitiesRelationManager::class,
         ];
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListAdvisories::route('/'),
-            'create' => Pages\CreateAdvisory::route('/create'),
-            'edit' => Pages\EditAdvisory::route('/{record}/edit'),
+            'index' => ListAdvisories::route('/'),
+            'create' => CreateAdvisory::route('/create'),
+            'edit' => EditAdvisory::route('/{record}/edit'),
         ];
     }
 }

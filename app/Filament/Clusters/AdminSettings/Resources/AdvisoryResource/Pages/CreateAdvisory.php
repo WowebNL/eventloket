@@ -4,6 +4,8 @@ namespace App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages;
 
 use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource;
+use App\Models\Advisory;
+use App\Models\Organisation;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -14,10 +16,10 @@ class CreateAdvisory extends CreateRecord
     protected function afterCreate(): void
     {
         if (auth()->user()->role === Role::MunicipalityAdmin) {
-            /** @var \App\Models\Advisory $advisory */
+            /** @var Advisory $advisory */
             $advisory = $this->record;
 
-            /** @var \App\Models\Organisation $organisation */
+            /** @var Organisation $organisation */
             $organisation = Filament::getTenant();
 
             $advisory->municipalities()->attach($organisation->id);

@@ -8,9 +8,9 @@ class NewRequest extends Page
 {
     public $formId;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string $view = 'filament.organiser.pages.new-request';
+    protected string $view = 'filament.organiser.pages.new-request';
 
     public function getTitle(): string
     {

@@ -12,7 +12,7 @@ class Dashboard extends \Filament\Pages\Dashboard
         return self::greet().' '.auth()->user()->name;
     }
 
-    public function getColumns(): int|string|array
+    public function getColumns(): int|array
     {
         return 3;
     }

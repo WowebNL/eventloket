@@ -3,8 +3,8 @@
 namespace App\Filament\Organiser\Clusters\Settings\Pages;
 
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Pages\Tenancy\EditTenantProfile;
+use Filament\Schemas\Schema;
 
 class EditOrganisationProfile extends EditTenantProfile
 {
@@ -13,10 +13,10 @@ class EditOrganisationProfile extends EditTenantProfile
         return __('organiser/pages/tenancy/profile.label');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 TextInput::make('name')
                     ->label(__('organiser/pages/tenancy/register.form.name.label'))
                     ->required()
@@ -24,7 +24,7 @@ class EditOrganisationProfile extends EditTenantProfile
                 TextInput::make('coc_number')
                     ->label(__('organiser/pages/tenancy/register.form.coc_number.label'))
                     ->disabled()
-                    ->unique(ignoreRecord: true)
+                    ->unique()
                     ->validationMessages([
                         'unique' => __('organiser/pages/tenancy/register.form.coc_number.validation.unique'),
                     ])

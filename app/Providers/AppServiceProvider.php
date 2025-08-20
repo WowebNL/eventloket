@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages\ListApplications;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
@@ -21,7 +22,7 @@ class AppServiceProvider extends ServiceProvider
             PanelsRenderHook::RESOURCE_PAGES_LIST_RECORDS_TABLE_BEFORE,
             fn (): View => view('filament.components.resource-information'),
             scopes: [
-                \App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages\ListApplications::class,
+                ListApplications::class,
             ]
         );
     }

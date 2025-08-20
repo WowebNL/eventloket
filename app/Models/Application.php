@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Laravel\Passport\Client;
 use Laravel\Passport\Token;
@@ -32,7 +33,7 @@ class Application extends Model
         return $this->morphMany(Client::class, 'owner');
     }
 
-    public function tokens(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    public function tokens(): HasManyThrough
     {
         return $this->hasManyThrough(Token::class, Client::class, 'owner_id')->where(
             'owner_type',
