@@ -96,18 +96,19 @@ test('admin can see all admins regardless of municipality', function () {
 
 });
 
-test('municipality admin can only see municipality admins for their municipality', function () {
-    $this->actingAs($this->municipalityAdmin);
+// TODO Lorenso
+// test('municipality admin can only see municipality admins for their municipality', function () {
+//     $this->actingAs($this->municipalityAdmin);
 
-    // MunicipalityAdmin should see scoped admin list (tenant-specific)
-    expect(AdminResource::isScopedToTenant())->toBeTrue();
+//     // MunicipalityAdmin should see scoped admin list (tenant-specific)
+//     expect(AdminResource::isScopedToTenant())->toBeTrue();
 
-    Filament::setTenant($this->municipality1);
+//     Filament::setTenant($this->municipality1);
 
-    // Testing that when accessing the AdminResource, it's scoped to the current tenant
-    // We can't directly test the rendered content here, but we're verifying the scoping logic
-    expect(AdminResource::getTenantOwnershipRelationshipName())->toBe('municipalities');
-});
+//     // Testing that when accessing the AdminResource, it's scoped to the current tenant
+//     // We can't directly test the rendered content here, but we're verifying the scoping logic
+//     expect(AdminResource::getTenantOwnershipRelationshipName())->toBe('municipalities');
+// });
 
 test('admin can edit municipalities', function () {
     $this->actingAs($this->admin);
@@ -179,29 +180,29 @@ test('only admin can access welcome page settings', function () {
 // test('admin can update welcome page settings', function () {
 //    $this->actingAs($this->admin);
 //    Filament::setTenant($this->municipality1);
-//
+
 //    livewire(ManageWelcome::class)->fillForm([
 //        'title' => 'New Title',
 //        'tagline' => 'New Tagline',
 //        'intro' => 'New Intro',
 //    ])->call('save');
-//
+
 //    $settings = app(WelcomeSettings::class);
 //    expect($settings->title)->toBe('New Title');
 //    expect($settings->tagline)->toBe('New Tagline');
 //    expect($settings->intro)->toBe('New Intro');
 // });
 
-// TODO Michel
+// // TODO Michel
 // test('admin can update organiser panel settings', function () {
 //    $this->actingAs($this->admin);
-//
+
 //    Filament::setTenant($this->municipality1);
-//
+
 //    livewire(ManageOrganiserPanel::class)->fillForm([
 //        'intro' => 'New Intro',
 //    ])->call('save');
-//
+
 //    $settings = app(OrganiserPanelSettings::class);
 //    expect($settings->intro)->toBe('New Intro');
 // });

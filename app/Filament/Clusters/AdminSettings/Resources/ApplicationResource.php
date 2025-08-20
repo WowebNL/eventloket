@@ -2,7 +2,6 @@
 
 namespace App\Filament\Clusters\AdminSettings\Resources;
 
-use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
 use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages\CreateApplication;
 use App\Filament\Clusters\AdminSettings\Resources\ApplicationResource\Pages\EditApplication;
@@ -29,14 +28,7 @@ class ApplicationResource extends Resource
 
     protected static ?string $cluster = AdminSettings::class;
 
-    public static function isScopedToTenant(): bool
-    {
-        if (auth()->user()?->role === Role::Admin) {
-            return false;
-        }
-
-        return true;
-    }
+    protected static bool $isScopedToTenant = false;
 
     public static function getModelLabel(): string
     {

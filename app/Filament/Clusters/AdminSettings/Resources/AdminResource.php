@@ -27,14 +27,7 @@ class AdminResource extends Resource
 
     protected static ?string $cluster = AdminSettings::class;
 
-    public static function isScopedToTenant(): bool
-    {
-        if (auth()->user()?->role === Role::Admin) {
-            return false;
-        }
-
-        return true;
-    }
+    protected static bool $isScopedToTenant = false;
 
     protected static ?string $tenantOwnershipRelationshipName = 'municipalities';
 
