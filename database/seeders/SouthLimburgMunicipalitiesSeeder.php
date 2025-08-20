@@ -13,26 +13,27 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
     public function run(): void
     {
         $municipalities = [
-            'Beek',
-            'Beekdaelen',
-            'Brunssum',
-            'Eijsden-Margraten',
-            'Gulpen-Wittem',
-            'Heerlen',
-            'Kerkrade',
-            'Landgraaf',
-            'Maastricht',
-            'Meerssen',
-            'Simpelveld',
-            'Sittard-Geleen',
-            'Stein',
-            'Vaals',
-            'Valkenburg aan de Geul',
-            'Voerendaal',
+            'GM0888' => 'Beek',
+            'GM1954' => 'Beekdaelen',
+            'GM0899' => 'Brunssum',
+            'GM1903' => 'Eijsden-Margraten',
+            'GM1729' => 'Gulpen-Wittem',
+            'GM0917' => 'Heerlen',
+            'GM0928' => 'Kerkrade',
+            'GM0882' => 'Landgraaf',
+            'GM0935' => 'Maastricht',
+            'GM0938' => 'Meerssen',
+            'GM0965' => 'Simpelveld',
+            'GM1883' => 'Sittard-Geleen',
+            'GM0971' => 'Stein',
+            'GM0981' => 'Vaals',
+            'GM0994' => 'Valkenburg aan de Geul',
+            'GM0986' => 'Voerendaal',
         ];
 
-        foreach ($municipalities as $name) {
-            Municipality::factory()->create(['name' => $name]);
+        foreach ($municipalities as $brk_id => $name) {
+            $model = Municipality::updateOrCreate(['name' => $name], ['brk_identification' => $brk_id]);
+            dispatch(new \App\Jobs\ProcessSyncGeometryOnMunicipality($model));
         }
     }
 }

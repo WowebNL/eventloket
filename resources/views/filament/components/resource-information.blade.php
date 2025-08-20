@@ -1,0 +1,1 @@
+<p x-init="$el.innerHTML = await $wire.$call('getResourceInformation')"></p>

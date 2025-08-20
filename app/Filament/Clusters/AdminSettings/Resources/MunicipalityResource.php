@@ -41,6 +41,12 @@ class MunicipalityResource extends Resource
                     ->label(__('admin/resources/municipality.columns.name.label'))
                     ->required()
                     ->maxLength(255),
+                Forms\Components\TextInput::make('brk_identification')
+                    ->label(__('admin/resources/municipality.columns.brk_identification.label'))
+                    ->required()
+                    ->startsWith('GM')
+                    ->helperText(__('admin/resources/municipality.columns.brk_identification.helper_text'))
+                    ->maxLength(255),
             ]);
     }
 
@@ -50,6 +56,9 @@ class MunicipalityResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label(__('admin/resources/municipality.columns.name.label'))
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('brk_identification')
+                    ->label(__('admin/resources/municipality.columns.brk_identification.label'))
                     ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()

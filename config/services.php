@@ -40,4 +40,7 @@ return [
         'main_form_uuid' => env('OPEN_FORMS_MAIN_FORM_UUID'),
     ],
 
+    'kadaster' => [
+        'base_url' => env('KADASTER_BASE_URL', 'https://api.pdok.nl/kadaster'),
+    ],
 ];
