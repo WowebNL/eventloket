@@ -3,7 +3,7 @@
 namespace App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages;
 
 use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource;
-use Filament\Actions;
+use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditAdvisory extends EditRecord
@@ -13,7 +13,7 @@ class EditAdvisory extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 }

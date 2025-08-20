@@ -13,7 +13,7 @@ class Intro extends Widget
 
     public $introContent;
 
-    protected static string $view = 'filament.organiser.widgets.intro';
+    protected string $view = 'filament.organiser.widgets.intro';
 
     public function mount(OrganiserPanelSettings $settings): void
     {

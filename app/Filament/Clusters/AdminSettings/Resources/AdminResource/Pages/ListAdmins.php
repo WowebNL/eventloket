@@ -8,14 +8,14 @@ use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
 use App\Models\Municipality;
 use App\Models\User;
-use Filament\Actions;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Support\Enums\MaxWidth;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -26,12 +26,12 @@ class ListAdmins extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('invite')
+            Action::make('invite')
                 ->label(__('admin/resources/admin.actions.invite.label'))
                 ->icon('heroicon-o-envelope')
                 ->modalSubmitActionLabel(__('admin/resources/admin.actions.invite.modal_submit_action_label'))
-                ->modalWidth(MaxWidth::Medium)
-                ->form([
+                ->modalWidth(Width::Medium)
+                ->schema([
                     TextInput::make('name')
                         ->label(__('admin/resources/admin.actions.invite.form.name.label'))
                         ->maxLength(255),

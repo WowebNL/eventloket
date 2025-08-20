@@ -4,15 +4,14 @@ namespace App\Filament\Organiser\Pages;
 
 use App\Enums\Role;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Pages\Auth\Register as BaseRegister;
+use Filament\Schemas\Schema;
 
-class Register extends BaseRegister
+class Register extends \Filament\Auth\Pages\Register
 {
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 $this->getNameFormComponent(),
                 $this->getEmailFormComponent(),
                 TextInput::make('phone')

@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\OrganisationType;
+use Database\Factories\OrganisationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Organisation extends Model
 {
-    /** @use HasFactory<\Database\Factories\OrganisationFactory> */
+    /** @use HasFactory<OrganisationFactory> */
     use HasFactory;
 
     protected $fillable = [

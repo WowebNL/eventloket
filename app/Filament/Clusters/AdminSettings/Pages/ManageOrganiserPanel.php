@@ -6,12 +6,12 @@ use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
 use App\Settings\OrganiserPanelSettings;
 use Filament\Forms\Components\RichEditor;
-use Filament\Forms\Form;
 use Filament\Pages\SettingsPage;
+use Filament\Schemas\Schema;
 
 class ManageOrganiserPanel extends SettingsPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?string $cluster = AdminSettings::class;
 
@@ -37,10 +37,10 @@ class ManageOrganiserPanel extends SettingsPage
         return __('admin/pages/manage-organiser-panel.navigation_label');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 RichEditor::make('intro')
                     ->label(__('admin/pages/manage-organiser-panel.form.intro.label'))
                     ->required()
