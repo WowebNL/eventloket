@@ -4,7 +4,6 @@ namespace App\Filament\Pages;
 
 use App\Enums\Role;
 use App\Models\AdminInvite;
-use App\Models\Municipality;
 use App\Models\User;
 use Filament\Auth\Events\Registered;
 use Filament\Facades\Filament;
@@ -91,20 +90,8 @@ class AcceptAdminInvite extends SimplePage
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
-            'role' => $this->adminInvite->role,
+            'role' => Role::Admin,
         ]);
-
-        $tenantId = Municipality::first()->id;
-        if ($this->adminInvite->role !== Role::Admin) {
-            foreach ($this->adminInvite->municipalities as $key => $municipality) {
-                if ($key == 0) {
-                    /** @var Municipality $municipality */
-                    $tenantId = $municipality->id;
-                }
-                /** @var Municipality $municipality */
-                $municipality->users()->attach($user);
-            }
-        }
 
         $this->adminInvite->delete();
 
@@ -114,7 +101,7 @@ class AcceptAdminInvite extends SimplePage
 
         session()->regenerate();
 
-        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $tenantId]));
+        $this->redirect(route('filament.admin.pages.dashboard'));
     }
 
     public function acceptInvite()
@@ -127,29 +114,16 @@ class AcceptAdminInvite extends SimplePage
             abort(403);
         }
 
-        $tenantId = Municipality::first()->id;
-        if ($this->adminInvite->role !== Role::Admin) {
-            foreach ($this->adminInvite->municipalities as $key => $municipality) {
-                if ($key == 0) {
-                    /** @var Municipality $municipality */
-                    $tenantId = $municipality->id;
-                }
-                /** @phpstan-ignore-next-line */
-                $municipality->users()->attach(auth()->user());
-            }
-        }
+        auth()->user()->update(['role' => Role::Admin]);
 
         $this->adminInvite->delete();
 
-        $this->redirect(route('filament.admin.pages.dashboard', ['tenant' => $tenantId]));
+        $this->redirect(route('filament.admin.pages.dashboard'));
     }
 
     public function getHeading(): string|Htmlable
     {
-        /** @var Role $role */
-        $role = $this->adminInvite->role;
-
-        return __('admin/pages/auth/accept-admin-invite.heading', ['role' => strtolower($role->getLabel())]);
+        return __('admin/pages/auth/accept-admin-invite.heading');
     }
 
     public function getSubheading(): Htmlable|string|null

@@ -1,12 +1,10 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\Pages\ListAdminUsers;
 use App\Filament\Pages\AcceptAdminInvite;
-use App\Filament\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
+use App\Filament\Resources\AdminUserResource\Pages\ListAdminUsers;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
-use App\Models\Municipality;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
@@ -20,267 +18,21 @@ beforeEach(function () {
 
     Mail::fake();
 
-    $this->municipality = Municipality::factory()->create([
-        'name' => 'Test Municipality',
-    ]);
-
     $this->admin = User::factory()->create([
         'email' => 'admin@example.com',
         'role' => Role::Admin,
     ]);
-
-    $this->municipality->users()->attach($this->admin);
 });
 
-// Tests for Reviewer role
-test('admin can create a reviewer invite', function () {
-    // Arrange
-    $this->actingAs($this->admin);
-    $inviteeEmail = 'reviewer@example.com';
-
-    Filament::setTenant($this->municipality);
-
-    // Act
-    $response = livewire(ListReviewerUsers::class)
-        ->callAction('invite', [
-            'email' => $inviteeEmail,
-        ]);
-
-    // Assert
-    $response->assertSuccessful();
-
-    $invite = AdminInvite::where('email', $inviteeEmail)->first();
-    expect($invite)->not->toBeNull()
-        ->and($invite->municipalities()->first()->id)->toBe($this->municipality->id)
-        ->and($invite->role)->toBe(Role::Reviewer);
-
-    Mail::assertSent(AdminInviteMail::class, function ($mail) use ($inviteeEmail) {
-        return $mail->hasTo($inviteeEmail);
-    });
-});
-
-test('existing user can accept a reviewer invite', function () {
-    // Arrange
-    $user = User::factory()->create([
-        'email' => 'existinguser@example.com',
-    ]);
-
-    $invite = AdminInvite::create([
-        'email' => $user->email,
-        'role' => Role::Reviewer,
-        'token' => Str::uuid(),
-    ]);
-
-    $invite->municipalities()->attach($this->municipality->id);
-
-    // Act
-    $this->actingAs($user);
-    $signedUrl = URL::signedRoute('admin-invites.accept', [
-        'token' => $invite->token,
-    ]);
-
-    // Assert
-    $this->get($signedUrl)
-        ->assertOk()
-        ->assertSeeLivewire(AcceptAdminInvite::class);
-
-    // Test the accept invite action
-    $response = livewire(AcceptAdminInvite::class, ['token' => $invite->token])
-        ->call('acceptInvite');
-
-    $response->assertRedirect(route('filament.admin.pages.dashboard', ['tenant' => $this->municipality->id]));
-
-    $this->assertDatabaseHas('municipality_user', [
-        'municipality_id' => $this->municipality->id,
-        'user_id' => $user->id,
-    ]);
-
-    $this->assertDatabaseMissing('admin_invites', [
-        'id' => $invite->id,
-    ]);
-});
-
-test('new user can register and accept a reviewer invite', function () {
-    // Arrange
-    $inviteeEmail = 'newreviewer@example.com';
-    $invite = AdminInvite::create([
-        'email' => $inviteeEmail,
-        'role' => Role::Reviewer,
-        'token' => Str::uuid(),
-    ]);
-
-    $invite->municipalities()->attach($this->municipality->id);
-
-    $signedUrl = URL::signedRoute('admin-invites.accept', [
-        'token' => $invite->token,
-    ]);
-
-    // Assert
-    $this->get($signedUrl)
-        ->assertOk()
-        ->assertSeeLivewire(AcceptAdminInvite::class);
-
-    // Test the registration and accept invite action
-    $response = livewire(AcceptAdminInvite::class, ['token' => $invite->token])
-        ->fillForm([
-            'name' => 'New Reviewer',
-            'phone' => '1234567890',
-            'password' => 'password',
-            'passwordConfirmation' => 'password',
-        ])
-        ->call('create');
-
-    // Assert
-    $response->assertRedirect(route('filament.admin.pages.dashboard', ['tenant' => $this->municipality->id]));
-
-    $user = User::where('email', $inviteeEmail)->first();
-    expect($user)->not->toBeNull()
-        ->and($user->name)->toBe('New Reviewer')
-        ->and($user->phone)->toBe('1234567890')
-        ->and($user->role)->toBe(Role::Reviewer);
-
-    $this->assertDatabaseHas('municipality_user', [
-        'municipality_id' => $this->municipality->id,
-        'user_id' => $user->id,
-    ]);
-
-    $this->assertDatabaseMissing('admin_invites', [
-        'id' => $invite->id,
-    ]);
-});
-
-// Tests for MunicipalityAdmin role
-test('admin can create a municipality admin invite', function () {
-    // Arrange
-    $this->actingAs($this->admin);
-    $inviteeEmail = 'municipalityadmin@example.com';
-
-    Filament::setTenant($this->municipality);
-
-    // Act
-    $response = livewire(ListAdminUsers::class)
-        ->callAction('invite', [
-            'email' => $inviteeEmail,
-            'role' => Role::MunicipalityAdmin->value,
-            'municipalities' => [$this->municipality->id],
-        ]);
-
-    // Assert
-    $response->assertSuccessful();
-
-    $invite = AdminInvite::where('email', $inviteeEmail)->first();
-    expect($invite)->not->toBeNull()
-        ->and($invite->municipalities()->first()->id)->toBe($this->municipality->id)
-        ->and($invite->role)->toBe(Role::MunicipalityAdmin);
-
-    Mail::assertSent(AdminInviteMail::class, function ($mail) use ($inviteeEmail) {
-        return $mail->hasTo($inviteeEmail);
-    });
-});
-
-test('existing user can accept a municipality admin invite', function () {
-    // Arrange
-    $user = User::factory()->create([
-        'email' => 'existingmunicadmin@example.com',
-    ]);
-
-    $invite = AdminInvite::create([
-        'email' => $user->email,
-        'role' => Role::MunicipalityAdmin,
-        'token' => Str::uuid(),
-    ]);
-
-    $invite->municipalities()->attach($this->municipality->id);
-
-    // Act
-    $this->actingAs($user);
-    $signedUrl = URL::signedRoute('admin-invites.accept', [
-        'token' => $invite->token,
-    ]);
-
-    // Assert
-    $this->get($signedUrl)
-        ->assertOk()
-        ->assertSeeLivewire(AcceptAdminInvite::class);
-
-    // Test the accept invite action
-    $response = livewire(AcceptAdminInvite::class, ['token' => $invite->token])
-        ->call('acceptInvite');
-
-    $response->assertRedirect(route('filament.admin.pages.dashboard', ['tenant' => $this->municipality->id]));
-
-    $this->assertDatabaseHas('municipality_user', [
-        'municipality_id' => $this->municipality->id,
-        'user_id' => $user->id,
-    ]);
-
-    $this->assertDatabaseMissing('admin_invites', [
-        'id' => $invite->id,
-    ]);
-});
-
-test('new user can register and accept a municipality admin invite', function () {
-    // Arrange
-    $inviteeEmail = 'newmunicadmin@example.com';
-    $invite = AdminInvite::create([
-        'email' => $inviteeEmail,
-        'role' => Role::MunicipalityAdmin,
-        'token' => Str::uuid(),
-    ]);
-
-    $invite->municipalities()->attach($this->municipality->id);
-
-    $signedUrl = URL::signedRoute('admin-invites.accept', [
-        'token' => $invite->token,
-    ]);
-
-    // Assert
-    $this->get($signedUrl)
-        ->assertOk()
-        ->assertSeeLivewire(AcceptAdminInvite::class);
-
-    // Test the registration and accept invite action
-    $response = livewire(AcceptAdminInvite::class, ['token' => $invite->token])
-        ->fillForm([
-            'name' => 'New Municipality Admin',
-            'phone' => '1234567890',
-            'password' => 'password',
-            'passwordConfirmation' => 'password',
-        ])
-        ->call('create');
-
-    // Assert
-    $response->assertRedirect(route('filament.admin.pages.dashboard', ['tenant' => $this->municipality->id]));
-
-    $user = User::where('email', $inviteeEmail)->first();
-    expect($user)->not->toBeNull()
-        ->and($user->name)->toBe('New Municipality Admin')
-        ->and($user->phone)->toBe('1234567890')
-        ->and($user->role)->toBe(Role::MunicipalityAdmin);
-
-    $this->assertDatabaseHas('municipality_user', [
-        'municipality_id' => $this->municipality->id,
-        'user_id' => $user->id,
-    ]);
-
-    $this->assertDatabaseMissing('admin_invites', [
-        'id' => $invite->id,
-    ]);
-});
-
-// Tests for Admin role
 test('admin can create an admin invite', function () {
     // Arrange
     $this->actingAs($this->admin);
     $inviteeEmail = 'newadmin@example.com';
 
-    Filament::setTenant($this->municipality);
-
     // Act
     $response = livewire(ListAdminUsers::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
-            'role' => Role::Admin,
         ]);
 
     // Assert
@@ -288,7 +40,7 @@ test('admin can create an admin invite', function () {
     $invite = AdminInvite::where('email', $inviteeEmail)->first();
 
     expect($invite)->not->toBeNull()
-        ->and($invite->role)->toBe(Role::Admin);
+        ->and($invite->email)->toBe($inviteeEmail);
 
     Mail::assertSent(AdminInviteMail::class, function ($mail) use ($inviteeEmail) {
         return $mail->hasTo($inviteeEmail);
@@ -307,8 +59,6 @@ test('existing user can accept an admin invite', function () {
         'token' => Str::uuid(),
     ]);
 
-    $invite->municipalities()->attach($this->municipality->id);
-
     // Act
     $this->actingAs($user);
     $signedUrl = URL::signedRoute('admin-invites.accept', [
@@ -324,13 +74,11 @@ test('existing user can accept an admin invite', function () {
     $response = livewire(AcceptAdminInvite::class, ['token' => $invite->token])
         ->call('acceptInvite');
 
-    $response->assertRedirect(route('filament.admin.pages.dashboard', ['tenant' => $this->municipality->id]));
+    $response->assertRedirect(route('filament.admin.pages.dashboard'));
 
-    // For Admin role, we don't attach to municipality
-    $this->assertDatabaseMissing('municipality_user', [
-        'municipality_id' => $this->municipality->id,
-        'user_id' => $user->id,
-    ]);
+    // User should already have admin role
+    $user->refresh();
+    expect($user->role)->toBe(Role::Admin);
 
     $this->assertDatabaseMissing('admin_invites', [
         'id' => $invite->id,
@@ -366,19 +114,13 @@ test('new user can register and accept an admin invite', function () {
         ->call('create');
 
     // Assert
-    $response->assertRedirect(route('filament.admin.pages.dashboard', ['tenant' => $this->municipality->id]));
+    $response->assertRedirect(route('filament.admin.pages.dashboard'));
 
     $user = User::where('email', $inviteeEmail)->first();
     expect($user)->not->toBeNull()
         ->and($user->name)->toBe('New Global Admin')
         ->and($user->phone)->toBe('1234567890')
         ->and($user->role)->toBe(Role::Admin);
-
-    // For Admin role, we don't attach to municipality
-    $this->assertDatabaseMissing('municipality_user', [
-        'municipality_id' => $this->municipality->id,
-        'user_id' => $user->id,
-    ]);
 
     $this->assertDatabaseMissing('admin_invites', [
         'id' => $invite->id,
@@ -394,10 +136,8 @@ test('invite cannot be accepted by wrong user', function () {
     $invite = AdminInvite::create([
         'email' => 'differentuser@example.com', // Different email than logged-in user
         'token' => Str::uuid(),
-        'role' => Role::Reviewer,
+        'role' => Role::Admin,
     ]);
-
-    $invite->municipalities()->attach($this->municipality->id);
 
     // Act
     $this->actingAs($user);
@@ -407,38 +147,22 @@ test('invite cannot be accepted by wrong user', function () {
     // Assert
     $response->assertStatus(403);
 
-    $this->assertDatabaseMissing('municipality_user', [
-        'municipality_id' => $this->municipality->id,
-        'user_id' => $user->id,
-    ]);
-
     $this->assertDatabaseHas('admin_invites', [
         'id' => $invite->id,
     ]);
 });
 
-test('municipality admin cannot invite admin users', function () {
+test('non-admin users cannot create admin invites', function () {
     // Arrange
-    $municipalityAdmin = User::factory()->create([
-        'email' => 'municadmin@example.com',
-        'role' => Role::MunicipalityAdmin,
+    $nonAdmin = User::factory()->create([
+        'email' => 'reviewer@example.com',
+        'role' => Role::Reviewer,
     ]);
-    $this->municipality->users()->attach($municipalityAdmin);
 
-    $this->actingAs($municipalityAdmin);
+    $this->actingAs($nonAdmin);
     $inviteeEmail = 'newadmin@example.com';
 
-    Filament::setTenant($this->municipality);
-
-    // Act & Assert
-    $response = livewire(ListAdminUsers::class)
-        ->callAction('invite', [
-            'email' => $inviteeEmail,
-            'role' => Role::Admin,
-        ]);
-
-    $this->assertDatabaseMissing('admin_invites', [
-        'email' => $inviteeEmail,
-        'role' => Role::Admin,
-    ]);
+    // Act & Assert - should get an authorization error
+    $this->get(route('filament.admin.resources.admin-users.index'))
+        ->assertForbidden();
 });

@@ -17,7 +17,7 @@ class MunicipalityAdminUser extends User implements FilamentUser, HasTenants
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $panel->getId() === 'admin';
+        return $panel->getId() === 'municipality';
     }
 
     public function getTenants(Panel $panel): Collection

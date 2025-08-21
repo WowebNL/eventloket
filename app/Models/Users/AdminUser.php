@@ -3,35 +3,18 @@
 namespace App\Models\Users;
 
 use App\Enums\Role;
-use App\Models\Municipality;
 use App\Models\Traits\ScopesByRole;
 use App\Models\User;
 use Filament\Models\Contracts\FilamentUser;
-use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 
-class AdminUser extends User implements FilamentUser, HasTenants
+class AdminUser extends User implements FilamentUser
 {
     use ScopesByRole;
 
     public function canAccessPanel(Panel $panel): bool
     {
         return $panel->getId() === 'admin';
-    }
-
-    public function getTenants(Panel $panel): Collection
-    {
-        return Municipality::orderBy('name')->get();
-    }
-
-    /**
-     * @phpstan-param \App\Models\Municipality $tenant
-     */
-    public function canAccessTenant(Model $tenant): bool
-    {
-        return $this->canAccessMunicipality($tenant->id);
     }
 
     public static function getRole(): Role

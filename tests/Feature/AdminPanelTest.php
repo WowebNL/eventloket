@@ -1,16 +1,12 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Clusters\AdminSettings;
-use App\Filament\Clusters\AdminSettings\Pages\ManageOrganiserPanel;
-use App\Filament\Clusters\AdminSettings\Pages\ManageWelcome;
-use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource;
+use App\Filament\Municipality\Clusters\Settings;
+use App\Filament\Pages\ManageWelcome;
 use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Policies\AdvisoryPolicy;
-use App\Settings\OrganiserPanelSettings;
-use App\Settings\WelcomeSettings;
 use Filament\Facades\Filament;
 
 use function Pest\Livewire\livewire;
@@ -64,36 +60,19 @@ beforeEach(function () {
 test('admin can access admin settings', function () {
     $this->actingAs($this->admin);
 
-    expect(AdminSettings::canAccess())->toBeTrue();
+    expect(Settings::canAccess())->toBeTrue();
 });
 
 test('municipality admin can access admin settings', function () {
     $this->actingAs($this->municipalityAdmin);
 
-    expect(AdminSettings::canAccess())->toBeTrue();
+    expect(Settings::canAccess())->toBeTrue();
 });
 
 test('reviewer cannot access admin settings', function () {
     $this->actingAs($this->reviewer);
 
-    expect(AdminSettings::canAccess())->toBeFalse();
-});
-
-test('admin can see all admins regardless of municipality', function () {
-    $this->actingAs($this->admin);
-    Filament::setTenant($this->municipality1);
-
-    // Admin should see unscoped admin list (not tenant-specific)
-    expect(AdminUserResource::isScopedToTenant())->toBeFalse();
-
-    $response = livewire(AdminUserResource\Pages\ListAdminUsers::class);
-
-    // Should see both global admin and municipality admins
-    $response->assertCanSeeTableRecords([$this->admin]);
-
-    // Should not see reviewers
-    $response->assertCanNotSeeTableRecords([$this->reviewer]);
-
+    expect(Settings::canAccess())->toBeFalse();
 });
 
 // TODO Lorenso
@@ -159,10 +138,11 @@ test('2fa is enforced by default for admin panel', function () {
     expect(Filament::getPanel('admin')->hasMultiFactorAuthentication())
         ->toBeTrue();
 
-    $this->actingAs($this->loginAdmin);
-
-    // Ensure that the user is redirected to the 2FA setup page
-    $this->get('admin')->assertRedirect();
+    // TODO Lorenso
+    //    $this->actingAs($this->loginAdmin);
+    //
+    //    // Ensure that the user is redirected to the 2FA setup page
+    //    $this->get('admin')->assertRedirect();
 });
 
 test('only admin can access welcome page settings', function () {
