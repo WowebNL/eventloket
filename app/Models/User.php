@@ -4,27 +4,34 @@ namespace App\Models;
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Models\Users\AdminUser;
+use App\Models\Users\AdvisorUser;
+use App\Models\Users\MunicipalityAdminUser;
+use App\Models\Users\OrganiserUser;
+use App\Models\Users\ReviewerUser;
 use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Models\Contracts\HasTenants;
-use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Collection;
 
 /**
  * @property array<string>|null $app_authentication_recovery_codes
  */
-class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasTenants, MustVerifyEmail
+class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    protected $table = 'users';
+
+    public function getForeignKey()
+    {
+        return 'user_id';
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -68,49 +75,50 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         ];
     }
 
+    /**
+     * Returns the model for a specific role
+     */
+    public static function resolveClassForRole(Role $role): string
+    {
+        return match ($role) {
+            Role::Admin => AdminUser::class,
+            Role::MunicipalityAdmin => MunicipalityAdminUser::class,
+            Role::Reviewer => ReviewerUser::class,
+            Role::Advisor => AdvisorUser::class,
+            Role::Organiser => OrganiserUser::class,
+        };
+    }
+
+    public function newFromBuilder($attributes = [], $connection = null)
+    {
+        $attributes = (array) $attributes;
+
+        $class = self::resolveClassForRole(Role::from($attributes['role']));
+
+        $model = (new $class)->newInstance([], true);
+
+        $model->setRawAttributes($attributes, true);
+
+        $model->setConnection($connection ?: $this->getConnectionName());
+
+        $model->fireModelEvent('retrieved', false);
+
+        return $model;
+    }
+
     public function municipalities(): BelongsToMany
     {
-        return $this->belongsToMany(Municipality::class);
+        return $this->belongsToMany(Municipality::class, 'municipality_user');
     }
 
     public function advisories(): BelongsToMany
     {
-        return $this->belongsToMany(Advisory::class);
+        return $this->belongsToMany(Advisory::class, 'advisory_user');
     }
 
     public function organisations(): BelongsToMany
     {
-        return $this->belongsToMany(Organisation::class)->withPivot('role');
-    }
-
-    public function canAccessPanel(Panel $panel): bool
-    {
-        return match ($panel->getId()) {
-            'admin' => in_array($this->role, [Role::Admin, Role::MunicipalityAdmin, Role::Reviewer]),
-            'advisor' => $this->role === Role::Advisor,
-            'organiser' => $this->role === Role::Organiser,
-            default => false,
-        };
-    }
-
-    public function getTenants(Panel $panel): Collection
-    {
-        return match ($panel->getId()) {
-            'admin' => $this->role === Role::Admin ? Municipality::orderBy('name')->get() : $this->municipalities,
-            'advisor' => $this->advisories,
-            'organiser' => $this->organisations,
-            default => null,
-        };
-    }
-
-    public function canAccessTenant(Model $tenant): bool
-    {
-        return match (get_class($tenant)) {
-            Municipality::class => $this->canAccessMunicipality($tenant->id),
-            Advisory::class => $this->canAccessAdvisory($tenant->id),
-            Organisation::class => $this->canAccessOrganisation($tenant->id),
-            default => false,
-        };
+        return $this->belongsToMany(Organisation::class, 'organisation_user')->withPivot('role');
     }
 
     public function canAccessMunicipality(int $municipalityId): bool
@@ -137,7 +145,6 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         }
 
         return $query->exists();
-
     }
 
     public function getAppAuthenticationSecret(): ?string

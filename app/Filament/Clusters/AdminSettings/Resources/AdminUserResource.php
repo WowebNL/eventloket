@@ -4,11 +4,12 @@ namespace App\Filament\Clusters\AdminSettings\Resources;
 
 use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages\CreateAdmin;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages\EditAdmin;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages\ListAdmins;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource\RelationManagers\MunicipalitiesRelationManager;
+use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\Pages\CreateAdminUser;
+use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\Pages\EditAdminUser;
+use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\Pages\ListAdminUsers;
+use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Models\User;
+use App\Models\Users\AdminUser;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -17,9 +18,9 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
-class AdminResource extends Resource
+class AdminUserResource extends Resource
 {
-    protected static ?string $model = User::class;
+    protected static ?string $model = AdminUser::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
@@ -72,10 +73,10 @@ class AdminResource extends Resource
             ]);
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()->whereIn('role', [Role::Admin, Role::MunicipalityAdmin]);
-    }
+    //    public static function getEloquentQuery(): Builder
+    //    {
+    //        return parent::getEloquentQuery()->whereIn('role', [Role::Admin, Role::MunicipalityAdmin]);
+    //    }
 
     public static function getRelations(): array
     {
@@ -87,9 +88,9 @@ class AdminResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListAdmins::route('/'),
-            'create' => CreateAdmin::route('/create'),
-            'edit' => EditAdmin::route('/{record}/edit'),
+            'index' => ListAdminUsers::route('/'),
+            'create' => CreateAdminUser::route('/create'),
+            'edit' => EditAdminUser::route('/{record}/edit'),
         ];
     }
 }

@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Resources\UserResource\Pages;
+namespace App\Filament\Resources\ReviewerUserResource\Pages;
 
 use App\Enums\Role;
-use App\Filament\Resources\UserResource;
+use App\Filament\Resources\ReviewerUserResource;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
 use App\Models\Organisation;
@@ -16,9 +16,9 @@ use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
-class ListUsers extends ListRecords
+class ListReviewerUsers extends ListRecords
 {
-    protected static string $resource = UserResource::class;
+    protected static string $resource = ReviewerUserResource::class;
 
     protected function getHeaderActions(): array
     {

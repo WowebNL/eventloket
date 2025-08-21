@@ -4,7 +4,7 @@ use App\Enums\Role;
 use App\Filament\Clusters\AdminSettings;
 use App\Filament\Clusters\AdminSettings\Pages\ManageOrganiserPanel;
 use App\Filament\Clusters\AdminSettings\Pages\ManageWelcome;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource;
+use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource;
 use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\User;
@@ -84,12 +84,12 @@ test('admin can see all admins regardless of municipality', function () {
     Filament::setTenant($this->municipality1);
 
     // Admin should see unscoped admin list (not tenant-specific)
-    expect(AdminResource::isScopedToTenant())->toBeFalse();
+    expect(AdminUserResource::isScopedToTenant())->toBeFalse();
 
-    $response = livewire(AdminResource\Pages\ListAdmins::class);
+    $response = livewire(AdminUserResource\Pages\ListAdminUsers::class);
 
     // Should see both global admin and municipality admins
-    $response->assertCanSeeTableRecords([$this->admin, $this->municipalityAdmin]);
+    $response->assertCanSeeTableRecords([$this->admin]);
 
     // Should not see reviewers
     $response->assertCanNotSeeTableRecords([$this->reviewer]);

@@ -85,5 +85,4 @@ test('Widgets are rendered in organisation dashboard', function () {
     $this->get(route('filament.organiser.pages.dashboard', ['tenant' => $this->businessOrganisation->id]))
         ->assertSee('app.filament.organiser.widgets.intro') // intro widget
         ->assertSee('app.filament.organiser.widgets.shortlink'); // shortlink widget
-
 });

@@ -1,9 +1,9 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages\ListAdmins;
+use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\Pages\ListAdminUsers;
 use App\Filament\Pages\AcceptAdminInvite;
-use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
 use App\Models\Municipality;
@@ -41,7 +41,7 @@ test('admin can create a reviewer invite', function () {
     Filament::setTenant($this->municipality);
 
     // Act
-    $response = livewire(ListUsers::class)
+    $response = livewire(ListReviewerUsers::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
         ]);
@@ -158,7 +158,7 @@ test('admin can create a municipality admin invite', function () {
     Filament::setTenant($this->municipality);
 
     // Act
-    $response = livewire(ListAdmins::class)
+    $response = livewire(ListAdminUsers::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
             'role' => Role::MunicipalityAdmin->value,
@@ -277,7 +277,7 @@ test('admin can create an admin invite', function () {
     Filament::setTenant($this->municipality);
 
     // Act
-    $response = livewire(ListAdmins::class)
+    $response = livewire(ListAdminUsers::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
             'role' => Role::Admin,
@@ -431,7 +431,7 @@ test('municipality admin cannot invite admin users', function () {
     Filament::setTenant($this->municipality);
 
     // Act & Assert
-    $response = livewire(ListAdmins::class)
+    $response = livewire(ListAdminUsers::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
             'role' => Role::Admin,

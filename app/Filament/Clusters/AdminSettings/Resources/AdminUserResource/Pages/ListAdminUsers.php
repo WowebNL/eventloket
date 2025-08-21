@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Clusters\AdminSettings\Resources\AdminResource\Pages;
+namespace App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\Pages;
 
 use App\Enums\Role;
-use App\Filament\Clusters\AdminSettings\Resources\AdminResource;
+use App\Filament\Clusters\AdminSettings\Resources\AdminUserResource;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
 use App\Models\Municipality;
@@ -19,9 +19,9 @@ use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
-class ListAdmins extends ListRecords
+class ListAdminUsers extends ListRecords
 {
-    protected static string $resource = AdminResource::class;
+    protected static string $resource = AdminUserResource::class;
 
     protected function getHeaderActions(): array
     {

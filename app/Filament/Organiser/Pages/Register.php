@@ -3,11 +3,14 @@
 namespace App\Filament\Organiser\Pages;
 
 use App\Enums\Role;
+use App\Models\Users\OrganiserUser;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
 class Register extends \Filament\Auth\Pages\Register
 {
+    protected string $userModel = OrganiserUser::class;
+
     public function form(Schema $schema): Schema
     {
         return $schema

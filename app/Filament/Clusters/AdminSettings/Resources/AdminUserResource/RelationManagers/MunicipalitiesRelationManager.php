@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Clusters\AdminSettings\Resources\AdminResource\RelationManagers;
+namespace App\Filament\Clusters\AdminSettings\Resources\AdminUserResource\RelationManagers;
 
 use Filament\Actions\AttachAction;
 use Filament\Actions\DetachAction;
