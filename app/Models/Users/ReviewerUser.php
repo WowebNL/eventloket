@@ -3,17 +3,33 @@
 namespace App\Models\Users;
 
 use App\Enums\Role;
+use App\Models\Municipality;
 use App\Models\Traits\ScopesByRole;
 use App\Models\User;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 
 class ReviewerUser extends User implements FilamentUser, HasTenants
 {
     use ScopesByRole;
+
+    public function municipalities(): BelongsToMany
+    {
+        return $this->belongsToMany(Municipality::class, 'municipality_user');
+    }
+
+    public function canAccessMunicipality(int $municipalityId): bool
+    {
+        if ($this->role === Role::Admin) {
+            return true;
+        }
+
+        return $this->municipalities->contains($municipalityId);
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {

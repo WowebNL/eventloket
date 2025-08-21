@@ -56,7 +56,7 @@ test('Personal organisation cannot access settings', function () {
 
 test('Organisation admin can change other organisation members role', function () {
     $this->actingAs($this->businessAdminUser);
-    $memberUser = User::factory()->create();
+    $memberUser = User::factory()->create(['role' => Role::Organiser]);
     $this->businessOrganisation->users()->attach($memberUser, ['role' => OrganisationRole::Member->value]);
     Filament::setTenant($this->businessOrganisation);
 

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
@@ -14,7 +13,6 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -104,47 +102,6 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         $model->fireModelEvent('retrieved', false);
 
         return $model;
-    }
-
-    public function municipalities(): BelongsToMany
-    {
-        return $this->belongsToMany(Municipality::class, 'municipality_user');
-    }
-
-    public function advisories(): BelongsToMany
-    {
-        return $this->belongsToMany(Advisory::class, 'advisory_user');
-    }
-
-    public function organisations(): BelongsToMany
-    {
-        return $this->belongsToMany(Organisation::class, 'organisation_user')->withPivot('role');
-    }
-
-    public function canAccessMunicipality(int $municipalityId): bool
-    {
-        if ($this->role === Role::Admin) {
-            return true;
-        }
-
-        return $this->municipalities->contains($municipalityId);
-    }
-
-    public function canAccessAdvisory(int $advisoryId): bool
-    {
-        return $this->advisories->contains($advisoryId);
-    }
-
-    public function canAccessOrganisation(int $organisationId, ?OrganisationRole $role = null): bool
-    {
-        $query = $this->organisations()
-            ->wherePivot('organisation_id', $organisationId);
-
-        if ($role !== null) {
-            $query->wherePivot('role', $role->value);
-        }
-
-        return $query->exists();
     }
 
     public function getAppAuthenticationSecret(): ?string

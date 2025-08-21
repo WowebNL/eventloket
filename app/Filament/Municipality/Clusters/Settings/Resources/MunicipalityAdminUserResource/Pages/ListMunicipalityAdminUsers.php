@@ -8,6 +8,7 @@ use App\Mail\MunicipalityInviteMail;
 use App\Models\Municipality;
 use App\Models\MunicipalityInvite;
 use App\Models\User;
+use App\Models\Users\MunicipalityAdminUser;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -63,7 +64,11 @@ class ListMunicipalityAdminUsers extends ListRecords
                             }
 
                             // If the user is a MunicipalityAdmin, return only the municipalities they are associated with
-                            return auth()->user()->municipalities->pluck('name', 'id');
+                            if (auth()->user() instanceof MunicipalityAdminUser) {
+                                return auth()->user()->municipalities->pluck('name', 'id');
+                            }
+
+                            return collect();
                         })
                         ->label(__('admin/resources/admin.actions.invite.form.municipalities.label'))
                         ->visible(fn (Get $get): bool => $get('role') === Role::MunicipalityAdmin->value)

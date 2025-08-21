@@ -3,17 +3,29 @@
 namespace App\Models\Users;
 
 use App\Enums\Role;
+use App\Models\Advisory;
 use App\Models\Traits\ScopesByRole;
 use App\Models\User;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 
 class AdvisorUser extends User implements FilamentUser, HasTenants
 {
     use ScopesByRole;
+
+    public function advisories(): BelongsToMany
+    {
+        return $this->belongsToMany(Advisory::class, 'advisory_user');
+    }
+
+    public function canAccessAdvisory(int $advisoryId): bool
+    {
+        return $this->advisories->contains($advisoryId);
+    }
 
     public function canAccessPanel(Panel $panel): bool
     {
