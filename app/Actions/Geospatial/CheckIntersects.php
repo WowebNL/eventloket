@@ -7,20 +7,24 @@ use App\Models\Municipality;
 use Brick\Geo\Engine\GeometryEngine;
 use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Geometry;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class CheckIntersects
 {
-    public function __construct(private ?GeometryEngine $geometryEngine = null)
+    private $items;
+
+    public function __construct(private ?GeometryEngine $geometryEngine = null, string $modelClass = Municipality::class)
     {
         $this->geometryEngine = $this->geometryEngine ?? new PdoEngine(DB::connection()->getPdo());
+        $this->items = $modelClass::whereNotNull('geometry')->get();
     }
 
-    public function checkIntersectsWithModels(Geometry $geometry, string $modelClass = Municipality::class): array
+    public function checkIntersectsWithModels(Geometry $geometry): Collection
     {
-        return $modelClass::whereNotNull('geometry')->get()->filter(function (HasGeometry $model) use ($geometry) {
+        return $this->items->filter(function (HasGeometry $model) use ($geometry) {
             return $this->intersectsWithGeometryOnModel($model, $geometry);
-        })->all();
+        });
     }
 
     public function intersectsWithGeometryOnModel(HasGeometry $model, Geometry $geometry): bool
