@@ -43,4 +43,8 @@ return [
     'kadaster' => [
         'base_url' => env('KADASTER_BASE_URL', 'https://api.pdok.nl/kadaster'),
     ],
+
+    'locatieserver' => [
+        'base_url' => env('LOCATIESERVER_BASE_URL', 'https://api.pdok.nl/bzk/locatieserver'),
+    ],
 ];

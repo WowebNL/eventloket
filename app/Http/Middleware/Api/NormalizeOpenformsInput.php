@@ -23,43 +23,21 @@ class NormalizeOpenformsInput
                 if ($request->has($field)) {
                     $value = $request->input($field);
 
-                    if ($value == 'None') {
-                        // 'None' = null
-                        $value = null;
+                    // param sometimes is 'None' when empty
+                    if ($value === 'None') {
+                        $request->merge([$field => null]);
 
                         continue;
                     }
-                    // incomming json is not valid so make it valid
-                    $value = str_replace('\'', '"', $value);
+
+                    $value = $this->normalizeJson($value);
+
                     if (str_contains($value, '"coordinates"')) {
-                        // value is a geojson string but coordinates come in as string, we need then as float
-                        $value = json_decode($value);
-
-                        // check if value is an array, if so it contains multiple geojsons
-                        if (is_array($value)) {
-                            foreach ($value as $key => &$item) {
-                                // the object key in an array is the name of the input field it is comming from, we dont need that
-                                $item = reset($item);
-                                $item = $this->formatCoordinates($item);
-                            }
-                        } elseif (is_object($value)) {
-                            $value = $this->formatCoordinates($value);
-                        }
-
-                        $value = json_encode($value);
+                        $value = $this->normalizeGeoJson($value);
                     } elseif (preg_match('(postcode|houseNumber|houseLetter|city|streetName)', $value) === 1) {
-                        // value is an address
-                        $value = json_decode($value);
-                        if (is_array($value)) {
-                            foreach ($value as $key => &$item) {
-                                // the object key in an array is the name of the input field it is comming from, we dont need that
-                                $item = reset($item);
-                            }
-                        }
-                        $value = json_encode($value);
+                        $value = $this->normalizeAddress($value);
                     }
 
-                    // overwrite request field with new value
                     $request->merge([$field => $value]);
                 }
             }
@@ -68,10 +46,49 @@ class NormalizeOpenformsInput
         return $next($request);
     }
 
+    private function normalizeJson(string $value): ?string
+    {
+        // incomming json is not valid so make it valid
+        $value = str_replace('\'', '"', $value);
+
+        return json_validate($value) ? $value : null;
+    }
+
+    private function normalizeGeoJson(string $value): string
+    {
+        $value = json_decode($value);
+
+        // check if value is an array, if so it contains multiple geojsons
+        if (is_array($value)) {
+            foreach ($value as $key => &$item) {
+                // the object key in an array is the name of the input field it is comming from, we dont need that
+                $item = reset($item);
+                $item = $this->normalizeCoordinates($item);
+            }
+        } elseif (is_object($value)) {
+            $value = $this->normalizeCoordinates($value);
+        }
+
+        return json_encode($value);
+    }
+
+    private function normalizeAddress(string $value): string
+    {
+        $value = json_decode($value);
+        if (is_array($value)) {
+            foreach ($value as $key => &$item) {
+                // the object key in an array is the name of the input field it is comming from, we dont need that
+                $item = reset($item);
+            }
+        }
+
+        return json_encode($value);
+    }
+
     /**
      * Format coordinates in a GeoJSON string to floats if it are strings
      */
-    private function formatCoordinates(stdClass $object): stdClass
+    private function normalizeCoordinates(stdClass $object): stdClass
     {
         if (isset($object->coordinates)) {
             array_walk_recursive($object->coordinates, function (&$item) {
