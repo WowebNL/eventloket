@@ -25,6 +25,7 @@ class LocationServerController extends Controller
             'all' => [
                 'items' => collect(),
                 'within' => null,
+                'object' => null,
             ],
             'polygons' => [
                 'items' => collect(),
@@ -89,6 +90,7 @@ class LocationServerController extends Controller
                 }
             }
         }
+        $responseData['all']['object'] = $this->getObjectFromItems(Arr::get($responseData, 'all.items'));
 
         return response()->json([
             'data' => $responseData,
@@ -115,5 +117,23 @@ class LocationServerController extends Controller
         }
 
         return $responseData;
+    }
+
+    // TODO Michel make this cleaner later
+    private function getObjectFromItems(Collection $items): ?array
+    {
+        if ($items->isEmpty()) {
+            return null;
+        }
+
+        $response = [];
+        foreach ($items as $item) {
+            $response[$item['brk_identification']] = [
+                'brk_identification' => $item['brk_identification'],
+                'name' => $item['name'],
+            ];
+        }
+
+        return $response;
     }
 }
