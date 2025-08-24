@@ -7,6 +7,7 @@ use App\Filament\Organiser\Clusters\Settings;
 use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListUsers;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Users\OrganiserUser;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -34,7 +35,10 @@ class UserResource extends Resource
         /** @var Organisation $tenant */
         $tenant = Filament::getTenant();
 
-        return auth()->user()->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
+        /** @var OrganiserUser $user */
+        $user = auth()->user();
+
+        return $user->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
     }
 
     public static function getModelLabel(): string
@@ -72,15 +76,15 @@ class UserResource extends Resource
                 SelectColumn::make('organisations.role')
                     ->label(__('organiser/resources/user.columns.role.label'))
                     ->options(OrganisationRole::class)
-                    ->getStateUsing(fn (User $record) => self::getUserRoleState($record))
-                    ->updateStateUsing(fn (User $record, string $state) => $record->organisations()->updateExistingPivot($tenant->id, ['role' => $state]))
+                    ->getStateUsing(fn (OrganiserUser $record) => self::getUserRoleState($record))
+                    ->updateStateUsing(fn (OrganiserUser $record, string $state) => $record->organisations()->updateExistingPivot($tenant->id, ['role' => $state]))
                     ->selectablePlaceholder(false)
-                    ->disabled(fn (User $record) => $record->id === auth()->id());
+                    ->disabled(fn (OrganiserUser $record) => $record->id === auth()->id());
         } else {
             $columns[] =
                 TextColumn::make('status')
                     ->label(__('organiser/resources/user.columns.role.label'))
-                    ->getStateUsing(fn (User $record) => self::getUserRoleState($record));
+                    ->getStateUsing(fn (OrganiserUser $record) => self::getUserRoleState($record));
         }
 
         return $table
@@ -115,10 +119,14 @@ class UserResource extends Resource
         /** @var Organisation $tenant */
         $tenant = Filament::getTenant();
 
-        return $user->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
+        }
+
+        return false;
     }
 
-    private static function getUserRoleState(User $user): OrganisationRole
+    private static function getUserRoleState(OrganiserUser $user): OrganisationRole
     {
         /** @phpstan-ignore-next-line */
         $role = $user->organisations->firstWhere('id', Filament::getTenant()->id)?->pivot->role ?? OrganisationRole::Member->value;

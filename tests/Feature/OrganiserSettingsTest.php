@@ -56,7 +56,7 @@ test('Personal organisation cannot access settings', function () {
 
 test('Organisation admin can change other organisation members role', function () {
     $this->actingAs($this->businessAdminUser);
-    $memberUser = User::factory()->create();
+    $memberUser = User::factory()->create(['role' => Role::Organiser]);
     $this->businessOrganisation->users()->attach($memberUser, ['role' => OrganisationRole::Member->value]);
     Filament::setTenant($this->businessOrganisation);
 
@@ -85,5 +85,4 @@ test('Widgets are rendered in organisation dashboard', function () {
     $this->get(route('filament.organiser.pages.dashboard', ['tenant' => $this->businessOrganisation->id]))
         ->assertSee('app.filament.organiser.widgets.intro') // intro widget
         ->assertSee('app.filament.organiser.widgets.shortlink'); // shortlink widget
-
 });

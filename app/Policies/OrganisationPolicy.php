@@ -6,6 +6,7 @@ use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Users\OrganiserUser;
 
 class OrganisationPolicy
 {
@@ -22,7 +23,11 @@ class OrganisationPolicy
      */
     public function view(User $user, Organisation $organisation): bool
     {
-        return $user->canAccessOrganisation($organisation->id);
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($organisation->id);
+        }
+
+        return false;
     }
 
     /**
@@ -38,7 +43,15 @@ class OrganisationPolicy
      */
     public function update(User $user, Organisation $organisation): bool
     {
-        return $organisation->type != OrganisationType::Personal && $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        if ($organisation->type == OrganisationType::Personal) {
+            return false;
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        }
+
+        return false;
     }
 
     /**
@@ -46,7 +59,15 @@ class OrganisationPolicy
      */
     public function delete(User $user, Organisation $organisation): bool
     {
-        return $organisation->type != OrganisationType::Personal && $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        if ($organisation->type == OrganisationType::Personal) {
+            return false;
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        }
+
+        return false;
     }
 
     /**
@@ -54,7 +75,15 @@ class OrganisationPolicy
      */
     public function restore(User $user, Organisation $organisation): bool
     {
-        return $organisation->type != OrganisationType::Personal && $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        if ($organisation->type == OrganisationType::Personal) {
+            return false;
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        }
+
+        return false;
     }
 
     /**
@@ -62,6 +91,14 @@ class OrganisationPolicy
      */
     public function forceDelete(User $user, Organisation $organisation): bool
     {
-        return $organisation->type != OrganisationType::Personal && $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        if ($organisation->type == OrganisationType::Personal) {
+            return false;
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($organisation->id, OrganisationRole::Admin);
+        }
+
+        return false;
     }
 }

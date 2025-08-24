@@ -2,8 +2,8 @@
 
 use App\Enums\Role;
 use App\Filament\Advisor\Pages\AcceptAdvisoryInvite;
-use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\Pages\EditAdvisory;
-use App\Filament\Clusters\AdminSettings\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
+use App\Filament\Resources\AdvisoryResource\Pages\EditAdvisory;
+use App\Filament\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;

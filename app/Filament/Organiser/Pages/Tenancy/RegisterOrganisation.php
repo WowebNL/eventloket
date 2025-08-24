@@ -5,6 +5,7 @@ namespace App\Filament\Organiser\Pages\Tenancy;
 use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Models\Organisation;
+use App\Models\Users\OrganiserUser;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
@@ -58,7 +59,15 @@ class RegisterOrganisation extends RegisterTenant
         return Action::make('noOrganisation')
             ->link()
             ->label(__('organiser/pages/tenancy/register.actions.no_organisation.label'))
-            ->visible(fn (): bool => auth()->user()->organisations()->doesntExist())
+            ->visible(function () {
+                $user = auth()->user();
+
+                if ($user instanceof OrganiserUser) {
+                    return $user->organisations()->doesntExist();
+                }
+
+                return false;
+            })
             ->action(function () {
                 $organisation = Organisation::create([
                     'type' => OrganisationType::Personal,

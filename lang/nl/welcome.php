@@ -17,5 +17,8 @@ return [
         'handler_login' => [
             'label' => 'Behandelaar login',
         ],
+        'admin_login' => [
+            'label' => 'Beheerder login',
+        ],
     ],
 ];

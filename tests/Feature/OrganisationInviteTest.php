@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\OrganisationRole;
+use App\Enums\Role;
 use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListUsers;
 use App\Filament\Organiser\Pages\AcceptOrganisationInvite;
 use App\Mail\OrganisationInviteMail;
@@ -26,6 +27,7 @@ beforeEach(function () {
 
     $this->admin = User::factory()->create([
         'email' => 'admin@example.com',
+        'role' => Role::Organiser,
     ]);
 
     $this->organisation->users()->attach($this->admin, [

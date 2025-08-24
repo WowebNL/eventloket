@@ -2,6 +2,7 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
+use App\Enums\Role;
 use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
 use App\Models\Organisation;
 use App\Models\User;
@@ -16,7 +17,9 @@ beforeEach(function () {
 
 test('user without organisations can create a personal organisation', function () {
     // Create a user with no organisations
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'role' => Role::Organiser,
+    ]);
 
     // Login as this user
     $this->actingAs($user);
@@ -48,7 +51,9 @@ test('user without organisations can create a personal organisation', function (
 
 test('user with existing organisations cannot create a personal organisation', function () {
     // Create a user
-    $user = User::factory()->create();
+    $user = User::factory()->create([
+        'role' => Role::Organiser,
+    ]);
 
     // Create an existing organisation for this user
     $existingOrg = Organisation::factory()->create([
@@ -90,8 +95,8 @@ test('user with existing organisations cannot create a personal organisation', f
 
 test('personal organisation is automatically created only once', function () {
     // Create two users
-    $user1 = User::factory()->create();
-    $user2 = User::factory()->create();
+    $user1 = User::factory()->create(['role' => Role::Organiser]);
+    $user2 = User::factory()->create(['role' => Role::Organiser]);
 
     // Login as first user
     $this->actingAs($user1);

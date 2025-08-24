@@ -2,13 +2,14 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
+use App\Enums\Role;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Policies\OrganisationPolicy;
 
 // Test viewing all organisations
 test('allows any user to view all organisations', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $policy = new OrganisationPolicy;
 
     expect($policy->viewAny($user))->toBeTrue();
@@ -16,7 +17,7 @@ test('allows any user to view all organisations', function () {
 
 // Test viewing specific organisations
 test('allows users to view organisations they have access to', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $organisation = Organisation::factory()->create();
 
     // User has no access initially
@@ -30,7 +31,7 @@ test('allows users to view organisations they have access to', function () {
 
 // Test organisation creation
 test('allows any user to create organisations', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $policy = new OrganisationPolicy;
 
     expect($policy->create($user))->toBeTrue();
@@ -38,7 +39,7 @@ test('allows any user to create organisations', function () {
 
 // Test personal organisation update restrictions
 test('prevents updating personal organisations', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $personalOrg = Organisation::factory()->create([
         'type' => OrganisationType::Personal,
     ]);
@@ -50,7 +51,7 @@ test('prevents updating personal organisations', function () {
 
 // Test business organisation update permissions
 test('allows admins to update business organisations', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $businessOrg = Organisation::factory()->create([
         'type' => OrganisationType::Business,
     ]);
@@ -68,7 +69,7 @@ test('allows admins to update business organisations', function () {
 
 // Test personal organisation deletion restrictions
 test('prevents deleting personal organisations', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $personalOrg = Organisation::factory()->create([
         'type' => OrganisationType::Personal,
     ]);
@@ -80,7 +81,7 @@ test('prevents deleting personal organisations', function () {
 
 // Test business organisation deletion permissions
 test('allows admins to delete business organisations', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $businessOrg = Organisation::factory()->create([
         'type' => OrganisationType::Business,
     ]);
@@ -98,7 +99,7 @@ test('allows admins to delete business organisations', function () {
 
 // Test restore and forceDelete permissions
 test('has consistent permissions for restore and forceDelete', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->create(['role' => Role::Organiser]);
     $policy = new OrganisationPolicy;
 
     // Test with personal org
