@@ -59,6 +59,7 @@ class ManageWelcome extends SettingsPage
                     ->columnSpanFull(),
                 Repeater::make('usps')
                     ->label(__('admin/pages/manage-welcome.form.usps.label'))
+                    ->addActionLabel(__('admin/pages/manage-welcome.form.usps.add_action_label'))
                     ->schema([
                         Select::make('icon')
                             ->label(__('admin/pages/manage-welcome.form.usps.items.icon.label'))
@@ -84,6 +85,7 @@ class ManageWelcome extends SettingsPage
                     ->columnSpanFull(),
                 Repeater::make('faqs')
                     ->label(__('admin/pages/manage-welcome.form.faqs.label'))
+                    ->addActionLabel(__('admin/pages/manage-welcome.form.faqs.add_action_label'))
                     ->schema([
                         TextInput::make('question')
                             ->label(__('admin/pages/manage-welcome.form.faqs.items.question.label'))

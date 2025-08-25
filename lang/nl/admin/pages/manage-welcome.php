@@ -21,6 +21,7 @@ return [
         ],
         'usps' => [
             'label' => 'Unique Selling Points',
+            'add_action_label' => 'Nieuwe USP toevoegen',
             'items' => [
                 'icon' => [
                     'label' => 'Icoon',
@@ -39,6 +40,7 @@ return [
         ],
         'faqs' => [
             'label' => 'Veelgestelde vragen',
+            'add_action_label' => 'Nieuwe veelgestelde vraag toevoegen',
             'items' => [
                 'question' => [
                     'label' => 'Vraag',
