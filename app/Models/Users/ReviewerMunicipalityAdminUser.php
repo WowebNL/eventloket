@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Collection;
 
-class MunicipalityAdminUser extends User implements FilamentUser, HasTenants
+class ReviewerMunicipalityAdminUser extends User implements FilamentUser, HasTenants
 {
     use ScopesByRole;
 
@@ -47,6 +47,6 @@ class MunicipalityAdminUser extends User implements FilamentUser, HasTenants
 
     public static function getRole(): Role
     {
-        return Role::MunicipalityAdmin;
+        return Role::ReviewerMunicipalityAdmin;
     }
 }

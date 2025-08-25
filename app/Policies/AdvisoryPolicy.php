@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Advisory;
 use App\Models\User;
 use App\Models\Users\MunicipalityAdminUser;
+use App\Models\Users\ReviewerMunicipalityAdminUser;
 
 class AdvisoryPolicy
 {
@@ -22,7 +23,7 @@ class AdvisoryPolicy
      */
     public function view(User $user, Advisory $advisory): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -30,7 +31,7 @@ class AdvisoryPolicy
      */
     public function create(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -42,7 +43,7 @@ class AdvisoryPolicy
             return true;
         }
 
-        if ($user instanceof MunicipalityAdminUser) {
+        if ($user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser) {
             // Check if the user has access to all advisory municipalities
             return $advisory->municipalities->pluck('id')
                 ->diff($user->municipalities->pluck('id'))
@@ -61,7 +62,7 @@ class AdvisoryPolicy
             return true;
         }
 
-        if ($user instanceof MunicipalityAdminUser) {
+        if ($user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser) {
             // Check if the user has access to all advisory municipalities
             return $advisory->municipalities->pluck('id')
                 ->diff($user->municipalities->pluck('id'))
@@ -80,7 +81,7 @@ class AdvisoryPolicy
             return true;
         }
 
-        if ($user instanceof MunicipalityAdminUser) {
+        if ($user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser) {
             // Check if the user has access to all advisory municipalities
             return $advisory->municipalities->pluck('id')
                 ->diff($user->municipalities->pluck('id'))
@@ -99,7 +100,7 @@ class AdvisoryPolicy
             return true;
         }
 
-        if ($user instanceof MunicipalityAdminUser) {
+        if ($user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser) {
             // Check if the user has access to all advisory municipalities
             return $advisory->municipalities->pluck('id')
                 ->diff($user->municipalities->pluck('id'))
