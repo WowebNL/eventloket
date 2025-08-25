@@ -22,7 +22,7 @@
       </a>
     </div>
     <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-6">
-        <a href="{{ route('filament.organiser.tenant.registration') }}" class="py-2 px-2.5 text-sm/6 font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded">{{ __('welcome.register.label') }}</a>
+        <a href="{{ route('filament.organiser.auth.register') }}" class="py-2 px-2.5 text-sm/6 font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded">{{ __('welcome.register.label') }}</a>
       <a href="{{ route('filament.organiser.auth.login') }}" class="py-2 px-2.5 text-sm/6 font-semibold text-gray-900">{{ __('welcome.log_in.label') }} <span aria-hidden="true">&rarr;</span></a>
     </div>
   </nav>
@@ -36,12 +36,12 @@
           <p class="text-base/7 font-semibold text-blue-600">{{ $tagline }}</p>
           <h1 class="mt-2 text-4xl font-semibold tracking-tight text-pretty text-gray-900 sm:text-5xl">{{  $title }}</h1>
                   <div class="mt-6 flex items-center gap-x-6">
-          <a href="{{ route('filament.organiser.tenant.registration') }}" class="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">{{ __('welcome.register.label') }}</a>
+          <a href="{{ route('filament.organiser.auth.register') }}" class="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">{{ __('welcome.register.label') }}</a>
           <a href="{{ route('filament.organiser.auth.login') }}" class="text-sm/6 font-semibold text-gray-900">{{ __('welcome.log_in.label') }}<span aria-hidden="true"> →</span></a>
         </div>
-          <p class="mt-6 text-xl/8 text-gray-700">
+          <div class="[&>p]:mt-6 text-xl/8 text-gray-700">
             {!! str($intro)->sanitizeHtml() !!}
-          </p>
+          </div>
         </div>
       </div>
     </div>
@@ -66,7 +66,7 @@
           </ul>
           @endif
           @if($outro)
-            <p class="mt-8">{!! str($outro)->sanitizeHtml() !!}</p>
+            <p class="mt-8 [&>p]:mt-3">{!! str($outro)->sanitizeHtml() !!}</p>
           @endif
         </div>
       </div>
