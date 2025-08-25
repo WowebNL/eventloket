@@ -6,7 +6,6 @@ use App\Enums\Role;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Models\Users\MunicipalityAdminUser;
-use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
 
 class MunicipalityPolicy
@@ -24,7 +23,7 @@ class MunicipalityPolicy
      */
     public function view(User $user, Municipality $municipality): bool
     {
-        if ($user instanceof ReviewerUser || $user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser) {
+        if ($user instanceof ReviewerUser || $user instanceof MunicipalityAdminUser) {
             return $user->canAccessMunicipality($municipality->id);
         }
 
