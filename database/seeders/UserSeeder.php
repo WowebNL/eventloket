@@ -17,12 +17,16 @@ class UserSeeder extends Seeder
             'name' => 'Michel Verhoeven',
             'email' => 'michel@woweb.nl',
             'role' => Role::Admin,
+            'app_authentication_secret' => null,
+            'app_authentication_recovery_codes' => null,
         ]);
 
         User::factory()->create([
             'name' => 'Lorenso D\'Agostino',
             'email' => 'lorenso@dagostino.digital',
             'role' => Role::Admin,
+            'app_authentication_secret' => null,
+            'app_authentication_recovery_codes' => null,
         ]);
     }
 }

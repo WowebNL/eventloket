@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\Role;
 use App\Models\Municipality;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class SouthLimburgMunicipalitiesSeeder extends Seeder
@@ -35,5 +37,20 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
             $model = Municipality::updateOrCreate(['name' => $name], ['brk_identification' => $brk_id]);
             dispatch(new \App\Jobs\ProcessSyncGeometryOnMunicipality($model));
         }
+
+        $municipalityUsers = User::factory()
+            ->state(fn () => ['role' => fake()->randomElement([Role::Advisor, Role::MunicipalityAdmin])])
+            ->createMany(10);
+
+        $municipalities = Municipality::all();
+
+        foreach ($municipalityUsers as $user) {
+            $randomMunicipalities = $municipalities->shuffle()->take(rand(1, 3));
+
+            foreach ($randomMunicipalities as $municipality) {
+                $municipality->users()->attach($user->id);
+            }
+        }
+
     }
 }

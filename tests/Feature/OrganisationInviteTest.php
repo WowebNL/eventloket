@@ -2,7 +2,7 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
-use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListOrganiserUsers;
 use App\Filament\Organiser\Pages\AcceptOrganisationInvite;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;
@@ -43,7 +43,7 @@ test('organisation admin can create an invite', function () {
     Filament::setTenant($this->organisation);
 
     // Act
-    $response = livewire(ListUsers::class)
+    $response = livewire(ListOrganiserUsers::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
             'makeAdmin' => false,
@@ -190,7 +190,7 @@ test('admin can invite a user with admin role', function () {
     Filament::setTenant($this->organisation);
 
     // Act
-    $response = livewire(ListUsers::class)
+    $response = livewire(ListOrganiserUsers::class)
         ->callAction('invite', [
             'email' => $inviteeEmail,
             'makeAdmin' => true,

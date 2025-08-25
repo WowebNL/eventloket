@@ -6,6 +6,7 @@ use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Users\AdminUser;
 use App\Models\Users\OrganiserUser;
 
 class OrganisationPolicy
@@ -23,6 +24,10 @@ class OrganisationPolicy
      */
     public function view(User $user, Organisation $organisation): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         if ($user instanceof OrganiserUser) {
             return $user->canAccessOrganisation($organisation->id);
         }
@@ -43,6 +48,10 @@ class OrganisationPolicy
      */
     public function update(User $user, Organisation $organisation): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         if ($organisation->type == OrganisationType::Personal) {
             return false;
         }
@@ -59,6 +68,10 @@ class OrganisationPolicy
      */
     public function delete(User $user, Organisation $organisation): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         if ($organisation->type == OrganisationType::Personal) {
             return false;
         }
@@ -75,6 +88,10 @@ class OrganisationPolicy
      */
     public function restore(User $user, Organisation $organisation): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         if ($organisation->type == OrganisationType::Personal) {
             return false;
         }
@@ -91,6 +108,10 @@ class OrganisationPolicy
      */
     public function forceDelete(User $user, Organisation $organisation): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         if ($organisation->type == OrganisationType::Personal) {
             return false;
         }
