@@ -23,7 +23,7 @@ return [
 
     'actions' => [
         'invite' => [
-            'label' => 'Beheerder uitnodigen',
+            'label' => 'Gemeentelijk beheerder uitnodigen',
             'modal_submit_action_label' => 'Uitnodiging versturen',
             'form' => [
                 'name' => [
@@ -47,6 +47,10 @@ return [
                 ],
                 'municipalities' => [
                     'label' => 'Selecteer de gemeente(n) waar de gemeentelijk beheerder toegang tot heeft',
+                ],
+                'can_review' => [
+                    'label' => 'Mag aanvragen behandelen',
+                    'helper_text' => 'Vink dit aan als de gemeentelijk beheerder ook aanvragen moet kunnen behandelen',
                 ],
             ],
             'notification' => [

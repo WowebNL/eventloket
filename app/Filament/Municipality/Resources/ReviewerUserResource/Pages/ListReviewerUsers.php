@@ -28,7 +28,7 @@ class ListReviewerUsers extends ListRecords
                 ->icon('heroicon-o-envelope')
                 ->modalSubmitActionLabel(__('admin/resources/user.actions.invite.modal_submit_action_label'))
                 ->modalWidth(Width::Medium)
-                ->visible(fn (): bool => in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin]))
+                ->visible(fn (): bool => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]))
                 ->schema([
                     TextInput::make('name')
                         ->label(__('admin/resources/user.actions.invite.form.name.label'))

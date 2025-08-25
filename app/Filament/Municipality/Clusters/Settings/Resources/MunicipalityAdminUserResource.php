@@ -2,23 +2,24 @@
 
 namespace App\Filament\Municipality\Clusters\Settings\Resources;
 
+use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\CreateMunicipalityAdminUser;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\EditMunicipalityAdminUser;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Models\User;
-use App\Models\Users\MunicipalityAdminUser;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class MunicipalityAdminUserResource extends Resource
 {
-    protected static ?string $model = MunicipalityAdminUser::class;
+    protected static ?string $model = User::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
@@ -76,6 +77,11 @@ class MunicipalityAdminUserResource extends Resource
         return [
             MunicipalitiesRelationManager::class,
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereIn('role', [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     public static function getPages(): array

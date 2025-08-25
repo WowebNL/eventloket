@@ -5,17 +5,14 @@ namespace App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdmi
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource;
 use App\Mail\MunicipalityInviteMail;
-use App\Models\Municipality;
 use App\Models\MunicipalityInvite;
 use App\Models\User;
-use App\Models\Users\MunicipalityAdminUser;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -42,45 +39,27 @@ class ListMunicipalityAdminUsers extends ListRecords
                         ->required()
                         ->unique(table: User::class)
                         ->maxLength(255),
-                    Radio::make('role')
-                        ->label(__('admin/resources/admin.actions.invite.form.role.label'))
-                        ->visible(fn (): bool => auth()->user()->role == Role::Admin)
-                        ->required()
-                        ->options([
-                            Role::MunicipalityAdmin->value => __('admin/resources/admin.actions.invite.form.role.options.municipality_admin.label'),
-                            Role::Admin->value => __('admin/resources/admin.actions.invite.form.role.options.admin.label'),
-                        ])
-                        ->descriptions([
-                            Role::MunicipalityAdmin->value => __('admin/resources/admin.actions.invite.form.role.options.municipality_admin.description'),
-                            Role::Admin->value => __('admin/resources/admin.actions.invite.form.role.options.admin.description'),
-                        ])
-                        ->default(Role::MunicipalityAdmin->value)
-                        ->live(),
                     Select::make('municipalities')
                         ->multiple()
                         ->options(function () {
-                            if (auth()->user()->role === Role::Admin) {
-                                return Municipality::pluck('name', 'id');
-                            }
+                            /** @var \App\Models\Users\MunicipalityAdminUser|\App\Models\Users\ReviewerMunicipalityAdminUser $user */
+                            $user = auth()->user();
 
-                            // If the user is a MunicipalityAdmin, return only the municipalities they are associated with
-                            if (auth()->user() instanceof MunicipalityAdminUser) {
-                                return auth()->user()->municipalities->pluck('name', 'id');
-                            }
-
-                            return collect();
+                            return $user->municipalities->pluck('name', 'id');
                         })
                         ->label(__('admin/resources/admin.actions.invite.form.municipalities.label'))
-                        ->visible(fn (Get $get): bool => $get('role') === Role::MunicipalityAdmin->value)
                         ->preload()
                         ->required(),
+                    Checkbox::make('can_review')
+                        ->label(__('admin/resources/admin.actions.invite.form.can_review.label'))
+                        ->helperText(__('admin/resources/admin.actions.invite.form.can_review.helper_text')),
                 ])
                 ->action(function ($data) {
 
                     $municipalityInvite = MunicipalityInvite::create([
                         'name' => $data['name'],
                         'email' => $data['email'],
-                        'role' => auth()->user()->role == Role::Admin ? $data['role'] : Role::MunicipalityAdmin,
+                        'role' => $data['can_review'] ? Role::ReviewerMunicipalityAdmin : Role::MunicipalityAdmin,
                         'token' => Str::uuid(),
                     ]);
 

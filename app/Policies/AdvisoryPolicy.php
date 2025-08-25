@@ -22,7 +22,7 @@ class AdvisoryPolicy
      */
     public function view(User $user, Advisory $advisory): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -30,7 +30,7 @@ class AdvisoryPolicy
      */
     public function create(User $user): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin]);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**

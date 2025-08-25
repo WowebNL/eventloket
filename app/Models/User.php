@@ -7,6 +7,7 @@ use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
 use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
+use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
 use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
@@ -81,6 +82,7 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         return match ($role) {
             Role::Admin => AdminUser::class,
             Role::MunicipalityAdmin => MunicipalityAdminUser::class,
+            Role::ReviewerMunicipalityAdmin => ReviewerMunicipalityAdminUser::class,
             Role::Reviewer => ReviewerUser::class,
             Role::Advisor => AdvisorUser::class,
             Role::Organiser => OrganiserUser::class,
