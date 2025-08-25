@@ -27,10 +27,6 @@ class OrganisationForm
                     ->label(__('admin/resources/organisation.form.address.label'))
                     ->required()
                     ->maxLength(255),
-                TextInput::make('bag_id')
-                    ->label(__('admin/resources/organisation.form.bag_id.label'))
-                    ->helperText(__('admin/resources/organisation.form.bag_id.helper_text'))
-                    ->maxLength(255),
                 TextInput::make('email')
                     ->label(__('admin/resources/organisation.form.email.label'))
                     ->email()
