@@ -64,12 +64,6 @@ class AdminUserResource extends Resource
             ]);
     }
 
-    public static function getRelations(): array
-    {
-        return [
-            MunicipalitiesRelationManager::class,
-        ];
-    }
 
     public static function getPages(): array
     {
