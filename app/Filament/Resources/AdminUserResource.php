@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AdminUserResource\Pages\CreateAdminUser;
 use App\Filament\Resources\AdminUserResource\Pages\EditAdminUser;
 use App\Filament\Resources\AdminUserResource\Pages\ListAdminUsers;
-use App\Filament\Resources\AdminUserResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Models\User;
 use App\Models\Users\AdminUser;
 use Filament\Actions\EditAction;
@@ -63,7 +62,6 @@ class AdminUserResource extends Resource
                 //
             ]);
     }
-
 
     public static function getPages(): array
     {
