@@ -3,6 +3,7 @@
 namespace App\Policies;
 
 use App\Models\User;
+use App\Models\Users\AdminUser;
 use App\Models\Users\OrganiserUser;
 
 class OrganiserUserPolicy
@@ -12,7 +13,7 @@ class OrganiserUserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -20,6 +21,10 @@ class OrganiserUserPolicy
      */
     public function view(User $user, OrganiserUser $organiserUser): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 
@@ -28,6 +33,10 @@ class OrganiserUserPolicy
      */
     public function create(User $user): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 
@@ -36,6 +45,10 @@ class OrganiserUserPolicy
      */
     public function update(User $user, OrganiserUser $organiserUser): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 
@@ -44,6 +57,10 @@ class OrganiserUserPolicy
      */
     public function delete(User $user, OrganiserUser $organiserUser): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 
@@ -52,6 +69,10 @@ class OrganiserUserPolicy
      */
     public function restore(User $user, OrganiserUser $organiserUser): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 
@@ -60,6 +81,10 @@ class OrganiserUserPolicy
      */
     public function forceDelete(User $user, OrganiserUser $organiserUser): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 }

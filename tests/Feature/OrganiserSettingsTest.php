@@ -4,7 +4,7 @@ use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Enums\Role;
 use App\Filament\Organiser\Clusters\Settings;
-use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListOrganiserUsers;
 use App\Filament\Organiser\Pages\Dashboard;
 use App\Filament\Organiser\Widgets\Intro;
 use App\Models\Organisation;
@@ -60,7 +60,7 @@ test('Organisation admin can change other organisation members role', function (
     $this->businessOrganisation->users()->attach($memberUser, ['role' => OrganisationRole::Member->value]);
     Filament::setTenant($this->businessOrganisation);
 
-    livewire(ListUsers::class)
+    livewire(ListOrganiserUsers::class)
         ->assertTableColumnExists('organisations.role');
 
 });

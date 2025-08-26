@@ -4,7 +4,7 @@ namespace App\Filament\Organiser\Clusters\Settings\Resources;
 
 use App\Enums\OrganisationRole;
 use App\Filament\Organiser\Clusters\Settings;
-use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListOrganiserUsers;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
@@ -15,11 +15,11 @@ use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
-class UserResource extends Resource
+class OrganiserUserResource extends Resource
 {
     protected static ?string $cluster = Settings::class;
 
-    protected static ?string $model = User::class;
+    protected static ?string $model = OrganiserUser::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
@@ -66,7 +66,7 @@ class UserResource extends Resource
         $columns = [
             TextColumn::make('name')
                 ->label(__('organiser/resources/user.columns.name.label'))
-                ->description(fn (User $record): string => $record->email)
+                ->description(fn (OrganiserUser $record): string => $record->email)
                 ->searchable(),
 
         ];
@@ -110,7 +110,7 @@ class UserResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => ListUsers::route('/'),
+            'index' => ListOrganiserUsers::route('/'),
         ];
     }
 

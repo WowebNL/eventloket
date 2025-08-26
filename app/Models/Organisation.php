@@ -18,6 +18,7 @@ class Organisation extends Model
         'name',
         'coc_number',
         'address',
+        'bag_id',
         'email',
         'phone',
     ];
