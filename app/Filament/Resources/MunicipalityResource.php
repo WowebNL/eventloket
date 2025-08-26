@@ -54,7 +54,8 @@ class MunicipalityResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label(__('admin/resources/municipality.columns.name.label'))
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('brk_identification')
                     ->label(__('admin/resources/municipality.columns.brk_identification.label'))
                     ->searchable(),

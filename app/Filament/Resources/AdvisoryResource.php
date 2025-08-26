@@ -50,7 +50,8 @@ class AdvisoryResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label(__('admin/resources/advisory.columns.name.label'))
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

@@ -48,7 +48,8 @@ class AdminUserResource extends Resource
                 TextColumn::make('name')
                     ->label(__('admin/resources/admin.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('role')
                     ->label(__('admin/resources/admin.columns.role.label')),
             ])
