@@ -58,7 +58,8 @@ class ApplicationResource extends Resource
             ->columns([
                 TextColumn::make('name')
                     ->label(__('admin/resources/application.columns.name.label'))
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 IconColumn::make('all_endpoints')
                     ->label(__('admin/resources/application.columns.all_endpoints.label'))
                     ->boolean()

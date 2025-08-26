@@ -16,7 +16,8 @@ class OrganisationsTable
             ->columns([
                 TextColumn::make('name')
                     ->label(__('admin/resources/organisation.columns.name.label'))
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('coc_number')
                     ->label(__('admin/resources/organisation.columns.coc_number.label'))
                     ->searchable(),

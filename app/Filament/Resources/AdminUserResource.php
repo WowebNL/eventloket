@@ -5,7 +5,6 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AdminUserResource\Pages\CreateAdminUser;
 use App\Filament\Resources\AdminUserResource\Pages\EditAdminUser;
 use App\Filament\Resources\AdminUserResource\Pages\ListAdminUsers;
-use App\Filament\Resources\AdminUserResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Models\User;
 use App\Models\Users\AdminUser;
 use Filament\Actions\EditAction;
@@ -49,7 +48,8 @@ class AdminUserResource extends Resource
                 TextColumn::make('name')
                     ->label(__('admin/resources/admin.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable(),
                 TextColumn::make('role')
                     ->label(__('admin/resources/admin.columns.role.label')),
             ])
@@ -62,13 +62,6 @@ class AdminUserResource extends Resource
             ->toolbarActions([
                 //
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            MunicipalitiesRelationManager::class,
-        ];
     }
 
     public static function getPages(): array
