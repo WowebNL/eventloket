@@ -52,7 +52,7 @@ class ManageWelcome extends SettingsPage
                 FileUpload::make('preview_image')
                     ->label(__('admin/pages/manage-welcome.form.welcome_image.label'))
                     ->image()
-                    ->visibility('public'),
+                    ->disk('public'),
                 RichEditor::make('intro')
                     ->label(__('admin/pages/manage-welcome.form.intro.label'))
                     ->required()
