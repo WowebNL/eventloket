@@ -24,10 +24,6 @@ class MunicipalityAdminUser extends User implements FilamentUser, HasTenants
 
     public function canAccessMunicipality(int $municipalityId): bool
     {
-        if ($this->role === Role::Admin) {
-            return true;
-        }
-
         return $this->municipalities->contains($municipalityId);
     }
 

@@ -58,6 +58,37 @@ test('municipality admin can create a reviewer invite', function () {
     });
 });
 
+test('reviewer municipality admin can create a reviewer invite', function () {
+    // Arrange
+    $reviewerMunicipalityAdmin = User::factory()->create([
+        'email' => 'reviewer-municipality-admin@example.com',
+        'role' => Role::ReviewerMunicipalityAdmin,
+    ]);
+
+    $this->actingAs($reviewerMunicipalityAdmin);
+    $inviteeEmail = 'reviewer@example.com';
+
+    Filament::setTenant($this->municipality);
+
+    // Act
+    $response = livewire(ListReviewerUsers::class)
+        ->callAction('invite', [
+            'email' => $inviteeEmail,
+        ]);
+
+    // Assert
+    $response->assertSuccessful();
+
+    $invite = MunicipalityInvite::where('email', $inviteeEmail)->first();
+    expect($invite)->not->toBeNull()
+        ->and($invite->municipalities()->first()->id)->toBe($this->municipality->id)
+        ->and($invite->role)->toBe(Role::Reviewer);
+
+    Mail::assertSent(MunicipalityInviteMail::class, function ($mail) use ($inviteeEmail) {
+        return $mail->hasTo($inviteeEmail);
+    });
+});
+
 test('existing user can accept a reviewer invite', function () {
     // Arrange
     $user = User::factory()->create([

@@ -6,8 +6,9 @@ use Filament\Support\Contracts\HasLabel;
 
 enum Role: string implements HasLabel
 {
-    case Admin = 'admin'; // Functioneel beheerder
-    case MunicipalityAdmin = 'municipality_admin'; // Functioneel beheerder per gemeente
+    case Admin = 'admin'; // Platformbeheerder
+    case MunicipalityAdmin = 'municipality_admin'; // Gemeentelijk beheerder
+    case ReviewerMunicipalityAdmin = 'reviewer_municipality_admin'; // Behandelaar en gemeentelijk beheerder
     case Reviewer = 'reviewer'; // Behandelaar
     case Advisor = 'advisor'; // Adviesdienst medewerker
     case Organiser = 'organiser'; // Organisator

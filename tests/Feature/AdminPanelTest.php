@@ -57,12 +57,6 @@ beforeEach(function () {
     $this->advisory2->municipalities()->attach([$this->municipality1->id, $this->municipality2->id]);
 });
 
-test('admin can access admin settings', function () {
-    $this->actingAs($this->admin);
-
-    expect(Settings::canAccess())->toBeTrue();
-});
-
 test('municipality admin can access admin settings', function () {
     $this->actingAs($this->municipalityAdmin);
 
