@@ -66,7 +66,7 @@
           </ul>
           @endif
           @if($outro)
-            <p class="mt-8 [&>p]:mt-3">{!! str($outro)->sanitizeHtml() !!}</p>
+            <div class="mt-8 [&>p]:mt-3">{!! str($outro)->sanitizeHtml() !!}</div>
           @endif
         </div>
       </div>
@@ -91,9 +91,9 @@
                   class=" pb-8 border-b border-solid border-gray-200 "
                 >
                     <h5 class="leading-8 text-gray-600 text-xl mt-2">{{ $faq['question'] }}</h5>
-                    <p class="text-base font-normal text-gray-600 ">
+                    <div class="text-base font-normal text-gray-600 [&>p]:mt-3">
                       {!! str($faq['answer'])->sanitizeHtml() !!}
-                    </p>
+                    </div>
                 </div>
                 @endforeach
 
