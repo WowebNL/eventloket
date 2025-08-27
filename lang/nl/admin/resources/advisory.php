@@ -34,4 +34,35 @@ return [
             ],
         ],
     ],
+
+    'widgets' => [
+
+        'pending_invites' => [
+
+            'action' => 'Openstaande uitnodigingen',
+
+            'heading' => 'Openstaande adviseuruitnodigingen',
+
+            'label' => 'Adviseuruitnodiging',
+            'plural_label' => 'Adviseuruitnodigingen',
+
+            'columns' => [
+
+                'email' => [
+                    'label' => 'E-mailadres',
+                ],
+
+                'name' => [
+                    'label' => 'Naam',
+                ],
+
+                'created_at' => [
+                    'label' => 'Aangemaakt op',
+                ],
+
+            ],
+
+        ],
+
+    ],
 ];

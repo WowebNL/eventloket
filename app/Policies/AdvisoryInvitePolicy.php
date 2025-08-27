@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\AdvisoryInvite;
 use App\Models\User;
+use App\Models\Users\AdminUser;
 
 class AdvisoryInvitePolicy
 {
@@ -44,6 +45,10 @@ class AdvisoryInvitePolicy
      */
     public function delete(User $user, AdvisoryInvite $advisoryInvite): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 

@@ -2,8 +2,11 @@
 
 namespace App\Policies;
 
+use App\Enums\OrganisationRole;
 use App\Models\OrganisationInvite;
 use App\Models\User;
+use App\Models\Users\AdminUser;
+use App\Models\Users\OrganiserUser;
 
 class OrganisationInvitePolicy
 {
@@ -44,6 +47,14 @@ class OrganisationInvitePolicy
      */
     public function delete(User $user, OrganisationInvite $organisationInvite): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($organisationInvite->organisation_id, OrganisationRole::Admin);
+        }
+
         return false;
     }
 

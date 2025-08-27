@@ -39,6 +39,7 @@ class OrganiserPanelProvider extends PanelProvider
             ->brandLogo(asset('images/logos/logo-dark.svg'))
             ->darkModeBrandLogo(asset('images/logos/logo-light.svg'))
             ->brandLogoHeight('2.5rem')
+            ->viteTheme('resources/css/filament/organiser/theme.css')
             ->tenant(Organisation::class)
             ->discoverResources(in: app_path('Filament/Organiser/Resources'), for: 'App\\Filament\\Organiser\\Resources')
             ->discoverPages(in: app_path('Filament/Organiser/Pages'), for: 'App\\Filament\\Organiser\\Pages')

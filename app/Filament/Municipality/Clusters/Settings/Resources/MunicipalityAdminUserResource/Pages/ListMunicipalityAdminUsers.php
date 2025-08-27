@@ -3,7 +3,9 @@
 namespace App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages;
 
 use App\Enums\Role;
+use App\Filament\Actions\PendingInvitesAction;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource;
+use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Widgets\PendingMunicipalityAdminUserInvitesWidget;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\MunicipalityInvite;
 use App\Models\User;
@@ -24,17 +26,20 @@ class ListMunicipalityAdminUsers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            PendingInvitesAction::make()
+                ->modalHeading(__('municipality/resources/municipality_admin.widgets.pending_invites.heading'))
+                ->widget(PendingMunicipalityAdminUserInvitesWidget::class),
             Action::make('invite')
-                ->label(__('admin/resources/admin.actions.invite.label'))
+                ->label(__('municipality/resources/municipality_admin.actions.invite.label'))
                 ->icon('heroicon-o-envelope')
-                ->modalSubmitActionLabel(__('admin/resources/admin.actions.invite.modal_submit_action_label'))
+                ->modalSubmitActionLabel(__('municipality/resources/municipality_admin.actions.invite.modal_submit_action_label'))
                 ->modalWidth(Width::Medium)
                 ->schema([
                     TextInput::make('name')
-                        ->label(__('admin/resources/admin.actions.invite.form.name.label'))
+                        ->label(__('municipality/resources/municipality_admin.actions.invite.form.name.label'))
                         ->maxLength(255),
                     TextInput::make('email')
-                        ->label(__('admin/resources/admin.actions.invite.form.email.label'))
+                        ->label(__('municipality/resources/municipality_admin.actions.invite.form.email.label'))
                         ->email()
                         ->required()
                         ->unique(table: User::class)
@@ -47,12 +52,12 @@ class ListMunicipalityAdminUsers extends ListRecords
 
                             return $user->municipalities->pluck('name', 'id');
                         })
-                        ->label(__('admin/resources/admin.actions.invite.form.municipalities.label'))
+                        ->label(__('municipality/resources/municipality_admin.actions.invite.form.municipalities.label'))
                         ->preload()
                         ->required(),
                     Checkbox::make('can_review')
-                        ->label(__('admin/resources/admin.actions.invite.form.can_review.label'))
-                        ->helperText(__('admin/resources/admin.actions.invite.form.can_review.helper_text')),
+                        ->label(__('municipality/resources/municipality_admin.actions.invite.form.can_review.label'))
+                        ->helperText(__('municipality/resources/municipality_admin.actions.invite.form.can_review.helper_text')),
                 ])
                 ->action(function ($data) {
 
@@ -71,7 +76,7 @@ class ListMunicipalityAdminUsers extends ListRecords
                         ->send(new MunicipalityInviteMail($municipalityInvite));
 
                     Notification::make()
-                        ->title(__('admin/resources/admin.actions.invite.notification.title'))
+                        ->title(__('municipality/resources/municipality_admin.actions.invite.notification.title'))
                         ->success()
                         ->send();
                 }),

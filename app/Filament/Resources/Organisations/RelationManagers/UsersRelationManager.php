@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Organisations\RelationManagers;
 
 use App\Enums\OrganisationRole;
 use App\Filament\Actions\OrganiserUser\InviteAction;
+use App\Filament\Actions\PendingInvitesAction;
+use App\Filament\Resources\Organisations\Widgets\PendingOrganisationInvitesWidget;
 use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
 use Filament\Actions\BulkActionGroup;
@@ -94,6 +96,10 @@ class UsersRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
+                PendingInvitesAction::make()
+                    ->modalHeading(__('admin/resources/organisation.widgets.pending_invites.heading'))
+                    ->widgetRecord($this->ownerRecord)
+                    ->widget(PendingOrganisationInvitesWidget::class),
                 InviteAction::make()
                     ->organisation(fn () => $this->ownerRecord),
             ])

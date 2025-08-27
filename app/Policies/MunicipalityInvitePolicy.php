@@ -4,6 +4,8 @@ namespace App\Policies;
 
 use App\Models\MunicipalityInvite;
 use App\Models\User;
+use App\Models\Users\AdminUser;
+use App\Models\Users\MunicipalityAdminUser;
 
 class MunicipalityInvitePolicy
 {
@@ -44,6 +46,17 @@ class MunicipalityInvitePolicy
      */
     public function delete(User $user, MunicipalityInvite $municipalityInvite): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
+        if ($user instanceof MunicipalityAdminUser) {
+            // Check if the user has access to one of the municipalities of the municipality invite
+            return $user->municipalities->pluck('id')
+                ->intersect($municipalityInvite->municipalities->pluck('id'))
+                ->isNotEmpty();
+        }
+
         return false;
     }
 

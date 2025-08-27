@@ -36,6 +36,7 @@ class MunicipalityPanelProvider extends PanelProvider
             ->brandLogo(asset('images/logos/logo-dark.svg'))
             ->darkModeBrandLogo(asset('images/logos/logo-light.svg'))
             ->brandLogoHeight('2.5rem')
+            ->viteTheme('resources/css/filament/municipality/theme.css')
             ->tenant(Municipality::class)
             ->discoverClusters(in: app_path('Filament/Municipality/Clusters'), for: 'App\Filament\Municipality\Clusters')
             ->discoverResources(in: app_path('Filament/Municipality/Resources'), for: 'App\Filament\Municipality\Resources')
