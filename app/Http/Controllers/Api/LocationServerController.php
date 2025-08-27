@@ -92,6 +92,8 @@ class LocationServerController extends Controller
         }
         $responseData['all']['object'] = $this->getObjectFromItems(Arr::get($responseData, 'all.items'));
 
+        $responseData['all']['items'] = array_values($responseData['all']['items']->toArray());
+
         return response()->json([
             'data' => $responseData,
         ]);
