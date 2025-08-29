@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\AdvisoryResource\RelationManagers;
 
+use App\Filament\Actions\PendingInvitesAction;
+use App\Filament\Resources\AdvisoryResource\Widgets\PendingAdvisoryInvitesWidget;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
@@ -63,6 +65,10 @@ class UsersRelationManager extends RelationManager
             ])
             ->headerActions([
                 AttachAction::make(),
+                PendingInvitesAction::make()
+                    ->modalHeading(__('admin/resources/advisory.widgets.pending_invites.heading'))
+                    ->widgetRecord($this->ownerRecord)
+                    ->widget(PendingAdvisoryInvitesWidget::class),
                 Action::make('invite')
                     ->label(__('admin/resources/advisory.actions.invite.label'))
                     ->icon('heroicon-o-envelope')

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AdminUserResource\Pages;
 
+use App\Filament\Actions\PendingInvitesAction;
 use App\Filament\Resources\AdminUserResource;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
@@ -21,6 +22,9 @@ class ListAdminUsers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            PendingInvitesAction::make()
+                ->modalHeading(__('admin/resources/admin.widgets.pending_invites.heading'))
+                ->widget(AdminUserResource\Widgets\PendingAdminInvitesWidget::class),
             Action::make('invite')
                 ->label(__('admin/resources/admin.actions.invite.label'))
                 ->icon('heroicon-o-envelope')

@@ -3,7 +3,9 @@
 namespace App\Filament\Municipality\Resources\ReviewerUserResource\Pages;
 
 use App\Enums\Role;
+use App\Filament\Actions\PendingInvitesAction;
 use App\Filament\Municipality\Resources\ReviewerUserResource;
+use App\Filament\Municipality\Resources\ReviewerUserResource\Widgets\PendingReviewerUserInvitesWidget;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\MunicipalityInvite;
 use App\Models\Organisation;
@@ -23,6 +25,9 @@ class ListReviewerUsers extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
+            PendingInvitesAction::make()
+                ->modalHeading(__('municipality/resources/user.widgets.pending_invites.heading'))
+                ->widget(PendingReviewerUserInvitesWidget::class),
             Action::make('invite')
                 ->label(__('admin/resources/user.actions.invite.label'))
                 ->icon('heroicon-o-envelope')

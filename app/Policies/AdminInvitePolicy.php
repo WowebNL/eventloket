@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\AdminInvite;
 use App\Models\User;
 
@@ -44,7 +45,7 @@ class AdminInvitePolicy
      */
     public function delete(User $user, AdminInvite $adminInvite): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 
     /**

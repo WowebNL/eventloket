@@ -29,4 +29,35 @@ return [
             ],
         ],
     ],
+
+    'widgets' => [
+
+        'pending_invites' => [
+
+            'action' => 'Openstaande uitnodigingen',
+
+            'heading' => 'Openstaande behandelaaruitnodigingen',
+
+            'label' => 'behandelaaruitnodiging',
+            'plural_label' => 'behandelaaruitnodigingen',
+
+            'columns' => [
+
+                'email' => [
+                    'label' => 'E-mailadres',
+                ],
+
+                'name' => [
+                    'label' => 'Naam',
+                ],
+
+                'created_at' => [
+                    'label' => 'Aangemaakt op',
+                ],
+
+            ],
+
+        ],
+
+    ],
 ];

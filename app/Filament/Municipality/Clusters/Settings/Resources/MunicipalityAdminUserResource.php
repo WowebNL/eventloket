@@ -33,12 +33,12 @@ class MunicipalityAdminUserResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('admin/resources/admin.label');
+        return __('municipality/resources/municipality_admin.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('admin/resources/admin.plural_label');
+        return __('municipality/resources/municipality_admin.plural_label');
     }
 
     public static function form(Schema $schema): Schema
@@ -46,7 +46,7 @@ class MunicipalityAdminUserResource extends Resource
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label(__('admin/resources/admin.columns.name.label')),
+                    ->label(__('municipality/resources/municipality_admin.columns.name.label')),
             ]);
     }
 
@@ -55,11 +55,11 @@ class MunicipalityAdminUserResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label(__('admin/resources/admin.columns.name.label'))
+                    ->label(__('municipality/resources/municipality_admin.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
                     ->searchable(),
                 TextColumn::make('role')
-                    ->label(__('admin/resources/admin.columns.role.label')),
+                    ->label(__('municipality/resources/municipality_admin.columns.role.label')),
             ])
             ->filters([
                 //

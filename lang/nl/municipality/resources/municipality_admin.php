@@ -1,13 +1,8 @@
 <?php
 
 return [
-    'label' => 'Platformbeheerder',
-    'plural_label' => 'Platformbeheerders',
-
-    'user' => [
-        'label' => 'Adviseur',
-        'plural_label' => 'Adviseurs',
-    ],
+    'label' => 'Beheerder',
+    'plural_label' => 'Beheerders',
 
     'columns' => [
 
@@ -21,9 +16,14 @@ return [
 
     ],
 
+    'user' => [
+        'label' => 'Adviseur',
+        'plural_label' => 'Adviseurs',
+    ],
+
     'actions' => [
         'invite' => [
-            'label' => 'Platformbeheerder uitnodigen',
+            'label' => 'Beheerder uitnodigen',
             'modal_submit_action_label' => 'Uitnodiging versturen',
             'form' => [
                 'name' => [
@@ -65,10 +65,10 @@ return [
 
             'action' => 'Openstaande uitnodigingen',
 
-            'heading' => 'Openstaande platformbeheerderuitnodigingen',
+            'heading' => 'Openstaande gemeentelijk beheerderuitnodigingen',
 
-            'label' => 'platformbeheerderuitnodiging',
-            'plural_label' => 'platformbeheerderuitnodigingen',
+            'label' => 'gemeentelijk beheerderuitnodiging',
+            'plural_label' => 'gemeentelijk beheerderuitnodigingen',
 
             'columns' => [
 
@@ -78,6 +78,10 @@ return [
 
                 'name' => [
                     'label' => 'Naam',
+                ],
+
+                'role' => [
+                    'label' => 'Rol',
                 ],
 
                 'created_at' => [

@@ -1,0 +1,5 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/Municipality/**/*';
+@source '../../../../resources/views/filament/municipality/**/*';
+@source '../../../../resources/views/filament/components/**/*';
