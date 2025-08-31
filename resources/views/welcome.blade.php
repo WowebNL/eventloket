@@ -39,7 +39,7 @@
           <a href="{{ route('filament.organiser.auth.register') }}" class="rounded-md bg-blue-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">{{ __('welcome.register.label') }}</a>
           <a href="{{ route('filament.organiser.auth.login') }}" class="text-sm/6 font-semibold text-gray-900">{{ __('welcome.log_in.label') }}<span aria-hidden="true"> →</span></a>
         </div>
-          <div class="[&>p]:mt-6 text-xl/8 text-gray-700">
+          <div class="[&>p]:mt-6 text-xl/8 text-gray-700 [&>p]:mt-3 [&_a]:text-blue-600 [&_a]:underline [&>h2]:text-4xl [&>h3]:text-2xl [&>h2,&>h3]:font-semibold [&>h2]:tracking-tight [&>h2,&>h3]:text-gray-900 [&>h2,&>h3]:mt-2 [&>blockquote]:p-4 [&>blockquote]:my-4 [&>blockquote]:border-s-4 [&>blockquote]:border-gray-300 [&>blockquote]:bg-gray-50 [&>blockquote]:dark:border-gray-500 [&>blockquote]:dark:bg-gray-800 [&>ul]:list-disc [&>ol]:list-decimal [&>ul,&>ol]:ms-5 [&>ul]:mt-3 [&>ol]:mt-3 [&>li]:mt-1">
             {!! str($intro)->sanitizeHtml() !!}
           </div>
         </div>
@@ -66,7 +66,9 @@
           </ul>
           @endif
           @if($outro)
-            <div class="mt-8 [&>p]:mt-3">{!! str($outro)->sanitizeHtml() !!}</div>
+            <div class="mt-8 [&>p]:mt-3 [&_a]:text-blue-600 [&_a]:underline [&>h2]:text-4xl [&>h3]:text-2xl [&>h2,&>h3]:font-semibold [&>h2]:tracking-tight [&>h2,&>h3]:text-gray-900 [&>h2,&>h3]:mt-2 [&>blockquote]:p-4 [&>blockquote]:my-4 [&>blockquote]:border-s-4 [&>blockquote]:border-gray-300 [&>blockquote]:bg-gray-50 [&>blockquote]:dark:border-gray-500 [&>blockquote]:dark:bg-gray-800 [&>ul]:list-disc [&>ol]:list-decimal [&>ul,&>ol]:ms-5 [&>ul]:mt-3 [&>ol]:mt-3 [&>li]:mt-1">
+              {!! str($outro)->sanitizeHtml() !!}
+            </div>
           @endif
         </div>
       </div>
@@ -91,7 +93,7 @@
                   class=" pb-8 border-b border-solid border-gray-200 "
                 >
                     <h5 class="leading-8 text-gray-600 text-xl mt-2">{{ $faq['question'] }}</h5>
-                    <div class="text-base font-normal text-gray-600 [&>p]:mt-3">
+                    <div class="text-base font-normal text-gray-600 [&>p]:mt-3 [&_a]:text-blue-600 [&_a]:underline [&>h2]:text-4xl [&>h3]:text-2xl [&>h2,&>h3]:font-semibold [&>h2]:tracking-tight [&>h2,&>h3]:text-gray-900 [&>h2,&>h3]:mt-2 [&>blockquote]:p-4 [&>blockquote]:my-4 [&>blockquote]:border-s-4 [&>blockquote]:border-gray-300 [&>blockquote]:bg-gray-50 [&>blockquote]:dark:border-gray-500 [&>blockquote]:dark:bg-gray-800 [&>ul]:list-disc [&>ol]:list-decimal [&>ul,&>ol]:ms-5 [&>ul]:mt-3 [&>ol]:mt-3 [&>li]:mt-1">
                       {!! str($faq['answer'])->sanitizeHtml() !!}
                     </div>
                 </div>
