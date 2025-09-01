@@ -3,3 +3,7 @@
 @source '../../../../app/Filament/Organiser/**/*';
 @source '../../../../resources/views/filament/organiser/**/*';
 @source '../../../../resources/views/filament/components/**/*';
+
+.utrecht-form-field__label--checkbox {
+    pointer-events: none!important;
+}
