@@ -7,6 +7,7 @@ use App\Filament\Pages\AcceptAdminInvite;
 use App\Filament\Pages\Welcome;
 use App\Settings\WelcomeSettings;
 use Illuminate\Support\Facades\Route;
+use Woweb\Openzaak\Openzaak;
 
 Route::middleware('signed')
     ->get('admin/admin-invites/{token}', AcceptAdminInvite::class)
@@ -26,3 +27,10 @@ Route::middleware('signed')
 
 // Route::get('/', Welcome::class)->name('welcome');
 Route::get('/', fn (WelcomeSettings $settings) => view('welcome')->with($settings->toArray()))->name('welcome');
+
+Route::get('/test', function () {
+    $openzaak = new Openzaak;
+    $zaaktypen = $openzaak->catalogi()->zaaktypen()->getAll();
+    $zaken = $openzaak->zaken()->zaken()->getAll();
+    dd($zaaktypen, $zaken);
+});
