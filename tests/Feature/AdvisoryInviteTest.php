@@ -1,7 +1,7 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Advisor\Pages\AcceptAdvisoryInvite;
+use App\Filament\Public\Pages\AcceptAdvisoryInvite;
 use App\Filament\Resources\AdvisoryResource\Pages\EditAdvisory;
 use App\Filament\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
 use App\Mail\AdvisoryInviteMail;

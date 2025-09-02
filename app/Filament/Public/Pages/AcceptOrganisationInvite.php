@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Advisor\Pages;
+namespace App\Filament\Public\Pages;
 
 use App\Enums\Role;
-use App\Models\AdvisoryInvite;
+use App\Models\OrganisationInvite;
 use App\Models\User;
 use Filament\Auth\Events\Registered;
 use Filament\Facades\Filament;
@@ -18,26 +18,26 @@ use Illuminate\Validation\Rules\Password;
 /**
  * @property mixed $form
  */
-class AcceptAdvisoryInvite extends SimplePage
+class AcceptOrganisationInvite extends SimplePage
 {
     use InteractsWithForms;
 
-    protected string $view = 'filament.advisor.pages.accept-advisory-invite';
+    protected string $view = 'filament.organiser.pages.accept-organisation-invite';
 
-    public AdvisoryInvite $advisoryInvite;
+    public OrganisationInvite $organisationInvite;
 
     public array $data = [];
 
     public function mount(string $token)
     {
-        $panel = Filament::getPanel('advisor');
+        $panel = Filament::getPanel('organiser');
         $panel->boot();
 
-        $this->advisoryInvite = AdvisoryInvite::where('token', $token)->firstOrFail();
+        $this->organisationInvite = OrganisationInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
-            'name' => $this->advisoryInvite->name,
-            'email' => $this->advisoryInvite->email,
+            'name' => $this->organisationInvite->name,
+            'email' => $this->organisationInvite->email,
         ]);
     }
 
@@ -60,7 +60,6 @@ class AcceptAdvisoryInvite extends SimplePage
                     ->unique('users'),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
-                    ->required()
                     ->maxLength(20),
                 TextInput::make('password')
                     ->label(__('filament-panels::auth/pages/register.form.password.label'))
@@ -87,17 +86,19 @@ class AcceptAdvisoryInvite extends SimplePage
 
         $user = User::create([
             'name' => $data['name'],
-            'email' => $this->advisoryInvite->email,
+            'email' => $this->organisationInvite->email,
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
-            'role' => Role::Advisor,
+            'role' => Role::Organiser,
         ]);
 
         /** @phpstan-ignore-next-line */
-        $this->advisoryInvite->advisory->users()->attach($user);
+        $this->organisationInvite->organisation->users()->attach($user, [
+            'role' => $this->organisationInvite->role,
+        ]);
 
-        $this->advisoryInvite->delete();
+        $this->organisationInvite->delete();
 
         event(new Registered($user));
 
@@ -105,7 +106,7 @@ class AcceptAdvisoryInvite extends SimplePage
 
         session()->regenerate();
 
-        $this->redirect(route('filament.advisor.pages.dashboard', ['tenant' => $this->advisoryInvite->advisory_id]));
+        $this->redirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisationInvite->organisation_id]));
     }
 
     public function acceptInvite()
@@ -114,25 +115,27 @@ class AcceptAdvisoryInvite extends SimplePage
             abort(403);
         }
 
-        if (auth()->user()->email != $this->advisoryInvite->email) {
+        if (auth()->user()->email != $this->organisationInvite->email) {
             abort(403);
         }
 
         /** @phpstan-ignore-next-line */
-        $this->advisoryInvite->advisory->users()->attach(auth()->user());
+        $this->organisationInvite->organisation->users()->attach(auth()->user(), [
+            'role' => $this->organisationInvite->role,
+        ]);
 
-        $this->advisoryInvite->delete();
+        $this->organisationInvite->delete();
 
-        $this->redirect(route('filament.advisor.pages.dashboard', ['tenant' => $this->advisoryInvite->advisory_id]));
+        $this->redirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisationInvite->organisation_id]));
     }
 
     public function getHeading(): string|Htmlable
     {
-        return __('advisor/pages/auth/accept-advisory-invite.heading');
+        return __('organiser/pages/auth/accept-organisation-invite.heading');
     }
 
     public function getSubheading(): Htmlable|string|null
     {
-        return __('advisor/pages/auth/accept-advisory-invite.subheading');
+        return __('organiser/pages/auth/accept-organisation-invite.subheading');
     }
 }
