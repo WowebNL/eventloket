@@ -1,9 +1,9 @@
 <?php
 
-use App\Filament\Public\Pages\AcceptAdminInvite;
-use App\Filament\Public\Pages\AcceptAdvisoryInvite;
-use App\Filament\Public\Pages\AcceptMunicipalityInvite;
-use App\Filament\Public\Pages\AcceptOrganisationInvite;
+use App\Livewire\AcceptInvites\AcceptAdminInvite;
+use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
+use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
+use App\Livewire\AcceptInvites\AcceptOrganisationInvite;
 use App\Settings\WelcomeSettings;
 use Illuminate\Support\Facades\Route;
 

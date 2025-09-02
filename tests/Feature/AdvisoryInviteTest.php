@@ -1,9 +1,9 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Public\Pages\AcceptAdvisoryInvite;
 use App\Filament\Resources\AdvisoryResource\Pages\EditAdvisory;
 use App\Filament\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
+use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
