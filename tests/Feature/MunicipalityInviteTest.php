@@ -3,7 +3,7 @@
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
-use App\Filament\Public\Pages\AcceptMunicipalityInvite;
+use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\Municipality;
 use App\Models\MunicipalityInvite;
@@ -118,7 +118,7 @@ test('existing user can accept a reviewer invite', function () {
     $response = livewire(AcceptMunicipalityInvite::class, ['token' => $invite->token])
         ->call('acceptInvite');
 
-    $response->assertRedirect(route('filament.municipality.tenant', ['tenant' => $this->municipality->id]));
+    $response->assertRedirect(route('filament.municipality.pages.dashboard', ['tenant' => $this->municipality->id]));
 
     $this->assertDatabaseHas('municipality_user', [
         'municipality_id' => $this->municipality->id,
@@ -161,7 +161,7 @@ test('new user can register and accept a reviewer invite', function () {
         ->call('create');
 
     // Assert
-    $response->assertRedirect(route('filament.municipality.tenant', ['tenant' => $this->municipality->id]));
+    $response->assertRedirect(route('filament.municipality.pages.dashboard', ['tenant' => $this->municipality->id]));
 
     $user = User::where('email', $inviteeEmail)->first();
     expect($user)->not->toBeNull()
