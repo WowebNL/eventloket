@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Municipality\Pages;
+namespace App\Filament\Public\Pages;
 
 use App\Enums\Role;
 use App\Models\Municipality;

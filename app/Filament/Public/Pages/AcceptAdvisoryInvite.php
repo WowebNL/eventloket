@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Filament\Public\Pages;
 
 use App\Enums\Role;
-use App\Models\AdminInvite;
+use App\Models\AdvisoryInvite;
 use App\Models\User;
 use Filament\Auth\Events\Registered;
 use Filament\Facades\Filament;
@@ -18,26 +18,26 @@ use Illuminate\Validation\Rules\Password;
 /**
  * @property mixed $form
  */
-class AcceptAdminInvite extends SimplePage
+class AcceptAdvisoryInvite extends SimplePage
 {
     use InteractsWithForms;
 
-    protected string $view = 'filament.pages.accept-admin-invite';
+    protected string $view = 'filament.advisor.pages.accept-advisory-invite';
 
-    public AdminInvite $adminInvite;
+    public AdvisoryInvite $advisoryInvite;
 
     public array $data = [];
 
     public function mount(string $token)
     {
-        $panel = Filament::getPanel('admin');
+        $panel = Filament::getPanel('advisor');
         $panel->boot();
 
-        $this->adminInvite = AdminInvite::where('token', $token)->firstOrFail();
+        $this->advisoryInvite = AdvisoryInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
-            'name' => $this->adminInvite->name,
-            'email' => $this->adminInvite->email,
+            'name' => $this->advisoryInvite->name,
+            'email' => $this->advisoryInvite->email,
         ]);
     }
 
@@ -60,6 +60,7 @@ class AcceptAdminInvite extends SimplePage
                     ->unique('users'),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
+                    ->required()
                     ->maxLength(20),
                 TextInput::make('password')
                     ->label(__('filament-panels::auth/pages/register.form.password.label'))
@@ -86,14 +87,17 @@ class AcceptAdminInvite extends SimplePage
 
         $user = User::create([
             'name' => $data['name'],
-            'email' => $this->adminInvite->email,
+            'email' => $this->advisoryInvite->email,
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
-            'role' => Role::Admin,
+            'role' => Role::Advisor,
         ]);
 
-        $this->adminInvite->delete();
+        /** @phpstan-ignore-next-line */
+        $this->advisoryInvite->advisory->users()->attach($user);
+
+        $this->advisoryInvite->delete();
 
         event(new Registered($user));
 
@@ -101,7 +105,7 @@ class AcceptAdminInvite extends SimplePage
 
         session()->regenerate();
 
-        $this->redirect(route('filament.admin.pages.dashboard'));
+        $this->redirect(route('filament.advisor.pages.dashboard', ['tenant' => $this->advisoryInvite->advisory_id]));
     }
 
     public function acceptInvite()
@@ -110,24 +114,25 @@ class AcceptAdminInvite extends SimplePage
             abort(403);
         }
 
-        if (auth()->user()->email != $this->adminInvite->email) {
+        if (auth()->user()->email != $this->advisoryInvite->email) {
             abort(403);
         }
 
-        auth()->user()->update(['role' => Role::Admin]);
+        /** @phpstan-ignore-next-line */
+        $this->advisoryInvite->advisory->users()->attach(auth()->user());
 
-        $this->adminInvite->delete();
+        $this->advisoryInvite->delete();
 
-        $this->redirect(route('filament.admin.pages.dashboard'));
+        $this->redirect(route('filament.advisor.pages.dashboard', ['tenant' => $this->advisoryInvite->advisory_id]));
     }
 
     public function getHeading(): string|Htmlable
     {
-        return __('admin/pages/auth/accept-admin-invite.heading');
+        return __('advisor/pages/auth/accept-advisory-invite.heading');
     }
 
     public function getSubheading(): Htmlable|string|null
     {
-        return __('admin/pages/auth/accept-admin-invite.subheading');
+        return __('advisor/pages/auth/accept-advisory-invite.subheading');
     }
 }

@@ -2,8 +2,8 @@
 
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
-use App\Filament\Municipality\Pages\AcceptMunicipalityInvite;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
+use App\Filament\Public\Pages\AcceptMunicipalityInvite;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\Municipality;
 use App\Models\MunicipalityInvite;

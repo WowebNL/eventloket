@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Filament\Organiser\Pages;
+namespace App\Filament\Public\Pages;
 
 use App\Enums\Role;
-use App\Models\OrganisationInvite;
+use App\Models\AdminInvite;
 use App\Models\User;
 use Filament\Auth\Events\Registered;
 use Filament\Facades\Filament;
@@ -18,26 +18,26 @@ use Illuminate\Validation\Rules\Password;
 /**
  * @property mixed $form
  */
-class AcceptOrganisationInvite extends SimplePage
+class AcceptAdminInvite extends SimplePage
 {
     use InteractsWithForms;
 
-    protected string $view = 'filament.organiser.pages.accept-organisation-invite';
+    protected string $view = 'filament.pages.accept-admin-invite';
 
-    public OrganisationInvite $organisationInvite;
+    public AdminInvite $adminInvite;
 
     public array $data = [];
 
     public function mount(string $token)
     {
-        $panel = Filament::getPanel('organiser');
+        $panel = Filament::getPanel('admin');
         $panel->boot();
 
-        $this->organisationInvite = OrganisationInvite::where('token', $token)->firstOrFail();
+        $this->adminInvite = AdminInvite::where('token', $token)->firstOrFail();
 
         $this->form->fill([
-            'name' => $this->organisationInvite->name,
-            'email' => $this->organisationInvite->email,
+            'name' => $this->adminInvite->name,
+            'email' => $this->adminInvite->email,
         ]);
     }
 
@@ -86,19 +86,14 @@ class AcceptOrganisationInvite extends SimplePage
 
         $user = User::create([
             'name' => $data['name'],
-            'email' => $this->organisationInvite->email,
+            'email' => $this->adminInvite->email,
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
-            'role' => Role::Organiser,
+            'role' => Role::Admin,
         ]);
 
-        /** @phpstan-ignore-next-line */
-        $this->organisationInvite->organisation->users()->attach($user, [
-            'role' => $this->organisationInvite->role,
-        ]);
-
-        $this->organisationInvite->delete();
+        $this->adminInvite->delete();
 
         event(new Registered($user));
 
@@ -106,7 +101,7 @@ class AcceptOrganisationInvite extends SimplePage
 
         session()->regenerate();
 
-        $this->redirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisationInvite->organisation_id]));
+        $this->redirect(route('filament.admin.pages.dashboard'));
     }
 
     public function acceptInvite()
@@ -115,27 +110,24 @@ class AcceptOrganisationInvite extends SimplePage
             abort(403);
         }
 
-        if (auth()->user()->email != $this->organisationInvite->email) {
+        if (auth()->user()->email != $this->adminInvite->email) {
             abort(403);
         }
 
-        /** @phpstan-ignore-next-line */
-        $this->organisationInvite->organisation->users()->attach(auth()->user(), [
-            'role' => $this->organisationInvite->role,
-        ]);
+        auth()->user()->update(['role' => Role::Admin]);
 
-        $this->organisationInvite->delete();
+        $this->adminInvite->delete();
 
-        $this->redirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisationInvite->organisation_id]));
+        $this->redirect(route('filament.admin.pages.dashboard'));
     }
 
     public function getHeading(): string|Htmlable
     {
-        return __('organiser/pages/auth/accept-organisation-invite.heading');
+        return __('admin/pages/auth/accept-admin-invite.heading');
     }
 
     public function getSubheading(): Htmlable|string|null
     {
-        return __('organiser/pages/auth/accept-organisation-invite.subheading');
+        return __('admin/pages/auth/accept-admin-invite.subheading');
     }
 }

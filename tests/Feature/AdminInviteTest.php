@@ -1,7 +1,7 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Pages\AcceptAdminInvite;
+use App\Filament\Public\Pages\AcceptAdminInvite;
 use App\Filament\Resources\AdminUserResource\Pages\ListAdminUsers;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
