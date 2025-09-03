@@ -10,6 +10,7 @@
         "brick/geo": "^0.13.1",
         "filament/filament": "^4.0",
         "filament/spatie-laravel-settings-plugin": "^4.0",
+        "guava/calendar": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/passport": "^13.0",
         "laravel/tinker": "^2.10.1",
