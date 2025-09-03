@@ -62,6 +62,7 @@ class MunicipalityAdminUserResource extends Resource
                 SelectColumn::make('role')
                     ->label(__('municipality/resources/municipality_admin.columns.role.label'))
                     ->options([
+                        Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                     ])
