@@ -52,7 +52,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bindMethod([ProcessOpenNotification::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), typeProcessor: app(GetIncommingNotificationType::class)));
         $this->app->bindMethod([AddZaakeigenschappenZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
         $this->app->bindMethod([CreateZaak::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class)));
-        
+
         $this->app->bindMethod([SyncZaaktypen::class, 'handle'], fn ($command) => $command->handle(app(Openzaak::class)));
     }
 }
