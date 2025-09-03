@@ -2,11 +2,11 @@
 
 namespace App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages;
 
-use App\Filament\Actions\OrganiserUser\InviteAction;
-use App\Filament\Actions\PendingInvitesAction;
 use App\Filament\Organiser\Clusters\Settings;
 use App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource;
 use App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource\Widgets\PendingOrganisationInvitesWidget;
+use App\Filament\Shared\Actions\OrganiserUser\InviteAction;
+use App\Filament\Shared\Actions\PendingInvitesAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListOrganiserUsers extends ListRecords

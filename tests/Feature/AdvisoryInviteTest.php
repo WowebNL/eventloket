@@ -1,9 +1,9 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Resources\AdvisoryResource\Pages\EditAdvisory;
-use App\Filament\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
-use App\Filament\Resources\AdvisoryResource\Widgets\PendingAdvisoryInvitesWidget;
+use App\Filament\Admin\Resources\AdvisoryResource\Pages\EditAdvisory;
+use App\Filament\Admin\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
+use App\Filament\Admin\Resources\AdvisoryResource\Widgets\PendingAdvisoryInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;

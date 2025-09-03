@@ -1,8 +1,8 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Resources\AdminUserResource\Pages\ListAdminUsers;
-use App\Filament\Resources\AdminUserResource\Widgets\PendingAdminInvitesWidget;
+use App\Filament\Admin\Resources\AdminUserResource\Pages\ListAdminUsers;
+use App\Filament\Admin\Resources\AdminUserResource\Widgets\PendingAdminInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptAdminInvite;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;

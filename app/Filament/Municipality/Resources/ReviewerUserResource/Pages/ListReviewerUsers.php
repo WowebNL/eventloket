@@ -3,9 +3,9 @@
 namespace App\Filament\Municipality\Resources\ReviewerUserResource\Pages;
 
 use App\Enums\Role;
-use App\Filament\Actions\PendingInvitesAction;
 use App\Filament\Municipality\Resources\ReviewerUserResource;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Widgets\PendingReviewerUserInvitesWidget;
+use App\Filament\Shared\Actions\PendingInvitesAction;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\MunicipalityInvite;
 use App\Models\Organisation;

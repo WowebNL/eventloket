@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Filament\Resources\ApplicationResource\Pages\ListApplications;
+use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;

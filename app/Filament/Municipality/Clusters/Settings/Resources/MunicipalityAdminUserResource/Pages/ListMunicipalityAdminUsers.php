@@ -3,9 +3,9 @@
 namespace App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages;
 
 use App\Enums\Role;
-use App\Filament\Actions\PendingInvitesAction;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Widgets\PendingMunicipalityAdminUserInvitesWidget;
+use App\Filament\Shared\Actions\PendingInvitesAction;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\MunicipalityInvite;
 use App\Models\User;

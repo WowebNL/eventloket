@@ -3,11 +3,11 @@
 use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Enums\Role;
-use App\Filament\Actions\OrganiserUser\InviteAction;
-use App\Filament\Resources\Organisations\Pages\CreateOrganisation;
-use App\Filament\Resources\Organisations\Pages\EditOrganisation;
-use App\Filament\Resources\Organisations\Pages\ListOrganisations;
-use App\Filament\Resources\Organisations\RelationManagers\UsersRelationManager;
+use App\Filament\Admin\Resources\Organisations\Pages\CreateOrganisation;
+use App\Filament\Admin\Resources\Organisations\Pages\EditOrganisation;
+use App\Filament\Admin\Resources\Organisations\Pages\ListOrganisations;
+use App\Filament\Admin\Resources\Organisations\RelationManagers\UsersRelationManager;
+use App\Filament\Shared\Actions\OrganiserUser\InviteAction;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;
 use App\Models\OrganisationInvite;
