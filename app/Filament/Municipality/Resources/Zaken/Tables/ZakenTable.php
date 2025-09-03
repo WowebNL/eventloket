@@ -60,6 +60,7 @@ class ZakenTable
                 ViewAction::make(),
             ])
             ->toolbarActions([
-            ]);
+            ])
+            ->poll(); // default 10s
     }
 }
