@@ -32,6 +32,11 @@ trait HasUuid
      */
     protected static function idByUuuid(string $uuid): ?int
     {
-        return self::where('uuid', $uuid)->select('id')->first()?->id;
+        return self::where(self::$uuidFieldName, $uuid)->select('id')->first()?->id;
+    }
+
+    public function getRouteKeyName()
+    {
+        return self::$uuidFieldName;
     }
 }

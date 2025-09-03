@@ -7,6 +7,7 @@ use App\Filament\Resources\MunicipalityResource\Pages\EditMunicipality;
 use App\Filament\Resources\MunicipalityResource\Pages\ListMunicipalities;
 use App\Models\Municipality;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -45,6 +46,11 @@ class MunicipalityResource extends Resource
                     ->startsWith('GM')
                     ->helperText(__('admin/resources/municipality.columns.brk_identification.helper_text'))
                     ->maxLength(255),
+                Select::make('zaaktypen')
+                    ->label(__('admin/resources/municipality.columns.zaaktypen.label'))
+                    ->multiple()
+                    ->relationship(name: 'zaaktypen', titleAttribute: 'name', modifyQueryUsing: fn ($query) => $query->where(['is_active' => true, 'municipality_id' => null]))
+                    ->preload(),
             ]);
     }
 
@@ -59,6 +65,8 @@ class MunicipalityResource extends Resource
                 TextColumn::make('brk_identification')
                     ->label(__('admin/resources/municipality.columns.brk_identification.label'))
                     ->searchable(),
+                TextColumn::make('zaaktypen.name')
+                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

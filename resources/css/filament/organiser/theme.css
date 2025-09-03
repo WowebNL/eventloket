@@ -5,5 +5,9 @@
 @source '../../../../resources/views/filament/components/**/*';
 
 .utrecht-form-field__label--checkbox {
-    pointer-events: none!important;
+    padding-inline-start: 0!important;
+}
+
+.utrecht-form-label--checkbox {
+        padding-inline-start: calc(var(--_of-checkbox-label-shift) + var(--of-utrecht-form-label-checkbox-padding-inline-start))!important;
 }
