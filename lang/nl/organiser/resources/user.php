@@ -26,6 +26,9 @@ return [
                 ],
                 'email' => [
                     'label' => 'E-mailadres',
+                    'validation' => [
+                        'already_invited' => 'Dit :attribute is al uitgenodigd voor deze organisatie.',
+                    ],
                 ],
                 'make_admin' => [
                     'label' => 'Maak beheerder',

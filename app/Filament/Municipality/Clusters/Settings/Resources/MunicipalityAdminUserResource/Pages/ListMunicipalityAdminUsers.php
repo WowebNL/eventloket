@@ -9,6 +9,7 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserR
 use App\Mail\MunicipalityInviteMail;
 use App\Models\MunicipalityInvite;
 use App\Models\User;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Select;
@@ -43,6 +44,13 @@ class ListMunicipalityAdminUsers extends ListRecords
                         ->email()
                         ->required()
                         ->unique(table: User::class)
+                        ->rules([
+                            fn () => function (string $attribute, $value, Closure $fail) {
+                                if (MunicipalityInvite::where('email', $value)->exists()) {
+                                    $fail(__('municipality/resources/municipality_admin.actions.invite.form.email.validation.already_invited'));
+                                }
+                            },
+                        ])
                         ->maxLength(255),
                     Select::make('municipalities')
                         ->multiple()

@@ -9,6 +9,8 @@ use App\Filament\Municipality\Resources\ReviewerUserResource\Widgets\PendingRevi
 use App\Mail\MunicipalityInviteMail;
 use App\Models\MunicipalityInvite;
 use App\Models\Organisation;
+use App\Models\User;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
@@ -42,6 +44,14 @@ class ListReviewerUsers extends ListRecords
                         ->label(__('admin/resources/user.actions.invite.form.email.label'))
                         ->email()
                         ->required()
+                        ->unique(table: User::class)
+                        ->rules([
+                            fn () => function (string $attribute, $value, Closure $fail) {
+                                if (MunicipalityInvite::where('email', $value)->exists()) {
+                                    $fail(__('admin/resources/user.actions.invite.form.email.validation.already_invited'));
+                                }
+                            },
+                        ])
                         ->maxLength(255),
                 ])
                 ->action(function ($data) {

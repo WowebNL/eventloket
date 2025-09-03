@@ -6,6 +6,7 @@ use App\Enums\OrganisationRole;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;
 use App\Models\OrganisationInvite;
+use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -45,6 +46,16 @@ class InviteAction extends Action
                 ->label(__('organiser/resources/user.actions.invite.form.email.label'))
                 ->email()
                 ->required()
+                ->unique(table: User::class)
+                ->rules([
+                    fn () => function (string $attribute, $value, Closure $fail) {
+                        $organisation = $this->getRelationship();
+
+                        if (OrganisationInvite::where('organisation_id', $organisation->id)->where('email', $value)->exists()) {
+                            $fail(__('admin/resources/advisory.actions.invite.form.email.validation.already_invited'));
+                        }
+                    },
+                ])
                 ->maxLength(255),
             Checkbox::make('makeAdmin')
                 ->label(__('organiser/resources/user.actions.invite.form.make_admin.label'))

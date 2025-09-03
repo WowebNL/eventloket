@@ -7,6 +7,7 @@ use App\Filament\Resources\AdminUserResource;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
 use App\Models\User;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -39,6 +40,13 @@ class ListAdminUsers extends ListRecords
                         ->email()
                         ->required()
                         ->unique(table: User::class)
+                        ->rules([
+                            fn () => function (string $attribute, $value, Closure $fail) {
+                                if (AdminInvite::where('email', $value)->exists()) {
+                                    $fail(__('admin/resources/admin.actions.invite.form.email.validation.already_invited'));
+                                }
+                            },
+                        ])
                         ->maxLength(255),
                 ])
                 ->action(function ($data) {

@@ -22,6 +22,9 @@ return [
                 ],
                 'email' => [
                     'label' => 'E-mailadres',
+                    'validation' => [
+                        'already_invited' => 'Dit :attribute is al uitgenodigd.',
+                    ],
                 ],
             ],
             'notification' => [

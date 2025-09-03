@@ -5,6 +5,8 @@ namespace App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
+use App\Models\User;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\AttachAction;
 use Filament\Actions\DeleteAction;
@@ -76,6 +78,17 @@ class UsersRelationManager extends RelationManager
                             ->label(__('admin/resources/advisory.actions.invite.form.email.label'))
                             ->email()
                             ->required()
+                            ->unique(table: User::class)
+                            ->rules([
+                                fn () => function (string $attribute, $value, Closure $fail) {
+                                    /** @var Advisory $advisory */
+                                    $advisory = $this->ownerRecord;
+
+                                    if (AdvisoryInvite::where('advisory_id', $advisory->id)->where('email', $value)->exists()) {
+                                        $fail(__('admin/resources/advisory.actions.invite.form.email.validation.already_invited'));
+                                    }
+                                },
+                            ])
                             ->maxLength(255),
                     ])
                     ->action(function ($data) {
