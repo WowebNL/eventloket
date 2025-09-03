@@ -6,6 +6,8 @@ use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Console\Commands\SyncZaaktypen;
 use App\Filament\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
+use App\Jobs\Zaak\AddZaakeigenschappenZGW;
+use App\Jobs\Zaak\CreateZaak;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
@@ -13,6 +15,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
+use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
 
 class AppServiceProvider extends ServiceProvider
@@ -47,6 +50,9 @@ class AppServiceProvider extends ServiceProvider
     private function bindCustomMethods(): void
     {
         $this->app->bindMethod([ProcessOpenNotification::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), typeProcessor: app(GetIncommingNotificationType::class)));
+        $this->app->bindMethod([AddZaakeigenschappenZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
+        $this->app->bindMethod([CreateZaak::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class)));
+        
         $this->app->bindMethod([SyncZaaktypen::class, 'handle'], fn ($command) => $command->handle(app(Openzaak::class)));
     }
 }
