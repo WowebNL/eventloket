@@ -3,6 +3,7 @@
 namespace App\Livewire\AcceptInvites;
 
 use App\Enums\Role;
+use App\Exceptions\InviteNotFoundException;
 use App\Models\AdminInvite;
 use App\Models\AdvisoryInvite;
 use App\Models\MunicipalityInvite;
@@ -44,7 +45,11 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
     {
         Filament::getPanel($this->getPanelName())->boot();
 
-        $this->invite = $this->getInviteModel()::where('token', $token)->firstOrFail();
+        if (! $invite = $this->getInviteModel()::where('token', $token)->first()) {
+            throw new InviteNotFoundException;
+        }
+
+        $this->invite = $invite;
 
         /** @phpstan-ignore-next-line */
         $this->form->fill([

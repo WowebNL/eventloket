@@ -8,3 +8,5 @@ Schedule::call(function () {
         \App\Jobs\ProcessSyncGeometryOnMunicipality::dispatch($municipality);
     }
 })->weekly();
+
+Schedule::job(new \App\Jobs\CleanupExpiredInvites)->daily();

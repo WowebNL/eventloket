@@ -9,7 +9,7 @@
                 {{ $this->form }}
 
             <div class="mt-6">
-                <x-filament::button type="submit">
+                <x-filament::button type="submit" style="width: 100%;">
                     {{ __('advisor/pages/auth/accept-advisory-invite.button') }}
                 </x-filament::button>
             </div>

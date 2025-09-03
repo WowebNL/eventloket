@@ -198,3 +198,27 @@ test('non-admin users cannot create admin invites', function () {
     $this->get(route('filament.admin.resources.admin-users.index'))
         ->assertForbidden();
 });
+
+test('deleted invite shows not found page', function () {
+    // Arrange
+    $invite = AdminInvite::factory()->create([
+        'email' => 'deleted@example.com',
+        'token' => Str::uuid(),
+    ]);
+
+    $signedUrl = URL::signedRoute('admin-invites.accept', [
+        'token' => $invite->token,
+    ]);
+
+    // Delete the invite
+    $invite->delete();
+
+    // Act & Assert
+    $this->get($signedUrl)
+        ->assertStatus(404)
+        ->assertViewIs('errors.invite-not-found')
+        ->assertViewHas([
+            'heading' => __('errors/invite-not-found.heading'),
+            'subheading' => __('errors/invite-not-found.subheading', ['days' => config('invites.expiration_days')]),
+        ]);
+});
