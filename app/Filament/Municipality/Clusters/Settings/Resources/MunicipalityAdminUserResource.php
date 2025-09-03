@@ -13,6 +13,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -58,8 +59,13 @@ class MunicipalityAdminUserResource extends Resource
                     ->label(__('municipality/resources/municipality_admin.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
                     ->searchable(),
-                TextColumn::make('role')
-                    ->label(__('municipality/resources/municipality_admin.columns.role.label')),
+                SelectColumn::make('role')
+                    ->label(__('municipality/resources/municipality_admin.columns.role.label'))
+                    ->options([
+                        Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
+                        Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                    ])
+                    ->selectablePlaceholder(false),
             ])
             ->filters([
                 //
