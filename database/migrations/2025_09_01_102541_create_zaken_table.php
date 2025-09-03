@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('zaken', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('public_id')->unique();
+            $table->string('zgw_zaak_url')->unique();
             $table->foreignUuid('zaaktype_id')->constrained('zaaktypen')->cascadeOnDelete();
             $table->foreignId('organisation_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('organiser_user_id')->nullable()->constrained('users', 'id')->cascadeOnDelete();

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('zaaktypen', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('name');
-            $table->string('oz_url')->unique();
+            $table->string('zgw_zaaktype_url')->unique();
             $table->foreignId('municipality_id')->nullable()->constrained()->nullOnDelete();
             $table->boolean('is_active')->default(false);
             $table->timestamps();

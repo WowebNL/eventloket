@@ -26,7 +26,7 @@ class CreateZaak implements ShouldQueue
     public function handle(Openzaak $openzaak): void
     {
         $ozZaak = new OzZaak(...$openzaak->get($this->zaakUrlZGW.'?expand=zaakobjecten,eigenschappen,status,status.statustype')->toArray());
-        $zaaktype = Zaaktype::where(['oz_url' => $ozZaak->zaaktype, 'is_active' => true])->first();
+        $zaaktype = Zaaktype::where(['zgw_zaaktype_url' => $ozZaak->zaaktype, 'is_active' => true])->first();
 
         if (! $zaaktype) {
             // zaaktype not found in local database or not active
@@ -35,7 +35,7 @@ class CreateZaak implements ShouldQueue
             return;
         }
         $zaak = Zaak::updateOrCreate(
-            ['id' => $ozZaak->uuid],
+            ['zgw_zaak_url' => $ozZaak->url],
             [
                 'public_id' => $ozZaak->identificatie,
                 'zaaktype_id' => $zaaktype->id,

@@ -24,6 +24,8 @@ class ZaakResource extends Resource
 
     protected static ?string $tenantOwnershipRelationshipName = 'municipality';
 
+    protected static ?string $slug = 'zaken';
+
     public static function getModelLabel(): string
     {
         return __('municipality/resources/zaak.label');

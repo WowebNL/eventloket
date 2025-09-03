@@ -35,17 +35,16 @@ class SyncZaaktypen extends Command
 
         foreach ($zaaktypen as $data) {
             $zaaktype = Zaaktype::updateOrCreate(
-                ['id' => $data['uuid']],
+                ['zgw_zaaktype_url' => $data['url']],
                 [
                     'name' => $data['omschrijving'],
-                    'oz_url' => $data['url'],
                     'is_active' => true,
                 ]
             );
             $updatedIds[] = $zaaktype->id;
         }
 
-        // deactivate all zaaktypen that were not updated
+        // deactivate all zaaktypen that were not in the openzaak response
         Zaaktype::whereNotIn('id', $updatedIds)->update(['is_active' => false]);
 
         $this->info('Zaaktypen synced successfully.');

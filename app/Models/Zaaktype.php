@@ -15,7 +15,7 @@ class Zaaktype extends Model
 
     protected $fillable = [
         'name',
-        'oz_url',
+        'zgw_zaaktype_url',
         'is_active',
     ];
 

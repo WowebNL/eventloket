@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -20,8 +21,8 @@ class Zaak extends Model
     protected $table = 'zaken';
 
     protected $fillable = [
-        'id',
         'public_id',
+        'zgw_zaak_url',
         'zaaktype_id',
         'data_object_url',
         'organisation_id',
@@ -58,7 +59,7 @@ class Zaak extends Model
         return Attribute::make(
             get: function ($value, $attributes) {
                 return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
-                    return new OzZaak(...(new Openzaak)->get($attributes['oz_url'].'?expand=status,status.statustype,eigenschappen')->all());
+                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen')->all());
                 });
             },
             // set: function($value, $attributes) {
@@ -66,12 +67,12 @@ class Zaak extends Model
         );
     }
 
-    protected function zaakdata()
+    protected function zaakdata(): Attribute
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                return Cache::rememberForever("zaak.{$attributes['uuid']}.zaakdata", function () use ($attributes) {
-                    return (new ObjectsApi)->get($attributes['data_object_url']);
+                return Cache::rememberForever("zaak.{$attributes['id']}.zaakdata", function () use ($attributes) {
+                    return new FormSubmissionObject(...(new ObjectsApi)->get(basename($attributes['data_object_url']))->toArray());
                 });
             },
             // set: function($value, $attributes) {

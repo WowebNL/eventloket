@@ -26,9 +26,9 @@ class ProcessCreateZaak implements ShouldQueue
      */
     public function handle(CreateZaakNotificationReceived $event): void
     {
-        // TODO do this in createZaak event (make one + listener + fire event)
         Bus::chain([
             new AddZaakeigenschappenZGW($event->notification->hoofdObject),
+            // TODO set uiterlijke eindatum afdoening en eindatum gepland
             // TODO add geometry to zaak
             new CreateZaak($event->notification->hoofdObject),
             // TODO send notificaties

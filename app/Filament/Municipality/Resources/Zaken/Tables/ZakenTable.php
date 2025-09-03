@@ -4,6 +4,8 @@ namespace App\Filament\Municipality\Resources\Zaken\Tables;
 
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class ZakenTable
@@ -35,8 +37,25 @@ class ZakenTable
 
             ])
             ->filters([
-                //
-            ])
+                SelectFilter::make('reference_data.status_name')
+                    ->label(__('municipality/resources/zaak.columns.status.label'))
+                    ->options([
+                        'Ontvangen' => 'Ontvangen',
+                    ])
+                    ->multiple()
+                    ->attribute('reference_data->status_name'),
+                SelectFilter::make('reference_data.risico_classificatie')
+                    ->label(__('municipality/resources/zaak.columns.risico_classificatie.label'))
+                    ->options([
+                        '0' => '0',
+                        'A' => 'A',
+                        'B' => 'B',
+                        'C' => 'C',
+                    ])
+                    ->multiple()
+                    ->attribute('reference_data->risico_classificatie'),
+            ], layout: FiltersLayout::AboveContent)
+            ->deferFilters(false)
             ->recordActions([
                 ViewAction::make(),
             ])
