@@ -12,7 +12,8 @@
         "filament/spatie-laravel-settings-plugin": "^4.0",
         "laravel/framework": "^12.0",
         "laravel/passport": "^13.0",
-        "laravel/tinker": "^2.10.1"
+        "laravel/tinker": "^2.10.1",
+        "woweb/openzaak": "dev-main"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.15",
@@ -27,6 +28,12 @@
         "pestphp/pest": "^3.8",
         "pestphp/pest-plugin-laravel": "^3.2",
         "pestphp/pest-plugin-livewire": "^3.0"
+    },
+    "repositories": {
+        "woweb/openzaak": {
+            "type": "vcs",
+            "url": "git@github.com:WowebNL/laravel-openzaak.git"
+        }
     },
     "autoload": {
         "psr-4": {

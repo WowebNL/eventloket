@@ -8,3 +8,5 @@ Schedule::call(function () {
         \App\Jobs\ProcessSyncGeometryOnMunicipality::dispatch($municipality);
     }
 })->weekly();
+
+Schedule::command('sync:zaaktypen')->dailyAt('02:00');
