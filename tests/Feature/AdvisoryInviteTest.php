@@ -3,6 +3,7 @@
 use App\Enums\Role;
 use App\Filament\Resources\AdvisoryResource\Pages\EditAdvisory;
 use App\Filament\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
+use App\Filament\Resources\AdvisoryResource\Widgets\PendingAdvisoryInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
@@ -59,6 +60,51 @@ test('admin can create an advisory invite', function () {
     Mail::assertSent(AdvisoryInviteMail::class, function ($mail) use ($inviteeEmail) {
         return $mail->hasTo($inviteeEmail);
     });
+});
+
+test('admin can see and delete pending advisory invites', function () {
+    // Arrange
+    $this->actingAs($this->admin);
+    $inviteeEmail = 'advisor@example.com';
+    $invitee2Email = 'advisor2@example.com';
+
+    $invite1 = AdvisoryInvite::create([
+        'advisory_id' => $this->advisory->id,
+        'email' => $inviteeEmail,
+        'token' => Str::uuid(),
+    ]);
+    $invite2 = AdvisoryInvite::create([
+        'advisory_id' => $this->advisory->id,
+        'email' => $invitee2Email,
+        'token' => Str::uuid(),
+    ]);
+
+    // Act
+    $listPage = livewire(UsersRelationManager::class, [
+        'ownerRecord' => $this->advisory,
+        'pageClass' => EditAdvisory::class,
+    ])
+        ->assertTableActionExists('pending-invites')
+        ->assertTableActionExists('pending-invites')
+        ->assertTableActionExists('pending-invites');
+
+    // Assert the action opens successfully
+    $listPage->assertSuccessful();
+
+    // Test the widget content directly
+    $widget = livewire(PendingAdvisoryInvitesWidget::class, ['record' => $this->advisory])
+        ->assertCanSeeTableRecords([$invite1, $invite2])
+        ->assertSee($inviteeEmail)
+        ->assertSee($invitee2Email);
+
+    // Test deleting a single record
+    $widget->callTableAction('delete', $invite1->id)
+        ->assertCanNotSeeTableRecords([$invite1])
+        ->assertCanSeeTableRecords([$invite2]);
+
+    // Verify the invite was actually deleted from the database
+    expect(AdvisoryInvite::find($invite1->id))->toBeNull()
+        ->and(AdvisoryInvite::find($invite2->id))->not->toBeNull();
 });
 
 test('existing user can accept an advisory invite', function () {
