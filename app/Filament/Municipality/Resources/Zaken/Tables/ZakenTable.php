@@ -61,6 +61,7 @@ class ZakenTable
             ])
             ->toolbarActions([
             ])
+            ->defaultSort('created_at', direction: 'desc')
             ->poll(); // default 10s
     }
 }
