@@ -5,7 +5,9 @@ return [
     'plural_label' => 'Zaken',
 
     'columns' => [
-
+        'naam_evenement' => [
+            'label' => 'Naam evenement',
+        ],
         'public_id' => [
             'label' => 'Identificatie',
         ],

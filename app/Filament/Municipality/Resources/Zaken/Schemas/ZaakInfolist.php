@@ -28,6 +28,8 @@ class ZaakInfolist
                             ->description('Informatie over de zaak')
                             ->columns(2)
                             ->schema([
+                                TextEntry::make('reference_data.naam_evenement')
+                                    ->label(__('municipality/resources/zaak.columns.naam_evenement.label')),
                                 TextEntry::make('public_id')
                                     ->icon('heroicon-o-identification')
                                     ->label(__('municipality/resources/zaak.columns.public_id.label')),

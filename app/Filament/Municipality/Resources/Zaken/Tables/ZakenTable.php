@@ -14,6 +14,11 @@ class ZakenTable
     {
         return $table
             ->columns([
+                TextColumn::make('reference_data.naam_evenement')
+                    ->label(__('municipality/resources/zaak.columns.naam_evenement.label'))
+                    ->sortable()
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
                 TextColumn::make('public_id')
                     ->label(__('municipality/resources/zaak.columns.public_id.label'))
                     ->sortable()
@@ -29,11 +34,13 @@ class ZakenTable
                 TextColumn::make('reference_data.risico_classificatie')
                     ->label(__('municipality/resources/zaak.columns.risico_classificatie.label'))
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.status_name')
                     ->label(__('municipality/resources/zaak.columns.status.label'))
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
 
             ])
             ->filters([
