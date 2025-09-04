@@ -3,7 +3,7 @@
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
-use App\Filament\Municipality\Resources\ReviewerUserResource\Widgets\PendingReviewerUserInvitesWidget;
+use App\Filament\Shared\Resources\ReviewerUsers\Widgets\PendingReviewerUserInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\Municipality;

@@ -7,13 +7,11 @@ use App\Filament\Admin\Resources\Organisations\Pages\CreateOrganisation;
 use App\Filament\Admin\Resources\Organisations\Pages\EditOrganisation;
 use App\Filament\Admin\Resources\Organisations\Pages\ListOrganisations;
 use App\Filament\Admin\Resources\Organisations\RelationManagers\UsersRelationManager;
-use App\Filament\Shared\Actions\OrganiserUser\InviteAction;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;
 use App\Models\OrganisationInvite;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
 
@@ -109,7 +107,7 @@ test('admin can invite organisation user for organisation', function () {
         'pageClass' => EditOrganisation::class,
     ])
         ->assertOk()
-        ->callAction(TestAction::make(InviteAction::class)->table(), [
+        ->callTableAction('invite', null, [
             'name' => fake()->name,
             'email' => $email,
             'makeAdmin' => false,

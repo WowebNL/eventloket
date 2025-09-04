@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Admin\Resources\Organisations\Widgets;
+namespace App\Filament\Shared\Resources\OrganiserUsers\Widgets;
 
 use App\Models\Organisation;
 use App\Models\OrganisationInvite;

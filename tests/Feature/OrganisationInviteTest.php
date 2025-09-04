@@ -2,8 +2,8 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource\Pages\ListOrganiserUsers;
 use App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource\Widgets\PendingOrganisationInvitesWidget;
-use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListOrganiserUsers;
 use App\Livewire\AcceptInvites\AcceptOrganisationInvite;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;

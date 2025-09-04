@@ -9,6 +9,7 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserR
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Models\User;
+use App\Models\Users\MunicipalityAdminUser;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class MunicipalityAdminUserResource extends Resource
 {
-    protected static ?string $model = User::class;
+    protected static ?string $model = MunicipalityAdminUser::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 

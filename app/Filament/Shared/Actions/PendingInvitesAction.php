@@ -19,7 +19,7 @@ class PendingInvitesAction extends Action
     {
         parent::setUp();
 
-        $this->label(__('admin/resources/admin.widgets.pending_invites.action'));
+        $this->label(__('shared/actions.pending_invites.label'));
 
         $this->color('gray');
 

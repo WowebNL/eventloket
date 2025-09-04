@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Widgets;
+namespace App\Filament\Shared\Resources\ReviewerUsers\Widgets;
 
 use App\Enums\Role;
+use App\Models\Municipality;
 use App\Models\MunicipalityInvite;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -12,8 +13,10 @@ use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Database\Eloquent\Builder;
 
-class PendingMunicipalityAdminUserInvitesWidget extends TableWidget
+class PendingReviewerUserInvitesWidget extends TableWidget
 {
+    public ?Municipality $record = null;
+
     public function table(Table $table): Table
     {
         return $table
@@ -22,26 +25,22 @@ class PendingMunicipalityAdminUserInvitesWidget extends TableWidget
                 $tenant = Filament::getTenant();
 
                 return MunicipalityInvite::query()
-                    ->whereIn('role', [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin])
-                    ->whereHas('municipalities', fn (Builder $query): Builder => $query->where('id', $tenant->id));
+                    ->where('role', Role::Reviewer)
+                    ->whereHas('municipalities', fn (Builder $query): Builder => $query->where('id', $tenant->id ?? $this->record->id));
             })
-            ->modelLabel(__('municipality/resources/municipality_admin.widgets.pending_invites.label'))
-            ->pluralModelLabel(__('municipality/resources/municipality_admin.widgets.pending_invites.plural_label'))
+            ->modelLabel(__('municipality/resources/user.widgets.pending_invites.label'))
+            ->pluralModelLabel(__('municipality/resources/user.widgets.pending_invites.plural_label'))
             ->columns([
                 TextColumn::make('email')
-                    ->label(__('municipality/resources/municipality_admin.widgets.pending_invites.columns.email.label'))
+                    ->label(__('municipality/resources/user.widgets.pending_invites.columns.email.label'))
                     ->searchable(),
                 TextColumn::make('name')
-                    ->label(__('municipality/resources/municipality_admin.widgets.pending_invites.columns.name.label'))
-                    ->searchable(),
-                TextColumn::make('role')
-                    ->label(__('municipality/resources/municipality_admin.widgets.pending_invites.columns.role.label'))
+                    ->label(__('municipality/resources/user.widgets.pending_invites.columns.name.label'))
                     ->searchable(),
                 TextColumn::make('created_at')
-                    ->label(__('municipality/resources/municipality_admin.widgets.pending_invites.columns.created_at.label'))
+                    ->label(__('municipality/resources/user.widgets.pending_invites.columns.created_at.label'))
                     ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->sortable(),
             ])
             ->filters([
                 //

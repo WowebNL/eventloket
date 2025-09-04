@@ -5,6 +5,8 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\CreateMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\EditMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\ListMunicipalities;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityAdminUsersRelationManager;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerUsersRelationManager;
 use App\Models\Municipality;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
@@ -82,7 +84,8 @@ class MunicipalityResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ReviewerUsersRelationManager::class,
+            MunicipalityAdminUsersRelationManager::class,
         ];
     }
 

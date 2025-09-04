@@ -5,11 +5,11 @@ namespace App\Filament\Municipality\Resources;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\CreateReviewerUser;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\EditReviewerUser;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
+use App\Filament\Shared\Resources\ReviewerUsers\Schemas\ReviewerUserForm;
+use App\Filament\Shared\Resources\ReviewerUsers\Tables\ReviewerUsersTable;
 use App\Models\Users\ReviewerUser;
-use Filament\Actions\EditAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class ReviewerUserResource extends Resource
@@ -24,40 +24,22 @@ class ReviewerUserResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('admin/resources/user.label');
+        return __('resources/reviewer_user.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('admin/resources/user.plural_label');
+        return __('resources/reviewer_user.plural_label');
     }
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                //
-            ]);
+        return ReviewerUserForm::configure($schema);
     }
 
     public static function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('name')
-                    ->label(__('admin/resources/user.columns.name.label'))
-                    ->description(fn (ReviewerUser $record): string => $record->email)
-                    ->searchable(),
-            ])
-            ->filters([
-                //
-            ])
-            ->recordActions([
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                //
-            ]);
+        return ReviewerUsersTable::configure($table);
     }
 
     public static function getRelations(): array
