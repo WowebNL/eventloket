@@ -22,12 +22,6 @@ class Application extends Model
         'all_endpoints',
     ];
 
-    // use uuid only for routes
-    public function getRouteKeyName()
-    {
-        return 'uuid';
-    }
-
     public function clients()
     {
         return $this->morphMany(Client::class, 'owner');

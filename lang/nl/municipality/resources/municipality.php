@@ -13,6 +13,9 @@ return [
             'label' => 'BRK (kadaster) Identificatie',
             'helper_text' => 'De BRK identificatie moet beginnen met "GM".',
         ],
+        'zaaktypen' => [
+            'label' => 'Zaaktypen',
+        ],
 
     ],
 ];

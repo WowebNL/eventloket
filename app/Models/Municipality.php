@@ -11,6 +11,7 @@ use Database\Factories\MunicipalityFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Municipality extends Model implements HasGeometry
 {
@@ -53,6 +54,11 @@ class Municipality extends Model implements HasGeometry
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
+    }
+
+    public function zaaktypen(): HasMany
+    {
+        return $this->hasMany(Zaaktype::class);
     }
 
     public function advisories()
