@@ -44,11 +44,11 @@ class AcceptMunicipalityInvite extends AbstractAcceptInvite
 
     public function getHeading(): string|Htmlable
     {
-        return __('advisor/pages/auth/accept-advisory-invite.heading');
+        return __('municipality/pages/auth/accept-municipality-invite.heading', ['role' => strtolower($this->getRole()->getLabel())]);
     }
 
     public function getSubheading(): Htmlable|string|null
     {
-        return __('advisor/pages/auth/accept-advisory-invite.subheading');
+        return __('municipality/pages/auth/accept-municipality-invite.subheading');
     }
 }

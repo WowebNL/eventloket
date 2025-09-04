@@ -39,11 +39,11 @@ class AcceptOrganisationInvite extends AbstractAcceptInvite
 
     public function getHeading(): string|Htmlable
     {
-        return __('advisor/pages/auth/accept-advisory-invite.heading');
+        return __('organiser/pages/auth/accept-organisation-invite.heading');
     }
 
     public function getSubheading(): Htmlable|string|null
     {
-        return __('advisor/pages/auth/accept-advisory-invite.subheading');
+        return __('organiser/pages/auth/accept-organisation-invite.subheading');
     }
 }
