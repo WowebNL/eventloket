@@ -8,22 +8,23 @@ use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Model;
 
-class ZaakReferenceData implements Arrayable, Castable
+final readonly class ZaakReferenceData implements Arrayable, Castable
 {
-    public readonly Carbon $start_evenement_datetime;
+    public Carbon $start_evenement_datetime;
 
-    public readonly Carbon $eind_evenement_datetime;
+    public Carbon $eind_evenement_datetime;
 
-    public readonly Carbon $registratiedatum_datetime;
+    public Carbon $registratiedatum_datetime;
 
-    public readonly ?array $otherParams;
+    public ?array $otherParams;
 
     public function __construct(
-        public readonly string $risico_classificatie,
-        public readonly string $start_evenement,
-        public readonly string $eind_evenement,
-        public readonly string $registratiedatum,
-        public readonly string $status_name,
+        public string $risico_classificatie,
+        public string $start_evenement,
+        public string $eind_evenement,
+        public string $registratiedatum,
+        public string $status_name,
+        public ?string $naam_evenement = null,
         ...$otherParams
     ) {
         $this->start_evenement_datetime = Carbon::parse($this->start_evenement);
@@ -40,6 +41,7 @@ class ZaakReferenceData implements Arrayable, Castable
             'eind_evenement' => $this->eind_evenement,
             'registratiedatum' => $this->registratiedatum,
             'status_name' => $this->status_name,
+            'naam_evenement' => $this->naam_evenement,
         ];
     }
 
