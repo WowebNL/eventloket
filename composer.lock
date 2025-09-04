@@ -9598,12 +9598,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/WowebNL/laravel-openzaak.git",
-                "reference": "7ab6e665fe77cef8cd0a42b234f357adf2ad0c03"
+                "reference": "f3fca8a8820167f7a697168b1ed2abb30f3b65c8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WowebNL/laravel-openzaak/zipball/7ab6e665fe77cef8cd0a42b234f357adf2ad0c03",
-                "reference": "7ab6e665fe77cef8cd0a42b234f357adf2ad0c03",
+                "url": "https://api.github.com/repos/WowebNL/laravel-openzaak/zipball/f3fca8a8820167f7a697168b1ed2abb30f3b65c8",
+                "reference": "f3fca8a8820167f7a697168b1ed2abb30f3b65c8",
                 "shasum": ""
             },
             "require": {
@@ -9637,7 +9637,7 @@
                 "source": "https://github.com/WowebNL/laravel-openzaak/tree/main",
                 "issues": "https://github.com/WowebNL/laravel-openzaak/issues"
             },
-            "time": "2025-09-01T18:10:03+00:00"
+            "time": "2025-09-04T12:10:41+00:00"
         }
     ],
     "packages-dev": [
