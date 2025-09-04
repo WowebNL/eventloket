@@ -9,4 +9,6 @@ Schedule::call(function () {
     }
 })->weekly();
 
+Schedule::job(new \App\Jobs\CleanupExpiredInvites)->daily();
+
 Schedule::command('sync:zaaktypen')->dailyAt('02:00');

@@ -3,6 +3,7 @@
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
+use App\Filament\Shared\Resources\ReviewerUsers\Widgets\PendingReviewerUserInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\Municipality;
@@ -56,6 +57,53 @@ test('municipality admin can create a reviewer invite', function () {
     Mail::assertSent(MunicipalityInviteMail::class, function ($mail) use ($inviteeEmail) {
         return $mail->hasTo($inviteeEmail);
     });
+});
+
+test('municipality admin can see and delete pending reviewer invites', function () {
+    // Arrange
+    $this->actingAs($this->municipalityAdmin);
+    $inviteeEmail = 'reviewer@example.com';
+    $invitee2Email = 'reviewer2@example.com';
+
+    $invite1 = MunicipalityInvite::create([
+        'email' => $inviteeEmail,
+        'role' => Role::Reviewer,
+        'token' => Str::uuid(),
+    ]);
+    $invite1->municipalities()->attach($this->municipality->id);
+
+    $invite2 = MunicipalityInvite::create([
+        'email' => $invitee2Email,
+        'role' => Role::Reviewer,
+        'token' => Str::uuid(),
+    ]);
+    $invite2->municipalities()->attach($this->municipality->id);
+
+    Filament::setTenant($this->municipality);
+
+    // Act
+    $listPage = livewire(ListReviewerUsers::class)
+        ->assertActionExists('pending-invites')
+        ->assertActionEnabled('pending-invites')
+        ->callAction('pending-invites');
+
+    // Assert the action opens successfully
+    $listPage->assertSuccessful();
+
+    // Test the widget content directly
+    $widget = livewire(PendingReviewerUserInvitesWidget::class)
+        ->assertCanSeeTableRecords([$invite1, $invite2])
+        ->assertSee($inviteeEmail)
+        ->assertSee($invitee2Email);
+
+    // Test deleting a single record
+    $widget->callTableAction('delete', $invite1->id)
+        ->assertCanNotSeeTableRecords([$invite1])
+        ->assertCanSeeTableRecords([$invite2]);
+
+    // Verify the invite was actually deleted from the database
+    expect(MunicipalityInvite::find($invite1->id))->toBeNull()
+        ->and(MunicipalityInvite::find($invite2->id))->not->toBeNull();
 });
 
 test('reviewer municipality admin can create a reviewer invite', function () {

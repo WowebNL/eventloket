@@ -1,7 +1,8 @@
 <?php
 
 use App\Enums\Role;
-use App\Filament\Resources\AdminUserResource\Pages\ListAdminUsers;
+use App\Filament\Admin\Resources\AdminUserResource\Pages\ListAdminUsers;
+use App\Filament\Admin\Resources\AdminUserResource\Widgets\PendingAdminInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptAdminInvite;
 use App\Mail\AdminInviteMail;
 use App\Models\AdminInvite;
@@ -47,6 +48,40 @@ test('admin can create an admin invite', function () {
     });
 });
 
+test('admin can see and delete pending admin invites', function () {
+    // Arrange
+    $this->actingAs($this->admin);
+    $inviteeEmail = 'newadmin@example.com';
+    $invitee2Email = 'newadmin2@example.com';
+
+    $invite1 = AdminInvite::factory()->create(['email' => $inviteeEmail]);
+    $invite2 = AdminInvite::factory()->create(['email' => $invitee2Email]);
+
+    // Act
+    $listPage = livewire(ListAdminUsers::class)
+        ->assertActionExists('pending-invites')
+        ->assertActionEnabled('pending-invites')
+        ->callAction('pending-invites');
+
+    // Assert the action opens successfully
+    $listPage->assertSuccessful();
+
+    // Test the widget content directly
+    $widget = livewire(PendingAdminInvitesWidget::class)
+        ->assertCanSeeTableRecords([$invite1, $invite2])
+        ->assertSee($inviteeEmail)
+        ->assertSee($invitee2Email);
+
+    // Test deleting a single record
+    $widget->callTableAction('delete', $invite1->id)
+        ->assertCanNotSeeTableRecords([$invite1])
+        ->assertCanSeeTableRecords([$invite2]);
+
+    // Verify the invite was actually deleted from the database
+    expect(AdminInvite::find($invite1->id))->toBeNull()
+        ->and(AdminInvite::find($invite2->id))->not->toBeNull();
+});
+
 test('existing user can accept an admin invite', function () {
     // Arrange
     $user = User::factory()->create([
@@ -55,7 +90,6 @@ test('existing user can accept an admin invite', function () {
 
     $invite = AdminInvite::create([
         'email' => $user->email,
-        'role' => Role::Admin,
         'token' => Str::uuid(),
     ]);
 
@@ -90,7 +124,6 @@ test('new user can register and accept an admin invite', function () {
     $inviteeEmail = 'brandnewadmin@example.com';
     $invite = AdminInvite::create([
         'email' => $inviteeEmail,
-        'role' => Role::Admin,
         'token' => Str::uuid(),
     ]);
 
@@ -136,7 +169,6 @@ test('invite cannot be accepted by wrong user', function () {
     $invite = AdminInvite::create([
         'email' => 'differentuser@example.com', // Different email than logged-in user
         'token' => Str::uuid(),
-        'role' => Role::Admin,
     ]);
 
     // Act
@@ -165,4 +197,28 @@ test('non-admin users cannot create admin invites', function () {
     // Act & Assert - should get an authorization error
     $this->get(route('filament.admin.resources.admin-users.index'))
         ->assertForbidden();
+});
+
+test('deleted invite shows not found page', function () {
+    // Arrange
+    $invite = AdminInvite::factory()->create([
+        'email' => 'deleted@example.com',
+        'token' => Str::uuid(),
+    ]);
+
+    $signedUrl = URL::signedRoute('admin-invites.accept', [
+        'token' => $invite->token,
+    ]);
+
+    // Delete the invite
+    $invite->delete();
+
+    // Act & Assert
+    $this->get($signedUrl)
+        ->assertStatus(404)
+        ->assertViewIs('errors.invite-not-found')
+        ->assertViewHas([
+            'heading' => __('errors/invite-not-found.heading'),
+            'subheading' => __('errors/invite-not-found.subheading', ['days' => config('invites.expiration_days')]),
+        ]);
 });

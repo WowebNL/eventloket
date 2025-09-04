@@ -2,7 +2,8 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
-use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListOrganiserUsers;
+use App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource\Pages\ListOrganiserUsers;
+use App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource\Widgets\PendingOrganisationInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptOrganisationInvite;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;
@@ -60,6 +61,52 @@ test('organisation admin can create an invite', function () {
     Mail::assertSent(OrganisationInviteMail::class, function ($mail) use ($inviteeEmail) {
         return $mail->hasTo($inviteeEmail);
     });
+});
+
+test('organisation admin can see and delete pending organisation invites', function () {
+    // Arrange
+    $this->actingAs($this->admin);
+    $inviteeEmail = 'organiser@example.com';
+    $invitee2Email = 'organiser2@example.com';
+
+    $invite1 = OrganisationInvite::create([
+        'organisation_id' => $this->organisation->id,
+        'email' => $inviteeEmail,
+        'role' => OrganisationRole::Member->value,
+        'token' => Str::uuid(),
+    ]);
+    $invite2 = OrganisationInvite::create([
+        'organisation_id' => $this->organisation->id,
+        'email' => $invitee2Email,
+        'role' => OrganisationRole::Member->value,
+        'token' => Str::uuid(),
+    ]);
+
+    Filament::setTenant($this->organisation);
+
+    // Act
+    $listPage = livewire(ListOrganiserUsers::class)
+        ->assertActionExists('pending-invites')
+        ->assertActionEnabled('pending-invites')
+        ->callAction('pending-invites');
+
+    // Assert the action opens successfully
+    $listPage->assertSuccessful();
+
+    // Test the widget content directly
+    $widget = livewire(PendingOrganisationInvitesWidget::class)
+        ->assertCanSeeTableRecords([$invite1, $invite2])
+        ->assertSee($inviteeEmail)
+        ->assertSee($invitee2Email);
+
+    // Test deleting a single record
+    $widget->callTableAction('delete', $invite1->id)
+        ->assertCanNotSeeTableRecords([$invite1])
+        ->assertCanSeeTableRecords([$invite2]);
+
+    // Verify the invite was actually deleted from the database
+    expect(OrganisationInvite::find($invite1->id))->toBeNull()
+        ->and(OrganisationInvite::find($invite2->id))->not->toBeNull();
 });
 
 test('existing user can accept an invite', function () {

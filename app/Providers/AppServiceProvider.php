@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Console\Commands\SyncZaaktypen;
-use App\Filament\Resources\ApplicationResource\Pages\ListApplications;
+use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateZaak;

@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Casts\AsGeoJson;
 use App\Models\Contracts\HasGeometry;
+use App\Models\Users\MunicipalityAdminUser;
+use App\Models\Users\ReviewerUser;
 use Brick\Geo\Geometry;
 use Database\Factories\MunicipalityFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,6 +39,16 @@ class Municipality extends Model implements HasGeometry
         return [
             'geometry' => AsGeoJson::class,
         ];
+    }
+
+    public function reviewerUsers()
+    {
+        return $this->belongsToMany(ReviewerUser::class, 'municipality_user');
+    }
+
+    public function municipalityAdminUsers()
+    {
+        return $this->belongsToMany(MunicipalityAdminUser::class, 'municipality_user');
     }
 
     public function users(): BelongsToMany

@@ -3,17 +3,15 @@
 use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Enums\Role;
-use App\Filament\Actions\OrganiserUser\InviteAction;
-use App\Filament\Resources\Organisations\Pages\CreateOrganisation;
-use App\Filament\Resources\Organisations\Pages\EditOrganisation;
-use App\Filament\Resources\Organisations\Pages\ListOrganisations;
-use App\Filament\Resources\Organisations\RelationManagers\UsersRelationManager;
+use App\Filament\Admin\Resources\Organisations\Pages\CreateOrganisation;
+use App\Filament\Admin\Resources\Organisations\Pages\EditOrganisation;
+use App\Filament\Admin\Resources\Organisations\Pages\ListOrganisations;
+use App\Filament\Admin\Resources\Organisations\RelationManagers\UsersRelationManager;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;
 use App\Models\OrganisationInvite;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
-use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
 
@@ -109,7 +107,7 @@ test('admin can invite organisation user for organisation', function () {
         'pageClass' => EditOrganisation::class,
     ])
         ->assertOk()
-        ->callAction(TestAction::make(InviteAction::class)->table(), [
+        ->callTableAction('invite', null, [
             'name' => fake()->name,
             'email' => $email,
             'makeAdmin' => false,

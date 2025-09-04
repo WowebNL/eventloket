@@ -4,7 +4,8 @@ namespace App\Filament\Organiser\Clusters\Settings\Resources;
 
 use App\Enums\OrganisationRole;
 use App\Filament\Organiser\Clusters\Settings;
-use App\Filament\Organiser\Clusters\Settings\Resources\UserResource\Pages\ListOrganiserUsers;
+use App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource\Pages\ListOrganiserUsers;
+use App\Filament\Shared\Resources\OrganiserUsers\Schemas\OrganiserUserForm;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
@@ -53,10 +54,7 @@ class OrganiserUserResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                //
-            ]);
+        return OrganiserUserForm::configure($schema);
     }
 
     public static function table(Table $table): Table

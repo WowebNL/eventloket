@@ -9,17 +9,19 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserR
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Models\User;
+use App\Models\Users\MunicipalityAdminUser;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class MunicipalityAdminUserResource extends Resource
 {
-    protected static ?string $model = User::class;
+    protected static ?string $model = MunicipalityAdminUser::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
@@ -58,8 +60,14 @@ class MunicipalityAdminUserResource extends Resource
                     ->label(__('municipality/resources/municipality_admin.columns.name.label'))
                     ->description(fn (User $record): string => $record->email)
                     ->searchable(),
-                TextColumn::make('role')
-                    ->label(__('municipality/resources/municipality_admin.columns.role.label')),
+                SelectColumn::make('role')
+                    ->label(__('municipality/resources/municipality_admin.columns.role.label'))
+                    ->options([
+                        Role::Reviewer->value => Role::Reviewer->getLabel(),
+                        Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
+                        Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                    ])
+                    ->selectablePlaceholder(false),
             ])
             ->filters([
                 //
