@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Users\MunicipalityAdminUser;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\SelectColumn;
@@ -67,7 +68,13 @@ class MunicipalityAdminUserResource extends Resource
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                     ])
-                    ->selectablePlaceholder(false),
+                    ->selectablePlaceholder(false)
+                    ->afterStateUpdated(function () {
+                        Notification::make()
+                            ->title(__('municipality/resources/municipality_admin.columns.role.notification'))
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->filters([
                 //
