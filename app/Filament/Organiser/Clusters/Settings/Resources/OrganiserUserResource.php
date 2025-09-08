@@ -10,6 +10,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\SelectColumn;
@@ -77,7 +78,13 @@ class OrganiserUserResource extends Resource
                     ->getStateUsing(fn (OrganiserUser $record) => self::getUserRoleState($record))
                     ->updateStateUsing(fn (OrganiserUser $record, string $state) => $record->organisations()->updateExistingPivot($tenant->id, ['role' => $state]))
                     ->selectablePlaceholder(false)
-                    ->disabled(fn (OrganiserUser $record) => $record->id === auth()->id());
+                    ->disabled(fn (OrganiserUser $record) => $record->id === auth()->id())
+                    ->afterStateUpdated(function () {
+                        Notification::make()
+                            ->title(__('organiser/resources/user.columns.role.notification'))
+                            ->success()
+                            ->send();
+                    });
         } else {
             $columns[] =
                 TextColumn::make('status')
