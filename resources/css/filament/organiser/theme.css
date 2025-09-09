@@ -1,8 +1,7 @@
-@import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import '../base_theme.css';
 
 @source '../../../../app/Filament/Organiser/**/*';
 @source '../../../../resources/views/filament/organiser/**/*';
-@source '../../../../resources/views/filament/components/**/*';
 
 .utrecht-form-field__label--checkbox {
     padding-inline-start: 0!important;

@@ -6,8 +6,11 @@ use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Informatieobject;
+use Guava\Calendar\Contracts\Eventable;
+use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
@@ -15,9 +18,12 @@ use Illuminate\Support\Facades\Cache;
 use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
 
-class Zaak extends Model
+/**
+ * @property-read ZaakReferenceData $reference_data
+ */
+class Zaak extends Model implements Eventable
 {
-    use HasUuids;
+    use HasFactory, HasUuids;
 
     protected $table = 'zaken';
 
@@ -99,5 +105,14 @@ class Zaak extends Model
             // set: function($value, $attributes) {
             // }
         );
+    }
+
+    public function toCalendarEvent(): CalendarEvent
+    {
+        // Status tekstueel toevoegen
+        return CalendarEvent::make($this)
+            ->title($this->reference_data->naam_evenement ?? $this->public_id)
+            ->start($this->reference_data->start_evenement)
+            ->end($this->reference_data->eind_evenement);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Filament\Shared\Resources\MunicipalityAdminUsers\Tables;
 use App\Enums\Role;
 use App\Models\User;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -29,7 +30,13 @@ class MunicipalityAdminUserTable
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                     ])
-                    ->selectablePlaceholder(false),
+                    ->selectablePlaceholder(false)
+                    ->afterStateUpdated(function () {
+                        Notification::make()
+                            ->title(__('resources/municipality_admin.columns.role.notification'))
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->filters([
                 //

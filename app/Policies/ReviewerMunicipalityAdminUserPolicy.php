@@ -37,7 +37,7 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function update(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        return $user->is($reviewerMunicipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -45,7 +45,7 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function delete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        return $user->is($reviewerMunicipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -53,7 +53,7 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function restore(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        return $user->is($reviewerMunicipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -61,6 +61,6 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function forceDelete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        return $user->is($reviewerMunicipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 }

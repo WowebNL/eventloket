@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Organiser\Clusters\Settings\Pages\EditOrganisationProfile;
+use App\Filament\Organiser\Pages\Dashboard;
 use App\Filament\Organiser\Pages\EditProfile;
 use App\Filament\Organiser\Pages\Register;
 use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
@@ -43,6 +44,9 @@ class OrganiserPanelProvider extends PanelProvider
             ->tenant(Organisation::class)
             ->discoverResources(in: app_path('Filament/Organiser/Resources'), for: 'App\\Filament\\Organiser\\Resources')
             ->discoverPages(in: app_path('Filament/Organiser/Pages'), for: 'App\\Filament\\Organiser\\Pages')
+            ->pages([
+                Dashboard::class,
+            ])
             ->discoverClusters(in: app_path('Filament/Organiser/Clusters'), for: 'App\\Filament\\Organiser\\Clusters')
             ->login()
             ->registration(Register::class)
@@ -56,6 +60,7 @@ class OrganiserPanelProvider extends PanelProvider
                     ->recoverable(),
             ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Shared'), for: 'App\Filament\Shared')
             ->widgets([
                 Intro::class,
                 Shortlink::class,

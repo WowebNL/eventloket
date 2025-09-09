@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Advisor\Pages\Dashboard;
 use App\Models\Advisory;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
@@ -9,11 +10,9 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -50,9 +49,7 @@ class AdvisorPanelProvider extends PanelProvider
                     ->recoverable(),
             ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Advisor/Widgets'), for: 'App\\Filament\\Advisor\\Widgets')
-            ->widgets([
-                AccountWidget::class,
-            ])
+            ->discoverWidgets(in: app_path('Filament/Shared'), for: 'App\Filament\Shared')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

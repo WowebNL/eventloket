@@ -17,6 +17,8 @@ class PendingReviewerUserInvitesWidget extends TableWidget
 {
     public ?Municipality $record = null;
 
+    protected static bool $isDiscovered = false;
+
     public function table(Table $table): Table
     {
         return $table

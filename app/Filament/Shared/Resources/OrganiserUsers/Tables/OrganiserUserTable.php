@@ -11,6 +11,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -34,6 +35,12 @@ class OrganiserUserTable
                     ->selectablePlaceholder(false)
                     ->updateStateUsing(function (OrganiserUser $record, string $state) use ($organisation): void {
                         $record->organisations()->updateExistingPivot($organisation->id, ['role' => $state]);
+                    })
+                    ->afterStateUpdated(function () {
+                        Notification::make()
+                            ->title(__('organiser/resources/user.columns.role.notification'))
+                            ->success()
+                            ->send();
                     })
                     ->searchable(),
                 TextColumn::make('created_at')

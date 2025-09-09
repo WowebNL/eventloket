@@ -5,7 +5,7 @@ namespace App\Models\Users;
 use App\Enums\Role;
 use App\Models\Traits\ScopesByRole;
 
-class ReviewerMunicipalityAdminUser extends MunicipalityAdminUser
+class ReviewerMunicipalityAdminUser extends MunicipalityUser
 {
     use ScopesByRole;
 
