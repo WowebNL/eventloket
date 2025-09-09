@@ -2,10 +2,13 @@
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Filament\Organiser\Widgets\Intro;
+use App\Filament\Organiser\Widgets\Shortlink;
 use Carbon\Carbon;
+use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Contracts\Support\Htmlable;
 
-class Dashboard extends \Filament\Pages\Dashboard
+class Dashboard extends BaseDashboard
 {
     public function getTitle(): string|Htmlable
     {
@@ -27,5 +30,13 @@ class Dashboard extends \Filament\Pages\Dashboard
             $hour >= 12 && $hour < 18 => __('organiser/pages/dashboard.greet.afternoon'),
             default => __('organiser/pages/dashboard.greet.evening'),
         };
+    }
+
+    public function getWidgets(): array
+    {
+        return [
+            Intro::class,
+            Shortlink::class,
+        ];
     }
 }

@@ -16,6 +16,23 @@ use Filament\Schemas\Schema;
 
 class ZaakInfolist
 {
+    public static function informationschema(): array
+    {
+        return [
+            TextEntry::make('reference_data.naam_evenement')
+                ->label(__('municipality/resources/zaak.columns.naam_evenement.label')),
+            TextEntry::make('public_id')
+                ->icon('heroicon-o-identification')
+                ->label(__('municipality/resources/zaak.columns.public_id.label')),
+            TextEntry::make('zaaktype.name')
+                ->label(__('municipality/resources/zaak.columns.zaaktype.label')),
+            TextEntry::make('zaakdata.zaakeigenschappen_key_value.risico_classificatie')
+                ->label(__('Risico classificatie uit formulier')),
+            TextEntry::make('municipality.name')
+                ->label(__('Ingediend bij gemeente')),
+        ];
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -27,19 +44,7 @@ class ZaakInfolist
                         Section::make('Informatie')
                             ->description('Informatie over de zaak')
                             ->columns(2)
-                            ->schema([
-                                TextEntry::make('reference_data.naam_evenement')
-                                    ->label(__('municipality/resources/zaak.columns.naam_evenement.label')),
-                                TextEntry::make('public_id')
-                                    ->icon('heroicon-o-identification')
-                                    ->label(__('municipality/resources/zaak.columns.public_id.label')),
-                                TextEntry::make('zaaktype.name')
-                                    ->label(__('municipality/resources/zaak.columns.zaaktype.label')),
-                                TextEntry::make('zaakdata.zaakeigenschappen_key_value.risico_classificatie')
-                                    ->label(__('Risico classificatie uit formulier')),
-                                TextEntry::make('municipality.name')
-                                    ->label(__('Ingediend bij gemeente')),
-                            ])
+                            ->schema(self::informationschema())
                             ->columnSpan(8),
                         Section::make('Acties')
                             ->description('Voer wijzigingen uit binnen de zaak')
