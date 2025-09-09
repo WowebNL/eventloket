@@ -52,6 +52,7 @@ class MunicipalityPanelProvider extends PanelProvider
                     ->recoverable(),
             ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Municipality/Widgets'), for: 'App\Filament\Municipality\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Shared'), for: 'App\Filament\Shared')
             ->widgets([
                 AccountWidget::class,
             ])

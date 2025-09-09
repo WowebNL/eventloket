@@ -7,14 +7,15 @@ use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\EditReviewerU
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
 use App\Filament\Shared\Resources\ReviewerUsers\Schemas\ReviewerUserForm;
 use App\Filament\Shared\Resources\ReviewerUsers\Tables\ReviewerUsersTable;
-use App\Models\Users\ReviewerUser;
+use App\Models\Users\MunicipalityUser;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReviewerUserResource extends Resource
 {
-    protected static ?string $model = ReviewerUser::class;
+    protected static ?string $model = MunicipalityUser::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
@@ -47,6 +48,12 @@ class ReviewerUserResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        /** @phpstan-ignore-next-line */
+        return parent::getEloquentQuery()->reviewers();
     }
 
     public static function getPages(): array

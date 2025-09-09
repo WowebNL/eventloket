@@ -15,6 +15,8 @@ class PendingOrganisationInvitesWidget extends TableWidget
 {
     public ?Organisation $record = null;
 
+    protected static bool $isDiscovered = false;
+
     public function table(Table $table): Table
     {
         return $table
