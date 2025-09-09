@@ -4,6 +4,7 @@ namespace App\Filament\Advisor\Widgets;
 
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Widgets\CalendarWidget;
+use App\Models\Municipality;
 use App\Models\Organisation;
 use Filament\Forms\Components\Select;
 use Guava\Calendar\ValueObjects\FetchInfo;
@@ -14,6 +15,12 @@ class AdvisorCalendarWidget extends CalendarWidget
     protected function getFilterSchema(): array
     {
         return [
+            Select::make('municipalities')
+                ->label(__('admin/resources/municipality.plural_label'))
+                ->options(fn () => Municipality::query()->orderBy('name')->pluck('name', 'id'))
+                ->multiple()
+                ->searchable()
+                ->preload(),
             Select::make('organisations')
                 ->label(__('admin/resources/organisation.plural_label'))
                 ->options(fn () => Organisation::query()->orderBy('name')->pluck('name', 'id'))
@@ -27,6 +34,10 @@ class AdvisorCalendarWidget extends CalendarWidget
     protected function applyContextFilters(Builder $query, FetchInfo $info): Builder
     {
         $filters = $this->filters ?? [];
+
+        if (! empty($filters['municipalities'])) {
+            $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('municipality_id', $filters['municipalities']));
+        }
 
         if (! empty($filters['organisations'])) {
             $query->whereIn('organisation_id', $filters['organisations']);
