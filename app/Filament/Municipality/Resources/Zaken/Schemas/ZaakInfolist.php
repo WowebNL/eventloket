@@ -16,21 +16,20 @@ use Filament\Schemas\Schema;
 
 class ZaakInfolist
 {
-
-    public static function informationschema() : array
+    public static function informationschema(): array
     {
         return [
-                                TextEntry::make('reference_data.naam_evenement')
-                                    ->label(__('municipality/resources/zaak.columns.naam_evenement.label')),
-                                TextEntry::make('public_id')
-                                    ->icon('heroicon-o-identification')
-                                    ->label(__('municipality/resources/zaak.columns.public_id.label')),
-                                TextEntry::make('zaaktype.name')
-                                    ->label(__('municipality/resources/zaak.columns.zaaktype.label')),
-                                TextEntry::make('zaakdata.zaakeigenschappen_key_value.risico_classificatie')
-                                    ->label(__('Risico classificatie uit formulier')),
-                                TextEntry::make('municipality.name')
-                                    ->label(__('Ingediend bij gemeente')),
+            TextEntry::make('reference_data.naam_evenement')
+                ->label(__('municipality/resources/zaak.columns.naam_evenement.label')),
+            TextEntry::make('public_id')
+                ->icon('heroicon-o-identification')
+                ->label(__('municipality/resources/zaak.columns.public_id.label')),
+            TextEntry::make('zaaktype.name')
+                ->label(__('municipality/resources/zaak.columns.zaaktype.label')),
+            TextEntry::make('zaakdata.zaakeigenschappen_key_value.risico_classificatie')
+                ->label(__('Risico classificatie uit formulier')),
+            TextEntry::make('municipality.name')
+                ->label(__('Ingediend bij gemeente')),
         ];
     }
 
