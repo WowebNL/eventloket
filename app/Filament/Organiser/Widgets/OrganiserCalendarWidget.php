@@ -2,6 +2,7 @@
 
 namespace App\Filament\Organiser\Widgets;
 
+use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Widgets\CalendarWidget;
 use App\Models\Municipality;
 use Filament\Forms\Components\Select;
@@ -19,6 +20,7 @@ class OrganiserCalendarWidget extends CalendarWidget
                 ->multiple()
                 ->searchable()
                 ->preload(),
+            RisicoClassificatiesSelect::make(),
         ];
     }
 
@@ -30,6 +32,10 @@ class OrganiserCalendarWidget extends CalendarWidget
 
         if (! empty($filters['municipalities'])) {
             $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('municipality_id', $filters['municipalities']));
+        }
+
+        if (! empty($filters['risico_classificaties'])) {
+            $query->whereIn('reference_data->risico_classificatie', $filters['risico_classificaties']);
         }
 
         return $query;
