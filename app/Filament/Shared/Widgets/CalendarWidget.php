@@ -36,14 +36,13 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
     public function defaultSchema(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Informatie')
-                ->description('Informatie over de zaak')
+            Section::make(__('shared/widgets/calendar.modal_title'))
                 ->columns(2)
                 ->schema(ZaakInfolist::informationschema())
                 ->columnSpan(8)
                 ->footer([
                     Action::make('view')
-                        ->label(__('Bekijk zaak'))
+                        ->label(__('shared/widgets/calendar.view_case'))
                         ->icon('heroicon-o-arrow-top-right-on-square')
                         ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
                         ->color('primary')
