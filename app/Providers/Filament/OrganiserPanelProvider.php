@@ -7,6 +7,8 @@ use App\Filament\Organiser\Pages\Dashboard;
 use App\Filament\Organiser\Pages\EditProfile;
 use App\Filament\Organiser\Pages\Register;
 use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
+use App\Filament\Organiser\Widgets\Intro;
+use App\Filament\Organiser\Widgets\Shortlink;
 use App\Models\Organisation;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
@@ -58,6 +60,11 @@ class OrganiserPanelProvider extends PanelProvider
                     ->recoverable(),
             ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Shared'), for: 'App\Filament\Shared')
+            ->widgets([
+                Intro::class,
+                Shortlink::class,
+            ])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

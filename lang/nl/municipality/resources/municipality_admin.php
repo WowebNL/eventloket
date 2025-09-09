@@ -12,6 +12,7 @@ return [
 
         'role' => [
             'label' => 'Rol',
+            'notification' => 'Rol geupdate',
         ],
 
     ],

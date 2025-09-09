@@ -16,18 +16,10 @@ use Filament\Schemas\Schema;
 
 class ZaakInfolist
 {
-    public static function configure(Schema $schema): Schema
+
+    public static function informationschema() : array
     {
-        return $schema
-            ->components([
-                Grid::make()
-                    ->columns(12)
-                    ->columnSpanFull()
-                    ->schema([
-                        Section::make('Informatie')
-                            ->description('Informatie over de zaak')
-                            ->columns(2)
-                            ->schema([
+        return [
                                 TextEntry::make('reference_data.naam_evenement')
                                     ->label(__('municipality/resources/zaak.columns.naam_evenement.label')),
                                 TextEntry::make('public_id')
@@ -39,7 +31,21 @@ class ZaakInfolist
                                     ->label(__('Risico classificatie uit formulier')),
                                 TextEntry::make('municipality.name')
                                     ->label(__('Ingediend bij gemeente')),
-                            ])
+        ];
+    }
+
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Grid::make()
+                    ->columns(12)
+                    ->columnSpanFull()
+                    ->schema([
+                        Section::make('Informatie')
+                            ->description('Informatie over de zaak')
+                            ->columns(2)
+                            ->schema(self::informationschema())
                             ->columnSpan(8),
                         Section::make('Acties')
                             ->description('Voer wijzigingen uit binnen de zaak')

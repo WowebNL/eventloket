@@ -29,7 +29,7 @@ class MunicipalityAdminUserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === Role::MunicipalityAdmin;
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -37,7 +37,7 @@ class MunicipalityAdminUserPolicy
      */
     public function update(User $user, MunicipalityAdminUser $municipalityAdminUser): bool
     {
-        return $user->is($municipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -45,7 +45,7 @@ class MunicipalityAdminUserPolicy
      */
     public function delete(User $user, MunicipalityAdminUser $municipalityAdminUser): bool
     {
-        return $user->is($municipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -53,7 +53,7 @@ class MunicipalityAdminUserPolicy
      */
     public function restore(User $user, MunicipalityAdminUser $municipalityAdminUser): bool
     {
-        return $user->is($municipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -61,6 +61,6 @@ class MunicipalityAdminUserPolicy
      */
     public function forceDelete(User $user, MunicipalityAdminUser $municipalityAdminUser): bool
     {
-        return $user->is($municipalityAdminUser);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 }

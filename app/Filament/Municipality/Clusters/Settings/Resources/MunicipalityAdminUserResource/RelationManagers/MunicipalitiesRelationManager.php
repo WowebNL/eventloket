@@ -2,12 +2,14 @@
 
 namespace App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\RelationManagers;
 
+use App\Enums\Role;
 use Filament\Actions\AttachAction;
 use Filament\Actions\DetachAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class MunicipalitiesRelationManager extends RelationManager
@@ -51,7 +53,14 @@ class MunicipalitiesRelationManager extends RelationManager
             ->headerActions([
                 AttachAction::make()
                     ->preloadRecordSelect()
-                    ->multiple(),
+                    ->multiple()
+                    ->recordSelectOptionsQuery(function (Builder $query) {
+                        if (in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin])) {
+                            return $query->whereHas('users', fn (Builder $query): Builder => $query->where('id', auth()->user()->id));
+                        }
+
+                        return $query;
+                    }),
             ])
             ->recordActions([
                 DetachAction::make(),

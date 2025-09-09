@@ -49,6 +49,7 @@ class AdvisorPanelProvider extends PanelProvider
                     ->recoverable(),
             ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Advisor/Widgets'), for: 'App\\Filament\\Advisor\\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Shared'), for: 'App\Filament\Shared')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
