@@ -2,6 +2,7 @@
 
 namespace App\Filament\Municipality\Resources\Zaken\Schemas;
 
+use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Actions\Action;
@@ -9,6 +10,7 @@ use Filament\Forms\Components\Select;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Icon;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -82,10 +84,11 @@ class ZaakInfolist
                             ])->columnSpan(4),
                         Tabs::make('Tabs')
                             ->tabs([
-                                Tab::make('Berichten')
-                                    ->schema([
-                                    ]),
                                 Tab::make('Bestanden')
+                                    ->schema([
+                                        Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
+                                    ]),
+                                Tab::make('Berichten')
                                     ->schema([
                                     ]),
                                 Tab::make('Adviesvragen')

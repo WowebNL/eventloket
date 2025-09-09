@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DocumentController;
 use App\Livewire\AcceptInvites\AcceptAdminInvite;
 use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
@@ -25,3 +26,6 @@ Route::middleware('signed')
 
 // Route::get('/', Welcome::class)->name('welcome');
 Route::get('/', fn (WelcomeSettings $settings) => view('welcome')->with($settings->toArray()))->name('welcome');
+
+// auth in DocumentRequest
+Route::get('/zaak-documents/{zaak}/{documentuuid}/{type?}', DocumentController::class)->name('zaak.documents.view');

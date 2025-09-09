@@ -5,6 +5,7 @@ namespace App\Models;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
+use App\ValueObjects\ZGW\Informatieobject;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -65,7 +66,27 @@ class Zaak extends Model implements Eventable
         return Attribute::make(
             get: function ($value, $attributes) {
                 return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
-                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen')->all());
+                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten')->all());
+                });
+            },
+            // set: function($value, $attributes) {
+            // }
+        );
+    }
+
+    protected function documenten(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value, $attributes) {
+                return Cache::rememberForever("zaak.{$attributes['id']}.documenten", function () {
+                    $openzaak = new Openzaak;
+                    $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);
+                    $collection = collect();
+                    foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
+                        $collection->push(new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
+                    }
+
+                    return $collection;
                 });
             },
             // set: function($value, $attributes) {
