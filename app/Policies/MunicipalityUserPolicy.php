@@ -4,9 +4,9 @@ namespace App\Policies;
 
 use App\Enums\Role;
 use App\Models\User;
-use App\Models\Users\ReviewerMunicipalityAdminUser;
+use App\Models\Users\MunicipalityUser;
 
-class ReviewerMunicipalityAdminUserPolicy
+class MunicipalityUserPolicy
 {
     /**
      * Determine whether the user can view any models.
@@ -19,7 +19,7 @@ class ReviewerMunicipalityAdminUserPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
+    public function view(User $user, MunicipalityUser $municipalityUser): bool
     {
         return false;
     }
@@ -29,21 +29,21 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->role === Role::MunicipalityAdmin;
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
+    public function update(User $user, MunicipalityUser $municipalityUser): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        return true; // return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
+    public function delete(User $user, MunicipalityUser $municipalityUser): bool
     {
         return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
@@ -51,7 +51,7 @@ class ReviewerMunicipalityAdminUserPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
+    public function restore(User $user, MunicipalityUser $municipalityUser): bool
     {
         return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
@@ -59,7 +59,7 @@ class ReviewerMunicipalityAdminUserPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
+    public function forceDelete(User $user, MunicipalityUser $municipalityUser): bool
     {
         return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }

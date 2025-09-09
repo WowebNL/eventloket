@@ -56,6 +56,7 @@ class OrganiserPanelProvider extends PanelProvider
                     ->recoverable(),
             ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Organiser/Widgets'), for: 'App\\Filament\\Organiser\\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Shared'), for: 'App\Filament\Shared')
             ->widgets([
                 Intro::class,
                 Shortlink::class,

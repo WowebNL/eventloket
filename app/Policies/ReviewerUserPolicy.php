@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Models\Users\ReviewerUser;
 
@@ -36,7 +37,7 @@ class ReviewerUserPolicy
      */
     public function update(User $user, ReviewerUser $reviewerUser): bool
     {
-        return false;
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
@@ -44,7 +45,7 @@ class ReviewerUserPolicy
      */
     public function delete(User $user, ReviewerUser $reviewerUser): bool
     {
-        return false;
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**

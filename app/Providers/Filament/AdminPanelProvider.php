@@ -50,6 +50,7 @@ class AdminPanelProvider extends PanelProvider
                     ->recoverable(),
             ], isRequired: config('app.require_2fa'))
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\\Filament\\Admin\\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Shared'), for: 'App\Filament\Shared')
             ->widgets([
                 AccountWidget::class,
             ])
