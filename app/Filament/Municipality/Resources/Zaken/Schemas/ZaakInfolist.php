@@ -3,6 +3,9 @@
 namespace App\Filament\Municipality\Resources\Zaken\Schemas;
 
 use App\Livewire\Zaken\ZaakDocumentsTable;
+use App\Filament\Municipality\Resources\Zaken\Pages\ViewZaak;
+use App\Filament\Municipality\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
+use App\Filament\Municipality\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Actions\Action;
@@ -89,26 +92,34 @@ class ZaakInfolist
                                     ->label(__('municipality/resources/zaak.columns.status.label')),
                             ])->columnSpan(4),
                         Tabs::make('Tabs')
+                            ->persistTabInQueryString()
                             ->tabs([
+                                Tab::make('Organisatievragen')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
+                                    ->icon('heroicon-o-chat-bubble-left')
+                                    ->schema([
+                                        Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
+                                    ]),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
+                                    ->icon('heroicon-o-document')
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ]),
-                                Tab::make('messages')
-                                    ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
-                                    ->schema([
-                                    ]),
                                 Tab::make('advice_requests')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
+                                    ->icon('heroicon-o-question-mark-circle')
                                     ->schema([
+                                        Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),
                                 Tab::make('locations')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.locations.label'))
+                                    ->icon('heroicon-o-map-pin')
                                     ->schema([
                                     ]),
                                 Tab::make('log')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.log.label'))
+                                    ->icon('heroicon-o-clock')
                                     ->schema([
                                     ]),
                             ])

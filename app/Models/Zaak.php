@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationType;
+use App\Models\Threads\AdviceThread;
+use App\Models\Threads\OrganiserThread;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
@@ -50,6 +52,16 @@ class Zaak extends Model implements Eventable
     public function zaaktype(): BelongsTo
     {
         return $this->belongsTo(Zaaktype::class);
+    }
+
+    public function organiserThreads()
+    {
+        return $this->hasMany(OrganiserThread::class);
+    }
+
+    public function adviceThreads()
+    {
+        return $this->hasMany(AdviceThread::class);
     }
 
     public function municipality(): HasOneThrough
