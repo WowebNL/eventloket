@@ -3,6 +3,9 @@
 namespace App\Filament\Municipality\Resources\Zaken\Schemas;
 
 use App\Livewire\Zaken\ZaakDocumentsTable;
+use App\Filament\Municipality\Resources\Zaken\Pages\ViewZaak;
+use App\Filament\Municipality\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
+use App\Filament\Municipality\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Actions\Action;
@@ -83,21 +86,29 @@ class ZaakInfolist
                                     ->label(__('municipality/resources/zaak.columns.status.label')),
                             ])->columnSpan(4),
                         Tabs::make('Tabs')
+                            ->persistTabInQueryString()
                             ->tabs([
+                                Tab::make('Organisatievragen')
+                                    ->icon('heroicon-o-chat-bubble-left')
+                                    ->schema([
+                                        Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
+                                    ]),
                                 Tab::make('Bestanden')
+                                    ->icon('heroicon-o-document')
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ]),
-                                Tab::make('Berichten')
-                                    ->schema([
-                                    ]),
                                 Tab::make('Adviesvragen')
+                                    ->icon('heroicon-o-question-mark-circle')
                                     ->schema([
+                                        Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),
                                 Tab::make('Locaties')
+                                    ->icon('heroicon-o-map-pin')
                                     ->schema([
                                     ]),
                                 Tab::make('Log')
+                                    ->icon('heroicon-o-clock')
                                     ->schema([
                                     ]),
                             ])
