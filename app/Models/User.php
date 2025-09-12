@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Models\Traits\HasUuid;
 use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
 use App\Models\Users\MunicipalityAdminUser;
@@ -13,6 +14,7 @@ use Database\Factories\UserFactory;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthentication;
 use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -23,7 +25,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, HasUuid, Notifiable;
 
     protected $table = 'users';
 
@@ -38,6 +40,8 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
      * @var list<string>
      */
     protected $fillable = [
+        'first_name',
+        'last_name',
         'name',
         'email',
         'email_verified_at',
@@ -72,6 +76,30 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
         ];
+    }
+
+    /**
+     * setup name based on first and last name
+     */
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: function (string $value, array $attributes) {
+                if (! empty($attributes['first_name']) && ! empty($attributes['last_name'])) {
+                    return $attributes['first_name'].' '.$attributes['last_name'];
+                }
+
+                return $value;
+            },
+            set: function ($value, $attributes) {
+                // set name when first_name and last_name have value
+                if (! empty($attributes['first_name']) && ! empty($attributes['last_name'])) {
+                    return $attributes['first_name'].' '.$attributes['last_name'];
+                }
+
+                return $value;
+            }
+        );
     }
 
     /**

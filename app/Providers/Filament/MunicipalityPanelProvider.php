@@ -3,7 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Municipality\Pages\Dashboard;
-use App\Filament\Municipality\Pages\EditProfile;
+use App\Filament\Shared\Pages\EditProfile;
 use App\Models\Municipality;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
