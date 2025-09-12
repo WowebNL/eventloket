@@ -82,7 +82,7 @@ test('Intro widget has intro text', function () {
 test('Widgets are rendered in organisation dashboard', function () {
     $this->actingAs($this->businessAdminUser);
 
-    $this->get(route('filament.organiser.pages.dashboard', ['tenant' => $this->businessOrganisation->id]))
+    livewire(Dashboard::class)
         ->assertSee('app.filament.organiser.widgets.intro') // intro widget
         ->assertSee('app.filament.organiser.widgets.shortlink'); // shortlink widget
 });

@@ -5,13 +5,14 @@ namespace App\Filament\Organiser\Pages;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
-class EditProfile extends \Filament\Auth\Pages\EditProfile
+class EditProfile extends \App\Filament\Shared\Pages\EditProfile
 {
     public function form(Schema $schema): Schema
     {
         return $schema
             ->components([
-                $this->getNameFormComponent(),
+                $this->getFirstNameFormComponent(),
+                $this->getLastNameFormComponent(),
                 $this->getEmailFormComponent(),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))

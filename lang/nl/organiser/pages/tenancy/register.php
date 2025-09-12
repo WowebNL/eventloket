@@ -28,6 +28,27 @@ return [
         'phone' => [
             'label' => 'Algemeen telefoonnummer',
         ],
+        'postcode' => [
+            'label' => 'Postcode',
+        ],
+        'huisnummer' => [
+            'label' => 'Huisnummer',
+        ],
+        'huisletter' => [
+            'label' => 'Huisletter',
+        ],
+        'huisnummertoevoeging' => [
+            'label' => 'Huisnummertoevoeging',
+        ],
+        'straatnaam' => [
+            'label' => 'Straatnaam',
+        ],
+        'woonplaatsnaam' => [
+            'label' => 'Woonplaatsnaam',
+        ],
+        'bagid' => [
+            'label' => 'Identificatie in het Basisregistratie Adressen en Gebouwen (BAG)',
+        ],
 
     ],
 

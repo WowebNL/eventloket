@@ -10,7 +10,7 @@
         </div>
         <div class="mt-6">
             <div>
-                <x-filament::button href="{{ route('filament.organiser.pages.new-request', ['tenant' => Filament\Facades\Filament::getTenant()->id]) }}" size="xl" icon="heroicon-o-document-text" tag="a">
+                <x-filament::button href="{{ route('filament.organiser.pages.new-request.{openform?}', ['tenant' => Filament\Facades\Filament::getTenant()]) }}" size="xl" icon="heroicon-o-document-text" tag="a">
                     {{ __('organiser/widgets/shortlink.button') }}
                 </x-filament::button>
             </div>

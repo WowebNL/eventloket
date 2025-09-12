@@ -3,15 +3,20 @@
 namespace App\Models;
 
 use App\Enums\OrganisationType;
+use App\Models\Traits\HasUuid;
+use App\Services\LocatieserverService;
 use Database\Factories\OrganisationFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 
 class Organisation extends Model
 {
     /** @use HasFactory<OrganisationFactory> */
-    use HasFactory;
+    use HasFactory, HasUuid;
 
     protected $fillable = [
         'type',
@@ -23,9 +28,34 @@ class Organisation extends Model
         'phone',
     ];
 
+    protected $appends = [
+        'bag_address',
+    ];
+
+    /** @return Attribute<\App\ValueObjects\Pdok\BagObject|null, void> */
+    protected function bagAddress(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value, array $attributes) {
+                if (! $attributes['bag_id']) {
+                    return null;
+                }
+
+                return Cache::rememberForever("organisation.{$this->id}.{$attributes['bag_id']}", function () use ($attributes) {
+                    return (new LocatieserverService)->getBagObjectById($attributes['bag_id']);
+                });
+            }
+        );
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withPivot('role');
+    }
+
+    public function formSubmissionSessions(): HasMany
+    {
+        return $this->hasMany(FormsubmissionSession::class);
     }
 
     protected function casts(): array
