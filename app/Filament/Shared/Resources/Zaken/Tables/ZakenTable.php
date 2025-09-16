@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Municipality\Resources\Zaken\Tables;
+namespace App\Filament\Shared\Resources\Zaken\Tables;
 
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
@@ -16,6 +16,11 @@ class ZakenTable
             ->columns([
                 TextColumn::make('reference_data.naam_evenement')
                     ->label(__('municipality/resources/zaak.columns.naam_evenement.label'))
+                    ->sortable()
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.organisator')
+                    ->label(__('municipality/resources/zaak.columns.organisator.label'))
                     ->sortable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
@@ -61,6 +66,11 @@ class ZakenTable
                     ])
                     ->multiple()
                     ->attribute('reference_data->risico_classificatie'),
+                SelectFilter::make('organisation_id')
+                    ->label(__('municipality/resources/zaak.columns.organisation.label'))
+                    ->relationship('organisation', 'name')
+                    ->searchable()
+                    ->multiple(),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([

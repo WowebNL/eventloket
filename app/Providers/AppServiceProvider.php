@@ -6,8 +6,10 @@ use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Console\Commands\SyncZaaktypen;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
+use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateZaak;
+use App\Jobs\Zaak\UpdateInitiatorZGW;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
@@ -51,7 +53,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bindMethod([ProcessOpenNotification::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), typeProcessor: app(GetIncommingNotificationType::class)));
         $this->app->bindMethod([AddZaakeigenschappenZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
-        $this->app->bindMethod([CreateZaak::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class)));
+        $this->app->bindMethod([UpdateInitiatorZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
+        $this->app->bindMethod([CreateZaak::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
+        $this->app->bindMethod([AddEinddatumZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class)));
 
         $this->app->bindMethod([SyncZaaktypen::class, 'handle'], fn ($command) => $command->handle(app(Openzaak::class)));
     }
