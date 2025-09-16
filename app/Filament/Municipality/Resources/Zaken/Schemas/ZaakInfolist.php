@@ -43,20 +43,26 @@ class ZaakInfolist
                     ->columns(12)
                     ->columnSpanFull()
                     ->schema([
-                        Section::make('Informatie')
-                            ->description('Informatie over de zaak')
+                        Section::make(__('municipality/resources/zaak.infolist.sections.information.label'))
+                            ->description(__('municipality/resources/zaak.infolist.sections.information.description'))
                             ->columns(2)
-                            ->schema(self::informationschema())
+                            ->schema(array_merge(self::informationschema(), [
+                                TextEntry::make('reference_data.organisator')
+                                    ->label(__('municipality/resources/zaak.columns.organisator.label')),
+                                TextEntry::make('openzaak.uiterlijkeEinddatumAfdoening')
+                                    ->date('d-m-Y')
+                                    ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),
+                            ]))
                             ->columnSpan(8),
-                        Section::make('Acties')
-                            ->description('Voer wijzigingen uit binnen de zaak')
+                        Section::make(__('municipality/resources/zaak.infolist.sections.actions.label'))
+                            ->description(__('municipality/resources/zaak.infolist.sections.actions.description'))
                             ->schema([
                                 TextEntry::make('reference_data.risico_classificatie')
                                     ->label(__('municipality/resources/zaak.columns.risico_classificatie.label'))
                                     ->afterLabel(Schema::end([
                                         Icon::make('heroicon-o-pencil-square'),
                                         Action::make('editRisicoClassificatie')
-                                            ->label(__('Wijzigen'))
+                                            ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.label'))
                                             ->fillForm(function (Zaak $record): array {
                                                 /** @var ZaakReferenceData $referenceData */
                                                 $referenceData = $record->reference_data;
@@ -84,20 +90,25 @@ class ZaakInfolist
                             ])->columnSpan(4),
                         Tabs::make('Tabs')
                             ->tabs([
-                                Tab::make('Bestanden')
+                                Tab::make('documents')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ]),
-                                Tab::make('Berichten')
+                                Tab::make('messages')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->schema([
                                     ]),
-                                Tab::make('Adviesvragen')
+                                Tab::make('advice_requests')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
                                     ->schema([
                                     ]),
-                                Tab::make('Locaties')
+                                Tab::make('locations')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.locations.label'))
                                     ->schema([
                                     ]),
-                                Tab::make('Log')
+                                Tab::make('log')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.log.label'))
                                     ->schema([
                                     ]),
                             ])

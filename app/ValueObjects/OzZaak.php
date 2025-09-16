@@ -3,6 +3,7 @@
 namespace App\ValueObjects;
 
 use App\ValueObjects\ZGW\CatalogiEigenschap;
+use App\ValueObjects\ZGW\Rol;
 use App\ValueObjects\ZGW\ZaakEigenschap;
 use Carbon\Carbon;
 use Illuminate\Contracts\Support\Arrayable;
@@ -25,6 +26,8 @@ class OzZaak implements Arrayable
 
     public readonly array $eigenschappen_key_value;
 
+    public readonly ?Rol $initiator;
+
     public function __construct(
         public readonly string $uuid,
         public readonly string $url,
@@ -33,9 +36,16 @@ class OzZaak implements Arrayable
         public readonly string $omschrijving,
         public readonly string $startdatum,
         public readonly string $registratiedatum,
+        public readonly ?string $einddatum,
+        public readonly ?string $einddatumGepland,
+        public readonly ?string $uiterlijkeEinddatumAfdoening,
         private readonly array $_expand = [],
         ...$otherParams
     ) {
+        $this->initiator = Arr::has($this->_expand, 'rollen')
+            ? new Rol(...Arr::first(Arr::where($this->_expand['rollen'], fn ($item) => $item['omschrijvingGeneriek'] === 'initiator')))
+            : null;
+
         $this->status_name = Arr::has($this->_expand, 'status._expand.statustype.omschrijving')
             ? $this->_expand['status']['_expand']['statustype']['omschrijving']
             : null;
@@ -66,6 +76,9 @@ class OzZaak implements Arrayable
             'startdatum' => $this->startdatum,
             'status_name' => $this->status_name,
             'eigenschappen' => $this->eigenschappen,
+            'einddatum' => $this->einddatum ? Carbon::parse($this->einddatum) : null,
+            'einddatumGepland' => $this->einddatumGepland ? Carbon::parse($this->einddatumGepland) : null,
+            'uiterlijkeEinddatumAfdoening' => $this->uiterlijkeEinddatumAfdoening ? Carbon::parse($this->uiterlijkeEinddatumAfdoening) : null,
         ];
     }
 }

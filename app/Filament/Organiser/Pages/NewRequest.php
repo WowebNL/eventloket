@@ -20,6 +20,8 @@ class NewRequest extends Page
 
     protected static ?string $slug = 'new-request/{openform?}';
 
+    protected static ?int $navigationSort = 1;
+
     // protected static string | array $routeMiddleware = ValidateOpenFormsPrefill::class; // prefill causes issues with openform submission, workaround for now is to save the of submission id from localstorage to the db
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 

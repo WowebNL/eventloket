@@ -11,6 +11,8 @@ use Filament\Facades\Filament;
 
 class Settings extends Cluster
 {
+    protected static ?int $navigationSort = 10;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     public static function getNavigationLabel(): string

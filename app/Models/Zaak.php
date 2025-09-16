@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentVertrouwelijkhedenByUserType;
+use App\Enums\OrganisationType;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
@@ -61,6 +63,18 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
+    }
+
+    protected function eventName(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value, $attributes) => $this->reference_data->naam_evenement ?? $attributes['public_id'],
+        );
+    }
+
     protected function openzaak(): Attribute
     {
         return Attribute::make(
@@ -78,20 +92,24 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                return Cache::rememberForever("zaak.{$attributes['id']}.documenten", function () {
-                    $openzaak = new Openzaak;
-                    $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);
-                    $collection = collect();
-                    foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
-                        $collection->push(new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
-                    }
+                return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkhedenByUserType::fromUserType(get_class(auth()->user()))));
 
-                    return $collection;
-                });
             },
-            // set: function($value, $attributes) {
-            // }
         );
+    }
+
+    private function getDocuments()
+    {
+        return Cache::rememberForever("zaak.{$this->id}.documenten", function () {
+            $openzaak = new Openzaak;
+            $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);
+            $collection = collect();
+            foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
+                $collection->push(new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
+            }
+
+            return $collection;
+        });
     }
 
     protected function zaakdata(): Attribute

@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Filament\Municipality\Resources\Zaken;
+namespace App\Filament\Organiser\Resources\Zaken;
 
-use App\Filament\Municipality\Resources\Zaken\Pages\ListZaken;
-use App\Filament\Municipality\Resources\Zaken\Pages\ViewZaak;
-use App\Filament\Municipality\Resources\Zaken\Schemas\ZaakForm;
-use App\Filament\Municipality\Resources\Zaken\Schemas\ZaakInfolist;
+use App\Filament\Organiser\Resources\Zaken\Pages\ListZaken;
+use App\Filament\Organiser\Resources\Zaken\Pages\ViewZaak;
+use App\Filament\Organiser\Resources\Zaken\Schemas\ZaakInfolist;
 use App\Filament\Shared\Resources\Zaken\Tables\ZakenTable;
 use App\Models\Zaak;
 use BackedEnum;
@@ -22,23 +21,25 @@ class ZaakResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'event_name';
 
-    protected static ?string $tenantOwnershipRelationshipName = 'municipality';
+    protected static ?string $tenantOwnershipRelationshipName = 'organisation';
 
     protected static ?string $slug = 'zaken';
 
+    protected static ?int $navigationSort = 2;
+
+    public static function getNavigationBadge(): ?string
+    {
+        return (string) static::getModel()::count();
+    }
+
     public static function getModelLabel(): string
     {
-        return __('municipality/resources/zaak.label');
+        return __('organiser/resources/zaak.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('municipality/resources/zaak.plural_label');
-    }
-
-    public static function form(Schema $schema): Schema
-    {
-        return ZaakForm::configure($schema);
+        return __('organiser/resources/zaak.plural_label');
     }
 
     public static function infolist(Schema $schema): Schema

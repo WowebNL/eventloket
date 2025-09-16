@@ -10,6 +10,8 @@ use Illuminate\Contracts\Support\Htmlable;
 
 class Dashboard extends BaseDashboard
 {
+    protected static ?int $navigationSort = 0;
+
     public function getTitle(): string|Htmlable
     {
         return self::greet().' '.auth()->user()->name;
