@@ -25,7 +25,7 @@ class ZakenTable
                     ->sortable()
                     ->searchable()
                     ->forceSearchCaseInsensitive()
-                    ->hidden(fn() => auth()->user()->role == Role::Organiser),
+                    ->hidden(fn () => auth()->user()->role == Role::Organiser),
                 TextColumn::make('public_id')
                     ->label(__('municipality/resources/zaak.columns.public_id.label'))
                     ->sortable()
@@ -73,7 +73,7 @@ class ZakenTable
                     ->relationship('organisation', 'name')
                     ->searchable()
                     ->multiple()
-                    ->hidden(fn() => auth()->user()->role == Role::Organiser),
+                    ->hidden(fn () => auth()->user()->role == Role::Organiser),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
