@@ -20,7 +20,7 @@
         
     @script
     <script>
-        $js('checkLocalStorage', async function() {
+        $js('checkLocalStorage', function() {
             let submission = localStorage.getItem("{{ $formId }}");
             if(submission) {
                 @this.checkSubmissionSession(submission);
@@ -32,6 +32,7 @@
         {{-- @TODO refactor but there is no event so we need to check till the form uuid is added --}}
         $js('listenLocalStorage', function() {
             const interval = setInterval(function() {
+                console.log('listenLocalStorage');
                 let submission = localStorage.getItem("{{ $formId }}");
                 if(submission) {
                     @this.updateFormsubmissionSession(submission);
@@ -52,6 +53,7 @@
 
         $js('checkIfSubmissionChanges', function (submission) {
             const interval = setInterval(function() {
+                console.log('checkIfSubmissionChanges');
                 let currentSubmission = localStorage.getItem("{{ $formId }}");
                 if(currentSubmission && currentSubmission !== submission) {
                     @this.updateFormsubmissionSession(currentSubmission);
