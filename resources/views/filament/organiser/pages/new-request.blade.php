@@ -17,25 +17,7 @@
             ></div>
 
         </div>
-    {{-- <script>
-        // localStorage.setItem("{{ $formId }}", '"550e3a0d-64cd-4809-b75c-5649613504ad"');
-        /** 
-         * 1. chech local storage for sumbission id every second
-         * 2. if found save it on the user 
-         * 3. on init contact step call eventloket endpoint to get user data 
-        */
-        const interval = setInterval(function() {
-            let submission = localStorage.getItem("{{ $formId }}");
-            if(submission) {
-                @this.updateFormsubmissionSession(submission);
-                stopInterval();
-            }
-        }, 1000);
-
-        function stopInterval() {
-            clearInterval(interval);
-        }
-    </script> --}}
+        
     @script
     <script>
         $js('checkLocalStorage', async function() {
@@ -49,11 +31,11 @@
 
         {{-- @TODO refactor but there is no event so we need to check till the form uuid is added --}}
         $js('listenLocalStorage', function() {
-            console.log('listenLocalStorage');
             const interval = setInterval(function() {
                 let submission = localStorage.getItem("{{ $formId }}");
                 if(submission) {
                     @this.updateFormsubmissionSession(submission);
+                    @this.$js.checkIfSubmissionChanges(submission);
                     clearInterval(interval);
                 }
             }, 1000);
