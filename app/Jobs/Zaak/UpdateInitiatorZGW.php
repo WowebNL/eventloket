@@ -46,17 +46,17 @@ class UpdateInitiatorZGW implements ShouldQueue
                     ],
                 ];
 
-                if ($adres) {
-                    $rolData['betrokkeneIdentificatie']['verblijfsadres'] = [
-                        'aoaIdentificatie' => config('app.name').'-organisatieadres-'.Str::uuid(),
-                        'wplWoonplaatsNaam' => $adres['city'],
-                        'gorOpenbareRuimteNaam' => 'adres',
-                        'aoaPostcode' => $adres['postcode'],
-                        'aoaHuisnummer' => $adres['houseNumber'],
-                        'aoaHuisletter' => $adres['houseLetter'],
-                        'aoaHuisnummertoevoeging' => $adres['houseNumberAddition'],
-                    ];
-                }
+                // if ($adres) { gives an error in Open Zaak API
+                //     $rolData['betrokkeneIdentificatie']['verblijfsadres'] = [
+                //         'aoaIdentificatie' => config('app.name').'-organisatieadres-'.Str::uuid(),
+                //         'wplWoonplaatsNaam' => $adres['city'],
+                //         'gorOpenbareRuimteNaam' => 'adres',
+                //         'aoaPostcode' => $adres['postcode'],
+                //         'aoaHuisnummer' => $adres['houseNumber'],
+                //         'aoaHuisletter' => $adres['houseLetter'],
+                //         'aoaHuisnummertoevoeging' => $adres['houseNumberAddition'],
+                //     ];
+                // }
 
                 $openzaak->zaken()->rollen()->put($zaak->initiator->uuid, $rolData);
 
