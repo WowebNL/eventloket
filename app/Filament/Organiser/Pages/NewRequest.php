@@ -82,6 +82,7 @@ class NewRequest extends Page
             }
         }
         $this->js('loadForm');
+        $this->js('checkIfSubmissionChanges', '"'.$submissionUUid.'"');
     }
 
     public function checkLoadExistingSubmissionSession()
