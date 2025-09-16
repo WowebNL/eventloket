@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Tables;
 
+use App\Enums\Role;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
@@ -23,7 +24,8 @@ class ZakenTable
                     ->label(__('municipality/resources/zaak.columns.organisator.label'))
                     ->sortable()
                     ->searchable()
-                    ->forceSearchCaseInsensitive(),
+                    ->forceSearchCaseInsensitive()
+                    ->hidden(fn () => auth()->user()->role == Role::Organiser),
                 TextColumn::make('public_id')
                     ->label(__('municipality/resources/zaak.columns.public_id.label'))
                     ->sortable()
@@ -70,7 +72,8 @@ class ZakenTable
                     ->label(__('municipality/resources/zaak.columns.organisation.label'))
                     ->relationship('organisation', 'name')
                     ->searchable()
-                    ->multiple(),
+                    ->multiple()
+                    ->hidden(fn () => auth()->user()->role == Role::Organiser),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
