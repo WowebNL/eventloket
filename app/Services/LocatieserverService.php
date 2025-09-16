@@ -14,14 +14,14 @@ class LocatieserverService
     }
 
     /**
-     * Get BRK identification by city.
+     * Get BRK identification by postcode and house number.
      */
-    public function getBrkIdentificationByCity(string $city): ?string
+    public function getBrkIdentificationByPostcodeHuisnummer(string $postcode, string $huisnummer): ?string
     {
         $url = $this->config['base_url'].'/search/v3_1/free';
         $httpResponse = Http::get($url, [
-            'q' => $city,
-            'fq' => 'type:(gemeente)',
+            'q' => $postcode.' '.$huisnummer,
+            'fq' => 'type:(adres)',
             'fl' => 'gemeentecode gemeentenaam',
         ]);
 

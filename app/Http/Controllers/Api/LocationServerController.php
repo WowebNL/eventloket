@@ -80,7 +80,7 @@ class LocationServerController extends Controller
             $adressen = json_decode($data['addresses'], true);
 
             foreach ($adressen as $adres) {
-                $brkIdentificatie = (new LocatieserverService)->getBrkIdentificationByCity($adres['city']);
+                $brkIdentificatie = (new LocatieserverService)->getBrkIdentificationByPostcodeHuisnummer($adres['postcode'], $adres['houseNumber']);
                 $municipality = $brkIdentificatie ? Municipality::where('brk_identification', $brkIdentificatie)->select(['brk_identification', 'name'])->first() : null;
                 if ($municipality) {
                     $responseData = $this->updateResponseDataItems($responseData, collect([$municipality]), ['all.items', 'addresses.items']);
