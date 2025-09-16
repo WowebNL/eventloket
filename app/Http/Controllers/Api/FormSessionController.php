@@ -20,7 +20,7 @@ class FormSessionController extends Controller
         $data = [
             'user_uuid' => $user->uuid,
             'organiser_uuid' => $organisation->uuid,
-            'kvk' => $organisation->coc_number,
+            'kvk' => $organisation->coc_number ?? '',
             'organisation_name' => $organisation->name,
             'organisation_email' => $organisation->email ?? '',
             'organisation_phone' => $organisation->phone ?? '',
