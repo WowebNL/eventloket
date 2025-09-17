@@ -37,6 +37,7 @@ class AdvisorPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/advisor/theme.css')
             ->tenant(Advisory::class)
             ->discoverResources(in: app_path('Filament/Advisor/Resources'), for: 'App\\Filament\\Advisor\\Resources')
+            ->discoverResources(in: app_path('Filament/Shared/Resources'), for: 'App\\Filament\\Shared\\Resources')
             ->discoverPages(in: app_path('Filament/Advisor/Pages'), for: 'App\\Filament\\Advisor\\Pages')
             ->pages([
                 Dashboard::class,

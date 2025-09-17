@@ -39,6 +39,7 @@ class MunicipalityPanelProvider extends PanelProvider
             ->tenant(Municipality::class)
             ->discoverClusters(in: app_path('Filament/Municipality/Clusters'), for: 'App\Filament\Municipality\Clusters')
             ->discoverResources(in: app_path('Filament/Municipality/Resources'), for: 'App\Filament\Municipality\Resources')
+            ->discoverResources(in: app_path('Filament/Shared/Resources'), for: 'App\Filament\Shared\Resources')
             ->discoverPages(in: app_path('Filament/Municipality/Pages'), for: 'App\Filament\Municipality\Pages')
             ->pages([
                 Dashboard::class,
