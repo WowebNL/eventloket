@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property-read Thread $thread
+ * @property-read User $user
  */
 #[ObservedBy(MessageObserver::class)]
 class Message extends Model

@@ -29,7 +29,7 @@ class NewAdviceThreadMail extends Mailable
     {
         return new Envelope(
             subject: __('mail/new-advice-thread.subject', [
-                'advisory' => $this->adviceThread->advisory->name,
+                'event' => $this->adviceThread->zaak->reference_data->naam_evenement,
                 'municipality' => $this->adviceThread->zaak->municipality->name,
             ]),
         );

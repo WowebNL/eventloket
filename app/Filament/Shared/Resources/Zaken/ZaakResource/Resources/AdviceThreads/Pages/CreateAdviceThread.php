@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Pages;
 
+use App\Enums\AdviceStatus;
 use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
 use App\Models\Message;
@@ -15,6 +16,8 @@ class CreateAdviceThread extends CreateRecord
     {
         $data['type'] = ThreadType::Advice;
         $data['created_by'] = auth()->user()->id;
+
+        $data['advice_status'] = AdviceStatus::Asked;
 
         return $data;
     }

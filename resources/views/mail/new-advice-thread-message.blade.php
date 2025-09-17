@@ -1,7 +1,7 @@
 <x-mail::message>
 # {{ __('mail/new-advice-thread-message.greeting') }}
 
-{{ __('mail/new-advice-thread-message.body', ['advisory' => $advisory, 'municipality' => $municipality, 'event' => $event]) }}
+{{ __('mail/new-advice-thread-message.body', ['sender' => $sender, 'advisory' => $advisory, 'event' => $event]) }}
 
 <x-mail::panel>
     {{ $title }}

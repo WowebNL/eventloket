@@ -6,10 +6,10 @@
         @if(!$getState())
             <p>Er zijn nog geen berichten</p>
         @else
-            <ul role="list" class="space-y-4">
+            <ul role="list" class="space-y-6">
                 @foreach ($getState() as $message)
                     <li>
-                        <x-filament::section tag="article">
+                        <x-filament::section id="message-{{ $message->id }}">
                             <div>
                                 <div class="flex space-x-3">
                                     <div class="shrink-0">
@@ -24,40 +24,40 @@
                                             {{ $message->user->name }}
                                         </p>
                                         <p class="text-sm text-gray-500">
-                                            <time datetime="{{ $message->created_at }}">
-                                                {{ $message->created_at->format('M d H:m') }}
-                                            </time>
+                                            @switch($message->user->role)
+                                                @case(\App\Enums\Role::Admin)
+                                                    Platformbeheerder
+                                                    @break
+
+                                                @case(\App\Enums\Role::MunicipalityAdmin)
+                                                @case(\App\Enums\Role::ReviewerMunicipalityAdmin)
+                                                    Gemeentelijk beheerder
+                                                    bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
+                                                    @break
+
+                                                @case(\App\Enums\Role::Reviewer)
+                                                    Behandelaar
+                                                    bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
+                                                    @break
+
+                                                @case(\App\Enums\Role::Advisor)
+                                                    Adviseur bij {{ $message->user->advisories->pluck('name')->join(', ') }}
+                                                    @break
+
+                                                @case(\App\Enums\Role::Organiser)
+                                                    Organisator
+                                                    bij {{ $message->user->organisations->pluck('name')->join(', ') }}
+                                                    @break
+
+                                                @default
+                                                    Default case...
+                                            @endswitch
                                         </p>
                                     </div>
                                     <div>
-                                        @switch($message->user->role)
-                                            @case(\App\Enums\Role::Admin)
-                                                Platformbeheerder
-                                                @break
-
-                                            @case(\App\Enums\Role::MunicipalityAdmin)
-                                            @case(\App\Enums\Role::ReviewerMunicipalityAdmin)
-                                                Gemeentelijk beheerder
-                                                bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
-                                                @break
-
-                                            @case(\App\Enums\Role::Reviewer)
-                                                Behandelaar
-                                                bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
-                                                @break
-
-                                            @case(\App\Enums\Role::Advisor)
-                                                Adviseur bij {{ $message->user->advisories->pluck('name')->join(', ') }}
-                                                @break
-
-                                            @case(\App\Enums\Role::Organiser)
-                                                Organisator
-                                                bij {{ $message->user->organisations->pluck('name')->join(', ') }}
-                                                @break
-
-                                            @default
-                                                Default case...
-                                        @endswitch
+                                        <time datetime="{{ $message->created_at }}">
+                                            {{ $message->created_at->format('M d H:m') }}
+                                        </time>
                                     </div>
                                 </div>
                             </div>
@@ -70,7 +70,7 @@
             </ul>
         @endif
 
-        <div class="mt-4">
+        <div class="my-6">
             <livewire:thread.message-form :thread="$record"/>
         </div>
     </div>

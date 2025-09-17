@@ -30,12 +30,15 @@ class MessageObserver
 
         $message->unreadByUsers()->attach($usersToNotify->pluck('id'));
 
+        // If this is the first message in the thread, and it's created by the creator of the thread, don't send a notification.
+        if ($message->thread->messages->count() === 1 && $message->user_id === $message->thread->created_by) {
+            return;
+        }
+
         $mailableClass = $this->getMailableClassForThreadType($message->thread->type);
 
-        // TODO: Is dit het eerste bericht in de thread? Stuur dan geen mails.
-
         foreach ($usersToNotify as $user) {
-            Mail::to($user->email)->send(new $mailableClass($message));
+            Mail::to($user->email)->send(new $mailableClass($message, $user));
         }
     }
 
