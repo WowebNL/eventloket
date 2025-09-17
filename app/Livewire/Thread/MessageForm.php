@@ -37,7 +37,12 @@ class MessageForm extends Component implements HasActions, HasSchemas
             ->components([
                 RichEditor::make('body')
                     ->label('Plaats een reactie')
-                    ->required(),
+                    ->required()
+                    ->toolbarButtons([
+                        ['bold', 'italic', 'underline', 'strike', 'link'],
+                        ['h1', 'h2', 'h3', 'alignStart', 'alignCenter', 'alignEnd'],
+                        ['blockquote', 'codeBlock', 'bulletList', 'orderedList'],
+                    ]),
             ])
             ->statePath('data');
     }

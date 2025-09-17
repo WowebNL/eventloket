@@ -6,9 +6,16 @@ use App\Enums\Role;
 use App\Enums\ThreadType;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property ThreadType $type
+ * @property-read Zaak $zaak
+ */
 class Thread extends Model
 {
     /** @use HasFactory<\Database\Factories\ThreadFactory> */
@@ -30,7 +37,7 @@ class Thread extends Model
         ];
     }
 
-    public function zaak()
+    public function zaak(): BelongsTo
     {
         return $this->belongsTo(Zaak::class);
     }
@@ -71,5 +78,17 @@ class Thread extends Model
         $model->fireModelEvent('retrieved', false);
 
         return $model;
+    }
+
+    #[Scope]
+    protected function advice(Builder $query): void
+    {
+        $query->where('type', ThreadType::Advice);
+    }
+
+    #[Scope]
+    protected function organiser(Builder $query): void
+    {
+        $query->where('type', ThreadType::Organiser);
     }
 }

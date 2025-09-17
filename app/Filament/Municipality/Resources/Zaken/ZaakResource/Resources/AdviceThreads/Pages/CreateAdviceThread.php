@@ -34,7 +34,4 @@ class CreateAdviceThread extends CreateRecord
             ]);
         }
     }
-
-    // TODO: Mails sturen.
-    // TODO: Alle message unread dingen aanmaken.
 }

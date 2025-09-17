@@ -61,8 +61,8 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="mt-4">
-                                {!! $message->body !!}
+                            <div class="mt-4 prose prose-sm max-w-none">
+                                {!! str($message->body)->sanitizeHtml() !!}
                             </div>
                         </x-filament::section>
                     </li>

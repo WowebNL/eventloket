@@ -24,8 +24,7 @@ class AdviceThreadForm
 
                 DateTimePicker::make('advice_due_at')
                     ->default(now()->addDays(10)->setTime(17, 0))
-                    ->label(__('resources/advice_thread.form.advice_due_at.label'))
-                    ->required(),
+                    ->label(__('resources/advice_thread.form.advice_due_at.label')),
 
                 Section::make()
                     ->columnSpanFull()
@@ -34,7 +33,12 @@ class AdviceThreadForm
                             ->label(__('resources/advice_thread.form.title.label'))
                             ->required(),
                         RichEditor::make('body')
-                            ->label(__('resources/advice_thread.form.body.label')),
+                            ->label(__('resources/advice_thread.form.body.label'))
+                            ->toolbarButtons([
+                                ['bold', 'italic', 'underline', 'strike', 'link'],
+                                ['h1', 'h2', 'h3', 'alignStart', 'alignCenter', 'alignEnd'],
+                                ['blockquote', 'codeBlock', 'bulletList', 'orderedList'],
+                            ]),
                     ]),
 
             ]);

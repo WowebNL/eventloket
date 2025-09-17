@@ -2,10 +2,10 @@
 
 namespace App\Filament\Municipality\Resources\Zaken\Schemas;
 
-use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Filament\Municipality\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Municipality\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
 use App\Filament\Municipality\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
+use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Actions\Action;

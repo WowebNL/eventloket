@@ -24,6 +24,8 @@ use Woweb\Openzaak\Openzaak;
 
 /**
  * @property-read ZaakReferenceData $reference_data
+ * @property-read Organisation $organisation
+ * @property-read Municipality $municipality
  */
 class Zaak extends Model implements Eventable
 {
@@ -54,14 +56,19 @@ class Zaak extends Model implements Eventable
         return $this->belongsTo(Zaaktype::class);
     }
 
+    public function organisation()
+    {
+        return $this->belongsTo(Organisation::class);
+    }
+
     public function organiserThreads()
     {
-        return $this->hasMany(OrganiserThread::class);
+        return $this->hasMany(OrganiserThread::class)->organiser();
     }
 
     public function adviceThreads()
     {
-        return $this->hasMany(AdviceThread::class);
+        return $this->hasMany(AdviceThread::class)->advice();
     }
 
     public function municipality(): HasOneThrough

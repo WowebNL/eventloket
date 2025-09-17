@@ -6,7 +6,12 @@ use App\Observers\MessageObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property-read Thread $thread
+ */
 #[ObservedBy(MessageObserver::class)]
 class Message extends Model
 {
@@ -19,13 +24,18 @@ class Message extends Model
         'body',
     ];
 
-    public function thread()
+    public function thread(): BelongsTo
     {
         return $this->belongsTo(Thread::class);
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function unreadByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'unread_messages');
     }
 }

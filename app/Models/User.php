@@ -78,6 +78,11 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         ];
     }
 
+    public function unreadMessages()
+    {
+        return $this->belongsToMany(Message::class, 'unread_messages');
+    }
+
     /**
      * setup name based on first and last name
      */
