@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Pages;
+
+use App\Enums\AdviceStatus;
+use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Contracts\Support\Htmlable;
+
+class ViewAdviceThread extends ViewRecord
+{
+    protected static string $resource = AdviceThreadResource::class;
+
+    public function getTitle(): string|Htmlable
+    {
+        return $this->getRecordTitle();
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            EditAction::make(),
+            Action::make('markNeedsMoreInfo')
+                ->label('More info needed')
+                ->action(fn () => $this->record->update(['status' => AdviceStatus::NeedsMoreInfo])),
+            Action::make('approve')
+                ->label('Approve')
+                ->color('success')
+                ->action(fn () => $this->record->update(['status' => AdviceStatus::Approved])),
+
+        ];
+    }
+}
