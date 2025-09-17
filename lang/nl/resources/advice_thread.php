@@ -29,5 +29,21 @@ return [
             'label' => 'Naam',
         ],
 
+        'advice_status' => [
+            'label' => 'Advies status',
+        ],
+
+        'advisory' => [
+            'label' => 'Adviesdienst',
+        ],
+
+        'advice_due_at' => [
+            'label' => 'Deadline',
+        ],
+
+        'created_by' => [
+            'label' => 'Aangemaakt door',
+        ],
+
     ],
 ];

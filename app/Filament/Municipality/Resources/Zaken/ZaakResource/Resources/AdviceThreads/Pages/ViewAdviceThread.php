@@ -7,10 +7,16 @@ use App\Filament\Municipality\Resources\Zaken\ZaakResource\Resources\AdviceThrea
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ViewAdviceThread extends ViewRecord
 {
     protected static string $resource = AdviceThreadResource::class;
+
+    public function getTitle(): string|Htmlable
+    {
+        return $this->getRecordTitle();
+    }
 
     protected function getHeaderActions(): array
     {

@@ -3,7 +3,6 @@
 namespace App\Enums;
 
 use Filament\Support\Contracts\HasLabel;
-use Illuminate\Contracts\Support\Htmlable;
 
 enum AdviceStatus: string implements HasLabel
 {
@@ -13,7 +12,7 @@ enum AdviceStatus: string implements HasLabel
     case ApprovedWithConditions = 'approved_with_conditions';
     case Rejected = 'rejected';
 
-    public function getLabel(): string|Htmlable|null
+    public function getLabel(): string
     {
         return __("enums/advice-status.{$this->value}.label");
     }

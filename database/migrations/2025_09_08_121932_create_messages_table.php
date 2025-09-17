@@ -20,7 +20,7 @@ return new class extends Migration
         });
 
         // TODO: Op het moment van bericht versturen (MessageObserver), maak een nieuwe koppel tabel entry aan voor alle betrokken users in deze thread en zet op ongelezen.
-        Schema::table('unread_messages', function (Blueprint $table) {
+        Schema::create('unread_messages', function (Blueprint $table) {
             $table->foreignId('message_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->primary(['message_id', 'user_id']);
