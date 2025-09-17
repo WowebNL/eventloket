@@ -14,7 +14,7 @@ class ZaakPolicy
     public function viewAny(User $user): bool
     {
         return match ($user->role) {
-            Role::MunicipalityAdmin, Role::Reviewer, Role::Organiser => true,
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Organiser => true,
             Role::Advisor => true,
             default => false,
         };
@@ -30,7 +30,7 @@ class ZaakPolicy
         }
 
         return match ($user->role) {
-            Role::MunicipalityAdmin, Role::Reviewer => true,
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
             Role::Advisor => true,
             default => false,
         };

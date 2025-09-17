@@ -4,6 +4,9 @@ return [
     'asked' => [
         'label' => 'Advies gevraagd',
     ],
+    'advisory_replied' => [
+        'label' => 'Adviesdienst geantwoord',
+    ],
     'approved' => [
         'label' => 'Advies akkoord',
     ],

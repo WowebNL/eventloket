@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Thread;
 
+use App\Enums\AdviceStatus;
+use App\Enums\Role;
+use App\Enums\ThreadType;
 use App\Models\Message;
 use App\Models\Thread;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -53,18 +56,22 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
         $data = $this->form->getState();
 
-        $message = Message::create([
+        Message::create([
             'thread_id' => $this->thread->id,
             'user_id' => auth()->id(),
             'body' => $data['body'],
         ]);
+
+        if ($this->thread->type == ThreadType::Advice && $this->thread->advice_status === AdviceStatus::Asked && auth()->user()->role === Role::Advisor) {
+            $this->thread->update(['advice_status' => AdviceStatus::AdvisoryReplied]);
+        }
 
         $this->form->fill(); // reset form state
 
         $this->dispatch('thread-updated');
 
         Notification::make()
-            ->title('Comment posted')
+            ->title('Reactie toegevoegd')
             ->success()
             ->send();
     }
