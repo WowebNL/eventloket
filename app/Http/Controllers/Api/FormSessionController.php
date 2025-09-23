@@ -28,6 +28,7 @@ class FormSessionController extends Controller
             'user_phone' => $user->phone,
             'user_first_name' => $user->first_name,
             'user_last_name' => $user->last_name,
+            'organisation_address' => '',
         ];
         if ($organisation->bag_address) {
             $data['organisation_address'] = [

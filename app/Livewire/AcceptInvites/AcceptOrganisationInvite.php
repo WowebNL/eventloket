@@ -24,9 +24,9 @@ class AcceptOrganisationInvite extends AbstractAcceptInvite
         return 'organiser';
     }
 
-    protected function getTenantId(): ?int
+    protected function getTenantId(): string
     {
-        return $this->invite->organisation_id;
+        return $this->invite->organisation->uuid;
     }
 
     protected function attachTenantRelation(User $user): void
