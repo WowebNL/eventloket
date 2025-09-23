@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DocumentRequest;
 use App\Models\Zaak;
+use App\ValueObjects\ZGW\Informatieobject;
 use Woweb\Openzaak\Openzaak;
 
 class DocumentController extends Controller
@@ -12,6 +13,12 @@ class DocumentController extends Controller
     {
         /** @phpstan-ignore-next-line */
         $document = $zaak->documenten->where('uuid', $documentuuid)->firstOrFail();
+
+        $validated = $request->validated();
+        if (isset($validated['version']) && $validated['version'] != $document->versie) {
+            // get the specified version
+            $document = new Informatieobject(...(new Openzaak)->get($document->url.'?versie='.$validated['version'])->toArray());
+        }
         $disposition = $type === 'download' ? 'attachment' : 'inline';
 
         return response((new Openzaak)->getRaw($document->inhoud))->withHeaders([

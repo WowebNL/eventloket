@@ -25,6 +25,7 @@ class DocumentRequest extends FormRequest
     {
         return [
             'type' => 'nullable|in:view,download',
+            'version' => 'nullable|integer|min:1',
         ];
     }
 }
