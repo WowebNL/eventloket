@@ -8,11 +8,11 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserR
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\EditMunicipalityAdminUser;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\RelationManagers\MunicipalitiesRelationManager;
+use App\Filament\Shared\Pages\EditProfile;
 use App\Models\User;
 use App\Models\Users\MunicipalityUser;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -49,8 +49,8 @@ class MunicipalityAdminUserResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('municipality/resources/municipality_admin.columns.name.label')),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
                 Select::make('role')
                     ->label(__('municipality/resources/municipality_admin.columns.role.label'))
                     ->options([

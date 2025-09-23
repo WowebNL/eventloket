@@ -2,6 +2,7 @@
 
 namespace App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\RelationManagers;
 
+use App\Filament\Shared\Pages\EditProfile;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
@@ -45,10 +46,8 @@ class UsersRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('admin/resources/user.columns.name.label'))
-                    ->required()
-                    ->maxLength(255),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
             ]);
     }
 

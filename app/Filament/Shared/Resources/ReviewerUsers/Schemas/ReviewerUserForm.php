@@ -3,8 +3,8 @@
 namespace App\Filament\Shared\Resources\ReviewerUsers\Schemas;
 
 use App\Enums\Role;
+use App\Filament\Shared\Pages\EditProfile;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
 class ReviewerUserForm
@@ -13,10 +13,8 @@ class ReviewerUserForm
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('resources/reviewer_user.columns.name.label'))
-                    ->required()
-                    ->maxLength(255),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
                 Select::make('role')
                     ->label(__('municipality/resources/municipality_admin.columns.role.label'))
                     ->options([

@@ -3,6 +3,7 @@
 namespace App\Filament\Admin\Resources\AdvisoryResource\RelationManagers;
 
 use App\Filament\Admin\Resources\AdvisoryResource\Widgets\PendingAdvisoryInvitesWidget;
+use App\Filament\Organiser\Pages\EditProfile;
 use App\Filament\Shared\Actions\PendingInvitesAction;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
@@ -47,10 +48,8 @@ class UsersRelationManager extends RelationManager
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('admin/resources/user.columns.name.label'))
-                    ->required()
-                    ->maxLength(255),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
             ]);
     }
 
