@@ -39,6 +39,7 @@ class OzZaak implements Arrayable
         public readonly ?string $einddatum,
         public readonly ?string $einddatumGepland,
         public readonly ?string $uiterlijkeEinddatumAfdoening,
+        public readonly ?string $bronorganisatie,
         private readonly array $_expand = [],
         ...$otherParams
     ) {

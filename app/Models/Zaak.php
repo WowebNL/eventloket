@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\DocumentVertrouwelijkhedenByUserType;
+use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationType;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
@@ -46,6 +46,7 @@ class Zaak extends Model implements Eventable
         ];
     }
 
+    /** @return BelongsTo<\App\Models\Zaaktype, $this> */
     public function zaaktype(): BelongsTo
     {
         return $this->belongsTo(Zaaktype::class);
@@ -75,6 +76,7 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /** @return Attribute<\App\ValueObjects\OzZaak, void> */
     protected function openzaak(): Attribute
     {
         return Attribute::make(
@@ -92,7 +94,8 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkhedenByUserType::fromUserType(get_class(auth()->user()))));
+                /** @phpstan-ignore-next-line */
+                return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
 
             },
         );

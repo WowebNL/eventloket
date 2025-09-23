@@ -2,11 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentVertrouwelijkheden;
+use App\ValueObjects\ZGW\InformatieobjectType;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
+use Woweb\Openzaak\Openzaak;
 
 class Zaaktype extends Model
 {
@@ -28,5 +33,27 @@ class Zaaktype extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    /** @return Attribute<\Illuminate\Support\Collection<\App\ValueObjects\ZGW\InformatieobjectType>|null, void> */
+    protected function documentTypes(): Attribute
+    {
+        return Attribute::make(
+            /** @phpstan-ignore-next-line */
+            get: fn () => $this->getDocumentTypes()->filter(fn (InformatieobjectType $type) => in_array($type->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))),
+        );
+    }
+
+    private function getDocumentTypes()
+    {
+        return Cache::rememberForever('zaaktype_'.$this->id.'_document_types', function () {
+            $items = (new Openzaak)->catalogi()->informatieobjecttypen()->getAll(['zaaktype' => $this->zgw_zaaktype_url]);
+            $collection = collect();
+            foreach ($items as $item) {
+                $collection->push(new InformatieobjectType(...$item));
+            }
+
+            return $collection;
+        });
     }
 }
