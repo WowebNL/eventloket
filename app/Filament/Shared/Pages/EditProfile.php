@@ -21,7 +21,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             ]);
     }
 
-    protected function getFirstNameFormComponent(): Component
+    public static function getFirstNameFormComponent(): Component
     {
         return TextInput::make('first_name')
             ->label(__('shared/pages/edit-profile.form.first_name.label'))
@@ -30,7 +30,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             ->autofocus();
     }
 
-    protected function getLastNameFormComponent(): Component
+    public static function getLastNameFormComponent(): Component
     {
         return TextInput::make('last_name')
             ->label(__('shared/pages/edit-profile.form.last_name.label'))

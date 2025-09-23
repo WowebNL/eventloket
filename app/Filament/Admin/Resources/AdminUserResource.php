@@ -5,10 +5,10 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\AdminUserResource\Pages\CreateAdminUser;
 use App\Filament\Admin\Resources\AdminUserResource\Pages\EditAdminUser;
 use App\Filament\Admin\Resources\AdminUserResource\Pages\ListAdminUsers;
+use App\Filament\Shared\Pages\EditProfile;
 use App\Models\User;
 use App\Models\Users\AdminUser;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -36,8 +36,8 @@ class AdminUserResource extends Resource
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('admin/resources/admin.columns.name.label')),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
             ]);
     }
 

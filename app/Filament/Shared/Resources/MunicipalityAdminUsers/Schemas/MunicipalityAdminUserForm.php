@@ -3,8 +3,8 @@
 namespace App\Filament\Shared\Resources\MunicipalityAdminUsers\Schemas;
 
 use App\Enums\Role;
+use App\Filament\Shared\Pages\EditProfile;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
 class MunicipalityAdminUserForm
@@ -13,8 +13,8 @@ class MunicipalityAdminUserForm
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('municipality/resources/municipality_admin.columns.name.label')),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
                 Select::make('role')
                     ->label(__('municipality/resources/municipality_admin.columns.role.label'))
                     ->options([

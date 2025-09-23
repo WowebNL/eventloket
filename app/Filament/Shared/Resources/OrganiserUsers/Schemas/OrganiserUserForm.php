@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\OrganiserUsers\Schemas;
 
 use App\Enums\OrganisationRole;
+use App\Filament\Shared\Pages\EditProfile;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -13,9 +14,8 @@ class OrganiserUserForm
     {
         return $schema
             ->components([
-                TextInput::make('name')
-                    ->label(__('admin/resources/organisation.user.form.name.label'))
-                    ->required(),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
                 TextInput::make('email')
                     ->label(__('admin/resources/organisation.user.form.email.label'))
                     ->email()
