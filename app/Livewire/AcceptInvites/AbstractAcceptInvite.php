@@ -37,7 +37,7 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
 
     abstract protected function getPanelName(): string;
 
-    abstract protected function getTenantId(): ?int;
+    abstract protected function getTenantId(): mixed;
 
     abstract protected function attachTenantRelation(User $user): void;
 

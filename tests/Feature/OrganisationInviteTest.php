@@ -137,7 +137,7 @@ test('existing user can accept an invite', function () {
     $response = livewire(AcceptOrganisationInvite::class, ['token' => $invite->token])
         ->call('acceptInvite');
 
-    $response->assertRedirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisation->id]));
+    $response->assertRedirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisation->uuid]));
 
     $this->assertDatabaseHas('organisation_user', [
         'organisation_id' => $this->organisation->id,
@@ -180,7 +180,7 @@ test('new user can register and accept an invite', function () {
         ->call('create');
 
     // Assert
-    $response->assertRedirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisation->id]));
+    $response->assertRedirect(route('filament.organiser.pages.dashboard', ['tenant' => $this->organisation->uuid]));
 
     $user = User::where('email', $inviteeEmail)->first();
     expect($user)->not->toBeNull()
