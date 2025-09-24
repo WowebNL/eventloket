@@ -2,11 +2,10 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
+use App\Enums\AdviceStatus;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class AdviceThreadsTable
@@ -16,35 +15,33 @@ class AdviceThreadsTable
         return $table
             ->columns([
                 TextColumn::make('title')
-                    ->searchable(),
-                TextColumn::make('type')
+                    ->label(__('resources/advice_thread.columns.title.label'))
                     ->searchable(),
                 TextColumn::make('advisory.name')
-                    ->numeric()
+                    ->label(__('resources/advice_thread.columns.advisory.label'))
                     ->sortable(),
                 TextColumn::make('advice_status')
+                    ->label(__('resources/advice_thread.columns.advice_status.label'))
+                    ->badge()
                     ->searchable(),
-                TextColumn::make('due_at')
-                    ->dateTime()
-                    ->sortable(),
-                TextColumn::make('final_advice_at')
-                    ->dateTime()
+                TextColumn::make('advice_due_at')
+                    ->label(__('resources/advice_thread.columns.advice_due_at.label'))
+                    ->dateTime('M j, Y H:i')
                     ->sortable(),
                 TextColumn::make('createdBy.name')
-                    ->numeric()
+                    ->label(__('resources/advice_thread.columns.created_by.label'))
                     ->sortable(),
             ])
             ->filters([
-                //
+                SelectFilter::make('advice_status')
+                    ->label(__('resources/advice_thread.columns.advice_status.label'))
+                    ->options(AdviceStatus::class),
             ])
             ->recordActions([
                 ViewAction::make(),
-                EditAction::make(),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
+                //
             ]);
     }
 }

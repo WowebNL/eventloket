@@ -56,9 +56,9 @@ class Zaak extends Model implements Eventable
         return $this->belongsTo(Zaaktype::class);
     }
 
-    public function organisation()
+    public function organisation(): BelongsTo
     {
-        return $this->belongsTo(Organisation::class);
+        return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
     }
 
     public function organiserThreads()
@@ -81,11 +81,6 @@ class Zaak extends Model implements Eventable
             'zaaktype_id',
             'municipality_id'
         );
-    }
-
-    public function organisation(): BelongsTo
-    {
-        return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
     }
 
     protected function eventName(): Attribute

@@ -2,6 +2,8 @@
 
 namespace App\Mail;
 
+use App\Models\Threads\OrganiserThread;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -15,8 +17,10 @@ class NewOrganiserThreadMail extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct()
-    {
+    public function __construct(
+        protected OrganiserThread $organiserThread,
+        protected User $receiver,
+    ) {
         //
     }
 
@@ -26,7 +30,10 @@ class NewOrganiserThreadMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'New Organiser Thread Mail',
+            subject: __('mail/new-advice-thread.subject', [
+                'event' => $this->organiserThread->zaak->reference_data->naam_evenement,
+                'municipality' => $this->organiserThread->zaak->municipality->name,
+            ]),
         );
     }
 
@@ -36,7 +43,14 @@ class NewOrganiserThreadMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'view.name',
+            markdown: 'mail.new-organiser-thread',
+            with: [
+                'organisation' => $this->organiserThread->zaak->organisation->name,
+                'municipality' => $this->organiserThread->zaak->municipality->name,
+                'event' => $this->organiserThread->zaak->reference_data->naam_evenement,
+                'title' => $this->organiserThread->title,
+                'viewUrl' => $this->organiserThread->getViewUrlForUser($this->receiver),
+            ]
         );
     }
 

@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Threads\AdviceThread;
+use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -18,6 +19,7 @@ class NewAdviceThreadMail extends Mailable
      */
     public function __construct(
         protected AdviceThread $adviceThread,
+        protected User $receiver,
     ) {
         //
     }
@@ -47,7 +49,7 @@ class NewAdviceThreadMail extends Mailable
                 'municipality' => $this->adviceThread->zaak->municipality->name,
                 'event' => $this->adviceThread->zaak->reference_data->naam_evenement,
                 'title' => $this->adviceThread->title,
-                'viewUrl' => route('welcome'), // TODO: Maak dit de advisory view thread route
+                'viewUrl' => $this->adviceThread->getViewUrlForUser($this->receiver),
             ]
         );
     }

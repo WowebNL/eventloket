@@ -7,9 +7,6 @@ use App\Mail\NewAdviceThreadMessageMail;
 use App\Mail\NewOrganiserThreadMessageMail;
 use App\Models\Message;
 use App\Models\Thread;
-use App\Models\Threads\AdviceThread;
-use App\Models\Threads\OrganiserThread;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 
 class MessageObserver
@@ -19,7 +16,7 @@ class MessageObserver
      */
     public function created(Message $message): void
     {
-        $usersToNotify = $this->getThreadParticipants($message->thread)
+        $usersToNotify = $message->thread->getParticipants()
             ->where('id', '!=', $message->user_id);
 
         if ($usersToNotify->isEmpty()) {
@@ -40,19 +37,6 @@ class MessageObserver
         foreach ($usersToNotify as $user) {
             Mail::to($user->email)->send(new $mailableClass($message, $user));
         }
-    }
-
-    private function getThreadParticipants(Thread $thread): Collection
-    {
-        $threadParticipants = match (get_class($thread)) {
-            AdviceThread::class => $thread->advisory->users,
-            OrganiserThread::class => $thread->zaak->organisation->users,
-            default => collect(),
-        };
-
-        $municipalityReviewerUsers = $thread->zaak->municipality->allReviewerUsers;
-
-        return $threadParticipants->merge($municipalityReviewerUsers);
     }
 
     private function getMailableClassForThreadType(ThreadType $threadType): string

@@ -15,7 +15,7 @@ class OrganiserThreadPolicy
     {
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
+            Role::Organiser => true,
             default => false,
         };
     }
@@ -27,7 +27,7 @@ class OrganiserThreadPolicy
     {
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
+            Role::Organiser => true,
             default => false,
         };
     }
@@ -39,7 +39,7 @@ class OrganiserThreadPolicy
     {
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
+            Role::Organiser => true,
             default => false,
         };
     }

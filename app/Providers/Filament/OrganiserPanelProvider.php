@@ -43,6 +43,7 @@ class OrganiserPanelProvider extends PanelProvider
             ->viteTheme('resources/css/filament/organiser/theme.css')
             ->tenant(Organisation::class)
             ->discoverResources(in: app_path('Filament/Organiser/Resources'), for: 'App\\Filament\\Organiser\\Resources')
+            ->discoverResources(in: app_path('Filament/Shared/Resources'), for: 'App\\Filament\\Shared\\Resources')
             ->discoverPages(in: app_path('Filament/Organiser/Pages'), for: 'App\\Filament\\Organiser\\Pages')
             ->pages([
                 Dashboard::class,

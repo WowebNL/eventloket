@@ -13,17 +13,16 @@ class OrganiserThreadInfolist
     {
         return $schema
             ->components([
-                Section::make('Informatie')
-                    ->description('Informatie over de thread')
+                Section::make()
                     ->columnSpanFull()
-                    ->columns(3)
+                    ->columns(4)
                     ->schema([
-                        TextEntry::make('type'),
-                        TextEntry::make('advisory.name')
-                            ->label('Adviesdienst'),
-                        TextEntry::make('advice_status'),
                         TextEntry::make('createdBy.name')
-                            ->label('Aangemaakt door'),
+                            ->label(__('resources/organiser_thread.columns.created_by.label'))
+                            ->icon('heroicon-o-user-circle'),
+                        TextEntry::make('created_at')
+                            ->label(__('resources/organiser_thread.columns.created_at.label'))
+                            ->dateTime('M j, Y H:i'),
                     ]),
 
                 ThreadMessagesEntry::make('messages'),

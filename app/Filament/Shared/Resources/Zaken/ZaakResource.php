@@ -17,9 +17,11 @@ class ZaakResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInboxStack;
 
-    protected static ?string $recordTitleAttribute = 'public_id';
+    protected static ?string $recordTitleAttribute = 'event_name';
 
     protected static ?string $slug = 'zaken';
+
+    protected static bool $isDiscovered = false;
 
     public static function getModelLabel(): string
     {

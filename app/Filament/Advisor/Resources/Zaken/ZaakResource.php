@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ZaakResource extends BaseZaakResource
 {
+    protected static bool $isDiscovered = true;
+
     /**
      * @param  Advisory|null  $tenant
      */

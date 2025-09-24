@@ -25,6 +25,10 @@ return [
 
     'columns' => [
 
+        'title' => [
+            'label' => 'Titel',
+        ],
+
         'name' => [
             'label' => 'Naam',
         ],

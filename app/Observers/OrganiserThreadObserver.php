@@ -2,7 +2,9 @@
 
 namespace App\Observers;
 
+use App\Mail\NewOrganiserThreadMail;
 use App\Models\Threads\OrganiserThread;
+use Illuminate\Support\Facades\Mail;
 
 class OrganiserThreadObserver
 {
@@ -11,7 +13,12 @@ class OrganiserThreadObserver
      */
     public function created(OrganiserThread $organiserThread): void
     {
-        // TODO: Mails sturen.
-        // TODO: Alle message unread dingen aanmaken.
+        $usersToNotify = $organiserThread->getParticipants()
+            ->where('id', '!=', $organiserThread->created_by);
+
+        foreach ($usersToNotify as $user) {
+            Mail::to($user->email)
+                ->send(new NewOrganiserThreadMail($organiserThread, $user));
+        }
     }
 }

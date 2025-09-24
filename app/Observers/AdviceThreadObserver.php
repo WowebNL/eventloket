@@ -17,7 +17,7 @@ class AdviceThreadObserver
         /** @var AdvisorUser $advisorUser */
         foreach ($adviceThread->advisory->users as $advisorUser) {
             Mail::to($advisorUser->email)
-                ->send(new NewAdviceThreadMail($adviceThread));
+                ->send(new NewAdviceThreadMail($adviceThread, $advisorUser));
         }
     }
 }
