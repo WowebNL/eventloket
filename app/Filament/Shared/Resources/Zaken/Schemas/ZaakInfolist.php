@@ -95,18 +95,18 @@ class ZaakInfolist
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
                             ->tabs([
+                                Tab::make('documents')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
+                                    ->icon('heroicon-o-document')
+                                    ->schema([
+                                        Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
+                                    ]),
                                 Tab::make('Organisatievragen')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
                                     ->visible(fn (Zaak $record) => Filament::getCurrentPanel()->getId() === 'municipality')
                                     ->schema([
                                         Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
-                                    ]),
-                                Tab::make('documents')
-                                    ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
-                                    ->icon('heroicon-o-document')
-                                    ->schema([
-                                        Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ]),
                                 Tab::make('advice_requests')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
