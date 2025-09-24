@@ -35,7 +35,6 @@ class AdviceThreadPolicy
     {
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
             default => false,
         };
     }
