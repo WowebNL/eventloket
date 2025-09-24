@@ -1,7 +1,7 @@
 <x-mail::message>
 # {{ __('mail/new-organiser-thread-message.greeting') }}
 
-{{ __('mail/new-organiser-thread-message.body', ['sender' => $sender, 'advisory' => $advisory, 'event' => $event]) }}
+{{ __('mail/new-organiser-thread-message.body', ['sender' => $sender, 'organisation' => $organisation, 'event' => $event]) }}
 
 <x-mail::panel>
     {{ $title }}

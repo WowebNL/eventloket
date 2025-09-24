@@ -30,7 +30,7 @@ class NewOrganiserThreadMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: __('mail/new-advice-thread.subject', [
+            subject: __('mail/new-organiser-thread.subject', [
                 'event' => $this->organiserThread->zaak->reference_data->naam_evenement,
                 'municipality' => $this->organiserThread->zaak->municipality->name,
             ]),

@@ -34,7 +34,7 @@ class NewOrganiserThreadMessageMail extends Mailable
         $organiserThread = $this->message->thread;
 
         return new Envelope(
-            subject: __('mail/new-advice-thread-message.subject', [
+            subject: __('mail/new-organiser-thread-message.subject', [
                 'sender' => $this->message->user->name,
                 'event' => $organiserThread->zaak->reference_data->naam_evenement,
                 'organisation' => $organiserThread->zaak->organisation->name,
@@ -55,7 +55,7 @@ class NewOrganiserThreadMessageMail extends Mailable
         $viewUrl .= "#message-{$this->message->id}";
 
         return new Content(
-            markdown: 'mail.new-advice-thread-message',
+            markdown: 'mail.new-organiser-thread-message',
             with: [
                 'sender' => $this->message->user->name,
                 'organisation' => $organiserThread->zaak->organisation->name,
