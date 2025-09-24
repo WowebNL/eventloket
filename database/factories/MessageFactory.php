@@ -17,7 +17,7 @@ class MessageFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'body' => fake()->paragraph,
         ];
     }
 }

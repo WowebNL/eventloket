@@ -18,7 +18,7 @@ class OrganiserThreadsRelationManager extends RelationManager
         return $table
             ->headerActions([
                 CreateAction::make()
-                    ->authorize(true),
+                    ->authorize('create'),
             ]);
     }
 }
