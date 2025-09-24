@@ -105,12 +105,28 @@ class ZaakInfolist
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
                                     ->visible(fn (Zaak $record) => Filament::getCurrentPanel()->getId() === 'municipality')
+                                    ->badge(function (Zaak $record) {
+                                        $count = auth()->user()
+                                            ->unreadMessages()
+                                            ->whereHas('thread', fn ($query) => $query->organiser()->where('zaak_id', $record->id))
+                                            ->count();
+
+                                        return $count > 0 ? $count : null;
+                                    })
                                     ->schema([
                                         Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),
                                 Tab::make('advice_requests')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
                                     ->icon('heroicon-o-question-mark-circle')
+                                    ->badge(function (Zaak $record) {
+                                        $count = auth()->user()
+                                            ->unreadMessages()
+                                            ->whereHas('thread', fn ($query) => $query->advice()->where('zaak_id', $record->id))
+                                            ->count();
+
+                                        return $count > 0 ? $count : null;
+                                    })
                                     ->schema([
                                         Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),

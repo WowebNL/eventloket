@@ -13,6 +13,14 @@ class ViewAdviceThread extends ViewRecord
 
     protected $listeners = ['thread-updated' => '$refresh'];
 
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        /** @phpstan-ignore-next-line */
+        auth()->user()->unreadMessages()->detach($this->record->messages()->pluck('id'));
+    }
+
     public function getTitle(): string|Htmlable
     {
         return $this->getRecordTitle();

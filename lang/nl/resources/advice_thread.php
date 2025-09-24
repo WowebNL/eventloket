@@ -49,5 +49,9 @@ return [
             'label' => 'Aangemaakt door',
         ],
 
+        'unread_messages_count' => [
+            'label' => 'Ongelezen berichten',
+        ],
+
     ],
 ];

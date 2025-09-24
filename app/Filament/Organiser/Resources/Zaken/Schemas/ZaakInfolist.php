@@ -30,14 +30,25 @@ class ZaakInfolist
                             ->columnSpanFull()
                             ->schema(SchemasZaakInfolist::informationschema()),
                         Tabs::make('Tabs')
+                            ->persistTabInQueryString()
                             ->tabs([
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
+                                    ->icon('heroicon-o-document')
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ]),
                                 Tab::make('messages')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
+                                    ->icon('heroicon-o-chat-bubble-left')
+                                    ->badge(function (Zaak $record) {
+                                        $count = auth()->user()
+                                            ->unreadMessages()
+                                            ->whereHas('thread', fn ($query) => $query->organiser()->where('zaak_id', $record->id))
+                                            ->count();
+
+                                        return $count > 0 ? $count : null;
+                                    })
                                     ->schema([
                                         Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),

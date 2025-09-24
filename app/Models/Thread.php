@@ -58,6 +58,11 @@ class Thread extends Model
         return $this->hasMany(Message::class, 'thread_id');
     }
 
+    public function unreadMessages()
+    {
+        return $this->messages()->whereHas('unreadByUsers', fn ($query) => $query->where('user_id', auth()->id()));
+    }
+
     /**
      * Returns the model for a specific role
      */

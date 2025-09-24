@@ -31,6 +31,12 @@ class AdviceThreadsTable
                 TextColumn::make('createdBy.name')
                     ->label(__('resources/advice_thread.columns.created_by.label'))
                     ->sortable(),
+                TextColumn::make('unread_messages_count')
+                    ->label(__('resources/advice_thread.columns.unread_messages_count.label'))
+                    ->counts('unreadMessages')
+                    ->badge()
+                    ->color(fn ($state) => $state ? 'primary' : 'gray')
+                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('advice_status')
