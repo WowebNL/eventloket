@@ -16,7 +16,7 @@ class ZakenTable
         return $table
             ->columns([
                 TextColumn::make('reference_data.naam_evenement')
-                    ->label(__('municipality/resources/zaak.columns.naam_evenement.label'))
+                    ->label(__('resources/zaak.columns.naam_evenement.label'))
                     ->sortable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
@@ -27,24 +27,24 @@ class ZakenTable
                     ->forceSearchCaseInsensitive()
                     ->hidden(fn () => auth()->user()->role == Role::Organiser),
                 TextColumn::make('public_id')
-                    ->label(__('municipality/resources/zaak.columns.public_id.label'))
+                    ->label(__('resources/zaak.columns.public_id.label'))
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('zaaktype.name')
-                    ->label(__('municipality/resources/zaak.columns.zaaktype.label'))
+                    ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('reference_data.registratiedatum')
                     ->dateTime('d-m-Y')
-                    ->label(__('municipality/resources/zaak.columns.registratiedatum.label'))
+                    ->label(__('resources/zaak.columns.registratiedatum.label'))
                     ->sortable(),
                 TextColumn::make('reference_data.risico_classificatie')
-                    ->label(__('municipality/resources/zaak.columns.risico_classificatie.label'))
+                    ->label(__('resources/zaak.columns.risico_classificatie.label'))
                     ->sortable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.status_name')
-                    ->label(__('municipality/resources/zaak.columns.status.label'))
+                    ->label(__('resources/zaak.columns.status.label'))
                     ->sortable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
@@ -52,14 +52,14 @@ class ZakenTable
             ])
             ->filters([
                 SelectFilter::make('reference_data.status_name')
-                    ->label(__('municipality/resources/zaak.columns.status.label'))
+                    ->label(__('resources/zaak.columns.status.label'))
                     ->options([
                         'Ontvangen' => 'Ontvangen',
                     ])
                     ->multiple()
                     ->attribute('reference_data->status_name'),
                 SelectFilter::make('reference_data.risico_classificatie')
-                    ->label(__('municipality/resources/zaak.columns.risico_classificatie.label'))
+                    ->label(__('resources/zaak.columns.risico_classificatie.label'))
                     ->options([
                         '0' => '0',
                         'A' => 'A',

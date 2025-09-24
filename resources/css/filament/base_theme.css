@@ -1,5 +1,11 @@
 @import '../../../vendor/filament/filament/resources/css/theme.css';
 @import '../../../vendor/guava/calendar/resources/css/theme.css';
 
-@source '../../../../resources/views/filament/components/**/*';
+@plugin "@tailwindcss/typography";
+
+@source '../../../resources/views/filament/components/**/*';
+@source '../../../resources/views/filament/infolists/**/*';
+
+@source '../../../resources/views/livewire/**/*';
+
 @source '../../../vendor/guava/calendar/resources/**/*';

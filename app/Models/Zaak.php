@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationType;
+use App\Models\Threads\AdviceThread;
+use App\Models\Threads\OrganiserThread;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
@@ -22,6 +24,8 @@ use Woweb\Openzaak\Openzaak;
 
 /**
  * @property-read ZaakReferenceData $reference_data
+ * @property-read Organisation $organisation
+ * @property-read Municipality $municipality
  */
 class Zaak extends Model implements Eventable
 {
@@ -52,6 +56,21 @@ class Zaak extends Model implements Eventable
         return $this->belongsTo(Zaaktype::class);
     }
 
+    public function organisation(): BelongsTo
+    {
+        return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
+    }
+
+    public function organiserThreads()
+    {
+        return $this->hasMany(OrganiserThread::class)->organiser();
+    }
+
+    public function adviceThreads()
+    {
+        return $this->hasMany(AdviceThread::class)->advice();
+    }
+
     public function municipality(): HasOneThrough
     {
         return $this->hasOneThrough(
@@ -62,11 +81,6 @@ class Zaak extends Model implements Eventable
             'zaaktype_id',
             'municipality_id'
         );
-    }
-
-    public function organisation(): BelongsTo
-    {
-        return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
     }
 
     protected function eventName(): Attribute

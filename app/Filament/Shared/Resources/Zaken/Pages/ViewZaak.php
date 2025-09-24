@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Municipality\Resources\Zaken\Pages;
+namespace App\Filament\Shared\Resources\Zaken\Pages;
 
-use App\Filament\Municipality\Resources\Zaken\ZaakResource;
+use App\Filament\Shared\Resources\Zaken\ZaakResource;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewZaak extends ViewRecord

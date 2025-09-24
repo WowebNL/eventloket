@@ -3,7 +3,7 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
-use App\Filament\Municipality\Resources\Zaken\Schemas\ZaakInfolist;
+use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
 use App\Models\Zaak;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;

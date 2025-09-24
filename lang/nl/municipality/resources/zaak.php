@@ -55,7 +55,7 @@ return [
                 'label' => 'Bestanden',
             ],
             'messages' => [
-                'label' => 'Berichten',
+                'label' => 'Organisatievragen',
             ],
             'advice_requests' => [
                 'label' => 'Adviesvragen',
