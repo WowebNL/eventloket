@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads;
 
+use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\ZaakResource;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads\Pages\CreateOrganiserThread;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads\Pages\EditOrganiserThread;
@@ -30,12 +31,12 @@ class OrganiserThreadResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('resources/organiser_thread.label');
+        return auth()->user()->role == Role::Organiser ? __('resources/organiser_thread.organiser_label') : __('resources/organiser_thread.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('resources/organiser_thread.plural_label');
+        return auth()->user()->role == Role::Organiser ? __('resources/organiser_thread.organiser_plural_label') : __('resources/organiser_thread.plural_label');
     }
 
     public static function form(Schema $schema): Schema

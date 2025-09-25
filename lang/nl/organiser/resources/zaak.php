@@ -5,6 +5,11 @@ return [
     'plural_label' => 'aanvragen',
 
     'infolist' => [
+        'tabs' => [
+            'messages' => [
+                'label' => 'Contactmomenten met behandelaar',
+            ],
+        ],
         'sections' => [
             'information' => [
                 'label' => 'Informatie',
