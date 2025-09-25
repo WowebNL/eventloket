@@ -3,6 +3,8 @@
 return [
     'label' => 'Organisatievraag',
     'plural_label' => 'Organisatievragen',
+    'organiser_label' => 'Contactmoment',
+    'organiser_plural_label' => 'Contactmomenten',
 
     'form' => [
 

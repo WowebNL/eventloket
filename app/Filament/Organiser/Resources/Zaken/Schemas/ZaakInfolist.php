@@ -39,7 +39,7 @@ class ZaakInfolist
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ]),
                                 Tab::make('messages')
-                                    ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
+                                    ->label(__('organiser/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
