@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\MunicipalityInvite;
 use App\Models\User;
-use App\Models\Users\AdminUser;
-use App\Models\Users\MunicipalityAdminUser;
+use App\Models\Users\MunicipalityUser;
 
 class MunicipalityInvitePolicy
 {
@@ -46,12 +46,13 @@ class MunicipalityInvitePolicy
      */
     public function delete(User $user, MunicipalityInvite $municipalityInvite): bool
     {
-        if ($user instanceof AdminUser) {
+        if ($user->role == Role::Admin) {
             return true;
         }
 
-        if ($user instanceof MunicipalityAdminUser) {
+        if (in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin])) {
             // Check if the user has access to one of the municipalities of the municipality invite
+            /** @var \App\Models\Users\MunicipalityUser $user */
             return $user->municipalities->pluck('id')
                 ->intersect($municipalityInvite->municipalities->pluck('id'))
                 ->isNotEmpty();
