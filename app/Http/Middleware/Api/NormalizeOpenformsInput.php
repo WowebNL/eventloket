@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware\Api;
 
+use App\Normalizers\OpenFormsNormalizer;
 use Closure;
 use Illuminate\Http\Request;
-use stdClass;
 use Symfony\Component\HttpFoundation\Response;
 
 class NormalizeOpenformsInput
@@ -30,12 +30,12 @@ class NormalizeOpenformsInput
                         continue;
                     }
 
-                    $value = $this->normalizeJson($value);
+                    $value = OpenFormsNormalizer::normalizeJson($value);
 
                     if (str_contains($value, '"coordinates"')) {
-                        $value = $this->normalizeGeoJson($value);
+                        $value = OpenFormsNormalizer::normalizeGeoJson($value);
                     } elseif (preg_match('(postcode|houseNumber|houseLetter|city|streetName)', $value) === 1) {
-                        $value = $this->normalizeAddress($value);
+                        $value = OpenFormsNormalizer::normalizeAddress($value);
                     }
 
                     $request->merge([$field => $value]);
@@ -44,58 +44,5 @@ class NormalizeOpenformsInput
         }
 
         return $next($request);
-    }
-
-    private function normalizeJson(string $value): ?string
-    {
-        // incomming json is not valid so make it valid
-        $value = str_replace('\'', '"', $value);
-
-        return json_validate($value) ? $value : null;
-    }
-
-    private function normalizeGeoJson(string $value): string
-    {
-        $value = json_decode($value);
-
-        // check if value is an array, if so it contains multiple geojsons
-        if (is_array($value)) {
-            foreach ($value as $key => &$item) {
-                // the object key in an array is the name of the input field it is comming from, we dont need that
-                $item = reset($item);
-                $item = $this->normalizeCoordinates($item);
-            }
-        } elseif (is_object($value)) {
-            $value = $this->normalizeCoordinates($value);
-        }
-
-        return json_encode($value);
-    }
-
-    private function normalizeAddress(string $value): string
-    {
-        $value = json_decode($value);
-        if (is_array($value)) {
-            foreach ($value as $key => &$item) {
-                // the object key in an array is the name of the input field it is comming from, we dont need that
-                $item = reset($item);
-            }
-        }
-
-        return json_encode($value);
-    }
-
-    /**
-     * Format coordinates in a GeoJSON string to floats if it are strings
-     */
-    private function normalizeCoordinates(stdClass $object): stdClass
-    {
-        if (isset($object->coordinates)) {
-            array_walk_recursive($object->coordinates, function (&$item) {
-                $item = is_string($item) ? floatval($item) : $item;
-            });
-        }
-
-        return $object;
     }
 }

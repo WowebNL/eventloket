@@ -4,6 +4,7 @@ namespace App\Listeners\Zaak;
 
 use App\Events\OpenNotification\CreateZaakNotificationReceived;
 use App\Jobs\Zaak\AddEinddatumZGW;
+use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
@@ -32,7 +33,7 @@ class ProcessCreateZaak implements ShouldQueue
             new AddZaakeigenschappenZGW($event->notification->hoofdObject),
             new AddEinddatumZGW($event->notification->hoofdObject),
             new UpdateInitiatorZGW($event->notification->hoofdObject),
-            // TODO add geometry to zaak
+            new AddGeometryZGW($event->notification->hoofdObject),
             new CreateZaak($event->notification->hoofdObject),
             // TODO send notificaties
         ])->dispatch();

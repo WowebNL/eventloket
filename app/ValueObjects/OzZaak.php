@@ -40,6 +40,7 @@ class OzZaak implements Arrayable
         public readonly ?string $einddatumGepland,
         public readonly ?string $uiterlijkeEinddatumAfdoening,
         public readonly ?string $bronorganisatie,
+        public readonly ?array $zaakgeometrie,
         private readonly array $_expand = [],
         ...$otherParams
     ) {
@@ -79,6 +80,7 @@ class OzZaak implements Arrayable
             'eigenschappen' => $this->eigenschappen,
             'einddatum' => $this->einddatum ? Carbon::parse($this->einddatum) : null,
             'einddatumGepland' => $this->einddatumGepland ? Carbon::parse($this->einddatumGepland) : null,
+            'zaakgeometrie' => $this->zaakgeometrie,
             'uiterlijkeEinddatumAfdoening' => $this->uiterlijkeEinddatumAfdoening ? Carbon::parse($this->uiterlijkeEinddatumAfdoening) : null,
         ];
     }
