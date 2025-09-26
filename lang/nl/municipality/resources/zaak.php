@@ -62,6 +62,18 @@ return [
             ],
             'locations' => [
                 'label' => 'Locaties',
+                'information' => [
+                    'label' => 'Informatie',
+                    'address' => [
+                        'label' => 'Adres',
+                    ],
+                    'location_name' => [
+                        'label' => 'Locatienaam',
+                    ],
+                ],
+                'map' => [
+                    'label' => 'Kaart',
+                ],
             ],
             'log' => [
                 'label' => 'Log',

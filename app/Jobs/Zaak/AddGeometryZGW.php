@@ -30,11 +30,33 @@ class AddGeometryZGW implements ShouldQueue
 
         $formSubmissionObject = new FormSubmissionObject(...$objectsapi->get(basename($zaak->data_object_url))->toArray());
         $geoJson = $formSubmissionObject->getFormattedEventLocation();
+        $zaakEventAddresses = $formSubmissionObject->zaakEventAddresses; // note this needs refactoring, variable zaakEventAddresses is filled in previous called method getFormattedEventLocation()
 
         if ($geoJson) {
             $openzaak->zaken()->zaken()->patch($zaak->uuid, [
                 'zaakgeometrie' => $geoJson,
             ]);
+        }
+
+        // save the adresses as zaakobjecten
+        if ($zaakEventAddresses) {
+            foreach ($zaakEventAddresses as $bagObject) {
+                $data = [
+                    'zaak' => $zaak->url,
+                    'objectType' => 'adres',
+                    'relatieomschrijving' => 'Adres van het evenement',
+                    'objectIdentificatie' => [
+                        'wplWoonplaatsNaam' => $bagObject->woonplaatsnaam,
+                        'gorOpenbareRuimteNaam' => $bagObject->id,
+                        'huisnummer' => $bagObject->huisnummer,
+                        'huisletter' => $bagObject->huisletter,
+                        'huisnummertoevoeging' => $bagObject->huisnummertoevoeging,
+                        'postcode' => $bagObject->postcode,
+                    ],
+                ];
+
+                $openzaak->zaken()->zaakobjecten()->store($data);
+            }
         }
 
     }

@@ -96,7 +96,7 @@ class Zaak extends Model implements Eventable
         return Attribute::make(
             get: function ($value, $attributes) {
                 return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
-                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten')->all());
+                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten')->all());
                 });
             },
             // set: function($value, $attributes) {

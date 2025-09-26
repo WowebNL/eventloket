@@ -3,6 +3,7 @@
 namespace App\Filament\Organiser\Resources\Zaken\Schemas;
 
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
+use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist as SchemasZaakInfolist;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
 use App\Livewire\Zaken\ZaakDocumentsTable;
@@ -52,6 +53,7 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),
+                                LocationsTab::make(),
                             ])
                             ->columnSpanFull(),
                     ]),

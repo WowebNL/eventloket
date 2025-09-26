@@ -18,12 +18,15 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
 
     public ?array $otherParams;
 
+    public ?string $naam_locatie_evenement;
+
     public function __construct(
         public string $risico_classificatie,
         public string $start_evenement,
         public string $eind_evenement,
         public string $registratiedatum,
         public string $status_name,
+        public ?string $naam_locatie_eveneme = null, // due to limit char restriction in OZ
         public ?string $naam_evenement = null,
         public ?string $organisator = null,
         ...$otherParams
@@ -31,6 +34,11 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         $this->start_evenement_datetime = Carbon::parse($this->start_evenement);
         $this->eind_evenement_datetime = Carbon::parse($this->eind_evenement);
         $this->registratiedatum_datetime = Carbon::parse($this->registratiedatum);
+        if ($this->naam_locatie_eveneme) {
+            $this->naam_locatie_evenement = $this->naam_locatie_eveneme;
+        } else {
+            $this->naam_locatie_evenement = $otherParams['naam_locatie_evenement'] ?? null;
+        }
         $this->otherParams = $otherParams;
     }
 
@@ -43,6 +51,7 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
             'registratiedatum' => $this->registratiedatum,
             'status_name' => $this->status_name,
             'naam_evenement' => $this->naam_evenement,
+            'naam_locatie_evenement' => $this->naam_locatie_evenement,
             'organisator' => $this->organisator,
         ];
     }

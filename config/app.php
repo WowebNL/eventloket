@@ -135,4 +135,5 @@ return [
     'api' => [
         'token_expire_in_days' => env('APP_API_TOKEN_EXPIRE_IN_DAYS', 365),
     ],
+
 ];

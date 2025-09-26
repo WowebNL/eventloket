@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\Schemas;
 
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
+use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
 use App\Livewire\Zaken\ZaakDocumentsTable;
@@ -130,11 +131,7 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),
-                                Tab::make('locations')
-                                    ->label(__('municipality/resources/zaak.infolist.tabs.locations.label'))
-                                    ->icon('heroicon-o-map-pin')
-                                    ->schema([
-                                    ]),
+                                LocationsTab::make(),
                                 Tab::make('log')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.log.label'))
                                     ->icon('heroicon-o-clock')

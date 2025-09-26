@@ -28,6 +28,8 @@ class OzZaak implements Arrayable
 
     public readonly ?Rol $initiator;
 
+    public ?array $zaakAddresses;
+
     public function __construct(
         public readonly string $uuid,
         public readonly string $url,
@@ -67,6 +69,27 @@ class OzZaak implements Arrayable
         $this->otherParams = $otherParams;
         $this->startdatum_datetime = Carbon::parse($this->startdatum);
         $this->registratiedatum_datetime = Carbon::parse($this->registratiedatum);
+        $this->setZaakAddresses();
+    }
+
+    public function setZaakAddresses(): void
+    {
+        $addresses = [];
+        if (isset($this->_expand['zaakobjecten']) && $this->_expand['zaakobjecten']) {
+            foreach ($this->_expand['zaakobjecten'] as $zaakobject) {
+                if ($zaakobject['objectType'] == 'adres' && $zaakobject['relatieomschrijving'] == 'Adres van het evenement') {
+                    $addresses[] = implode(' ', [
+                        $zaakobject['objectIdentificatie']['postcode'] ?? '',
+                        $zaakobject['objectIdentificatie']['huisnummer'] ?? '',
+                        $zaakobject['objectIdentificatie']['huisletter'] ?? '',
+                        $zaakobject['objectIdentificatie']['huisnummertoevoeging'] ?? '',
+                        $zaakobject['objectIdentificatie']['wplWoonplaatsNaam'] ?? '',
+                    ]);
+                }
+            }
+        }
+
+        $this->zaakAddresses = $addresses;
     }
 
     public function toArray(): array

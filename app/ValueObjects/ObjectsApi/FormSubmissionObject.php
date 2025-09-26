@@ -30,6 +30,8 @@ class FormSubmissionObject implements Arrayable
 
     private readonly array $event_location;
 
+    public array $zaakEventAddresses = [];
+
     public function __construct(
         public readonly string $uuid,
         public readonly string $type,
@@ -57,7 +59,7 @@ class FormSubmissionObject implements Arrayable
         $features = [];
         $geometries = [];
 
-        if (isset($this->event_location['line']) && ! empty($this->event_location['line'])) {
+        if (isset($this->event_location['line']) && ! empty($this->event_location['line']) && $this->event_location['line'] != 'None') {
             $json = OpenFormsNormalizer::normalizeGeoJson(OpenFormsNormalizer::normalizeJson($this->event_location['line']));
             $array = json_decode($json, true);
             $geometry = (new GeoJsonReader)->read(json_encode($array));
@@ -69,7 +71,7 @@ class FormSubmissionObject implements Arrayable
             $geometries[] = $geometry;
         }
 
-        if (isset($this->event_location['multipolygons']) && ! empty($this->event_location['multipolygons'])) {
+        if (isset($this->event_location['multipolygons']) && ! empty($this->event_location['multipolygons']) && $this->event_location['multipolygons'] != 'None') {
             $json = OpenFormsNormalizer::normalizeJson($this->event_location['multipolygons']);
             foreach (json_decode($json, true) as $array) {
                 $array = Arr::first($array);
@@ -95,6 +97,7 @@ class FormSubmissionObject implements Arrayable
                     $array['houseNumberAddition'] ?? null
                 );
                 if ($bagObject) {
+                    $this->zaakEventAddresses[] = $bagObject;
                     $geometry = Point::fromText($bagObject->centroide_ll, 4326);
                     if ($asFeatures) {
                         $feature = new Feature($geometry);
