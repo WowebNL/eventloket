@@ -35,6 +35,26 @@ class LocatieserverService
         return null;
     }
 
+    public function reverse(float $lat, float $lon): ?array
+    {
+        $url = $this->config['base_url'].'/search/v3_1/reverse';
+        $httpResponse = Http::get($url, [
+            'lat' => $lat,
+            'lon' => $lon,
+            'fq' => 'type:(adres)',
+            'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging',
+        ]);
+
+        if ($httpResponse->successful()) {
+            $data = $httpResponse->json();
+            if (Arr::has($data, ['response.docs.0'])) {
+                return $data['response']['docs'][0];
+            }
+        }
+
+        return null;
+    }
+
     public function getBagObjectByPostcodeHuisnummer(string $postcode, string $huisnummer, ?string $huisletter = null, ?string $huisnummertoevoeging = null): ?BagObject
     {
         $url = $this->config['base_url'].'/search/v3_1/free';
