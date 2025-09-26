@@ -25,6 +25,7 @@ class OrganiserThreadsTable
                     ->color(fn ($state) => $state ? 'primary' : 'gray')
                     ->sortable(),
             ])
+            ->defaultSort('created_at', direction: 'desc')
             ->filters([
                 //
             ])
