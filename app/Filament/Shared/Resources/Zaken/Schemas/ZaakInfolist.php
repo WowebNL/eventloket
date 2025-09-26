@@ -33,7 +33,7 @@ class ZaakInfolist
                 ->label(__('resources/zaak.columns.public_id.label')),
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
-            TextEntry::make('zaakdata.zaakeigenschappen_key_value.risico_classificatie')
+            TextEntry::make('reference_data.risico_classificatie')
                 ->label(__('Risico classificatie uit formulier')),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
