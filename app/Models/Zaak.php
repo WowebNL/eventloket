@@ -150,4 +150,11 @@ class Zaak extends Model implements Eventable
             ->start($this->reference_data->start_evenement)
             ->end($this->reference_data->eind_evenement);
     }
+
+    public function clearZgwCache(): void
+    {
+        Cache::forget("zaak.{$this->id}.openzaak");
+        Cache::forget("zaak.{$this->id}.documenten");
+        Cache::forget("zaak.{$this->id}.zaakdata");
+    }
 }

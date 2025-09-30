@@ -14,7 +14,6 @@ class GetIncommingNotificationType
     public function handle(Openzaak $openzaak, OpenNotification $notification): ?OpenNotificationType
     {
         $data = $notification->toArray();
-
         // Last OpenForms action is to connect the element in the object api to the zaak.
         // The connection is made to create a "zaakobject" on a zaak
         if ($data['actie'] === 'create' && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaakobject') {
@@ -24,6 +23,8 @@ class GetIncommingNotificationType
             $objectUrl = $openzaak->get($data['resourceUrl'])->get('object');
 
             return is_string($objectUrl) && str_contains($objectUrl, config('openzaak.objectsapi.url')) ? OpenNotificationType::CreateZaak : null;
+        } elseif (($data['actie'] === 'update' || $data['actie'] === 'partial_update') && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaakeigenschap') {
+            return OpenNotificationType::UpdateZaakEigenschap;
         }
         // TODO: Implement other notification types
 

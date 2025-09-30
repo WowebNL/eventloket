@@ -22,9 +22,9 @@ class OpenNotificationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'actie' => 'required|string|in:create,update,delete',
+            'actie' => 'required|string|in:create,update,delete,partial_update',
             'kanaal' => 'required|string|in:zaken,objecten',
-            'resource' => 'required|string|in:zaak,status,zaakobject',
+            'resource' => 'required|string|in:zaak,status,zaakobject,zaakeigenschap',
             'hoofdObject' => 'required|url',
             'resourceUrl' => 'required|url',
             'aanmaakdatum' => 'required|date',

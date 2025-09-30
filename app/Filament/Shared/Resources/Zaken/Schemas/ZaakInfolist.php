@@ -13,6 +13,7 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Livewire;
@@ -20,6 +21,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
+use Woweb\Openzaak\Openzaak;
 
 class ZaakInfolist
 {
@@ -87,7 +89,34 @@ class ZaakInfolist
                                                     ])->required(),
                                             ])
                                             ->action(function ($data, $record) {
-                                                // todo
+                                                $eigenschap = null;
+                                                foreach ($record->openzaak->eigenschappen as $item) {
+                                                    if ($item->naam === 'risico_classificatie') {
+                                                        $eigenschap = $item;
+                                                        break;
+                                                    }
+                                                }
+                                                if ($eigenschap) {
+                                                    $openzaak = new Openzaak;
+                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschap->uuid, [
+                                                        'waarde' => $data['risico_classificatie'],
+                                                    ]);
+
+                                                    // update local reference for dispaying the new value immidiately
+                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['risico_classificatie' => $data['risico_classificatie']]));
+                                                    $record->save();
+
+                                                    Notification::make()
+                                                        ->success()
+                                                        ->title(__('Risico classificatie is gewijzigd'))
+                                                        ->send();
+                                                } else {
+                                                    Notification::make()
+                                                        ->danger()
+                                                        ->title(__('Er is iets misgegaan bij het wijzigen van de risico classificatie'))
+                                                        ->send();
+                                                }
+
                                             }),
                                     ])),
                                 TextEntry::make('reference_data.status_name')
