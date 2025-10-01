@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
@@ -26,6 +27,7 @@ use Woweb\Openzaak\Openzaak;
  * @property-read ZaakReferenceData $reference_data
  * @property-read Organisation $organisation
  * @property-read Municipality $municipality
+ * @property-read Collection<Informatieobject> $documenten
  */
 class Zaak extends Model implements Eventable
 {

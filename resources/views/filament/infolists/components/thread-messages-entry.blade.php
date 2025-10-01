@@ -31,13 +31,11 @@
 
                                                 @case(\App\Enums\Role::MunicipalityAdmin)
                                                 @case(\App\Enums\Role::ReviewerMunicipalityAdmin)
-                                                    Gemeentelijk beheerder
-                                                    bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
+                                                    Gemeentelijk beheerder bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
                                                     @break
 
                                                 @case(\App\Enums\Role::Reviewer)
-                                                    Behandelaar
-                                                    bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
+                                                    Behandelaar bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
                                                     @break
 
                                                 @case(\App\Enums\Role::Advisor)
@@ -45,8 +43,7 @@
                                                     @break
 
                                                 @case(\App\Enums\Role::Organiser)
-                                                    Organisator
-                                                    bij {{ $message->user->organisations->pluck('name')->join(', ') }}
+                                                    Organisator bij {{ $message->user->organisations->pluck('name')->join(', ') }}
                                                     @break
 
                                                 @default
@@ -56,7 +53,7 @@
                                     </div>
                                     <div>
                                         <time datetime="{{ $message->created_at }}">
-                                            {{ $message->created_at->format('M d H:m') }}
+                                            {{ $message->created_at->translatedFormat('j M Y H:i') }}
                                         </time>
                                     </div>
                                 </div>
@@ -64,6 +61,13 @@
                             <div class="mt-4 prose prose-sm max-w-none">
                                 {!! str($message->body)->sanitizeHtml() !!}
                             </div>
+                            @if(!empty($message->documents))
+                                <div class="mt-4 space-y-2">
+                                    @foreach($message->documents as $document)
+                                        <livewire:thread.document :zaak="$message->thread->zaak" :documentUrl="$document->url" :versie="$document->versie" />
+                                    @endforeach
+                                </div>
+                            @endif
                         </x-filament::section>
                     </li>
                 @endforeach
