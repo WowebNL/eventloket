@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Filament\Shared\Widgets;
+namespace App\Filament\Organiser\Widgets;
 
+use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Filament\Shared\Resources\Threads\Filters\UnreadMessagesFilter;
 use App\Filament\Shared\Resources\Threads\Tables\Components\LatestMessageColumn;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
@@ -28,54 +29,21 @@ class OrganiserThreadInboxWidget extends TableWidget
         return __('resources/organiser_thread.widgets.inbox.heading');
     }
 
-    protected function isMunicipality(): bool
-    {
-        return Filament::getCurrentPanel()->getId() === 'municipality';
-    }
-
-    protected function isOrganiser(): bool
-    {
-        return Filament::getCurrentPanel()->getId() === 'organiser';
-    }
-
-    protected function zaakResourceClass(): string
-    {
-        return match (Filament::getCurrentPanel()->getId()) {
-            'municipality' => \App\Filament\Municipality\Resources\Zaken\ZaakResource::class,
-            'organiser' => \App\Filament\Organiser\Resources\Zaken\ZaakResource::class,
-            default => throw new \Exception('This panel is not supported'),
-        };
-    }
-
     public function table(Table $table): Table
     {
         return OrganiserThreadsTable::configure($table)
-            ->query(function (): Builder {
-                $query = OrganiserThread::query()->organiser();
-
-                return match (Filament::getCurrentPanel()->getId()) {
-                    /** @phpstan-ignore-next-line */
-                    'municipality' => $query->whereHas('zaak.zaaktype', fn (Builder $query) => $query->where('municipality_id', Filament::getTenant()->id)),
-                    /** @phpstan-ignore-next-line */
-                    'organiser' => $query->whereHas('zaak', fn (Builder $query) => $query->where('organisation_id', Filament::getTenant()->id)),
-                    default => throw new \Exception('This panel is not supported'),
-                };
-            })
+            /** @phpstan-ignore-next-line */
+            ->query(fn (): Builder => OrganiserThread::query()->organiser()->whereHas('zaak', fn (Builder $query) => $query->where('organisation_id', Filament::getTenant()->id)))
             ->columns([
                 TextColumn::make('zaak.reference_data.naam_evenement')
                     ->label(__('resources/organiser_thread.columns.event.label'))
                     ->description(fn (OrganiserThread $record) => $record->zaak->public_id)
                     ->icon('heroicon-s-eye')
                     ->sortable()
-                    ->url(fn (OrganiserThread $record) => $this->zaakResourceClass()::getUrl('view', ['record' => $record->zaak])),
-                TextColumn::make('zaak.organisation.name')
-                    ->label(__('resources/organiser_thread.columns.organisation.label'))
-                    ->sortable()
-                    ->visible(fn () => $this->isMunicipality()),
+                    ->url(fn (OrganiserThread $record) => ZaakResource::getUrl('view', ['record' => $record->zaak])),
                 TextColumn::make('zaak.zaaktype.municipality.name')
                     ->label(__('resources/organiser_thread.columns.municipality.label'))
-                    ->sortable()
-                    ->visible(fn () => $this->isOrganiser()),
+                    ->sortable(),
                 TextColumn::make('title')
                     ->label(__('resources/organiser_thread.columns.title.label'))
                     ->searchable(),

@@ -3,8 +3,8 @@
 namespace App\Filament\Organiser\Pages;
 
 use App\Filament\Organiser\Widgets\Intro;
+use App\Filament\Organiser\Widgets\OrganiserThreadInboxWidget;
 use App\Filament\Organiser\Widgets\Shortlink;
-use App\Filament\Shared\Widgets\OrganiserThreadInboxWidget;
 use Carbon\Carbon;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Contracts\Support\Htmlable;

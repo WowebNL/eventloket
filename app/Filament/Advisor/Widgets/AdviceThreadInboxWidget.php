@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Filament\Shared\Widgets;
+namespace App\Filament\Advisor\Widgets;
 
+use App\Filament\Advisor\Resources\Zaken\ZaakResource;
 use App\Filament\Shared\Resources\Threads\Filters\UnreadMessagesFilter;
 use App\Filament\Shared\Resources\Threads\Tables\Components\LatestMessageColumn;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
@@ -29,57 +30,24 @@ class AdviceThreadInboxWidget extends TableWidget
         return __('resources/advice_thread.widgets.inbox.heading');
     }
 
-    protected function isMunicipality(): bool
-    {
-        return Filament::getCurrentPanel()->getId() === 'municipality';
-    }
-
-    protected function isAdvisor(): bool
-    {
-        return Filament::getCurrentPanel()->getId() === 'advisor';
-    }
-
-    protected function zaakResourceClass(): string
-    {
-        return match (Filament::getCurrentPanel()->getId()) {
-            'municipality' => \App\Filament\Municipality\Resources\Zaken\ZaakResource::class,
-            'advisor' => \App\Filament\Advisor\Resources\Zaken\ZaakResource::class,
-            default => throw new \Exception('This panel is not supported'),
-        };
-    }
-
     public function table(Table $table): Table
     {
         return AdviceThreadsTable::configure($table)
-            ->query(function (): Builder {
-                $query = AdviceThread::query()->advice();
-
-                return match (Filament::getCurrentPanel()->getId()) {
-                    /** @phpstan-ignore-next-line */
-                    'municipality' => $query->whereHas('zaak.zaaktype', fn (Builder $query) => $query->where('municipality_id', Filament::getTenant()->id)),
-                    /** @phpstan-ignore-next-line */
-                    'advisor' => $query->where('advisory_id', Filament::getTenant()->id),
-                    default => throw new \Exception('This panel is not supported'),
-                };
-            })
+            /** @phpstan-ignore-next-line */
+            ->query(fn (): Builder => AdviceThread::query()->advice()->where('advisory_id', Filament::getTenant()->id))
             ->columns([
                 TextColumn::make('zaak.reference_data.naam_evenement')
                     ->label(__('resources/advice_thread.columns.event.label'))
                     ->description(fn (AdviceThread $record) => $record->zaak->public_id)
                     ->icon('heroicon-s-eye')
                     ->sortable()
-                    ->url(fn (AdviceThread $record) => $this->zaakResourceClass()::getUrl('view', ['record' => $record->zaak])),
+                    ->url(fn (AdviceThread $record) => ZaakResource::getUrl('view', ['record' => $record->zaak])),
                 TextColumn::make('zaak.organisation.name')
                     ->label(__('resources/advice_thread.columns.organisation.label'))
                     ->sortable(),
                 TextColumn::make('zaak.zaaktype.municipality.name')
                     ->label(__('resources/advice_thread.columns.municipality.label'))
-                    ->sortable()
-                    ->visible(fn () => $this->isAdvisor()),
-                TextColumn::make('advisory.name')
-                    ->label(__('resources/advice_thread.columns.advisory.label'))
-                    ->sortable()
-                    ->visible(fn () => $this->isMunicipality()),
+                    ->sortable(),
                 TextColumn::make('title')
                     ->label(__('resources/advice_thread.columns.title.label'))
                     ->searchable(),

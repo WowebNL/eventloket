@@ -2,7 +2,7 @@
 
 namespace App\Filament\Advisor\Pages;
 
-use App\Filament\Shared\Widgets\AdviceThreadInboxWidget;
+use App\Filament\Advisor\Widgets\AdviceThreadInboxWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Widgets\AccountWidget;
 
