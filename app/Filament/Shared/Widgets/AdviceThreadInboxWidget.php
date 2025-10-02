@@ -3,6 +3,8 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Filament\Shared\Resources\Threads\Filters\UnreadMessagesFilter;
+use App\Filament\Shared\Resources\Threads\Tables\Components\LatestMessageColumn;
+use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdviceStatusFilter;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Tables\AdviceThreadsTable;
@@ -89,12 +91,8 @@ class AdviceThreadInboxWidget extends TableWidget
                     ->label(__('resources/advice_thread.columns.advice_due_at.label'))
                     ->dateTime('M j, Y H:i')
                     ->sortable(),
-                TextColumn::make('unread_messages_count')
-                    ->label(__('resources/advice_thread.columns.unread_messages_count.label'))
-                    ->counts('unreadMessages')
-                    ->badge()
-                    ->color(fn ($state) => $state ? 'primary' : 'gray')
-                    ->sortable(),
+                UnreadMessagesColumn::make(),
+                LatestMessageColumn::make(),
             ])
             ->recordActions([
                 ViewAction::make()

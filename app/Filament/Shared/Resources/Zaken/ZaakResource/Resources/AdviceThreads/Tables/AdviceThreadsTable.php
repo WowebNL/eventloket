@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Tables;
 
+use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdviceStatusFilter;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
@@ -32,12 +33,7 @@ class AdviceThreadsTable
                 TextColumn::make('createdBy.name')
                     ->label(__('resources/advice_thread.columns.created_by.label'))
                     ->sortable(),
-                TextColumn::make('unread_messages_count')
-                    ->label(__('resources/advice_thread.columns.unread_messages_count.label'))
-                    ->counts('unreadMessages')
-                    ->badge()
-                    ->color(fn ($state) => $state ? 'primary' : 'gray')
-                    ->sortable(),
+                UnreadMessagesColumn::make(),
             ])
             ->defaultSort('created_at', direction: 'desc')
             ->filters([

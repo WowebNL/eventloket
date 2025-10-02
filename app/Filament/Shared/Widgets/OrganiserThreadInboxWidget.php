@@ -3,6 +3,8 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Filament\Shared\Resources\Threads\Filters\UnreadMessagesFilter;
+use App\Filament\Shared\Resources\Threads\Tables\Components\LatestMessageColumn;
+use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads\OrganiserThreadResource;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads\Tables\OrganiserThreadsTable;
 use App\Models\Threads\OrganiserThread;
@@ -80,12 +82,8 @@ class OrganiserThreadInboxWidget extends TableWidget
                 TextColumn::make('createdBy.name')
                     ->label(__('resources/organiser_thread.columns.created_by.label'))
                     ->sortable(),
-                TextColumn::make('unread_messages_count')
-                    ->label(__('resources/organiser_thread.columns.unread_messages_count.label'))
-                    ->counts('unreadMessages')
-                    ->badge()
-                    ->color(fn ($state) => $state ? 'primary' : 'gray')
-                    ->sortable(),
+                UnreadMessagesColumn::make(),
+                LatestMessageColumn::make(),
             ])
             ->recordActions([
                 ViewAction::make()

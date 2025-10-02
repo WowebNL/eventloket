@@ -2,8 +2,15 @@
 
 namespace App\Enums;
 
-enum ThreadType: string
+use Filament\Support\Contracts\HasLabel;
+
+enum ThreadType: string implements HasLabel
 {
     case Advice = 'advice';
     case Organiser = 'organiser';
+
+    public function getLabel(): string
+    {
+        return __("enums/thread-type.{$this->value}.label");
+    }
 }
