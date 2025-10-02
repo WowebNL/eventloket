@@ -32,6 +32,8 @@ class OrganiserThreadInboxWidget extends TableWidget
     public function table(Table $table): Table
     {
         return OrganiserThreadsTable::configure($table)
+            ->modelLabel(__('resources/organiser_thread.organiser_label'))
+            ->pluralModelLabel(__('resources/organiser_thread.organiser_plural_label'))
             /** @phpstan-ignore-next-line */
             ->query(fn (): Builder => OrganiserThread::query()->organiser()->whereHas('zaak', fn (Builder $query) => $query->where('organisation_id', Filament::getTenant()->id)))
             ->columns([
