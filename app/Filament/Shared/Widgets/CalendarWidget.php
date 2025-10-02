@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
 use App\Filament\Exports\EventExporter;
+use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
 use App\Models\Event;
 use App\Models\Municipality;
@@ -13,6 +14,7 @@ use App\Models\Zaaktype;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Dashboard\Actions\FilterAction;
@@ -26,6 +28,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Livewire\Component;
+use LogicException;
 
 class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 {
@@ -82,9 +86,44 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
                 ->label('Evenementen exporteren')
                 ->modalHeading('Evenementen exporteren')
                 ->columnMapping(false)
+                ->fillForm(function (Component $livewire) {
+                    if (! property_exists($livewire, 'filters')) {
+                        throw new LogicException('The ['.$livewire::class.'] page must implement the ['.HasFilters::class.'] trait.');
+                    }
+
+                    return [
+                        ...$livewire->filters,
+                        'start_date' => now()->startOfMonth()->format('Y-m-d'),
+                        'end_date' => now()->endOfMonth()->format('Y-m-d'),
+                    ];
+                })
+                ->schema([
+                    Section::make('Filters')
+                        ->schema([
+                            $this->municipalitiesFilter(),
+                            $this->zaaktypesFilter(),
+                            $this->statusNameFilter(),
+                            $this->organisationsFilter(),
+                            RisicoClassificatiesSelect::make(),
+                            $this->searchFilter(),
+                        ]),
+                    Section::make()
+                        ->description('Exporteer evenementen in deze periode')
+                        ->columns(2)
+                        ->schema([
+                            DatePicker::make('start_date')
+                                ->label('Start datum')
+                                ->required(),
+                            DatePicker::make('end_date')
+                                ->label('Eind datum')
+                                ->required()
+                                ->after('start_date'),
+                        ]),
+
+                ])
                 ->modifyQueryUsing(fn (Builder $query, array $options) => $this->applyContextFilters($query, new FetchInfo([
-                    'startStr' => now()->subYears(100),
-                    'endStr' => now()->addYears(100),
+                    'startStr' => $options['start_date'],
+                    'endStr' => $options['end_date'],
                 ]))),
         ];
     }
@@ -105,6 +144,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
     // Let child widgets add their own constraints.
     protected function applyContextFilters(Builder $query, FetchInfo $info): Builder
     {
+        $query->whereBetween('reference_data->start_evenement', [$info->start, $info->end]);
+
         $filters = $this->filters ?? [];
 
         $this->applyMunicipalitiesFilter($query, $filters);
