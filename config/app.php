@@ -135,4 +135,7 @@ return [
     'api' => [
         'token_expire_in_days' => env('APP_API_TOKEN_EXPIRE_IN_DAYS', 365),
     ],
+
+    'date_format' => env('APP_DATE_FORMAT', 'd-m-Y'),
+    'datetime_format' => env('APP_DATETIME_FORMAT', 'd-m-Y H:i'),
 ];

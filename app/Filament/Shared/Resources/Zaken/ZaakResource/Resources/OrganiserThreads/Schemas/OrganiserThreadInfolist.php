@@ -22,7 +22,7 @@ class OrganiserThreadInfolist
                             ->icon('heroicon-o-user-circle'),
                         TextEntry::make('created_at')
                             ->label(__('resources/organiser_thread.columns.created_at.label'))
-                            ->dateTime('M j, Y H:i'),
+                            ->dateTime(config('app.datetime_format')),
                     ]),
 
                 ThreadMessagesEntry::make('messages'),

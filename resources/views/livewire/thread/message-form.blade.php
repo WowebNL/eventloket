@@ -31,7 +31,7 @@
             {{ $this->attachAction }}
 
             <x-filament::button type="submit" icon="heroicon-o-paper-airplane">
-                Comment
+                {{ __('Bericht versturen') }}
             </x-filament::button>
         </div>
     </form>

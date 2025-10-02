@@ -53,7 +53,7 @@
                                     </div>
                                     <div>
                                         <time datetime="{{ $message->created_at }}">
-                                            {{ $message->created_at->translatedFormat('j M Y H:i') }}
+                                            {{ $message->created_at->translatedFormat(config('app.datetime_format')) }}
                                         </time>
                                     </div>
                                 </div>

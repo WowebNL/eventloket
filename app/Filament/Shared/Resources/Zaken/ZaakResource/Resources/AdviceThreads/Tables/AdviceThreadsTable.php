@@ -26,7 +26,7 @@ class AdviceThreadsTable
                     ->searchable(),
                 TextColumn::make('advice_due_at')
                     ->label(__('resources/advice_thread.columns.advice_due_at.label'))
-                    ->dateTime('M j, Y H:i')
+                    ->dateTime(config('app.datetime_format'))
                     ->sortable(),
                 TextColumn::make('createdBy.name')
                     ->label(__('resources/advice_thread.columns.created_by.label'))
