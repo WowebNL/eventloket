@@ -41,11 +41,6 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     public function mount(Zaak $zaak): void
     {
         $this->zaak = $zaak;
-        // dd((new Openzaak)->catalogi()->informatieobjecttypen()->getAll(['zaaktype' => $this->zaak->openzaak->zaaktype])->pluck('omschrijving', 'url')->toArray());
-        // $this->zaak->documenten->map(function($item) {
-        //     $trail = (new Openzaak)->get('https://open-zaak.vrzl-test.woweb.app/documenten/api/v1/enkelvoudiginformatieobjecten/' . $item->uuid . '/audittrail');
-        //     dd($trail);
-        // });
     }
 
     #[On('refreshTable')]
@@ -54,7 +49,6 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     public function table(Table $table): Table
     {
         return $table
-            /** @phpstan-ignore-next-line */
             ->records(fn (): Collection => $this->zaak->documenten->map(fn ($item) => $item->toArray()))
             ->columns([
                 TextColumn::make('titel'),
@@ -180,10 +174,9 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->icon('heroicon-m-ellipsis-vertical')
                     ->visible(fn (): bool => auth()->user()->role != Role::Organiser),
             ])
-            ->toolbarActions([
+            ->headerActions([
                 Action::make('upload')
                     ->label(__('Nieuw bestand toevoegen'))
-                    ->icon('heroicon-o-arrow-up-tray')
                     ->modalSubmitAction(fn (Action $action) => $action->label(__('Bestand toevoegen')))
                     ->schema([
                         TextInput::make('titel')

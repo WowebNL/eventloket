@@ -36,7 +36,7 @@ class ZaakInfolist
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             TextEntry::make('reference_data.risico_classificatie')
-                ->label(__('Risico classificatie uit formulier')),
+                ->label(__('resources/zaak.columns.risico_classificatie.label')),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
         ];
@@ -44,6 +44,8 @@ class ZaakInfolist
 
     public static function configure(Schema $schema): Schema
     {
+        $formBesluittypen = [];
+
         return $schema
             ->components([
                 Grid::make()

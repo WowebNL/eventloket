@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
@@ -104,6 +105,7 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /** @return Attribute<Collection<Informatieobject>, void> */
     protected function documenten(): Attribute
     {
         return Attribute::make(
