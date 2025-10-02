@@ -3,10 +3,12 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
+use App\Filament\Exports\EventExporter;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
 use App\Models\Event;
 use App\Models\Zaak;
 use Filament\Actions\Action;
+use Filament\Actions\ExportAction;
 use Filament\Facades\Filament;
 use Filament\Pages\Dashboard\Actions\FilterAction;
 use Filament\Pages\Dashboard\Concerns\HasFilters;
@@ -68,6 +70,15 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
                 ->schema($this->getFilterSchema())
                 ->badge(fn () => count(array_filter($this->filters ?? [])))
                 ->after(fn () => $this->dispatch('calendar--refresh')),
+            ExportAction::make()
+                ->exporter(EventExporter::class)
+                ->label('Evenementen exporteren')
+                ->modalHeading('Evenementen exporteren')
+                ->columnMapping(false)
+                ->modifyQueryUsing(fn (Builder $query, array $options) => $this->applyContextFilters($query, new FetchInfo([
+                    'startStr' => now()->subYears(100),
+                    'endStr' => now()->addYears(100),
+                ]))),
         ];
     }
 

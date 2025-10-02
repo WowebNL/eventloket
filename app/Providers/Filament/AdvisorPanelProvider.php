@@ -42,6 +42,7 @@ class AdvisorPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->databaseNotifications()
             ->login()
             ->passwordReset()
             ->profile()
