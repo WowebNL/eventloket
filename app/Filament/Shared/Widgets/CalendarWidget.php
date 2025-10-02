@@ -12,6 +12,7 @@ use Filament\Pages\Dashboard\Actions\FilterAction;
 use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Guava\Calendar\Filament\Actions\ViewAction;
 use Guava\Calendar\ValueObjects\FetchInfo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -34,24 +35,29 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
     protected ?string $defaultEventClickAction = 'view';
 
+    public function viewAction(): ViewAction
+    {
+        return ViewAction::make()
+            ->modelLabel(__('resources/zaak.label'))
+            ->pluralModelLabel(__('resources/zaak.plural_label'))
+            ->extraModalFooterActions([
+                Action::make('view')
+                    ->label(__('shared/widgets/calendar.view_case'))
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
+                    ->color('primary')
+                    ->button()
+                    ->visible(fn () => in_array(auth()->user()->role, [Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Reviewer])),
+            ]);
+    }
+
     public function defaultSchema(Schema $schema): Schema
     {
-
         return $schema->components([
             Section::make()
                 ->columns(2)
                 ->schema(ZaakInfolist::informationschema())
-                ->columnSpan(8)
-                ->footer([
-                    Action::make('view')
-                        ->label(__('shared/widgets/calendar.view_case'))
-                        ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
-                        ->color('primary')
-                        ->button()
-                        ->visible(fn () => in_array(auth()->user()->role, [Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Reviewer])),
-                ]),
-
+                ->columnSpan(8),
         ]);
     }
 
