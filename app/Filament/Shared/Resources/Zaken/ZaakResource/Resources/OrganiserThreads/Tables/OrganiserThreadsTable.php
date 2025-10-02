@@ -11,6 +11,8 @@ class OrganiserThreadsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modelLabel(__('resources/organiser_thread.label'))
+            ->pluralModelLabel(__('resources/organiser_thread.plural_label'))
             ->columns([
                 TextColumn::make('title')
                     ->label(__('resources/organiser_thread.columns.title.label'))
