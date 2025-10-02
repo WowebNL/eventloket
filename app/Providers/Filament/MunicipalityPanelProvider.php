@@ -44,6 +44,7 @@ class MunicipalityPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->databaseNotifications()
             ->login()
             ->passwordReset()
             ->profile(EditProfile::class)

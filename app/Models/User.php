@@ -34,6 +34,11 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         return 'user_id';
     }
 
+    public function getMorphClass()
+    {
+        return User::class;
+    }
+
     /**
      * The attributes that are mass assignable.
      *
