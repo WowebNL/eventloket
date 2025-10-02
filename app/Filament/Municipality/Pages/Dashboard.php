@@ -2,6 +2,7 @@
 
 namespace App\Filament\Municipality\Pages;
 
+use App\Filament\Municipality\Widgets\ThreadInboxWidget;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Widgets\AccountWidget;
 
@@ -11,6 +12,7 @@ class Dashboard extends BaseDashboard
     {
         return [
             AccountWidget::class,
+            ThreadInboxWidget::class,
         ];
     }
 }

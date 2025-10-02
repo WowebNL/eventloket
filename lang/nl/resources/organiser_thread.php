@@ -31,6 +31,18 @@ return [
             'label' => 'Titel',
         ],
 
+        'event' => [
+            'label' => 'Evenement',
+        ],
+
+        'organisation' => [
+            'label' => 'Organisatie',
+        ],
+
+        'municipality' => [
+            'label' => 'Gemeente',
+        ],
+
         'name' => [
             'label' => 'Naam',
         ],
@@ -59,5 +71,11 @@ return [
             'label' => 'Ongelezen berichten',
         ],
 
+    ],
+
+    'widgets' => [
+        'inbox' => [
+            'heading' => 'Recente organisatievragen',
+        ],
     ],
 ];

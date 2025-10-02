@@ -2,10 +2,10 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Tables;
 
-use App\Enums\AdviceStatus;
+use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
+use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdviceStatusFilter;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class AdviceThreadsTable
@@ -13,6 +13,8 @@ class AdviceThreadsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modelLabel(__('resources/advice_thread.label'))
+            ->pluralModelLabel(__('resources/advice_thread.plural_label'))
             ->columns([
                 TextColumn::make('title')
                     ->label(__('resources/advice_thread.columns.title.label'))
@@ -31,18 +33,11 @@ class AdviceThreadsTable
                 TextColumn::make('createdBy.name')
                     ->label(__('resources/advice_thread.columns.created_by.label'))
                     ->sortable(),
-                TextColumn::make('unread_messages_count')
-                    ->label(__('resources/advice_thread.columns.unread_messages_count.label'))
-                    ->counts('unreadMessages')
-                    ->badge()
-                    ->color(fn ($state) => $state ? 'primary' : 'gray')
-                    ->sortable(),
+                UnreadMessagesColumn::make(),
             ])
             ->defaultSort('created_at', direction: 'desc')
             ->filters([
-                SelectFilter::make('advice_status')
-                    ->label(__('resources/advice_thread.columns.advice_status.label'))
-                    ->options(AdviceStatus::class),
+                AdviceStatusFilter::make(),
             ])
             ->recordActions([
                 ViewAction::make(),
