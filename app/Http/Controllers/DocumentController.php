@@ -11,7 +11,6 @@ class DocumentController extends Controller
 {
     public function __invoke(DocumentRequest $request, Zaak $zaak, string $documentuuid, ?string $type = 'view')
     {
-        /** @phpstan-ignore-next-line */
         $document = $zaak->documenten->where('uuid', $documentuuid)->firstOrFail();
 
         $validated = $request->validated();

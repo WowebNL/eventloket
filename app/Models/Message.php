@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Observers\MessageObserver;
+use App\ValueObjects\MessageDocument;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @property-read Thread $thread
- * @property-read User $user
+ * @property-read User   $user
  */
 #[ObservedBy(MessageObserver::class)]
 class Message extends Model
@@ -23,7 +25,15 @@ class Message extends Model
         'thread_id',
         'user_id',
         'body',
+        'documents',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'documents' => AsCollection::of(MessageDocument::class),
+        ];
+    }
 
     public function thread(): BelongsTo
     {

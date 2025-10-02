@@ -35,7 +35,7 @@ class ZakenTable
                     ->sortable()
                     ->searchable(),
                 TextColumn::make('reference_data.registratiedatum')
-                    ->dateTime('d-m-Y')
+                    ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))
                     ->sortable(),
                 TextColumn::make('reference_data.risico_classificatie')
