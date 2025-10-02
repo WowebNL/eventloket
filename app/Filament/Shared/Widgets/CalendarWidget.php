@@ -92,7 +92,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
                     }
 
                     return [
-                        ...$livewire->filters,
+                        ...($livewire->filters ?? []),
                         'start_date' => now()->startOfMonth()->format('Y-m-d'),
                         'end_date' => now()->endOfMonth()->format('Y-m-d'),
                     ];
