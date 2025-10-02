@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "9fbee4d1fe8d2b556f07e1655a08ac7a",
+    "content-hash": "d80459e6297e5aedce0357b02d70704d",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -9697,6 +9697,63 @@
             "time": "2024-11-21T01:49:47+00:00"
         },
         {
+            "name": "webbingbrasil/filament-maps",
+            "version": "4.x-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Michel-Verhoeven/filament-maps.git",
+                "reference": "4f6d91394b308401443f4b96fd6d86f8a7168be0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Michel-Verhoeven/filament-maps/zipball/4f6d91394b308401443f4b96fd6d86f8a7168be0",
+                "reference": "4f6d91394b308401443f4b96fd6d86f8a7168be0",
+                "shasum": ""
+            },
+            "require": {
+                "filament/filament": "^4.0",
+                "php": "^8.0",
+                "spatie/laravel-package-tools": "^1.16"
+            },
+            "require-dev": {
+                "filament/upgrade": "^4.0",
+                "laravel/pint": "^1.13"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Webbingbrasil\\FilamentMaps\\FilamentMapsProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Webbingbrasil\\FilamentMaps\\": "src"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Danilo Andrade",
+                    "email": "danilo@webbingbrasil.com.br",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Map components for Filament.",
+            "homepage": "https://github.com/webbingbrasil/filament-maps",
+            "keywords": [
+                "filament",
+                "laravel"
+            ],
+            "support": {
+                "source": "https://github.com/Michel-Verhoeven/filament-maps/tree/4.x"
+            },
+            "time": "2025-09-26T09:22:53+00:00"
+        },
+        {
             "name": "webmozart/assert",
             "version": "1.11.0",
             "source": {
@@ -13401,6 +13458,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
+        "webbingbrasil/filament-maps": 20,
         "woweb/openzaak": 20
     },
     "prefer-stable": true,

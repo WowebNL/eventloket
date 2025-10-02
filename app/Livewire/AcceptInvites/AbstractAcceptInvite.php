@@ -64,7 +64,11 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
         /** @phpstan-ignore-next-line */
         $data = $this->form->getState();
 
+        $nameParts = explode(' ', $data['name'], 2);
+
         $user = User::create([
+            'first_name' => $nameParts[0],
+            'last_name' => $nameParts[1] ?? null,
             'name' => $data['name'],
             'email' => $this->invite->email,
             'email_verified_at' => now(),

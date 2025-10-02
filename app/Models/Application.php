@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Traits\HasUuid;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -15,7 +16,8 @@ use Laravel\Passport\Token;
  */
 class Application extends Model
 {
-    use HasUuid;
+    /** @use HasFactory<\Database\Factories\ApplicationFactory> */
+    use HasFactory, HasUuid;
 
     protected $fillable = [
         'name',

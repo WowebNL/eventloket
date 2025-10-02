@@ -185,6 +185,8 @@ test('new user can register and accept an invite', function () {
     $user = User::where('email', $inviteeEmail)->first();
     expect($user)->not->toBeNull()
         ->and($user->name)->toBe('New User')
+        ->and($user->first_name)->toBe('New')
+        ->and($user->last_name)->toBe('User')
         ->and($user->phone)->toBe('1234567890');
 
     $this->assertDatabaseHas('organisation_user', [

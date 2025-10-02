@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
+use App\Models\Event;
 use App\Models\Zaak;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -35,8 +36,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
     public function defaultSchema(Schema $schema): Schema
     {
+
         return $schema->components([
-            Section::make(__('shared/widgets/calendar.modal_title'))
+            Section::make()
                 ->columns(2)
                 ->schema(ZaakInfolist::informationschema())
                 ->columnSpan(8)
@@ -71,7 +73,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
     protected function getEvents(FetchInfo $info): Collection|array|Builder
     {
-        $query = Zaak::query();
+        $query = Event::query();
 
         return $this->applyContextFilters($query, $info);
     }

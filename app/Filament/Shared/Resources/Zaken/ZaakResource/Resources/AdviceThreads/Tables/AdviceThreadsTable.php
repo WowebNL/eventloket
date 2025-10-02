@@ -38,6 +38,7 @@ class AdviceThreadsTable
                     ->color(fn ($state) => $state ? 'primary' : 'gray')
                     ->sortable(),
             ])
+            ->defaultSort('created_at', direction: 'desc')
             ->filters([
                 SelectFilter::make('advice_status')
                     ->label(__('resources/advice_thread.columns.advice_status.label'))
