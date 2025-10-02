@@ -59,7 +59,7 @@ class ZaakInfolist
                                 TextEntry::make('reference_data.organisator')
                                     ->label(__('municipality/resources/zaak.columns.organisator.label')),
                                 TextEntry::make('openzaak.uiterlijkeEinddatumAfdoening')
-                                    ->date('d-m-Y')
+                                    ->date(config('app.date_format'))
                                     ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),
                             ]))
                             ->columnSpan(8),

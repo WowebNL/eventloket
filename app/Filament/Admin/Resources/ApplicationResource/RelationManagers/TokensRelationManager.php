@@ -48,7 +48,7 @@ class TokensRelationManager extends RelationManager
                     ->label(__('admin/resources/token.columns.revoked.label')),
                 TextColumn::make('expires_at')
                     ->since()
-                    ->dateTimeTooltip('d-m-Y H:i')
+                    ->dateTimeTooltip(config('app.datetime_format'))
                     ->label(__('admin/resources/token.columns.expires_at.label')),
                 TextColumn::make('created_at')
                     ->dateTime()

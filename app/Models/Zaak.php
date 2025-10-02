@@ -27,6 +27,7 @@ use Woweb\Openzaak\Openzaak;
  * @property-read ZaakReferenceData $reference_data
  * @property-read Organisation $organisation
  * @property-read Municipality $municipality
+ * @property-read Collection<Informatieobject> $documenten
  */
 class Zaak extends Model implements Eventable
 {

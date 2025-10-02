@@ -50,7 +50,7 @@ class AdviceThreadInfolist
                             ->icon('heroicon-o-lifebuoy'),
                         TextEntry::make('advice_due_at')
                             ->label(__('resources/advice_thread.columns.advice_due_at.label'))
-                            ->dateTime('M j, Y H:i')
+                            ->dateTime(config('app.datetime_format'))
                             ->icon('heroicon-o-clock'),
                         TextEntry::make('createdBy.name')
                             ->label(__('resources/advice_thread.columns.created_by.label'))
