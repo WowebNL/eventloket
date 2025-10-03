@@ -75,7 +75,7 @@ return [
 
     'widgets' => [
         'inbox' => [
-            'heading' => 'Recente organisatievragen',
+            'heading' => 'Recente contactmomenten met behandelaar',
         ],
     ],
 ];
