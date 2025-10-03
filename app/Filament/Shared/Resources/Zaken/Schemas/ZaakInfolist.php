@@ -10,7 +10,6 @@ use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
@@ -144,9 +143,9 @@ class ZaakInfolist
                                     ->visible(fn (Zaak $record) => $record->openzaak->resultaat && Arr::has($record->openzaak->resultaat, 'toelichting') && $record->openzaak->resultaat['toelichting']),
                                 TextEntry::make('openzaak.status_name')
                                     ->label(__('Huidige status')),
-                                TextEntry::make('openzaak.status.gezetdoor')
-                                    ->label(__('Status gezet door'))
-                                    ->belowContent(fn (Zaak $record) => Carbon::parse($record->openzaak->status['datumStatusGezet'])->format(config('app.date_format'))),
+                                TextEntry::make('openzaak.status.datumStatusGezet')
+                                    ->label(__('Status gezet op'))
+                                    ->date(config('app.date_format')),
                                 // TextEntry::make('besluiten.name')
                                 //     ->label(__('Besluit'))
                                 //     ->state(fn(Zaak $record) => $record->besluiten->pluck('name')->toArray())

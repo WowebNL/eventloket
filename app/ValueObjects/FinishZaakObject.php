@@ -70,7 +70,7 @@ final readonly class FinishZaakObject
             'zaak' => $this->zaak->openzaak->url,
             'datumStatusGezet' => date('Y-m-d'),
             'statustoelichting' => __('Zaak afgerond via :app', ['app' => config('app.name')]),
-            'gezetdoor' => $this->user->name,
+            // 'gezetdoor' => $this->user->name, // needs url to betrokkene instead of name
         ];
     }
 
