@@ -65,6 +65,7 @@ class NewDocumentVersionAction
                 'bestandsomvang' => Storage::size($data['file']),
                 'formaat' => Storage::mimeType($data['file']),
                 'lock' => $lockString,
+                'indicatieGebruiksrecht' => false,
             ]
         );
         $oz->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);

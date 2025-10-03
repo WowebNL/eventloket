@@ -89,6 +89,7 @@ class UploadDocumentAction
             'formaat' => Storage::mimeType($data['file']),
             'inhoud' => base64_encode(Storage::get($data['file'])),
             'informatieobjecttype' => $data['informatieobjecttype'],
+            'indicatieGebruiksrecht' => false,
         ]));
 
         $oz->zaken()->zaakinformatieobjecten()->store([

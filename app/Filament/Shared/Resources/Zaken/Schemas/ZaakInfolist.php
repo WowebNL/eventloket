@@ -6,9 +6,11 @@ use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
+use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
@@ -21,6 +23,9 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Woweb\Openzaak\Openzaak;
 
 class ZaakInfolist
@@ -36,7 +41,7 @@ class ZaakInfolist
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             TextEntry::make('reference_data.risico_classificatie')
-                ->label(__('Risico classificatie uit formulier')),
+                ->label(__('resources/zaak.columns.risico_classificatie.label')),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
         ];
@@ -44,8 +49,12 @@ class ZaakInfolist
 
     public static function configure(Schema $schema): Schema
     {
+        /** @var Zaak $zaak */
+        $zaak = $schema->model;
+
         return $schema
-            ->components([
+            ->components(array_filter([
+                $zaak->reference_data->resultaat ? new HtmlString(Blade::render('filament.components.zaak-result', ['resultaat' => $zaak->reference_data->resultaat])) : null,
                 Grid::make()
                     ->columns(12)
                     ->columnSpanFull()
@@ -121,10 +130,41 @@ class ZaakInfolist
                                     ])),
                                 TextEntry::make('reference_data.status_name')
                                     ->label(__('resources/zaak.columns.status.label')),
-                            ])->columnSpan(4),
+                            ])
+                            ->columnSpan(4)
+                            ->hidden(fn (Zaak $record) => $record->reference_data->resultaat),
+                        Section::make(__('Resultaat'))
+                            ->description(__('Het resultaat van deze zaak is vastgesteld.'))
+                            ->columns(2)
+                            ->schema([
+                                TextEntry::make('openzaak.resultaattype.omschrijving')
+                                    ->label(__('Resultaat')),
+                                TextEntry::make('openzaak.resultaat.toelichting')
+                                    ->label(__('Toelichting op het resultaat'))
+                                    ->visible(fn (Zaak $record) => $record->openzaak->resultaat && Arr::has($record->openzaak->resultaat, 'toelichting') && $record->openzaak->resultaat['toelichting']),
+                                TextEntry::make('openzaak.status_name')
+                                    ->label(__('Huidige status')),
+                                TextEntry::make('openzaak.status.gezetdoor')
+                                    ->label(__('Status gezet door'))
+                                    ->belowContent(fn (Zaak $record) => Carbon::parse($record->openzaak->status['datumStatusGezet'])->format(config('app.date_format'))),
+                                // TextEntry::make('besluiten.name')
+                                //     ->label(__('Besluit'))
+                                //     ->state(fn(Zaak $record) => $record->besluiten->pluck('name')->toArray())
+                                //     ->listWithLineBreaks()
+
+                                // TextEntry::make()
+                            ])
+                            ->columnSpan(4)
+                            ->visible(fn (Zaak $record) => $record->openzaak->resultaat),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
                             ->tabs([
+                                Tab::make('besluiten')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.decisions.label'))
+                                    ->icon('heroicon-o-briefcase')
+                                    ->schema([
+                                        Livewire::make(BesluitenInfolist::class, ['zaak' => $schema->model])->key('besluiten-table-'.($schema->model->id ?? 'new')),
+                                    ]),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->icon('heroicon-o-document')
@@ -169,6 +209,6 @@ class ZaakInfolist
                             ])
                             ->columnSpanFull(),
                     ]),
-            ]);
+            ]));
     }
 }

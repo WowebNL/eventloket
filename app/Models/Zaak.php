@@ -9,6 +9,8 @@ use App\Models\Threads\OrganiserThread;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
+use App\ValueObjects\ZGW\Besluit;
+use App\ValueObjects\ZGW\BesluitType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
@@ -98,7 +100,7 @@ class Zaak extends Model implements Eventable
         return Attribute::make(
             get: function ($value, $attributes) {
                 return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
-                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten')->all());
+                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype')->all());
                 });
             },
             // set: function($value, $attributes) {
@@ -106,6 +108,7 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /** @return Attribute<Collection<Informatieobject>, void> */
     protected function documenten(): Attribute
     {
         return Attribute::make(
@@ -115,6 +118,57 @@ class Zaak extends Model implements Eventable
 
             },
         );
+    }
+
+    /** @return Attribute<Collection<Informatieobject>, void> */
+    protected function besluitDocumenten(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value, $attributes) {
+                return $this->besluiten->flatMap(
+                    fn (Besluit $besluit) => $besluit->besluitDocumenten->map(
+                        fn (Informatieobject $doc) => new Informatieobject(...array_merge($doc->toArray(), ['besluit' => $besluit]))
+                    )
+                )->flatten();
+            },
+        );
+    }
+
+    /** @return Attribute<Collection<Besluit>, void> */
+    protected function besluiten(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value, $attributes) {
+                return $this->getBesluiten()->each(function (Besluit $besluit) {
+                    $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                        /** @phpstan-ignore-next-line */
+                        'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))),
+                    ]));
+                });
+            },
+        );
+    }
+
+    private function getBesluiten(): Collection
+    {
+        return Cache::rememberForever("zaak.{$this->id}.besluiten", function () {
+            $openzaak = new Openzaak;
+            $besluiten = $openzaak->besluiten()->besluiten()->getAll(['zaak' => $this->zgw_zaak_url]);
+            $collection = collect();
+            foreach ($besluiten as $besluit) {
+                $besluitDocumentenCollection = collect();
+                $besluitInformatieObjecten = $openzaak->besluiten()->besluitinformatieobjecten()->getAll(['besluit' => $besluit['url']]);
+                $besluitInformatieObjecten->each(function ($besluitInformatieObject) use ($besluitDocumentenCollection, $openzaak) {
+                    $besluitDocumentenCollection->push(new Informatieobject(...$openzaak->get($besluitInformatieObject['informatieobject'])->toArray()));
+                });
+                $collection->push(new Besluit(...array_merge($besluit, [
+                    'besluittypeObject' => new BesluitType(...$openzaak->get($besluit['besluittype'])->toArray()),
+                    'besluitDocumenten' => $besluitDocumentenCollection,
+                ])));
+            }
+
+            return $collection;
+        });
     }
 
     private function getDocuments()
@@ -158,5 +212,6 @@ class Zaak extends Model implements Eventable
         Cache::forget("zaak.{$this->id}.openzaak");
         Cache::forget("zaak.{$this->id}.documenten");
         Cache::forget("zaak.{$this->id}.zaakdata");
+        Cache::forget("zaak.{$this->id}.besluiten");
     }
 }

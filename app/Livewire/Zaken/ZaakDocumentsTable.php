@@ -36,11 +36,6 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     public function mount(Zaak $zaak): void
     {
         $this->zaak = $zaak;
-        // dd((new Openzaak)->catalogi()->informatieobjecttypen()->getAll(['zaaktype' => $this->zaak->openzaak->zaaktype])->pluck('omschrijving', 'url')->toArray());
-        // $this->zaak->documenten->map(function($item) {
-        //     $trail = (new Openzaak)->get('https://open-zaak.vrzl-test.woweb.app/documenten/api/v1/enkelvoudiginformatieobjecten/' . $item->uuid . '/audittrail');
-        //     dd($trail);
-        // });
     }
 
     #[On('refreshTable')]
@@ -56,7 +51,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->label(__('Type document'))
                     ->formatStateUsing(fn ($state) => $this->zaak->zaaktype->document_types->firstWhere('url', $state)->omschrijving),
                 TextColumn::make('creatiedatum')
-                    ->date('j M Y')
+                    ->date(config('app.date_format'))
                     ->sortable(),
                 TextColumn::make('versie')
                     ->sortable(),
@@ -130,7 +125,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->icon('heroicon-m-ellipsis-vertical')
                     ->visible(fn (): bool => auth()->user()->role != Role::Organiser),
             ])
-            ->toolbarActions([
+            ->headerActions([
                 UploadDocumentAction::make($this->zaak),
             ]);
     }
