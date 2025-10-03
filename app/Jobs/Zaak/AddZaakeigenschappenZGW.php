@@ -44,13 +44,17 @@ class AddZaakeigenschappenZGW implements ShouldQueue
                 continue;
             }
 
-            $data = [
-                'zaak' => $zaak->url,
-                'eigenschap' => $catalogiEigenschap->url,
-                'waarde' => current($eigenschap),
-            ];
-
-            $openzaak->zaken()->zaken()->zaakeigenschappen(basename($this->zaakUrlZGW))->store($data);
+            $waarde = current($eigenschap);
+            
+            if($waarde) {
+                $data = [
+                    'zaak' => $zaak->url,
+                    'eigenschap' => $catalogiEigenschap->url,
+                    'waarde' => current($eigenschap),
+                ];
+    
+                $openzaak->zaken()->zaken()->zaakeigenschappen(basename($this->zaakUrlZGW))->store($data);
+            }
         }
 
     }
