@@ -8,8 +8,10 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource;
 use App\Jobs\Zaak\AddBesluitZGW;
 use App\Jobs\Zaak\AddFinalStatusZGW;
 use App\Jobs\Zaak\AddResultaatZGW;
+use App\Mail\ResultMail;
 use App\Models\Zaak;
 use App\ValueObjects\FinishZaakObject;
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\BesluitType;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -24,11 +26,13 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
 use Woweb\Openzaak\Openzaak;
@@ -49,6 +53,11 @@ class ViewZaak extends ViewRecord
 
     protected static string $resource = ZaakResource::class;
 
+    public function refreshResultaat(): void
+    {
+        $this->record->refresh();
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -68,7 +77,7 @@ class ViewZaak extends ViewRecord
 
                                         return $this->formResultaattypen;
                                     })
-                                    ->afterStateUpdated(function (?string $state) {
+                                    ->afterStateUpdated(function (?string $state, Set $set) {
                                         if ($state) {
                                             $resultType = (new Openzaak)->get($state)->toArray();
                                             $besluittypen = [];
@@ -78,6 +87,7 @@ class ViewZaak extends ViewRecord
                                                 }
                                             }
                                             $this->formBesluittypen = $besluittypen;
+                                            $set('message_title', __('Uw aanvraag is :result', ['result' => strtolower($resultType['omschrijving'])]));
                                         }
                                     })
                                     ->required()
@@ -172,7 +182,7 @@ class ViewZaak extends ViewRecord
                             ->schema([
                                 TextInput::make('message_title')
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.message_title.label'))
-                                    ->default(fn (Field $component) => $this->getDefaultValue($component, __('Uw zaak is afgerond')))
+                                    ->default(fn (Field $component) => $this->getDefaultValue($component, __('Uw aanvraag is afgerond')))
                                     ->required(),
                                 RichEditor::make('message_content')
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.message_content.label'))
@@ -252,8 +262,8 @@ class ViewZaak extends ViewRecord
                         besluit_toelichting: $data['besluit_toelichting'] ?? null,
                         besluit_documenten: $data['besluit_documenten'] ?? null,
                         result_toelichting: $data['result_toelichting'] ?? null,
-                        message_title: $data['message_title'] ?? null,
-                        message_content: $data['message_content'] ?? null,
+                        message_title: $data['message_title'],
+                        message_content: $data['message_content'],
                         message_documenten: $data['message_documenten'] ?? null,
                     );
 
@@ -261,13 +271,35 @@ class ViewZaak extends ViewRecord
                         $finishZaakObject->besluittype ? new AddBesluitZGW($finishZaakObject) : null,
                         new AddResultaatZGW($finishZaakObject),
                         new AddFinalStatusZGW($finishZaakObject),
-                        // TODO: notifications
+                        function () use ($record, $finishZaakObject) {
+                            foreach ($record->organisation->users as $recipient) {
+                                /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                Mail::to($recipient->email)
+                                    ->queue(new ResultMail(
+                                        zaak: $record,
+                                        tenant: $record->organisation,
+                                        title: $finishZaakObject->message_title,
+                                        message: $finishZaakObject->message_content,
+                                        attachmentUrls: $finishZaakObject->message_documenten,
+                                    ));
+                            }
+                        },
                     ]))->dispatch();
+
+                    /**
+                     * TODO: needs correct TGet and TSet generics of ZaakReferenceData to work with static analysis, code works but gives error in static analysis.
+                     *
+                     * @disregard
+                     */
+                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['resultaat' => __('wordt momementeel verwerkt...')])); // @phpstan-ignore assign.propertyReadOnly
+
+                    $record->save();
 
                     $this->sessionFormData = [];
                     $this->activeStep = 1;
+                    $this->formResultaattypen = [];
+                    $this->formBesluittypen = [];
 
-                    // TODO: logic for processing state of zaak (disable some function when in this state)
                     Notification::make()
                         ->title(__('De afronding van de zaak wordt op de achtergrond verwerkt.'))
                         ->success()
@@ -275,7 +307,8 @@ class ViewZaak extends ViewRecord
                 })
                 ->closeModalByClickingAway(false)
                 ->modalSubmitAction(false)
-                ->modalCancelAction(false),
+                ->modalCancelAction(false)
+                ->hidden(fn (Zaak $record) => $record->reference_data->resultaat),
         ];
     }
 

@@ -23,6 +23,6 @@ class AddFinalStatusZGW implements ShouldQueue
     public function handle(Openzaak $openzaak): void
     {
         $finalStatusType = new StatusType(...$openzaak->catalogi()->statustypen()->getAll(['zaaktype' => $this->finishZaakObject->zaak->openzaak->zaaktype])->where('isEindstatus', true)->first());
-        $openzaak->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statusType' => $finalStatusType->url]));
+        $openzaak->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statustype' => $finalStatusType->url]));
     }
 }

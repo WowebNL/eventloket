@@ -28,6 +28,7 @@ class ProcessOpenNotification implements ShouldQueue
         match ($typeProcessor->handle($openzaak, $this->notification)) {
             OpenNotificationType::CreateZaak => CreateZaakNotificationReceived::dispatch($this->notification),
             OpenNotificationType::UpdateZaakEigenschap => ClearZaakCache::dispatch($this->notification),
+            OpenNotificationType::ZaakStatusChanged => ClearZaakCache::dispatch($this->notification),
             default => null,
         };
     }

@@ -106,6 +106,9 @@ return [
             ],
         ],
         'tabs' => [
+            'decisions' => [
+                'label' => 'Besluiten',
+            ],
             'documents' => [
                 'label' => 'Bestanden',
             ],

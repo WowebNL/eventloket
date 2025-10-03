@@ -25,6 +25,9 @@ class GetIncommingNotificationType
             return is_string($objectUrl) && str_contains($objectUrl, config('openzaak.objectsapi.url')) ? OpenNotificationType::CreateZaak : null;
         } elseif (($data['actie'] === 'update' || $data['actie'] === 'partial_update') && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaakeigenschap') {
             return OpenNotificationType::UpdateZaakEigenschap;
+        } elseif ($data['actie'] === 'create' && $data['kanaal'] === 'zaken' && $data['resource'] === 'status') {
+            // zaak status created, this happens when a status is changed on a zaak
+            return OpenNotificationType::ZaakStatusChanged;
         }
         // TODO: Implement other notification types
 

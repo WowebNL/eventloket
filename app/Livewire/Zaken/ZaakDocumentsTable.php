@@ -51,7 +51,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->label(__('Type document'))
                     ->formatStateUsing(fn ($state) => $this->zaak->zaaktype->document_types->firstWhere('url', $state)->omschrijving),
                 TextColumn::make('creatiedatum')
-                    ->date('j M Y')
+                    ->date(config('app.date_format'))
                     ->sortable(),
                 TextColumn::make('versie')
                     ->sortable(),

@@ -29,6 +29,7 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public ?string $naam_locatie_eveneme = null, // due to limit char restriction in OZ
         public ?string $naam_evenement = null,
         public ?string $organisator = null,
+        public ?string $resultaat = null,
         ...$otherParams
     ) {
         $this->start_evenement_datetime = Carbon::parse($this->start_evenement);
@@ -53,13 +54,25 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
             'naam_evenement' => $this->naam_evenement,
             'naam_locatie_evenement' => $this->naam_locatie_evenement,
             'organisator' => $this->organisator,
+            'resultaat' => $this->resultaat,
         ];
     }
 
     public static function castUsing(array $arguments): CastsAttributes
     {
+        /**
+         * @implements CastsAttributes<TGet, TSet>
+         *
+         * @template TGet of ZaakReferenceData
+         * @template TSet of ZaakReferenceData
+         */
         return new class implements CastsAttributes
         {
+            /**
+             * Transform the attribute from the underlying model values.
+             *
+             * @param  array<string, mixed>  $attributes
+             */
             public function get(
                 Model $model,
                 string $key,
@@ -69,6 +82,13 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
                 return new ZaakReferenceData(...json_decode($value, true));
             }
 
+            /**
+             * Transform the attribute to its underlying model values.
+             *
+             * @param  ZaakReferenceData  $value
+             * @param  array<string, mixed>  $attributes
+             * @return array<string, mixed>
+             */
             public function set(
                 Model $model,
                 string $key,

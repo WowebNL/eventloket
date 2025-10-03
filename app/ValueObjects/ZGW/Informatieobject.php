@@ -22,6 +22,7 @@ class Informatieobject implements Arrayable
         public readonly string $informatieobjecttype,
         public readonly string $formaat,
         public readonly bool $locked,
+        public readonly ?Besluit $besluit = null,
         ...$otherParams
     ) {}
 
@@ -41,6 +42,7 @@ class Informatieobject implements Arrayable
             'informatieobjecttype' => $this->informatieobjecttype,
             'formaat' => $this->formaat,
             'locked' => $this->locked,
+            'besluit' => $this->besluit?->toArray(),
         ];
     }
 }
