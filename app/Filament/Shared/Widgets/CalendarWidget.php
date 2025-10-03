@@ -11,6 +11,7 @@ use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use Carbon\CarbonImmutable;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Facades\Filament;
@@ -22,6 +23,7 @@ use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Guava\Calendar\Filament\Actions\ViewAction;
+use Guava\Calendar\ValueObjects\DatesSetInfo;
 use Guava\Calendar\ValueObjects\FetchInfo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -46,7 +48,19 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
     protected bool $eventClickEnabled = true;
 
+    protected bool $datesSetEnabled = true;
+
     protected ?string $defaultEventClickAction = 'view';
+
+    public ?CarbonImmutable $start = null;
+
+    public ?CarbonImmutable $end = null;
+
+    protected function onDatesSet(DatesSetInfo $info): void
+    {
+        $this->start = $info->view->currentStart;
+        $this->end = $info->view->currentStart->endOfMonth()->toImmutable();
+    }
 
     public function viewAction(): ViewAction
     {
@@ -92,9 +106,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
                     }
 
                     return [
-                        ...$livewire->filters,
-                        'start_date' => now()->startOfMonth()->format('Y-m-d'),
-                        'end_date' => now()->endOfMonth()->format('Y-m-d'),
+                        ...($livewire->filters ?? []),
+                        'start_date' => $this->start->format('Y-m-d'),
+                        'end_date' => $this->end->format('Y-m-d'),
                     ];
                 })
                 ->schema([
