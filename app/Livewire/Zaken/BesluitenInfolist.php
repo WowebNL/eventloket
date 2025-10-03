@@ -61,7 +61,7 @@ class BesluitenInfolist extends Component implements HasSchemas
                             ->schema([
                                 TextEntry::make('titel'),
                                 TextEntry::make('informatieobjecttype')
-                                    ->formatStateUsing(fn ($state) => $this->zaak->zaaktype->document_types->firstWhere('url', $state)->omschrijving),
+                                    ->formatStateUsing(fn ($state) => $this->zaak->zaaktype->document_types->firstWhere('url', $state)?->omschrijving),
                                 TextEntry::make('creatiedatum')
                                     ->date(config('app.date_format')),
                                 TextEntry::make('versie'),
