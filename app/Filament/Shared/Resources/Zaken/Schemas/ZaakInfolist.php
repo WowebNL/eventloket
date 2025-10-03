@@ -164,7 +164,8 @@ class ZaakInfolist
                                     ->icon('heroicon-o-briefcase')
                                     ->schema([
                                         Livewire::make(BesluitenInfolist::class, ['zaak' => $schema->model])->key('besluiten-table-'.($schema->model->id ?? 'new')),
-                                    ]),
+                                    ])
+                                    ->visible(fn (Zaak $record) => $record->besluiten->count() > 0),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->icon('heroicon-o-document')

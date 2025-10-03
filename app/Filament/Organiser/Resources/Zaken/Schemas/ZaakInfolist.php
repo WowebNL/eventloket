@@ -6,6 +6,7 @@ use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist as SchemasZaakInfolist;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
+use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Zaak;
 use Filament\Schemas\Components\Grid;
@@ -33,6 +34,13 @@ class ZaakInfolist
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
                             ->tabs([
+                                Tab::make('besluiten')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.decisions.label'))
+                                    ->icon('heroicon-o-briefcase')
+                                    ->schema([
+                                        Livewire::make(BesluitenInfolist::class, ['zaak' => $schema->model])->key('besluiten-table-'.($schema->model->id ?? 'new')),
+                                    ])
+                                    ->visible(fn (Zaak $record) => $record->besluiten->count() > 0),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->icon('heroicon-o-document')
