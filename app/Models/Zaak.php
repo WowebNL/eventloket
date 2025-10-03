@@ -113,9 +113,13 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                /** @phpstan-ignore-next-line */
-                return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
-
+                if (app()->runningInConsole()) {
+                    // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
+                    return $this->getDocuments();
+                } else {
+                    /** @phpstan-ignore-next-line */
+                    return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
+                }
             },
         );
     }
