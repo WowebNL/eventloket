@@ -271,24 +271,24 @@ class ViewZaak extends ViewRecord
                         message_documenten: $data['message_documenten'] ?? null,
                     );
 
-                    // Bus::chain(array_filter([
-                    //     $finishZaakObject->besluittype ? new AddBesluitZGW($finishZaakObject) : null,
-                    //     new AddResultaatZGW($finishZaakObject),
-                    //     new AddFinalStatusZGW($finishZaakObject),
-                    //     function () use ($record, $finishZaakObject) {
-                    //         foreach ($record->organisation->users as $recipient) {
-                    //             /** @var \App\Models\Users\MunicipalityUser $recipient */
-                    //             Mail::to($recipient->email)
-                    //                 ->queue(new ResultMail(
-                    //                     zaak: $record,
-                    //                     tenant: $record->organisation,
-                    //                     title: $finishZaakObject->message_title,
-                    //                     message: $finishZaakObject->message_content,
-                    //                     attachmentUrls: $finishZaakObject->message_documenten,
-                    //                 ));
-                    //         }
-                    //     },
-                    // ]))->dispatch();
+                    Bus::chain(array_filter([
+                        $finishZaakObject->besluittype ? new AddBesluitZGW($finishZaakObject) : null,
+                        new AddResultaatZGW($finishZaakObject),
+                        new AddFinalStatusZGW($finishZaakObject),
+                        function () use ($record, $finishZaakObject) {
+                            foreach ($record->organisation->users as $recipient) {
+                                /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                Mail::to($recipient->email)
+                                    ->queue(new ResultMail(
+                                        zaak: $record,
+                                        tenant: $record->organisation,
+                                        title: $finishZaakObject->message_title,
+                                        message: $finishZaakObject->message_content,
+                                        attachmentUrls: $finishZaakObject->message_documenten,
+                                    ));
+                            }
+                        },
+                    ]))->dispatch();
 
                     /**
                      * TODO: needs correct TGet and TSet generics of ZaakReferenceData to work with static analysis, code works but gives error in static analysis.
