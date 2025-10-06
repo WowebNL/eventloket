@@ -69,7 +69,7 @@ final readonly class FinishZaakObject
     {
         return [
             'zaak' => $this->zaak->openzaak->url,
-            'datumStatusGezet' => Carbon::now()->shiftTimezone('UTC')->toAtomString(),
+            'datumStatusGezet' => Carbon::now()->setTimezone('UTC')->toAtomString(),
             'statustoelichting' => __('Zaak afgerond via :app', ['app' => config('app.name')]),
             // 'gezetdoor' => $this->user->name, // needs url to betrokkene instead of name
         ];
