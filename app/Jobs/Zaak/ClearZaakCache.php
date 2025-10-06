@@ -3,6 +3,7 @@
 namespace App\Jobs\Zaak;
 
 use App\Models\Zaak;
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -28,6 +29,15 @@ class ClearZaakCache implements ShouldQueue
     {
         if ($zaak = Zaak::where('zgw_zaak_url', $this->notification->hoofdObject)->first()) {
             $zaak->clearZgwCache();
+            $zaak_reference = array_merge([
+                'status_name' => $zaak->openzaak->status_name,
+                'resultaat' => $zaak->openzaak->resultaattype ? $zaak->openzaak->resultaattype['omschrijving'] : null,
+            ], $zaak->openzaak->eigenschappen_key_value);
+
+            /** @disregard */
+            $zaak->reference_data = new ZaakReferenceData(...array_merge($zaak->reference_data->toArray(), $zaak_reference)); // @phpstan-ignore assign.propertyReadOnly
+
+            $zaak->save();
         }
     }
 }

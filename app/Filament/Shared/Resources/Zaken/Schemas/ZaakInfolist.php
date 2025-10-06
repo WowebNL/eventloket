@@ -46,6 +46,27 @@ class ZaakInfolist
         ];
     }
 
+    public static function resultaatSection(): Section
+    {
+        return Section::make(__('Resultaat'))
+            ->description(__('Het resultaat van deze zaak is vastgesteld.'))
+            ->columns(2)
+            ->schema([
+                TextEntry::make('openzaak.resultaattype.omschrijving')
+                    ->label(__('Resultaat')),
+                TextEntry::make('openzaak.resultaat.toelichting')
+                    ->label(__('Toelichting op het resultaat'))
+                    ->visible(fn (Zaak $record) => $record->openzaak->resultaat && Arr::has($record->openzaak->resultaat, 'toelichting') && $record->openzaak->resultaat['toelichting']),
+                TextEntry::make('openzaak.status_name')
+                    ->label(__('Huidige status')),
+                TextEntry::make('openzaak.status.datumStatusGezet')
+                    ->label(__('Status gezet op'))
+                    ->date(config('app.date_format')),
+            ])
+            ->columnSpan(4)
+            ->visible(fn (Zaak $record) => $record->openzaak->resultaat);
+    }
+
     public static function configure(Schema $schema): Schema
     {
         /** @var Zaak $zaak */
@@ -124,7 +145,6 @@ class ZaakInfolist
                                                         ->title(__('Er is iets misgegaan bij het wijzigen van de risico classificatie'))
                                                         ->send();
                                                 }
-
                                             }),
                                     ])),
                                 TextEntry::make('reference_data.status_name')
@@ -132,29 +152,7 @@ class ZaakInfolist
                             ])
                             ->columnSpan(4)
                             ->hidden(fn (Zaak $record) => $record->reference_data->resultaat),
-                        Section::make(__('Resultaat'))
-                            ->description(__('Het resultaat van deze zaak is vastgesteld.'))
-                            ->columns(2)
-                            ->schema([
-                                TextEntry::make('openzaak.resultaattype.omschrijving')
-                                    ->label(__('Resultaat')),
-                                TextEntry::make('openzaak.resultaat.toelichting')
-                                    ->label(__('Toelichting op het resultaat'))
-                                    ->visible(fn (Zaak $record) => $record->openzaak->resultaat && Arr::has($record->openzaak->resultaat, 'toelichting') && $record->openzaak->resultaat['toelichting']),
-                                TextEntry::make('openzaak.status_name')
-                                    ->label(__('Huidige status')),
-                                TextEntry::make('openzaak.status.datumStatusGezet')
-                                    ->label(__('Status gezet op'))
-                                    ->date(config('app.date_format')),
-                                // TextEntry::make('besluiten.name')
-                                //     ->label(__('Besluit'))
-                                //     ->state(fn(Zaak $record) => $record->besluiten->pluck('name')->toArray())
-                                //     ->listWithLineBreaks()
-
-                                // TextEntry::make()
-                            ])
-                            ->columnSpan(4)
-                            ->visible(fn (Zaak $record) => $record->openzaak->resultaat),
+                        self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
                             ->tabs([
@@ -204,8 +202,7 @@ class ZaakInfolist
                                 Tab::make('log')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.log.label'))
                                     ->icon('heroicon-o-clock')
-                                    ->schema([
-                                    ]),
+                                    ->schema([]),
                             ])
                             ->columnSpanFull(),
                     ]),
