@@ -4,6 +4,7 @@ namespace App\ValueObjects;
 
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
+use Carbon\Carbon;
 
 final readonly class FinishZaakObject
 {
@@ -68,7 +69,7 @@ final readonly class FinishZaakObject
     {
         return [
             'zaak' => $this->zaak->openzaak->url,
-            'datumStatusGezet' => date('Y-m-d H:i:s'),
+            'datumStatusGezet' => Carbon::now()->shiftTimezone('UTC')->toAtomString(),
             'statustoelichting' => __('Zaak afgerond via :app', ['app' => config('app.name')]),
             // 'gezetdoor' => $this->user->name, // needs url to betrokkene instead of name
         ];
