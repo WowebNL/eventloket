@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Woweb\Openzaak\Openzaak;
 
 class ViewZaak extends ViewRecord
@@ -52,6 +53,9 @@ class ViewZaak extends ViewRecord
     public $formResultaattypen = [];
 
     protected static string $resource = ZaakResource::class;
+
+    #[On('refreshZaak')]
+    public function refresh(): void {}
 
     public function refreshResultaat(): void
     {
@@ -267,24 +271,24 @@ class ViewZaak extends ViewRecord
                         message_documenten: $data['message_documenten'] ?? null,
                     );
 
-                    Bus::chain(array_filter([
-                        $finishZaakObject->besluittype ? new AddBesluitZGW($finishZaakObject) : null,
-                        new AddResultaatZGW($finishZaakObject),
-                        new AddFinalStatusZGW($finishZaakObject),
-                        function () use ($record, $finishZaakObject) {
-                            foreach ($record->organisation->users as $recipient) {
-                                /** @var \App\Models\Users\MunicipalityUser $recipient */
-                                Mail::to($recipient->email)
-                                    ->queue(new ResultMail(
-                                        zaak: $record,
-                                        tenant: $record->organisation,
-                                        title: $finishZaakObject->message_title,
-                                        message: $finishZaakObject->message_content,
-                                        attachmentUrls: $finishZaakObject->message_documenten,
-                                    ));
-                            }
-                        },
-                    ]))->dispatch();
+                    // Bus::chain(array_filter([
+                    //     $finishZaakObject->besluittype ? new AddBesluitZGW($finishZaakObject) : null,
+                    //     new AddResultaatZGW($finishZaakObject),
+                    //     new AddFinalStatusZGW($finishZaakObject),
+                    //     function () use ($record, $finishZaakObject) {
+                    //         foreach ($record->organisation->users as $recipient) {
+                    //             /** @var \App\Models\Users\MunicipalityUser $recipient */
+                    //             Mail::to($recipient->email)
+                    //                 ->queue(new ResultMail(
+                    //                     zaak: $record,
+                    //                     tenant: $record->organisation,
+                    //                     title: $finishZaakObject->message_title,
+                    //                     message: $finishZaakObject->message_content,
+                    //                     attachmentUrls: $finishZaakObject->message_documenten,
+                    //                 ));
+                    //         }
+                    //     },
+                    // ]))->dispatch();
 
                     /**
                      * TODO: needs correct TGet and TSet generics of ZaakReferenceData to work with static analysis, code works but gives error in static analysis.
@@ -304,6 +308,8 @@ class ViewZaak extends ViewRecord
                         ->title(__('De afronding van de zaak wordt op de achtergrond verwerkt.'))
                         ->success()
                         ->send();
+
+                    $this->dispatch('refreshZaak');
                 })
                 ->closeModalByClickingAway(false)
                 ->modalSubmitAction(false)
