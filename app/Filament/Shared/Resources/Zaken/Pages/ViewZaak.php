@@ -308,7 +308,7 @@ class ViewZaak extends ViewRecord
                         ->title(__('De afronding van de zaak wordt op de achtergrond verwerkt.'))
                         ->success()
                         ->send();
-                    
+
                     $this->dispatch('refreshZaak');
                 })
                 ->closeModalByClickingAway(false)
