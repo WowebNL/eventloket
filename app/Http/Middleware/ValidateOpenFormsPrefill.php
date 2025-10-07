@@ -33,7 +33,7 @@ class ValidateOpenFormsPrefill
 
             return redirect()->to($request->fullUrlWithoutQuery('initial_data_reference'));
 
-        } 
+        }
 
         // elseif ($objectTypeUrl = config('services.open_forms.prefill_object_type_url')) {
         //     /** @var \App\Models\Organisation $organisation */
@@ -78,7 +78,6 @@ class ValidateOpenFormsPrefill
         //     }
 
         // }
-
 
         return $next($request);
     }

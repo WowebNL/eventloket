@@ -23,16 +23,16 @@ class ViewZaak extends ViewRecord
                 ->tooltip('Start een nieuwe aanvraag waarbij de gegevens uit het aanvraagformulier van deze zaak vooraf ingevuld zijn.')
                 ->action(function (Zaak $record) {
                     $failed = false;
-                    if(isset($record->zaakdata->record['data']['data']) && $data = $record->zaakdata->record['data']['data']){
+                    if (isset($record->zaakdata->record['data']['data']) && $data = $record->zaakdata->record['data']['data']) {
                         $withOutSections = [];
-                        foreach($data as $item) {
+                        foreach ($data as $item) {
                             $withOutSections = is_array($item) ? array_merge($withOutSections, $item) : array_merge($withOutSections, [$item]);
                         }
 
                         $withOutSections['user_uuid'] = auth()->user()->uuid;
                         $withOutSections['organiser_uuid'] = $record->organisation->uuid;
 
-                        if($objectTypeUrl = config('services.open_forms.prefill_object_type_url')) {
+                        if ($objectTypeUrl = config('services.open_forms.prefill_object_type_url')) {
                             $record = array_filter($withOutSections);
 
                             $resp = (new ObjectsApi)->create([
@@ -56,19 +56,19 @@ class ViewZaak extends ViewRecord
                             }
                         } else {
                             $failed = true;
-                        } 
+                        }
                     } else {
                         $failed = true;
                     }
 
-                    if($failed) {
+                    if ($failed) {
                         Notification::make()
                             ->warning()
                             ->title('Er is iets misgegaan bij het aanmaken van een nieuwe aanvraag.')
                             ->body('Het vooraf invullen van het formulier is mislukt. Probeer het nogmaals of start een nieuwe aanvraag zonder vooraf ingevulde gegevens.')
                             ->send();
                     }
-                })
+                }),
         ];
     }
 }
