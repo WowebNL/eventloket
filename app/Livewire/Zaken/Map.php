@@ -74,8 +74,8 @@ class Map extends MapWidget
 
         $polygons = [];
 
-        foreach ($this->outsidePlaces as $key =>  $polygon) {
-            $polygons[] = Polygone::make('polygone-' . $key)
+        foreach ($this->outsidePlaces as $key => $polygon) {
+            $polygons[] = Polygone::make('polygone-'.$key)
                 ->latlngs($polygon)
                 ->options(['color' => 'blue', 'weight' => '2', 'fillColor' => 'blue', 'fillOpacity' => '0.4'])
                 ->tooltip('Buitenlocatie van het evenement')
