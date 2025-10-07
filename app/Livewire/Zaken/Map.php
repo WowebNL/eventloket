@@ -72,11 +72,17 @@ class Map extends MapWidget
             return [];
         }
 
-        return array_map(fn ($polygon) => Polygone::make('polygone')
-            ->latlngs($polygon)
-            ->options(['color' => 'blue', 'weight' => '2', 'fillColor' => 'blue', 'fillOpacity' => '0.4'])
-            ->tooltip('Buitenlocatie van het evenement')
-            ->popup('Buitenlocatie van het evenement'), $this->outsidePlaces);
+        $polygons = [];
+
+        foreach ($this->outsidePlaces as $key =>  $polygon) {
+            $polygons[] = Polygone::make('polygone-' . $key)
+                ->latlngs($polygon)
+                ->options(['color' => 'blue', 'weight' => '2', 'fillColor' => 'blue', 'fillOpacity' => '0.4'])
+                ->tooltip('Buitenlocatie van het evenement')
+                ->popup('Buitenlocatie van het evenement');
+        }
+
+        return $polygons;
     }
 
     public function getPolylines(): array
