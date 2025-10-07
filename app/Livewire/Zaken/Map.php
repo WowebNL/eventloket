@@ -66,6 +66,11 @@ class Map extends MapWidget
         parent::mount();
     }
 
+    public function getPollingInterval(): ?string
+    {
+        return null;
+    }
+
     public function getPolygones(): array
     {
         if (! $this->outsidePlaces) {
