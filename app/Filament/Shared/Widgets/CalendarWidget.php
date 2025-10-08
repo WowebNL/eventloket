@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
 use App\Filament\Exports\EventExporter;
+use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
 use App\Models\Event;
@@ -21,6 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Pages\Dashboard\Actions\FilterAction;
 use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
 use Guava\Calendar\Filament\Actions\ViewAction;
 use Guava\Calendar\ValueObjects\DatesSetInfo;
@@ -81,10 +83,19 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
     public function defaultSchema(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make()
-                ->columns(2)
-                ->schema(ZaakInfolist::informationschema())
-                ->columnSpan(8),
+            Tabs::make('event-modal-tabs')
+                ->tabs([
+                    Tabs\Tab::make('details')
+                        ->label(__('Details'))
+                        ->schema(ZaakInfolist::informationschema())
+                        ->columns(2),
+                    LocationsTab::make(),
+                ])
+                ->columnSpanFull(),
+            // Section::make()
+            //     ->columns(2)
+            //     ->schema(ZaakInfolist::informationschema())
+            //     ->columnSpan(8),
         ]);
     }
 
@@ -150,7 +161,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
     protected function getEvents(FetchInfo $info): Collection|array|Builder
     {
-        $query = Event::query();
+        if (in_array(auth()->user()->role, [Role::Organiser])) {
+            $query = Event::query();
+        } else {
+            $query = Zaak::query();
+        }
 
         return $this->applyContextFilters($query, $info);
     }

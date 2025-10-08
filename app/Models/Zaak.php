@@ -6,6 +6,7 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationType;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
+use App\Models\Users\OrganiserUser;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
@@ -63,6 +64,11 @@ class Zaak extends Model implements Eventable
     public function organisation(): BelongsTo
     {
         return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
+    }
+
+    public function organiserUser(): BelongsTo
+    {
+        return $this->belongsTo(OrganiserUser::class, 'organiser_user_id', 'id');
     }
 
     public function organiserThreads()

@@ -23,5 +23,23 @@ return [
         'risico_classificatie' => [
             'label' => 'Risicoclassificatie',
         ],
+        'start_evenement' => [
+            'label' => 'Start evenement',
+        ],
+        'eind_evenement' => [
+            'label' => 'Eind evenement',
+        ],
+        'telefoon' => [
+            'label' => 'Telefoonnummer organisatie',
+        ],
+        'telefoon-organiser' => [
+            'label' => 'Telefoonnummer indiener',
+        ],
+        'email' => [
+            'label' => 'E-mailadres organisatie',
+        ],
+        'email-organiser' => [
+            'label' => 'E-mailadres indiener',
+        ],
     ],
 ];

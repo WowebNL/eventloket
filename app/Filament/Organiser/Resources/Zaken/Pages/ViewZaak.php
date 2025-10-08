@@ -44,6 +44,8 @@ class ViewZaak extends ViewRecord
                                 ],
                             ])->toArray();
 
+                            // dd($resp);
+
                             if (Arr::has($resp, 'uuid')) {
                                 $this->redirect(route('filament.organiser.pages.new-request.{openform?}', ['tenant' => Filament::getTenant(), 'initial_data_reference' => Arr::get($resp, 'uuid')]));
                                 Notification::make()
