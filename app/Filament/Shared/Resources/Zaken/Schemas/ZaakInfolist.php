@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Schemas;
 
+use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
@@ -43,6 +44,27 @@ class ZaakInfolist
                 ->label(__('resources/zaak.columns.risico_classificatie.label')),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
+            TextEntry::make('reference_data.organisator')
+                ->label(__('municipality/resources/zaak.columns.organisator.label'))
+                ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])),
+            TextEntry::make('organisation.phone')
+                ->label(__('resources/zaak.columns.telefoon.label'))
+                ->visible(fn (?string $state) => ! empty($state)),
+            TextEntry::make('organiseruser.phone')
+                ->label(__('resources/zaak.columns.telefoon-organiser.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('organisation.email')
+                ->label(__('resources/zaak.columns.email.label'))
+                ->visible(fn (?string $state) => ! empty($state)),
+            TextEntry::make('organiserUser.email')
+                ->label(__('resources/zaak.columns.email-organiser.label'))
+                ->visible(fn (?string $state) => ! empty($state)),
+            TextEntry::make('reference_data.start_evenement')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_evenement.label')),
+            TextEntry::make('reference_data.eind_evenement')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_evenement.label')),
         ];
     }
 
@@ -83,8 +105,6 @@ class ZaakInfolist
                             ->description(__('municipality/resources/zaak.infolist.sections.information.description'))
                             ->columns(2)
                             ->schema(array_merge(self::informationschema(), [
-                                TextEntry::make('reference_data.organisator')
-                                    ->label(__('municipality/resources/zaak.columns.organisator.label')),
                                 TextEntry::make('openzaak.uiterlijkeEinddatumAfdoening')
                                     ->date(config('app.date_format'))
                                     ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),

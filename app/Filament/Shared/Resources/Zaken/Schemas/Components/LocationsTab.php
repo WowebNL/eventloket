@@ -14,7 +14,7 @@ class LocationsTab
 {
     public static function make(): Tab
     {
-        return Tab::make('locations')
+        return Tab::make('locations-'.Str::uuid())
             ->label(__('municipality/resources/zaak.infolist.tabs.locations.label'))
             ->icon('heroicon-o-map-pin')
             ->columns(12)

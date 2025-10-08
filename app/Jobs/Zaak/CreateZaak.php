@@ -57,7 +57,7 @@ class CreateZaak implements ShouldQueue
                 'zaaktype_id' => $zaaktype->id,
                 'data_object_url' => $ozZaak->data_object_url,
                 'organisation_id' => $organisation?->id,
-                'user_id' => $user?->id,
+                'organiser_user_id' => $user?->id,
                 'reference_data' => new ZaakReferenceData(
                     ...array_merge(
                         $ozZaak->eigenschappen_key_value,
