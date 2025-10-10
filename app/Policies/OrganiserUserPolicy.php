@@ -13,7 +13,11 @@ class OrganiserUserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

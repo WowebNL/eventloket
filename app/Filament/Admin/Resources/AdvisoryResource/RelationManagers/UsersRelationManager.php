@@ -50,6 +50,12 @@ class UsersRelationManager extends RelationManager
             ->components([
                 EditProfile::getFirstNameFormComponent(),
                 EditProfile::getLastNameFormComponent(),
+                TextInput::make('email')
+                    ->label(__('admin/resources/organisation.user.form.email.label'))
+                    ->disabled(),
+                TextInput::make('phone')
+                    ->label(__('admin/resources/organisation.user.form.phone.label'))
+                    ->maxLength(20),
             ]);
     }
 

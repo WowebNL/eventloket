@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Users\AdvisorUser;
 use Database\Factories\AdvisoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,7 @@ class Advisory extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class);
+        return $this->belongsToMany(AdvisorUser::class, 'advisory_user');
     }
 
     public function municipalities(): BelongsToMany

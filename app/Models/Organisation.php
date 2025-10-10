@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\OrganisationType;
 use App\Models\Traits\HasUuid;
+use App\Models\Users\OrganiserUser;
 use App\Services\LocatieserverService;
 use Database\Factories\OrganisationFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -50,7 +51,7 @@ class Organisation extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->withPivot('role');
+        return $this->belongsToMany(OrganiserUser::class, 'organisation_user')->withPivot('role');
     }
 
     public function formSubmissionSessions(): HasMany

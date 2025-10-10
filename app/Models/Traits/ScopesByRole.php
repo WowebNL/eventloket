@@ -13,7 +13,7 @@ trait ScopesByRole
     public static function bootScopesByRole()
     {
         static::addGlobalScope('role', function (Builder $builder) {
-            $builder->where('role', static::getRole());
+            $builder->where(self::getRoleKey(), static::getRole());
         });
     }
 
@@ -22,4 +22,9 @@ trait ScopesByRole
      * Must be implemented by each user type.
      */
     abstract public static function getRole(): Role;
+
+    public static function getRoleKey(): string
+    {
+        return 'role';
+    }
 }

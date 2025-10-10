@@ -60,6 +60,11 @@ class OrganiserUser extends User implements FilamentUser, HasTenants
         return Role::Organiser;
     }
 
+    public static function getRoleKey(): string
+    {
+        return 'users.role';
+    }
+
     public function formsubmissionSessions(): HasMany
     {
         return $this->hasMany(FormsubmissionSession::class);
