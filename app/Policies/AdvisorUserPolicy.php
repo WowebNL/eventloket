@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Models\Users\AdvisorUser;
 
@@ -12,7 +13,7 @@ class AdvisorUserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->role == Role::Admin;
     }
 
     /**
@@ -36,7 +37,7 @@ class AdvisorUserPolicy
      */
     public function update(User $user, AdvisorUser $advisorUser): bool
     {
-        return false;
+        return $user->role == Role::Admin;
     }
 
     /**
@@ -44,7 +45,7 @@ class AdvisorUserPolicy
      */
     public function delete(User $user, AdvisorUser $advisorUser): bool
     {
-        return false;
+        return $user->role == Role::Admin;
     }
 
     /**

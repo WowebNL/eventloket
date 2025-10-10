@@ -19,7 +19,9 @@ class OrganiserUserForm
                 TextInput::make('email')
                     ->label(__('admin/resources/organisation.user.form.email.label'))
                     ->email()
-                    ->required(),
+                    ->required()
+                    ->maxLength(255)
+                    ->unique('users', 'email'),
                 TextInput::make('phone')
                     ->label(__('admin/resources/organisation.user.form.phone.label'))
                     ->maxLength(20),
