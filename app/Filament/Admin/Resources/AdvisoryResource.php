@@ -7,9 +7,9 @@ use App\Filament\Admin\Resources\AdvisoryResource\Pages\EditAdvisory;
 use App\Filament\Admin\Resources\AdvisoryResource\Pages\ListAdvisories;
 use App\Filament\Admin\Resources\AdvisoryResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Filament\Admin\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
-use App\Filament\Organiser\Pages\EditProfile;
 use App\Models\Advisory;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
@@ -37,8 +37,10 @@ class AdvisoryResource extends Resource
     {
         return $schema
             ->components([
-                EditProfile::getFirstNameFormComponent(),
-                EditProfile::getLastNameFormComponent(),
+                TextInput::make('name')
+                    ->label(__('admin/resources/advisory.columns.name.label'))
+                    ->required()
+                    ->maxLength(255),
             ]);
     }
 
