@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Pages;
 
 use App\Enums\Role;
 use App\Models\NotificationPreference;
+use App\Notifications\AdviceReminder;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
@@ -63,6 +64,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             Role::Advisor => [
                 NewAdviceThread::class,
                 NewAdviceThreadMessage::class,
+                AdviceReminder::class,
             ],
             Role::Organiser => [
                 NewOrganiserThread::class,

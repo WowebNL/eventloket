@@ -9,6 +9,8 @@ Schedule::call(function () {
     }
 })->weekly();
 
+Schedule::job(new \App\Jobs\SendAdviceReminders)->dailyAt('12:00');
+
 Schedule::job(new \App\Jobs\CleanupExpiredInvites)->daily();
 Schedule::job(new \App\Jobs\CleanupExports)->daily();
 
