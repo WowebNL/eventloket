@@ -9,6 +9,7 @@ use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
 use App\Notifications\NewOrganiserThreadMessage;
+use App\Notifications\NewZaakDocument;
 use App\Notifications\Result;
 use App\Notifications\ZaakStatusChanged;
 use Filament\Forms\Components\CheckboxList;
@@ -71,6 +72,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,
                 ZaakStatusChanged::class,
+                NewZaakDocument::class,
                 Result::class,
             ],
             default => throw new \Exception('Unknown role'),

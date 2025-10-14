@@ -9,45 +9,44 @@ use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Notifications\Messages\MailMessage;
 
-class ZaakStatusChanged extends BaseNotification
+class NewZaakDocument extends BaseNotification
 {
     private string $eventName;
 
     private string $municipalityName;
 
-    private string $newStatus;
+    private string $type;
 
     /**
      * Create a new notification instance.
      */
     public function __construct(
         protected Zaak $zaak,
-        protected string $oldStatus
+        protected bool $isNew = true,
     ) {
         $this->eventName = $zaak->reference_data->naam_evenement;
         $this->municipalityName = $zaak->municipality->name;
-        $this->newStatus = $zaak->reference_data->status_name;
+        $this->type = $isNew ? 'new' : 'updated';
     }
 
     public static function getLabel(): string|Htmlable|null
     {
-        return __('notification/zaak-status-changed.label');
+        return __('notification/new-zaak-document.label');
     }
 
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(User $notifiable): MailMessage
+    public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject(__('notification/zaak-status-changed.mail.subject', [
+            ->subject(__('notification/new-zaak-document.mail.subject.'.$this->type, [
                 'event' => $this->eventName,
             ]))
-            ->markdown('mail.zaak-status-changed', [
+            ->markdown('mail.new-zaak-document', [
+                'type' => $this->type,
                 'event' => $this->eventName,
                 'municipality' => $this->municipalityName,
-                'oldStatus' => $this->oldStatus,
-                'newStatus' => $this->newStatus,
                 'viewUrl' => route('filament.organiser.resources.zaken.view', [
                     'tenant' => $this->zaak->organisation->uuid,
                     'record' => $this->zaak->id,
@@ -58,13 +57,11 @@ class ZaakStatusChanged extends BaseNotification
     public function toDatabase(User $notifiable): array
     {
         return FilamentNotification::make()
-            ->title(__('notification/zaak-status-changed.database.title', [
+            ->title(__('notification/new-zaak-document.database.title.'.$this->type, [
                 'event' => $this->eventName,
             ]))
-            ->body(__('notification/zaak-status-changed.database.body', [
+            ->body(__('notification/new-zaak-document.database.body.'.$this->type, [
                 'municipality' => $this->municipalityName,
-                'old_status' => $this->oldStatus,
-                'new_status' => $this->newStatus,
             ]))
             ->actions([
                 Action::make('view')
