@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,6 +21,15 @@ class ZaakFactory extends Factory
             'public_id' => 'ZAAK-'.fake()->unique()->randomNumber(5),
             'zgw_zaak_url' => fake()->url,
             'data_object_url' => fake()->url,
+            'reference_data' => new ZaakReferenceData(
+                'A',
+                now(),
+                now()->addDay(),
+                now(),
+                'Ontvangen',
+                'Test locatie',
+                'Test event'
+            ),
         ];
     }
 }

@@ -2,9 +2,8 @@
 
 namespace App\Observers;
 
-use App\Mail\NewOrganiserThreadMail;
 use App\Models\Threads\OrganiserThread;
-use Illuminate\Support\Facades\Mail;
+use App\Notifications\NewOrganiserThread;
 
 class OrganiserThreadObserver
 {
@@ -17,8 +16,7 @@ class OrganiserThreadObserver
             ->where('id', '!=', $organiserThread->created_by);
 
         foreach ($usersToNotify as $user) {
-            Mail::to($user->email)
-                ->send(new NewOrganiserThreadMail($organiserThread, $user));
+            $user->notify(new NewOrganiserThread($organiserThread));
         }
     }
 }

@@ -2,8 +2,17 @@
 
 namespace App\Filament\Shared\Pages;
 
+use App\Enums\Role;
+use App\Models\NotificationPreference;
+use App\Notifications\NewAdviceThread;
+use App\Notifications\NewAdviceThreadMessage;
+use App\Notifications\NewOrganiserThread;
+use App\Notifications\NewOrganiserThreadMessage;
+use App\Notifications\Result;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Schema;
 
 class EditProfile extends \Filament\Auth\Pages\EditProfile
@@ -18,6 +27,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 /** @phpstan-ignore-next-line */
                 $this->getPasswordFormComponent()->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 $this->getPasswordConfirmationFormComponent(),
+                $this->getNotificationPreferencesComponent(),
             ]);
     }
 
@@ -36,5 +46,88 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             ->label(__('shared/pages/edit-profile.form.last_name.label'))
             ->required()
             ->maxLength(255);
+    }
+
+    protected function getNotifications(): array
+    {
+        return match (auth()->user()->role) {
+            Role::Admin => [],
+            Role::MunicipalityAdmin => [],
+            Role::ReviewerMunicipalityAdmin,
+            Role::Reviewer => [
+                NewAdviceThread::class,
+                NewAdviceThreadMessage::class,
+                NewOrganiserThread::class,
+                NewOrganiserThreadMessage::class,
+            ],
+            Role::Advisor => [
+                NewAdviceThread::class,
+                NewAdviceThreadMessage::class,
+            ],
+            Role::Organiser => [
+                NewOrganiserThread::class,
+                NewOrganiserThreadMessage::class,
+                Result::class,
+            ],
+            default => throw new \Exception('Unknown role'),
+        };
+    }
+
+    protected function getNotificationPreferencesComponent(): Component
+    {
+        $schema = [];
+
+        foreach ($this->getNotifications() as $notificationClass) {
+            $schema[] = CheckboxList::make("{$notificationClass}_channels")
+                ->label($notificationClass::getLabel()) // Waar haal ik dit vandaan?
+                ->options([
+                    'mail' => __('shared/pages/edit-profile.form.notification_preferences.options.mail'),
+                    'database' => __('shared/pages/edit-profile.form.notification_preferences.options.database'),
+                ])
+                ->default(['mail', 'database'])
+                ->afterStateHydrated(function (CheckboxList $component) use ($notificationClass) {
+                    $preference = auth()->user()->notificationPreferences()
+                        ->where('notification_class', $notificationClass)
+                        ->first();
+
+                    $component->state($preference ? $preference->channels : ['mail', 'database']);
+                });
+        }
+
+        return Fieldset::make(__('shared/pages/edit-profile.form.notification_preferences.label'))
+            ->schema($schema)
+            ->hidden(fn () => count($this->getNotifications()) === 0);
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Handle notification preferences separately
+        $this->saveNotificationPreferences($data);
+
+        // Remove notification preferences from the main data array
+        foreach ($this->getNotifications() as $notificationClass) {
+            unset($data["{$notificationClass}_channels"]);
+        }
+
+        return parent::mutateFormDataBeforeSave($data);
+    }
+
+    protected function saveNotificationPreferences(array $data): void
+    {
+        $user = auth()->user();
+
+        foreach ($this->getNotifications() as $notificationClass) {
+            if (isset($data["{$notificationClass}_channels"])) {
+                NotificationPreference::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'notification_class' => $notificationClass,
+                    ],
+                    [
+                        'channels' => $data["{$notificationClass}_channels"] ?? [],
+                    ]
+                );
+            }
+        }
     }
 }

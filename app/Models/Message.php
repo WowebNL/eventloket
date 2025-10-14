@@ -49,4 +49,13 @@ class Message extends Model
     {
         return $this->belongsToMany(User::class, 'unread_messages');
     }
+
+    public function getViewUrlForUser(User $user): string
+    {
+        $viewUrl = $this->thread->getViewUrlForUser($user);
+
+        $viewUrl .= "#message-{$this->id}";
+
+        return $viewUrl;
+    }
 }

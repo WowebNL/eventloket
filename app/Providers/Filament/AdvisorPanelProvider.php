@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Advisor\Pages\Dashboard;
+use App\Filament\Shared\Pages\EditProfile;
 use App\Models\Advisory;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
@@ -45,7 +46,7 @@ class AdvisorPanelProvider extends PanelProvider
             ->databaseNotifications()
             ->login()
             ->passwordReset()
-            ->profile()
+            ->profile(EditProfile::class)
             ->multiFactorAuthentication([
                 AppAuthentication::make()
                     ->recoverable(),

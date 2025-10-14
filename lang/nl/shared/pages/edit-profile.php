@@ -8,5 +8,12 @@ return [
         'last_name' => [
             'label' => 'Achternaam',
         ],
+        'notification_preferences' => [
+            'label' => 'Melding voorkeuren',
+            'options' => [
+                'mail' => 'E-mail',
+                'database' => 'Binnen Eventloket',
+            ],
+        ],
     ],
 ];

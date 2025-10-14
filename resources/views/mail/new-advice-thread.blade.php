@@ -1,13 +1,13 @@
 <x-mail::message>
-# {{ __('mail/new-advice-thread.greeting') }}
+# {{ __('notification/new-advice-thread.mail.greeting') }}
 
-{{ __('mail/new-advice-thread.body', ['advisory' => $advisory, 'municipality' => $municipality, 'event' => $event]) }}
+{{ __('notification/new-advice-thread.mail.body', ['advisory' => $advisory, 'municipality' => $municipality, 'event' => $event]) }}
 
 <x-mail::panel>
 {{ $title }}
 </x-mail::panel>
 
 <x-mail::button :url="$viewUrl">
-    {{ __('mail/new-advice-thread.button') }}
+    {{ __('notification/new-advice-thread.mail.button') }}
 </x-mail::button>
 </x-mail::message>

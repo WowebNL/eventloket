@@ -8,8 +8,6 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThre
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Pages\CreateAdviceThread;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Pages\ViewAdviceThread;
 use App\Livewire\Thread\MessageForm;
-use App\Mail\NewAdviceThreadMail;
-use App\Mail\NewAdviceThreadMessageMail;
 use App\Models\Advisory;
 use App\Models\Message;
 use App\Models\Municipality;
@@ -18,6 +16,8 @@ use App\Models\Threads\AdviceThread;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\Notifications\NewAdviceThread;
+use App\Notifications\NewAdviceThreadMessage;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
@@ -66,6 +66,7 @@ beforeEach(function () {
             now()->addDay(),
             now(),
             'Ontvangen',
+            'Test locatie',
             'Test event'
         ),
     ]);
@@ -113,15 +114,16 @@ test('can be created by reviewer triggers email sending and creates unread', fun
     $message = $adviceThread->messages()->first();
 
     // Should have been sent to both advisors
-    Mail::assertSent(NewAdviceThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->advisor->email);
-    });
-    Mail::assertSent(NewAdviceThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->advisor2->email);
-    });
+    Notification::assertSentTo(
+        [$this->advisor, $this->advisor2],
+        NewAdviceThread::class,
+    );
 
     // Because this is the first message, no new message email should have been sent
-    Mail::assertNotSent(NewAdviceThreadMessageMail::class);
+    Notification::assertNotSentTo(
+        [$this->advisor, $this->advisor2],
+        NewAdviceThreadMessage::class
+    );
 
     // Unread message entries should have been created
     $this->assertDatabaseHas('unread_messages', [
@@ -165,15 +167,15 @@ test('advisor can send text messages and this changes advice status to replied',
     expect($adviceThread->advice_status)->toBe(AdviceStatus::AdvisoryReplied);
 
     // Everybody except for the advisor who sent the message received an email
-    Mail::assertSent(NewAdviceThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer->email);
-    });
-    Mail::assertSent(NewAdviceThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer2->email);
-    });
-    Mail::assertSent(NewAdviceThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->advisor2->email);
-    });
+    Notification::assertSentTo(
+        [$this->reviewer, $this->reviewer2, $this->advisor2],
+        NewAdviceThreadMessage::class
+    );
+
+    Notification::assertNotSentTo(
+        [$this->advisor],
+        NewAdviceThreadMessage::class
+    );
 
     $message = $adviceThread->messages()->first();
 

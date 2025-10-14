@@ -2,10 +2,9 @@
 
 namespace App\Observers;
 
-use App\Mail\NewAdviceThreadMail;
 use App\Models\Threads\AdviceThread;
 use App\Models\Users\AdvisorUser;
-use Illuminate\Support\Facades\Mail;
+use App\Notifications\NewAdviceThread;
 
 class AdviceThreadObserver
 {
@@ -16,8 +15,7 @@ class AdviceThreadObserver
     {
         /** @var AdvisorUser $advisorUser */
         foreach ($adviceThread->advisory->users as $advisorUser) {
-            Mail::to($advisorUser->email)
-                ->send(new NewAdviceThreadMail($adviceThread, $advisorUser));
+            $advisorUser->notify(new NewAdviceThread($adviceThread));
         }
     }
 }
