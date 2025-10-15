@@ -21,6 +21,7 @@ class EditProfile extends \App\Filament\Shared\Pages\EditProfile
                 /** @phpstan-ignore-next-line */
                 $this->getPasswordFormComponent()->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 $this->getPasswordConfirmationFormComponent(),
+                $this->getNotificationPreferencesComponent(),
             ]);
     }
 }

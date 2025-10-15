@@ -88,6 +88,11 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         return $this->belongsToMany(Message::class, 'unread_messages');
     }
 
+    public function notificationPreferences()
+    {
+        return $this->hasMany(NotificationPreference::class);
+    }
+
     /**
      * setup name based on first and last name
      */
@@ -175,5 +180,18 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
     {
         $this->app_authentication_recovery_codes = $codes;
         $this->save();
+    }
+
+    /**
+     * Get notification channels for a specific notification class
+     */
+    public function getNotificationChannels(string $notificationClass): array
+    {
+        $preference = $this->notificationPreferences()
+            ->where('notification_class', $notificationClass)
+            ->first();
+
+        // Default to both mail and database if no preference is set
+        return $preference ? $preference->channels : ['mail', 'database'];
     }
 }

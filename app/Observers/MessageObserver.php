@@ -3,11 +3,10 @@
 namespace App\Observers;
 
 use App\Enums\ThreadType;
-use App\Mail\NewAdviceThreadMessageMail;
-use App\Mail\NewOrganiserThreadMessageMail;
 use App\Models\Message;
 use App\Models\Thread;
-use Illuminate\Support\Facades\Mail;
+use App\Notifications\NewAdviceThreadMessage;
+use App\Notifications\NewOrganiserThreadMessage;
 
 class MessageObserver
 {
@@ -35,15 +34,15 @@ class MessageObserver
         $mailableClass = $this->getMailableClassForThreadType($message->thread->type);
 
         foreach ($usersToNotify as $user) {
-            Mail::to($user->email)->send(new $mailableClass($message, $user));
+            $user->notify(new $mailableClass($message));
         }
     }
 
     private function getMailableClassForThreadType(ThreadType $threadType): string
     {
         return match ($threadType) {
-            ThreadType::Advice => NewAdviceThreadMessageMail::class,
-            ThreadType::Organiser => NewOrganiserThreadMessageMail::class,
+            ThreadType::Advice => NewAdviceThreadMessage::class,
+            ThreadType::Organiser => NewOrganiserThreadMessage::class,
         };
     }
 }

@@ -8,8 +8,8 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource;
 use App\Jobs\Zaak\AddBesluitZGW;
 use App\Jobs\Zaak\AddFinalStatusZGW;
 use App\Jobs\Zaak\AddResultaatZGW;
-use App\Mail\ResultMail;
 use App\Models\Zaak;
+use App\Notifications\Result;
 use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\BesluitType;
@@ -32,7 +32,6 @@ use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -278,14 +277,13 @@ class ViewZaak extends ViewRecord
                         function () use ($record, $finishZaakObject) {
                             foreach ($record->organisation->users as $recipient) {
                                 /** @var \App\Models\Users\MunicipalityUser $recipient */
-                                Mail::to($recipient->email)
-                                    ->queue(new ResultMail(
-                                        zaak: $record,
-                                        tenant: $record->organisation,
-                                        title: $finishZaakObject->message_title,
-                                        message: $finishZaakObject->message_content,
-                                        attachmentUrls: $finishZaakObject->message_documenten,
-                                    ));
+                                $recipient->notify(new Result(
+                                    zaak: $record,
+                                    tenant: $record->organisation,
+                                    title: $finishZaakObject->message_title,
+                                    message: $finishZaakObject->message_content,
+                                    attachmentUrls: $finishZaakObject->message_documenten,
+                                ));
                             }
                         },
                     ]))->dispatch();

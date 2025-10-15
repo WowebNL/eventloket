@@ -10,8 +10,6 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserT
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads\Pages\CreateOrganiserThread;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads\Pages\ViewOrganiserThread;
 use App\Livewire\Thread\MessageForm;
-use App\Mail\NewOrganiserThreadMail;
-use App\Mail\NewOrganiserThreadMessageMail;
 use App\Models\Message;
 use App\Models\Municipality;
 use App\Models\Organisation;
@@ -19,6 +17,8 @@ use App\Models\Threads\OrganiserThread;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\Notifications\NewOrganiserThread;
+use App\Notifications\NewOrganiserThreadMessage;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
@@ -74,6 +74,7 @@ beforeEach(function () {
             now()->addDay(),
             now(),
             'Ontvangen',
+            'Test locatie',
             'Test event'
         ),
     ]);
@@ -109,18 +110,16 @@ test('can be created by municipality reviewer triggers email sending and creates
     $message = $organiserThread->messages()->first();
 
     // Should have been sent to all organisation workers and municipality handlers
-    Mail::assertSent(NewOrganiserThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->organiser->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->organiser2->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer2->email);
-    });
+    Notification::assertSentTo(
+        [$this->organiser, $this->organiser2, $this->reviewer2],
+        NewOrganiserThread::class
+    );
 
     // Because this is the first message, no new message email should have been sent
-    Mail::assertNotSent(NewOrganiserThreadMessageMail::class);
+    Notification::assertNotSentTo(
+        [$this->organiser, $this->organiser2, $this->reviewer2],
+        NewOrganiserThreadMessage::class
+    );
 
     // Unread message entries should have been created for all participants except creator
     $this->assertDatabaseHas('unread_messages', [
@@ -171,18 +170,20 @@ test('can be created by organiser triggers email sending and creates unread', fu
     $message = $organiserThread->messages()->first();
 
     // Should have been sent to all organisation workers and municipality handlers
-    Mail::assertSent(NewOrganiserThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->organiser2->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer2->email);
-    });
+    Notification::assertSentTo(
+        [$this->organiser2, $this->reviewer, $this->reviewer2],
+        NewOrganiserThread::class
+    );
+    Notification::assertNotSentTo(
+        [$this->organiser],
+        NewOrganiserThread::class
+    );
 
     // Because this is the first message, no new message email should have been sent
-    Mail::assertNotSent(NewOrganiserThreadMessageMail::class);
+    Notification::assertNotSentTo(
+        [$this->organiser2, $this->reviewer, $this->reviewer2],
+        NewOrganiserThreadMessage::class,
+    );
 
     // Unread message entries should have been created for all participants except creator
     $this->assertDatabaseHas('unread_messages', [
@@ -229,15 +230,15 @@ test('municipality user can send text messages', function () {
     expect($organiserThread->messages()->count())->toBe(1);
 
     // Everybody except for the reviewer who sent the message received an email
-    Mail::assertSent(NewOrganiserThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->organiser->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->organiser2->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer2->email);
-    });
+    Notification::assertSentTo(
+        [$this->organiser, $this->organiser2, $this->reviewer2],
+        NewOrganiserThreadMessage::class,
+    );
+
+    Notification::assertNotSentTo(
+        [$this->reviewer],
+        NewOrganiserThreadMessage::class,
+    );
 
     $message = $organiserThread->messages()->first();
 
@@ -286,15 +287,15 @@ test('organiser can send text messages', function () {
     expect($organiserThread->messages()->count())->toBe(1);
 
     // Everybody except for the organiser who sent the message received an email
-    Mail::assertSent(NewOrganiserThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->reviewer2->email);
-    });
-    Mail::assertSent(NewOrganiserThreadMessageMail::class, function ($mail) {
-        return $mail->hasTo($this->organiser2->email);
-    });
+    Notification::assertSentTo(
+        [$this->reviewer, $this->reviewer2, $this->organiser2],
+        NewOrganiserThreadMessage::class
+    );
+
+    Notification::assertNotSentTo(
+        [$this->organiser],
+        NewOrganiserThreadMessage::class
+    );
 
     $message = $organiserThread->messages()->first();
 
