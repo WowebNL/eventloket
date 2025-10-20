@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -76,7 +77,7 @@ class Zaak extends Model implements Eventable
         return $this->hasMany(OrganiserThread::class)->organiser();
     }
 
-    public function adviceThreads()
+    public function adviceThreads(): HasMany
     {
         return $this->hasMany(AdviceThread::class)->advice();
     }
@@ -90,6 +91,23 @@ class Zaak extends Model implements Eventable
             'id',
             'zaaktype_id',
             'municipality_id'
+        );
+    }
+
+    /**
+     * get all the related user to a zaak
+     *
+     * @return array<User>
+     */
+    public function relatedUsers(): array
+    {
+        return array_merge(
+            $this->organisation->users->all(),
+            $this->adviceThreads->map(function ($thread) {
+                /** @var \App\Models\Threads\AdviceThread $thread */
+                return $thread->advisory->users->all();
+            })->flatten(1)->all(),
+            $this->municipality->allReviewerUsers->all()
         );
     }
 

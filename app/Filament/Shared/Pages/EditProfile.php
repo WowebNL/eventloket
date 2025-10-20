@@ -62,11 +62,13 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 NewAdviceThreadMessage::class,
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,
+                NewZaakDocument::class,
             ],
             Role::Advisor => [
                 NewAdviceThread::class,
                 NewAdviceThreadMessage::class,
                 AdviceReminder::class,
+                NewZaakDocument::class,
             ],
             Role::Organiser => [
                 NewOrganiserThread::class,

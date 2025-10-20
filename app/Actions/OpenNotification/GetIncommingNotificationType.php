@@ -28,7 +28,12 @@ class GetIncommingNotificationType
         } elseif ($data['actie'] === 'create' && $data['kanaal'] === 'zaken' && $data['resource'] === 'status') {
             // zaak status created, this happens when a status is changed on a zaak
             return OpenNotificationType::ZaakStatusChanged;
+        } elseif ($data['actie'] === 'create' && $data['kanaal'] === 'documenten' && $data['resource'] === 'enkelvoudiginformatieobject') {
+            return OpenNotificationType::NewZaakDocument;
+        } elseif (($data['actie'] === 'update' || $data['actie'] === 'partial_update') && $data['kanaal'] === 'documenten' && $data['resource'] === 'enkelvoudiginformatieobject') {
+            return OpenNotificationType::UpdatedZaakDocument;
         }
+
         // TODO: Implement other notification types
 
         return null;
