@@ -17,6 +17,7 @@ class AdvisoryInvite extends Model
         'advisory_id',
         'name',
         'email',
+        'role',
         'token',
     ];
 

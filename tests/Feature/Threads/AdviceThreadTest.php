@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AdviceStatus;
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
@@ -40,8 +41,8 @@ beforeEach(function () {
         'role' => Role::Advisor,
     ]);
 
-    $this->advisory->users()->attach($this->advisor);
-    $this->advisory->users()->attach($this->advisor2);
+    $this->advisory->users()->attach($this->advisor, ['role' => AdvisoryRole::Member]);
+    $this->advisory->users()->attach($this->advisor2, ['role' => AdvisoryRole::Member]);
 
     $this->municipality = Municipality::factory()->create(['name' => 'Test Municipality']);
 
@@ -384,7 +385,7 @@ test('advisor can only see advice threads from their advisory', function () {
     // Create another advisory with different advisor
     $otherAdvisory = Advisory::factory()->create(['name' => 'Politie']);
     $otherAdvisor = User::factory()->create(['role' => Role::Advisor]);
-    $otherAdvisory->users()->attach($otherAdvisor);
+    $otherAdvisory->users()->attach($otherAdvisor, ['role' => AdvisoryRole::Member]);
 
     Filament::setCurrentPanel(Filament::getPanel('advisor'));
     $this->actingAs($this->advisor);

@@ -2,6 +2,7 @@
 
 namespace App\Models\Users;
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Models\Advisory;
 use App\Models\Traits\ScopesByRole;
@@ -19,12 +20,19 @@ class AdvisorUser extends User implements FilamentUser, HasTenants
 
     public function advisories(): BelongsToMany
     {
-        return $this->belongsToMany(Advisory::class, 'advisory_user');
+        return $this->belongsToMany(Advisory::class, 'advisory_user')->withPivot('role');
     }
 
-    public function canAccessAdvisory(int $advisoryId): bool
+    public function canAccessAdvisory(int $advisoryId, ?AdvisoryRole $asRole = null): bool
     {
-        return $this->advisories->contains($advisoryId);
+        $query = $this->advisories()
+            ->wherePivot('advisory_id', $advisoryId);
+
+        if ($asRole !== null) {
+            $query->wherePivot('role', $asRole->value);
+        }
+
+        return $query->exists();
     }
 
     public function canAccessPanel(Panel $panel): bool
@@ -48,5 +56,10 @@ class AdvisorUser extends User implements FilamentUser, HasTenants
     public static function getRole(): Role
     {
         return Role::Advisor;
+    }
+
+    public static function getRoleKey(): string
+    {
+        return 'users.role';
     }
 }
