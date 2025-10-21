@@ -1,12 +1,14 @@
 <?php
 
 use App\Events\OpenNotification\CreateZaakNotificationReceived;
+use App\Jobs\DocumentNotificationReceived;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\ClearZaakCache;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
+use App\Jobs\ZaakStatusNotificationReceived;
 use App\Listeners\Zaak\ProcessCreateZaak;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Support\Facades\Bus;
@@ -147,5 +149,68 @@ test('Open notifications endpoint handles update zaak eigenschap notification', 
 
     $response->assertStatus(200);
     Queue::assertPushed(ClearZaakCache::class);
+
+});
+
+test('Open notifications endpoint handles zaak status changed notification', function () {
+    Queue::fake([
+        ZaakStatusNotificationReceived::class,
+    ]);
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'status',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'https://example.com/status/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    Queue::assertPushed(ZaakStatusNotificationReceived::class);
+
+});
+
+test('Open notifications endpoint handles document creation notification', function () {
+    Queue::fake([
+        DocumentNotificationReceived::class,
+    ]);
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'documenten',
+        'resource' => 'enkelvoudiginformatieobject',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'https://example.com/enkelvoudiginformatieobject/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    Queue::assertPushed(DocumentNotificationReceived::class);
+
+});
+
+test('Open notifications endpoint handles document update notification', function () {
+    Queue::fake([
+        DocumentNotificationReceived::class,
+    ]);
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'partial_update',
+        'kanaal' => 'documenten',
+        'resource' => 'enkelvoudiginformatieobject',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'https://example.com/enkelvoudiginformatieobject/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    Queue::assertPushed(DocumentNotificationReceived::class);
 
 });
