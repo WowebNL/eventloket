@@ -69,10 +69,10 @@ describe('User Role Based Notification Preferences', function () {
         $this->get(route('filament.municipality.auth.profile'))
             ->assertOk()
             ->assertSee(__('shared/pages/edit-profile.form.notification_preferences.label'))
-            ->assertSee(NewAdviceThread::getLabel())
             ->assertSee(NewAdviceThreadMessage::getLabel())
             ->assertSee(NewOrganiserThread::getLabel())
             ->assertSee(NewOrganiserThreadMessage::getLabel())
+            ->assertDontSee(NewAdviceThread::getLabel())
             ->assertDontSee(Result::getLabel());
     });
 
@@ -86,10 +86,10 @@ describe('User Role Based Notification Preferences', function () {
         $this->get(route('filament.municipality.auth.profile'))
             ->assertOk()
             ->assertSee(__('shared/pages/edit-profile.form.notification_preferences.label'))
-            ->assertSee(NewAdviceThread::getLabel())
             ->assertSee(NewAdviceThreadMessage::getLabel())
             ->assertSee(NewOrganiserThread::getLabel())
             ->assertSee(NewOrganiserThreadMessage::getLabel())
+            ->assertDontSee(NewAdviceThread::getLabel())
             ->assertDontSee(Result::getLabel());
     });
 

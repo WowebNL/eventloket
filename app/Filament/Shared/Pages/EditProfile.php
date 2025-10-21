@@ -58,7 +58,6 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             Role::MunicipalityAdmin => [],
             Role::ReviewerMunicipalityAdmin,
             Role::Reviewer => [
-                NewAdviceThread::class,
                 NewAdviceThreadMessage::class,
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,

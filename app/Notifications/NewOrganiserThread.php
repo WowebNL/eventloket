@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Threads\OrganiserThread;
 use App\Models\User;
+use App\Models\Users\OrganiserUser;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
@@ -33,7 +34,7 @@ class NewOrganiserThread extends BaseNotification
 
     public static function getLabel(): string|Htmlable|null
     {
-        return __('notification/new-organiser-thread.label');
+        return auth()->user() instanceof OrganiserUser ? __('notification/new-organiser-thread.organiser_label') : __('notification/new-organiser-thread.label');
     }
 
     /**
@@ -41,12 +42,27 @@ class NewOrganiserThread extends BaseNotification
      */
     public function toMail(User $notifiable): MailMessage
     {
+        if ($notifiable instanceof OrganiserUser) {
+            return (new MailMessage)
+                ->subject(__('notification/new-organiser-thread.organiser_mail.subject', [
+                    'event' => $this->eventName,
+                ]))
+                ->markdown('mail.new-organiser-thread-organiser', [
+                    'isOrganiserMail' => true,
+                    'organisation' => $this->organisationName,
+                    'event' => $this->eventName,
+                    'title' => $this->title,
+                    'viewUrl' => $this->organiserThread->getViewUrlForUser($notifiable),
+                ]);
+        }
+
         return (new MailMessage)
             ->subject(__('notification/new-organiser-thread.mail.subject', [
                 'event' => $this->eventName,
-                'municipality' => $this->municipalityName,
+                'organisation' => $this->organisationName,
             ]))
             ->markdown('mail.new-organiser-thread', [
+                'isOrganiserMail' => false,
                 'organisation' => $this->organisationName,
                 'municipality' => $this->municipalityName,
                 'event' => $this->eventName,
@@ -57,11 +73,19 @@ class NewOrganiserThread extends BaseNotification
 
     public function toDatabase(User $notifiable): array
     {
-        return FilamentNotification::make()
-            ->title(__('notification/new-organiser-thread.database.title', [
+        if ($notifiable instanceof OrganiserUser) {
+            $title = __('notification/new-organiser-thread.organiser_database.title', [
                 'event' => $this->eventName,
-                'municipality' => $this->municipalityName,
-            ]))
+            ]);
+        } else {
+            $title = __('notification/new-organiser-thread.database.title', [
+                'event' => $this->eventName,
+                'organisation' => $this->organisationName,
+            ]);
+        }
+
+        return FilamentNotification::make()
+            ->title($title)
             ->actions([
                 Action::make('view')
                     ->label(__('View'))
