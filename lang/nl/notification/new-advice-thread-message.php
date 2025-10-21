@@ -1,13 +1,13 @@
 <?php
 
 return [
-    'label' => 'Nieuw adviesvraagbericht',
+    'label' => 'Nieuw reactie op adviesvraag',
 
     'mail' => [
         'subject' => 'Reactie van :sender over ":event" gemeente :municipality',
-        'greeting' => 'Nieuw adviesvraagbericht',
-        'body' => 'Er is een adviesvraagbericht binnen gekomen van :sender voor :advisory voor het evenement :event.',
-        'button' => 'Adviesvraagbericht bekijken',
+        'greeting' => 'Nieuw reactie op adviesvraag',
+        'body' => 'Er is een reactie op een adviesvraag binnen gekomen van :sender voor :advisory voor het evenement :event.',
+        'button' => 'Reactie bekijken',
     ],
 
     'database' => [
