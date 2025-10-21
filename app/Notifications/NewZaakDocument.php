@@ -13,8 +13,6 @@ class NewZaakDocument extends BaseNotification
 {
     private string $eventName;
 
-    private string $municipalityName;
-
     private string $type;
 
     /**
@@ -22,10 +20,10 @@ class NewZaakDocument extends BaseNotification
      */
     public function __construct(
         protected Zaak $zaak,
+        protected string $documentTitle,
         protected bool $isNew = true,
     ) {
         $this->eventName = $zaak->reference_data->naam_evenement;
-        $this->municipalityName = $zaak->municipality->name;
         $this->type = $isNew ? 'new' : 'updated';
     }
 
@@ -46,7 +44,7 @@ class NewZaakDocument extends BaseNotification
             ->markdown('mail.new-zaak-document', [
                 'type' => $this->type,
                 'event' => $this->eventName,
-                'municipality' => $this->municipalityName,
+                'filename' => $this->documentTitle,
                 'viewUrl' => route('filament.organiser.resources.zaken.view', [
                     'tenant' => $this->zaak->organisation->uuid,
                     'record' => $this->zaak->id,
@@ -61,7 +59,7 @@ class NewZaakDocument extends BaseNotification
                 'event' => $this->eventName,
             ]))
             ->body(__('notification/new-zaak-document.database.body.'.$this->type, [
-                'municipality' => $this->municipalityName,
+                'filename' => $this->documentTitle,
             ]))
             ->actions([
                 Action::make('view')

@@ -10,8 +10,8 @@ return [
         ],
         'greeting' => 'Nieuw document beschikbaar',
         'body' => [
-            'new' => 'Er is een nieuw document toegevoegd bij je aanvraag voor het evenement :event van :municipality.',
-            'updated' => 'Er is een nieuwe versie toegevoegd van een eerder document bij je aanvraag voor het evenement :event van :municipality.',
+            'new' => 'Er is een nieuw document toegevoegd met de titel :filename bij je aanvraag voor het evenement :event.',
+            'updated' => 'Er is een nieuwe versie toegevoegd van een eerder document met de titel :filename bij je aanvraag voor het evenement :event.',
         ],
         'button' => 'Document bekijken',
     ],
@@ -22,8 +22,8 @@ return [
             'updated' => 'Nieuwe versie van document voor ":event"',
         ],
         'body' => [
-            'new' => 'Er is een nieuw document toegevoegd bij je aanvraag van :municipality.',
-            'updated' => 'Er is een nieuwe versie toegevoegd van een document bij je aanvraag van :municipality.',
+            'new' => 'Er is een nieuw document toegevoegd bij je aanvraag met de titel :filename.',
+            'updated' => 'Er is een nieuwe versie toegevoegd van een document met de titel :filename.',
         ],
     ],
 ];
