@@ -65,7 +65,7 @@ class DocumentNotificationReceived implements ShouldQueue
                         && $user->name != $informatieobject->auteur // not own update
                     ) {
                         // Notify user about new document
-                        $user->notify(new NewZaakDocument(($zaak)));
+                        $user->notify(new NewZaakDocument($zaak, $informatieobject->titel, $isNew));
                     }
                 }
 
