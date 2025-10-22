@@ -76,7 +76,7 @@ class ViewZaak extends ViewRecord
                 ->label('Aanvraag intrekken')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->action(fn() => '')
+                ->action(fn () => ''),
 
         ];
     }
