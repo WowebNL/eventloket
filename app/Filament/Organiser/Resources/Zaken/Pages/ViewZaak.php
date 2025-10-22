@@ -71,6 +71,13 @@ class ViewZaak extends ViewRecord
                             ->send();
                     }
                 }),
+            Action::make('withdraw')
+                ->tooltip(__('Wanneer u een aanvraag intrekt, wordt deze niet verder in behandeling genomen. De behandelaar ontvangt hiervan een melding. Het is niet mogelijk om het intrekken ongedaan te maken.'))
+                ->label('Aanvraag intrekken')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->action(fn() => '')
+
         ];
     }
 }
