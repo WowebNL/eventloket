@@ -4,6 +4,8 @@ namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThrea
 
 use App\Enums\AdviceStatus;
 use App\Filament\Shared\Infolists\Components\ThreadMessagesEntry;
+use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
+use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
 use App\Models\Threads\AdviceThread;
 use App\Models\Users\MunicipalityUser;
 use Filament\Actions\Action;
@@ -11,6 +13,7 @@ use Filament\Forms\Components\Select;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Size;
 use Filament\Support\Enums\TextSize;
 use Filament\Support\Enums\Width;
 
@@ -22,7 +25,7 @@ class AdviceThreadInfolist
             ->components([
                 Section::make()
                     ->columnSpanFull()
-                    ->columns(4)
+                    ->columns(5)
                     ->schema([
                         TextEntry::make('advice_status')
                             ->label(__('resources/advice_thread.columns.advice_status.label'))
@@ -55,6 +58,15 @@ class AdviceThreadInfolist
                         TextEntry::make('createdBy.name')
                             ->label(__('resources/advice_thread.columns.created_by.label'))
                             ->icon('heroicon-o-user-circle'),
+                        TextEntry::make('assignedUsers.name')
+                            ->label(__('resources/advice_thread.columns.assigned_users.label'))
+                            ->icon('heroicon-o-user-circle')
+                            ->hintActions([
+                                AssignAction::make()
+                                    ->size(Size::ExtraSmall),
+                                AssignToSelfAction::make()
+                                    ->size(Size::ExtraSmall),
+                            ]),
                     ]),
 
                 ThreadMessagesEntry::make('messages'),

@@ -3,8 +3,11 @@
 namespace App\Policies;
 
 use App\Enums\Role;
+use App\Models\Thread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\User;
+use App\Models\Users\MunicipalityUser;
+use App\Models\Users\OrganiserUser;
 
 class OrganiserThreadPolicy
 {
@@ -49,6 +52,19 @@ class OrganiserThreadPolicy
      */
     public function update(User $user, OrganiserThread $organiserThread): bool
     {
+        return false;
+    }
+
+    public function postMessage(User $user, Thread $thread)
+    {
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($thread->zaak->organisation_id);
+        }
+
+        if ($user instanceof MunicipalityUser) {
+            return $user->canAccessMunicipality($thread->zaak->zaaktype->municipality_id);
+        }
+
         return false;
     }
 

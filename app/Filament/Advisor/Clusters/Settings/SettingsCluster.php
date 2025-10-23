@@ -34,6 +34,6 @@ class SettingsCluster extends Cluster
         /** @var AdvisorUser $user */
         $user = auth()->user();
 
-        return $user->canAccessAdvisory($tenant->id, asRole: AdvisoryRole::Admin);
+        return $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
     }
 }
