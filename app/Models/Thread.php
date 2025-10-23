@@ -112,7 +112,7 @@ class Thread extends Model
     public function getParticipants(): Collection
     {
         $threadParticipants = match (get_class($this)) {
-            AdviceThread::class => $this->advisory->users,
+            AdviceThread::class => $this->assignedUsers->count() ? $this->assignedUsers : $this->advisory->users,
             OrganiserThread::class => $this->zaak->organisation->users,
             default => collect(),
         };

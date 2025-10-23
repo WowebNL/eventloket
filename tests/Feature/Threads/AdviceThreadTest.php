@@ -188,13 +188,15 @@ test('advisor can send text messages and this changes advice status to replied',
     expect($adviceThread->advice_status)->toBe(AdviceStatus::AdvisoryReplied);
 
     // Everybody except for the advisor who sent the message received an email
+    // Also advisor 2 shouldn't have received an email because that advisor was not assigned
+    // to the advice thread
     Notification::assertSentTo(
-        [$this->reviewer, $this->reviewer2, $this->advisor2],
+        [$this->reviewer, $this->reviewer2],
         NewAdviceThreadMessage::class
     );
 
     Notification::assertNotSentTo(
-        [$this->advisor],
+        [$this->advisor, $this->advisor2],
         NewAdviceThreadMessage::class
     );
 
@@ -208,11 +210,6 @@ test('advisor can send text messages and this changes advice status to replied',
 
     $this->assertDatabaseHas('unread_messages', [
         'user_id' => $this->reviewer2->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->advisor2->id,
         'message_id' => $message->id,
     ]);
 });
