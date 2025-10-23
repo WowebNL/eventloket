@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Exports;
+namespace App\Filament\Shared\Exports;
 
 use App\Models\Event;
 use Filament\Actions\Exports\ExportColumn;

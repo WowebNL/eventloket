@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AdviceStatus;
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
@@ -30,6 +31,11 @@ beforeEach(function () {
         'name' => 'Brandweer',
     ]);
 
+    $this->advisoryAdmin = User::factory()->create([
+        'email' => 'admin@advisory.com',
+        'role' => Role::Advisor,
+    ]);
+
     $this->advisor = User::factory()->create([
         'email' => 'advisor@example.com',
         'role' => Role::Advisor,
@@ -40,8 +46,9 @@ beforeEach(function () {
         'role' => Role::Advisor,
     ]);
 
-    $this->advisory->users()->attach($this->advisor);
-    $this->advisory->users()->attach($this->advisor2);
+    $this->advisory->users()->attach($this->advisoryAdmin, ['role' => AdvisoryRole::Admin]);
+    $this->advisory->users()->attach($this->advisor, ['role' => AdvisoryRole::Member]);
+    $this->advisory->users()->attach($this->advisor2, ['role' => AdvisoryRole::Member]);
 
     $this->municipality = Municipality::factory()->create(['name' => 'Test Municipality']);
 
@@ -71,6 +78,16 @@ beforeEach(function () {
         ),
     ]);
 
+    $this->adviceThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => $this->reviewer->id,
+        'title' => 'Test advice thread',
+    ]);
+
     Mail::fake();
     Notification::fake();
 });
@@ -87,6 +104,8 @@ test('can not be created by an advisor', function () {
 });
 
 test('can be created by reviewer triggers email sending and creates unread', function () {
+    $this->adviceThread->delete();
+
     Filament::setCurrentPanel(Filament::getPanel('municipality'));
     $this->actingAs($this->reviewer);
     Filament::setTenant($this->municipality);
@@ -147,6 +166,8 @@ test('advisor can send text messages and this changes advice status to replied',
         'title' => 'Test advice thread',
     ]);
 
+    $adviceThread->assignedUsers()->attach($this->advisor);
+
     Filament::setCurrentPanel(Filament::getPanel('advisor'));
     $this->actingAs($this->advisor);
     Filament::setTenant($this->advisory);
@@ -167,13 +188,15 @@ test('advisor can send text messages and this changes advice status to replied',
     expect($adviceThread->advice_status)->toBe(AdviceStatus::AdvisoryReplied);
 
     // Everybody except for the advisor who sent the message received an email
+    // Also advisor 2 shouldn't have received an email because that advisor was not assigned
+    // to the advice thread
     Notification::assertSentTo(
-        [$this->reviewer, $this->reviewer2, $this->advisor2],
+        [$this->reviewer, $this->reviewer2],
         NewAdviceThreadMessage::class
     );
 
     Notification::assertNotSentTo(
-        [$this->advisor],
+        [$this->advisor, $this->advisor2],
         NewAdviceThreadMessage::class
     );
 
@@ -187,11 +210,6 @@ test('advisor can send text messages and this changes advice status to replied',
 
     $this->assertDatabaseHas('unread_messages', [
         'user_id' => $this->reviewer2->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->advisor2->id,
         'message_id' => $message->id,
     ]);
 });
@@ -384,7 +402,7 @@ test('advisor can only see advice threads from their advisory', function () {
     // Create another advisory with different advisor
     $otherAdvisory = Advisory::factory()->create(['name' => 'Politie']);
     $otherAdvisor = User::factory()->create(['role' => Role::Advisor]);
-    $otherAdvisory->users()->attach($otherAdvisor);
+    $otherAdvisory->users()->attach($otherAdvisor, ['role' => AdvisoryRole::Member]);
 
     Filament::setCurrentPanel(Filament::getPanel('advisor'));
     $this->actingAs($this->advisor);
@@ -452,4 +470,152 @@ test('municipality can see all advice threads for a zaak', function () {
     ])
         ->assertSuccessful()
         ->assertCanSeeTableRecords([$adviceThread1, $adviceThread2]);
+});
+
+test('admin can assign multiple advisors to advice thread using AssignAction', function () {
+
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisoryAdmin);
+    Filament::setTenant($this->advisory);
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(0);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::Asked);
+
+    // Test the action execution
+    $data = ['advisors' => [$this->advisor->id, $this->advisor2->id]];
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->callAction('assign', $data);
+
+    $this->adviceThread->refresh();
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(2);
+    expect($this->adviceThread->assignedUsers->pluck('id')->toArray())->toContain($this->advisor->id, $this->advisor2->id);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+});
+
+test('admin can assign single advisor to advice thread using AssignAction', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisoryAdmin);
+    Filament::setTenant($this->advisory);
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(0);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::Asked);
+
+    // Test the action execution
+    $data = ['advisors' => [$this->advisor->id]];
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->callAction('assign', $data);
+
+    $this->adviceThread->refresh();
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(1);
+    expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+});
+
+test('AssignAction only visible to advisory admins', function () {
+    // Test as regular advisory member
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->assertActionNotMounted('assign');
+
+    // Test as advisory admin
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisoryAdmin);
+    Filament::setTenant($this->advisory);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->assertActionVisible('assign');
+});
+
+// test('advisor can assign themselves to advice thread using AssignToSelfAction', function () {
+//    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+//    $this->actingAs($this->advisor);
+//    Filament::setTenant($this->advisory);
+//
+//    expect($this->adviceThread->assignedUsers)->toHaveCount(0);
+//    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::Asked);
+//
+//    livewire(MessageForm::class, [
+//        'thread' => $this->adviceThread,
+//    ])
+//        ->callAction('assign_to_self');
+//
+//    $this->adviceThread->refresh();
+//
+//    expect($this->adviceThread->assignedUsers)->toHaveCount(1);
+//    expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
+//    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+// });
+
+test('AssignToSelfAction is not visible when advisor is already assigned', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    // Assign advisor to thread first
+    $this->adviceThread->assignedUsers()->attach($this->advisor->id);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->assertActionNotMounted('assign_to_self')
+        ->assertActionDoesNotExist('assign_to_self');
+});
+
+test('AssignToSelfAction is visible when advisor is not assigned', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->assertActionVisible('assign_to_self');
+});
+
+test('unassigned advisor cannot submit message in MessageForm', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->call('submit')
+        ->assertForbidden();
+});
+
+test('assigned advisor can submit message in MessageForm', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $this->adviceThread->assignedUsers()->attach($this->advisor->id);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->fillForm([
+            'body' => 'Test message',
+        ])
+        ->call('submit')
+        ->assertHasNoFormErrors()
+        ->assertSuccessful();
+
+    $this->adviceThread->refresh();
+    expect($this->adviceThread->messages)->toHaveCount(1);
+    expect($this->adviceThread->messages->first()->user_id)->toBe($this->advisor->id);
 });

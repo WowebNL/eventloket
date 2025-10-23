@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Admin\Resources\AdvisoryResource\Widgets;
+namespace App\Filament\Shared\Resources\AdvisorUsers\Widgets;
 
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;

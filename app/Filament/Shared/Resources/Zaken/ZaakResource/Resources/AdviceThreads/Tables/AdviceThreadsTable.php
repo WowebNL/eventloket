@@ -34,6 +34,9 @@ class AdviceThreadsTable
                     ->label(__('resources/advice_thread.columns.created_by.label'))
                     ->sortable(),
                 UnreadMessagesColumn::make(),
+                TextColumn::make('assignedUsers.name')
+                    ->label(__('resources/advice_thread.columns.assigned_users.label'))
+                    ->badge(),
             ])
             ->defaultSort('created_at', direction: 'desc')
             ->filters([

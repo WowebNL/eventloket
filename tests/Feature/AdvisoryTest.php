@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Models\Advisory;
 use App\Models\Municipality;
@@ -18,7 +19,7 @@ beforeEach(function () {
         'role' => Role::Advisor,
     ]);
 
-    $this->advisory->users()->attach($this->advisor);
+    $this->advisory->users()->attach($this->advisor, ['role' => AdvisoryRole::Member]);
 });
 
 test('advisory can be linked to multiple municipalities', function () {

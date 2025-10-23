@@ -19,7 +19,7 @@ class Advisory extends Model
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(AdvisorUser::class, 'advisory_user');
+        return $this->belongsToMany(AdvisorUser::class, 'advisory_user')->withPivot('role');
     }
 
     public function municipalities(): BelongsToMany

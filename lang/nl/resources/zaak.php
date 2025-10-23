@@ -41,5 +41,8 @@ return [
         'email-organiser' => [
             'label' => 'E-mailadres indiener',
         ],
+        'assigned_advisor_users' => [
+            'label' => 'Toegewezen adviseurs',
+        ],
     ],
 ];

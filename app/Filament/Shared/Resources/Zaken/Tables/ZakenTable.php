@@ -48,7 +48,6 @@ class ZakenTable
                     ->sortable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
-
             ])
             ->filters([
                 SelectFilter::make('reference_data.status_name')

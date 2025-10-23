@@ -3,7 +3,7 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
-use App\Filament\Exports\EventExporter;
+use App\Filament\Shared\Exports\EventExporter;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;

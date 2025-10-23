@@ -5,6 +5,8 @@ namespace App\Livewire\Thread;
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Enums\ThreadType;
+use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
+use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Message;
@@ -44,6 +46,8 @@ class MessageForm extends Component implements HasActions, HasSchemas
     public ?array $data = [];
 
     public array $documents = [];
+
+    protected $listeners = ['thread-updated' => '$refresh'];
 
     public function mount(): void
     {
@@ -90,7 +94,7 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
     public function submit(): void
     {
-        $this->authorize('create', [Message::class, $this->thread]);
+        $this->authorize('post-message', $this->thread);
 
         $data = $this->form->getState();
 
@@ -165,6 +169,8 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
             ])
             ->action(function (array $data) {
+                $this->authorize('post-message', $this->thread);
+
                 if ($data['type'] === 'new') {
                     $document = UploadDocumentAction::uploadDocument($data, $this->thread->zaak);
                     $this->documents[] = MessageDocument::make($document->url, (int) $document->versie)->toArray();
@@ -187,6 +193,18 @@ class MessageForm extends Component implements HasActions, HasSchemas
                         ->send();
                 }
             });
+    }
+
+    public function assignAction(): Action
+    {
+        return AssignAction::make()
+            ->record($this->thread);
+    }
+
+    public function assignToSelfAction(): Action
+    {
+        return AssignToSelfAction::make()
+            ->record($this->thread);
     }
 
     public function render(): View

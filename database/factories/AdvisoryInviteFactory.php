@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AdvisoryRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -20,6 +21,7 @@ class AdvisoryInviteFactory extends Factory
         return [
             'name' => fake()->name,
             'email' => fake()->email,
+            'role' => fake()->randomElement(AdvisoryRole::cases()),
             'token' => Str::uuid(),
         ];
     }

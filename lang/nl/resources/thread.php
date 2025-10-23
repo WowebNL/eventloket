@@ -34,5 +34,12 @@ return [
                 'all' => 'Alles',
             ],
         ],
+        'assigned' => [
+            'label' => 'Toegewezen',
+            'options' => [
+                'unassigned' => 'Niet toegewezen',
+                'all' => 'Alles',
+            ],
+        ],
     ],
 ];
