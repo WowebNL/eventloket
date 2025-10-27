@@ -22,8 +22,6 @@ class MessageObserver
             return;
         }
 
-        // To add in the future: Check if the user wants to receive notifications for this thread.
-
         $message->unreadByUsers()->attach($usersToNotify->pluck('id'));
 
         // If this is the first message in the thread, and it's created by the creator of the thread, don't send a notification.

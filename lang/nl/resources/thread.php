@@ -38,6 +38,7 @@ return [
             'label' => 'Toegewezen',
             'options' => [
                 'unassigned' => 'Niet toegewezen',
+                'self' => 'Aan mij',
                 'all' => 'Alles',
             ],
         ],

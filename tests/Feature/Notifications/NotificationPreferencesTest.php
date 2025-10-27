@@ -2,9 +2,11 @@
 <?php
 
 use App\Enums\Role;
+use App\Models\Advisory;
 use App\Models\NotificationPreference;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Notifications\AdviceReminder;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
@@ -52,7 +54,7 @@ describe('User Role Based Notification Preferences', function () {
         $response = $this->get(route('filament.advisor.auth.profile'))
             ->assertOk()
             ->assertSee(__('shared/pages/edit-profile.form.notification_preferences.label'))
-            ->assertSee(NewAdviceThread::getLabel())
+            ->assertDontSee(NewAdviceThread::getLabel())
             ->assertSee(NewAdviceThreadMessage::getLabel())
             ->assertDontSee(NewOrganiserThread::getLabel())
             ->assertDontSee(NewOrganiserThreadMessage::getLabel())
@@ -120,6 +122,9 @@ describe('Notification Preferences Management', function () {
 
     test('advisor can update their notification preferences', function () {
         $advisor = User::factory()->create(['role' => Role::Advisor]);
+
+        $advisory = Advisory::factory()->create();
+        $advisory->users()->attach($advisor, ['role' => 'admin']);
 
         $this->actingAs($advisor);
 
@@ -201,7 +206,7 @@ describe('Notification Preferences Management', function () {
         // Create existing preferences
         NotificationPreference::create([
             'user_id' => $advisor->id,
-            'notification_class' => NewAdviceThread::class,
+            'notification_class' => AdviceReminder::class,
             'channels' => ['mail'],
         ]);
 
@@ -217,7 +222,7 @@ describe('Notification Preferences Management', function () {
 
         $this->livewire(\App\Filament\Shared\Pages\EditProfile::class)
             ->assertFormSet([
-                'App\Notifications\NewAdviceThread_channels' => ['mail'],
+                'App\Notifications\AdviceReminder_channels' => ['mail'],
                 'App\Notifications\NewAdviceThreadMessage_channels' => ['database'],
             ]);
     });

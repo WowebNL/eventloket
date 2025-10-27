@@ -18,6 +18,7 @@ class AssignedFilter
                     ->grouped()
                     ->options([
                         'unassigned' => __('resources/thread.filters.assigned.options.unassigned'),
+                        'self' => __('resources/thread.filters.assigned.options.self'),
                         'all' => __('resources/thread.filters.assigned.options.all'),
                     ]),
             ])
@@ -26,6 +27,10 @@ class AssignedFilter
                     ->when(
                         $data['assigned'] === 'unassigned',
                         fn (Builder $query, $date): Builder => $query->whereDoesntHave('assignedUsers'),
+                    )
+                    ->when(
+                        $data['assigned'] === 'self',
+                        fn (Builder $query, $date): Builder => $query->whereHas('assignedUsers', fn (Builder $q) => $q->where('id', auth()->id())),
                     );
             });
     }

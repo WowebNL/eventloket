@@ -10,7 +10,9 @@
                     {{ __('Deze adviesvraag is nog niet aan jou toegewezen. Wijs jezelf toe om een reactie te kunnen plaatsen.') }}
                 </p>
                 <div class="mt-4">
-                    {{ $this->assignToSelfAction }}
+                    @if ($this->assignToSelfAction->isVisible())
+                        {{ $this->assignToSelfAction }}
+                    @endif
                     @if ($this->assignAction->isVisible())
                         {{ $this->assignAction }}
                     @endif
