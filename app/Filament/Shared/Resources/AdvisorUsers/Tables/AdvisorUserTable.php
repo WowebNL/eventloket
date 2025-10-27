@@ -59,8 +59,8 @@ class AdvisorUserTable
             ])
             ->recordActions([
                 EditAction::make(),
-                DetachAction::make(),
-                DeleteAction::make(),
+                DetachAction::make()->visible(fn (AdvisorUser $record) => $record->advisories()->count() > 1),
+                DeleteAction::make()->visible(fn (AdvisorUser $record) => $record->id !== auth()->id()),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
