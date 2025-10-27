@@ -5,11 +5,14 @@ use App\Enums\Role;
 use App\Models\NotificationPreference;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Notifications\AdviceReminder;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
 use App\Notifications\NewOrganiserThreadMessage;
+use App\Notifications\NewZaakDocument;
 use App\Notifications\Result;
+use App\Notifications\ZaakStatusChanged;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Notification;
 
@@ -54,6 +57,8 @@ describe('User Role Based Notification Preferences', function () {
             ->assertSee(__('shared/pages/edit-profile.form.notification_preferences.label'))
             ->assertSee(NewAdviceThread::getLabel())
             ->assertSee(NewAdviceThreadMessage::getLabel())
+            ->assertSee(AdviceReminder::getLabel())
+            ->assertSee(NewZaakDocument::getLabel())
             ->assertDontSee(NewOrganiserThread::getLabel())
             ->assertDontSee(NewOrganiserThreadMessage::getLabel())
             ->assertDontSee(Result::getLabel());
@@ -72,8 +77,10 @@ describe('User Role Based Notification Preferences', function () {
             ->assertSee(NewAdviceThreadMessage::getLabel())
             ->assertSee(NewOrganiserThread::getLabel())
             ->assertSee(NewOrganiserThreadMessage::getLabel())
+            ->assertSee(NewZaakDocument::getLabel())
+            ->assertSee(Result::getLabel())
             ->assertDontSee(NewAdviceThread::getLabel())
-            ->assertDontSee(Result::getLabel());
+            ->assertDontSee(AdviceReminder::getLabel());
     });
 
     test('reviewer municipality admin users can see all review-related notification preferences', function () {
@@ -89,8 +96,10 @@ describe('User Role Based Notification Preferences', function () {
             ->assertSee(NewAdviceThreadMessage::getLabel())
             ->assertSee(NewOrganiserThread::getLabel())
             ->assertSee(NewOrganiserThreadMessage::getLabel())
+            ->assertSee(NewZaakDocument::getLabel())
+            ->assertSee(Result::getLabel())
             ->assertDontSee(NewAdviceThread::getLabel())
-            ->assertDontSee(Result::getLabel());
+            ->assertDontSee(AdviceReminder::getLabel());
     });
 
     test('organiser users can see organiser-related notification preferences', function () {
@@ -108,7 +117,10 @@ describe('User Role Based Notification Preferences', function () {
             ->assertSee(NewOrganiserThread::getLabel())
             ->assertSee(NewOrganiserThreadMessage::getLabel())
             ->assertSee(Result::getLabel())
+            ->assertSee(ZaakStatusChanged::getLabel())
+            ->assertSee(NewZaakDocument::getLabel())
             ->assertDontSee(NewAdviceThread::getLabel())
+            ->assertDontSee(AdviceReminder::getLabel())
             ->assertDontSee(NewAdviceThreadMessage::getLabel());
     });
 });

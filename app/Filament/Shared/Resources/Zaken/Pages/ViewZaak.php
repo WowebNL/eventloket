@@ -76,7 +76,7 @@ class ViewZaak extends ViewRecord
                                     ->options(function (Zaak $record) {
                                         $this->formResultaattypen = ((new Openzaak)->catalogi()->resultaattypen()->getAll([
                                             'zaaktype' => $record->openzaak->zaaktype,
-                                        ])->pluck('omschrijving', 'url')->toArray());
+                                        ])->filter(fn ($item) => $item['omschrijvingGeneriek'] !== 'Ingetrokken')->pluck('omschrijving', 'url')->toArray());
 
                                         return $this->formResultaattypen;
                                     })

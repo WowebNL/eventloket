@@ -45,6 +45,21 @@ class Zaaktype extends Model
         );
     }
 
+    /** @return Attribute<\Illuminate\Support\Collection<array>|null, void> */
+    protected function intrekkenResultaatType(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->getResultaatTypen()->firstWhere('omschrijvingGeneriek', 'Ingetrokken'),
+        );
+    }
+
+    protected function municipalityResultaatTypen(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->getResultaatTypen()->filter(fn (array $type) => $type['omschrijvingGeneriek'] !== 'Ingetrokken'),
+        );
+    }
+
     private function getDocumentTypes()
     {
         return Cache::rememberForever('zaaktype_'.$this->id.'_document_types', function () {
@@ -55,6 +70,13 @@ class Zaaktype extends Model
             }
 
             return $collection;
+        });
+    }
+
+    private function getResultaatTypen()
+    {
+        return Cache::rememberForever('zaaktype_'.$this->id.'_resultaat_typen', function () {
+            return (new Openzaak)->catalogi()->resultaattypen()->getAll(['zaaktype' => $this->zgw_zaaktype_url]);
         });
     }
 }
