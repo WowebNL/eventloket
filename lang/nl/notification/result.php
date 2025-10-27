@@ -10,4 +10,8 @@ return [
     'database' => [
         'title' => 'Nieuw resultaat beschikbaar',
     ],
+
+    'ingetrokken' => [
+        'label' => 'Ingetrokken aanvraag door organisator',
+    ],
 ];

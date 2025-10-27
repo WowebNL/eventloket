@@ -2,8 +2,10 @@
 
 namespace App\Notifications;
 
+use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
@@ -12,22 +14,37 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Notifications\Messages\MailMessage;
 use Woweb\Openzaak\Openzaak;
 
+/**
+ * note: municipality users are only informed if organisation withdraws a pending request
+ */
 class Result extends BaseNotification
 {
+    private string $url;
+
     /**
      * Create a new notification instance.
      */
     public function __construct(
         protected Zaak $zaak,
-        protected Organisation $tenant,
+        protected Organisation|Municipality $tenant,
         protected string $title,
         protected string $message,
         protected ?array $attachmentUrls = null,
-    ) {}
+    ) {
+        $this->url = $this->tenant instanceof Organisation
+            ? route('filament.organiser.resources.zaken.view', [
+                'record' => $this->zaak,
+                'tenant' => $this->tenant,
+            ])
+            : route('filament.municipality.resources.zaken.view', [
+                'record' => $this->zaak,
+                'tenant' => $this->tenant,
+            ]);
+    }
 
     public static function getLabel(): string|Htmlable|null
     {
-        return __('notification/result.label');
+        return auth()->user() instanceof MunicipalityUser ? __('notification/result.ingetrokken.label') : __('notification/result.label');
     }
 
     /**
@@ -39,10 +56,7 @@ class Result extends BaseNotification
             ->subject($this->title)
             ->markdown('mail.result-set', [
                 'content' => $this->message,
-                'url' => route('filament.organiser.resources.zaken.view', [
-                    'record' => $this->zaak,
-                    'tenant' => $this->tenant,
-                ]),
+                'url' => $this->url,
             ]);
 
         // Add attachments if they exist
@@ -65,10 +79,7 @@ class Result extends BaseNotification
             ->actions([
                 Action::make('view')
                     ->label(__('View'))
-                    ->url(route('filament.organiser.resources.zaken.view', [
-                        'record' => $this->zaak,
-                        'tenant' => $this->tenant,
-                    ]))
+                    ->url($this->url)
                     ->markAsRead(),
             ])
             ->getDatabaseMessage();

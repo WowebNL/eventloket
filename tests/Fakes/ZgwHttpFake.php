@@ -20,7 +20,11 @@ class ZgwHttpFake
             'zaaktype' => self::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
             'status' => self::$baseUrl.'/zaken/api/v1/statussen/1',
             'startdatum' => now()->toIso8601String(),
+            'registratiedatum' => now()->toIso8601String(),
             'einddatum' => null,
+            'einddatumGepland' => null,
+            'uiterlijkeEinddatumAfdoening' => null,
+            'zaakgeometrie' => null,
             'betrokkene' => [],
             'object' => self::$baseUrl.'/zaken/api/v1/zaakobjecten/1',
             'zaakobject' => self::$baseUrl.'/zaken/api/v1/zaakobjecten/1',
@@ -31,7 +35,7 @@ class ZgwHttpFake
         ], $data);
 
         Http::fake([
-            $url => Http::response($data, 200),
+            $url.'*' => Http::response($data, 200),
         ]);
 
         return $url;
@@ -71,7 +75,7 @@ class ZgwHttpFake
 
     public static function fakeZaakinformatieobjecten()
     {
-        $url = self::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten?*';
+        $url = self::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten';
 
         $data = [
             [
@@ -87,9 +91,86 @@ class ZgwHttpFake
         ];
 
         Http::fake([
+            $url.'*' => Http::response($data, 200),
+        ]);
+
+        return $url;
+    }
+
+    public static function fakeSingleZaaktype()
+    {
+        $url = self::$baseUrl.'/catalogi/api/v1/zaaktypen/1';
+
+        $data = [
+            'url' => $url,
+            'uuid' => '1',
+            'identificatie' => 'TEST-ZAAKTYPE',
+            'omschrijving' => 'Evenementenvergunning gemeente Heerlen',
+            'omschrijvingGeneriek' => '',
+            'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+            'doel' => 'Verlenen evenementenvergunning',
+            'aanleiding' => 'Aanvraag via EventLoket',
+            'toelichting' => '',
+            'indicatieInternOfExtern' => 'extern',
+            'handelingInitiator' => 'aanvragen',
+            'onderwerp' => 'Evenementenvergunning',
+            'handelingBehandelaar' => 'behandelen',
+            'doorlooptijd' => 'P56D',
+            'servicenorm' => 'P56D',
+            'opschortingEnAanhoudingMogelijk' => true,
+            'verlengingMogelijk' => true,
+            'verlengingstermijn' => 'P56D',
+            'trefwoorden' => [],
+            'publicatieIndicatie' => false,
+            'publicatietekst' => '',
+            'verantwoordingsrelatie' => [],
+            'productenOfDiensten' => [],
+            'concept' => false,
+            'verantwoordelijke' => 'APV',
+            'beginGeldigheid' => '2025-07-10',
+            'eindeGeldigheid' => null,
+            'versiedatum' => '2025-07-10',
+            'beginObject' => '2025-07-10',
+            'eindeObject' => null,
+            'catalogus' => self::$baseUrl.'/catalogi/api/v1/catalogi/1',
+            'doorlooptijd' => '',
+        ];
+
+        Http::fake([
             $url => Http::response($data, 200),
         ]);
 
         return $url;
+    }
+
+    public static function fakeResultaatTypen()
+    {
+        $url = self::$baseUrl.'/catalogi/api/v1/resultaattypen';
+
+        $data = [
+            [
+                'url' => self::$baseUrl.'/catalogi/api/v1/resultaattypen/1',
+                'zaaktype' => self::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'omschrijvingGeneriek' => 'Afgehandeld',
+            ],
+            [
+                'url' => self::$baseUrl.'/catalogi/api/v1/resultaattypen/2',
+                'zaaktype' => self::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'omschrijvingGeneriek' => 'Ingetrokken',
+            ],
+        ];
+
+        Http::fake([
+            $url.'*' => Http::response($data, 200),
+        ]);
+
+        return $url;
+    }
+
+    public static function wildcardFake()
+    {
+        Http::fake([
+            self::$baseUrl.'*' => Http::response([], 200),
+        ]);
     }
 }

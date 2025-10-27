@@ -3,6 +3,7 @@
 namespace App\ValueObjects;
 
 use App\Models\Users\MunicipalityUser;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use Carbon\Carbon;
 
@@ -12,7 +13,7 @@ final readonly class FinishZaakObject
 
     public function __construct(
         public Zaak $zaak,
-        public MunicipalityUser $user,
+        public MunicipalityUser|OrganiserUser $user,
         public string $resultaattype,
         public string $message_title,
         public string $message_content,

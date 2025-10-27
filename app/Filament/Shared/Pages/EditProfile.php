@@ -66,6 +66,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,
                 NewZaakDocument::class,
+                Result::class,
             ],
             Role::Advisor => [
                 /** @phpstan-ignore-next-line */
@@ -92,7 +93,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
 
         foreach ($this->getNotifications() as $notificationClass) {
             $schema[] = CheckboxList::make("{$notificationClass}_channels")
-                ->label($notificationClass::getLabel()) // Waar haal ik dit vandaan?
+                ->label($notificationClass::getLabel())
                 ->options([
                     'mail' => __('shared/pages/edit-profile.form.notification_preferences.options.mail'),
                     'database' => __('shared/pages/edit-profile.form.notification_preferences.options.database'),
