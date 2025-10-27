@@ -61,10 +61,28 @@ return [
             'label' => 'Aangemaakt door',
         ],
 
+        'assigned_users' => [
+            'label' => 'Toegewezen adviseurs',
+        ],
+
         'unread_messages_count' => [
             'label' => 'Ongelezen berichten',
         ],
 
+    ],
+
+    'actions' => [
+        'assign' => [
+            'label' => 'Adviseur toewijzen',
+            'form' => [
+                'advisors' => [
+                    'label' => 'Adviseurs',
+                ],
+            ],
+        ],
+        'assign_to_self' => [
+            'label' => 'Jezelf toewijzen',
+        ],
     ],
 
     'widgets' => [

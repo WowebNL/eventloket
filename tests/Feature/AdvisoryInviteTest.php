@@ -1,9 +1,10 @@
 <?php
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Filament\Admin\Resources\AdvisoryResource\Pages\EditAdvisory;
 use App\Filament\Admin\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
-use App\Filament\Admin\Resources\AdvisoryResource\Widgets\PendingAdvisoryInvitesWidget;
+use App\Filament\Shared\Resources\AdvisorUsers\Widgets\PendingAdvisoryInvitesWidget;
 use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
@@ -71,11 +72,13 @@ test('admin can see and delete pending advisory invites', function () {
     $invite1 = AdvisoryInvite::create([
         'advisory_id' => $this->advisory->id,
         'email' => $inviteeEmail,
+        'role' => AdvisoryRole::Member,
         'token' => Str::uuid(),
     ]);
     $invite2 = AdvisoryInvite::create([
         'advisory_id' => $this->advisory->id,
         'email' => $invitee2Email,
+        'role' => AdvisoryRole::Member,
         'token' => Str::uuid(),
     ]);
 
@@ -119,6 +122,7 @@ test('existing user can accept an advisory invite', function () {
     $invite = AdvisoryInvite::create([
         'advisory_id' => $this->advisory->id,
         'email' => $user->email,
+        'role' => AdvisoryRole::Member,
         'token' => Str::uuid(),
     ]);
 
@@ -157,6 +161,7 @@ test('new user can register and accept an advisory invite', function () {
     $invite = AdvisoryInvite::create([
         'advisory_id' => $this->advisory->id,
         'email' => $inviteeEmail,
+        'role' => AdvisoryRole::Member,
         'token' => Str::uuid(),
     ]);
 
@@ -210,6 +215,7 @@ test('advisory invite cannot be accepted by wrong user', function () {
     $invite = AdvisoryInvite::create([
         'advisory_id' => $this->advisory->id,
         'email' => 'differentuser@example.com', // Different email than logged-in user
+        'role' => AdvisoryRole::Member,
         'token' => Str::uuid(),
     ]);
 
@@ -228,5 +234,6 @@ test('advisory invite cannot be accepted by wrong user', function () {
 
     $this->assertDatabaseHas('advisory_invites', [
         'id' => $invite->id,
+        'role' => AdvisoryRole::Member,
     ]);
 });

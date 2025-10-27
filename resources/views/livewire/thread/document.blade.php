@@ -23,6 +23,6 @@
         <span class="inline-block size-0.5 mx-1 bg-gray-400 rounded-full align-middle"></span>
         <span>Versie: {{ $this->versie }}@if($this->versie != $this->latestVersion) (Nieuwste versie is {{ $this->latestVersion }})@endif</span>
         <span class="inline-block size-0.5 mx-1 bg-gray-400 rounded-full align-middle"></span>
-        <span>Type: {{ $this->zaak->zaaktype->document_types->firstWhere('url', $this->document->informatieobjecttype)->omschrijving  }}</span>
+        <span>Type: {{ $this->zaak->zaaktype->document_types->firstWhere('url', $this->document->informatieobjecttype)->omschrijving ?? ''  }}</span>
     </p>
 </x-filament::card>

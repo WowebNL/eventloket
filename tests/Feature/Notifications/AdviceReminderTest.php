@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\AdviceStatus;
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Enums\ThreadType;
 use App\Jobs\SendAdviceReminders;
@@ -31,8 +32,8 @@ beforeEach(function () {
         'role' => Role::Advisor,
     ]);
 
-    $this->advisory->users()->attach($this->advisor);
-    $this->advisory->users()->attach($this->advisor2);
+    $this->advisory->users()->attach($this->advisor, ['role' => AdvisoryRole::Member]);
+    $this->advisory->users()->attach($this->advisor2, ['role' => AdvisoryRole::Member]);
 
     $this->municipality = Municipality::factory()->create(['name' => 'Test Municipality']);
 

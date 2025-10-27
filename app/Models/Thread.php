@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
@@ -63,6 +64,11 @@ class Thread extends Model
         return $this->messages()->whereHas('unreadByUsers', fn ($query) => $query->where('user_id', auth()->id()));
     }
 
+    public function assignedUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'thread_user', 'thread_id', 'user_id');
+    }
+
     /**
      * Returns the model for a specific role
      */
@@ -106,7 +112,7 @@ class Thread extends Model
     public function getParticipants(): Collection
     {
         $threadParticipants = match (get_class($this)) {
-            AdviceThread::class => $this->advisory->users,
+            AdviceThread::class => $this->assignedUsers->count() ? $this->assignedUsers : $this->advisory->users,
             OrganiserThread::class => $this->zaak->organisation->users,
             default => collect(),
         };

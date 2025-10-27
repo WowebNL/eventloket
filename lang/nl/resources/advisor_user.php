@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Adviesdienst',
-    'plural_label' => 'Adviesdiensten',
+    'label' => 'Gebruiker',
+    'plural_label' => 'Gebruikers',
 
     'columns' => [
 
@@ -10,16 +10,36 @@ return [
             'label' => 'Naam',
         ],
 
+        'role' => [
+            'label' => 'Rol',
+            'notification' => 'Rol geupdate',
+        ],
+
     ],
 
-    'user' => [
-        'label' => 'Adviseur',
-        'plural_label' => 'Adviseurs',
+    'form' => [
+
+        'name' => [
+            'label' => 'Naam',
+        ],
+
+        'email' => [
+            'label' => 'E-mailadres',
+        ],
+
+        'phone' => [
+            'label' => 'Telefoonnummer',
+        ],
+
+        'role' => [
+            'label' => 'Rol',
+        ],
+
     ],
 
     'actions' => [
         'invite' => [
-            'label' => 'Adviseur uitnodigen',
+            'label' => 'Gebruiker uitnodigen',
             'modal_submit_action_label' => 'Uitnodiging versturen',
             'form' => [
                 'name' => [
@@ -28,12 +48,12 @@ return [
                 'email' => [
                     'label' => 'E-mailadres',
                     'validation' => [
-                        'already_invited' => 'Dit :attribute is al uitgenodigd voor deze adviesdienst.',
+                        'already_invited' => 'Dit :attribute is al uitgenodigd voor deze organisatie.',
                     ],
                 ],
                 'make_admin' => [
                     'label' => 'Maak beheerder',
-                    'helper_text' => 'Beheerders kunnen adviesdienstgegevens beheren en nieuwe gebruikers uitnodigen.',
+                    'helper_text' => 'Beheerders kunnen organisatiegegevens beheren en nieuwe gebruikers uitnodigen.',
                 ],
             ],
             'notification' => [
@@ -48,10 +68,10 @@ return [
 
             'action' => 'Openstaande uitnodigingen',
 
-            'heading' => 'Openstaande adviseuruitnodigingen',
+            'heading' => 'Openstaande organisatoruitnodigingen',
 
-            'label' => 'Adviseuruitnodiging',
-            'plural_label' => 'Adviseuruitnodigingen',
+            'label' => 'Organisatoruitnodiging',
+            'plural_label' => 'Organisatoruitnodigingen',
 
             'columns' => [
 

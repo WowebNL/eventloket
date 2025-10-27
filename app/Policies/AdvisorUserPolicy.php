@@ -2,9 +2,11 @@
 
 namespace App\Policies;
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Models\User;
 use App\Models\Users\AdvisorUser;
+use Illuminate\Support\Facades\DB;
 
 class AdvisorUserPolicy
 {
@@ -13,7 +15,15 @@ class AdvisorUserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->role == Role::Admin;
+        if ($user->role == Role::Admin) {
+            return true;
+        }
+
+        if ($user->role == Role::Advisor) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -21,6 +31,14 @@ class AdvisorUserPolicy
      */
     public function view(User $user, AdvisorUser $advisorUser): bool
     {
+        if ($user->role == Role::Admin) {
+            return true;
+        }
+
+        if ($user->role == Role::Advisor) {
+            return true;
+        }
+
         return false;
     }
 
@@ -37,7 +55,27 @@ class AdvisorUserPolicy
      */
     public function update(User $user, AdvisorUser $advisorUser): bool
     {
-        return $user->role == Role::Admin;
+        if ($user->id == $advisorUser->id) {
+            return true;
+        }
+
+        if ($user->role == Role::Admin) {
+            return true;
+        }
+
+        if ($user->role == Role::Advisor) {
+            return DB::table('advisory_user')
+                ->where('user_id', $user->id)
+                ->where('role', AdvisoryRole::Admin->value)
+                ->whereIn('advisory_id', function ($q) use ($advisorUser) {
+                    $q->select('advisory_id')
+                        ->from('advisory_user')
+                        ->where('user_id', $advisorUser->id);
+                })
+                ->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -45,7 +83,32 @@ class AdvisorUserPolicy
      */
     public function delete(User $user, AdvisorUser $advisorUser): bool
     {
-        return $user->role == Role::Admin;
+        if ($user->id == $advisorUser->id) {
+            return true;
+        }
+
+        if ($user->role == Role::Admin) {
+            return true;
+        }
+
+        if ($user->role == Role::Advisor) {
+            $userIsAdminForAdvisory = DB::table('advisory_user')
+                ->where('user_id', $user->id)
+                ->where('role', AdvisoryRole::Admin->value)
+                ->whereIn('advisory_id', function ($q) use ($advisorUser) {
+                    $q->select('advisory_id')
+                        ->from('advisory_user')
+                        ->where('user_id', $advisorUser->id);
+                })
+                ->exists();
+
+            // Deleting is only allowed when the advisor is in 1 or less advisories.
+            if ($userIsAdminForAdvisory) {
+                return $advisorUser->advisories->count() <= 1;
+            }
+        }
+
+        return false;
     }
 
     /**

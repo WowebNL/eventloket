@@ -42,7 +42,7 @@ class NewAdviceThread extends BaseNotification
     public function toMail(User $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject(__('notification/new-advice-thread.subject', [
+            ->subject(__('notification/new-advice-thread.mail.subject', [
                 'event' => $this->eventName,
                 'municipality' => $this->municipalityName,
             ]))

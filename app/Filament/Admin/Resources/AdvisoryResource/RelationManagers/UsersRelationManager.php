@@ -2,28 +2,15 @@
 
 namespace App\Filament\Admin\Resources\AdvisoryResource\RelationManagers;
 
-use App\Filament\Admin\Resources\AdvisoryResource\Widgets\PendingAdvisoryInvitesWidget;
-use App\Filament\Organiser\Pages\EditProfile;
-use App\Filament\Shared\Actions\PendingInvitesAction;
-use App\Mail\AdvisoryInviteMail;
+use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserInviteAction;
+use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserPendingInvitesAction;
+use App\Filament\Shared\Resources\AdvisorUsers\Schemas\AdvisorUserForm;
+use App\Filament\Shared\Resources\AdvisorUsers\Tables\AdvisorUserTable;
 use App\Models\Advisory;
-use App\Models\AdvisoryInvite;
-use App\Models\User;
-use Closure;
-use Filament\Actions\Action;
-use Filament\Actions\AttachAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
-use Filament\Forms\Components\TextInput;
-use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\Width;
-use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 class UsersRelationManager extends RelationManager
 {
@@ -46,88 +33,19 @@ class UsersRelationManager extends RelationManager
 
     public function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                EditProfile::getFirstNameFormComponent(),
-                EditProfile::getLastNameFormComponent(),
-                TextInput::make('email')
-                    ->label(__('admin/resources/organisation.user.form.email.label'))
-                    ->disabled(),
-                TextInput::make('phone')
-                    ->label(__('admin/resources/organisation.user.form.phone.label'))
-                    ->maxLength(20),
-            ]);
+        return AdvisorUserForm::configure($schema);
     }
 
     public function table(Table $table): Table
     {
-        return $table
-            ->recordTitleAttribute('name')
-            ->columns([
-                TextColumn::make('name')
-                    ->label(__('admin/resources/user.columns.name.label')),
-            ])
-            ->filters([
-                //
-            ])
+        /** @var Advisory $advisory */
+        $advisory = $this->ownerRecord;
+
+        return AdvisorUserTable::configure($table, $advisory)
             ->headerActions([
-                AttachAction::make(),
-                PendingInvitesAction::make()
-                    ->modalHeading(__('admin/resources/advisory.widgets.pending_invites.heading'))
-                    ->widgetRecord($this->ownerRecord)
-                    ->widget(PendingAdvisoryInvitesWidget::class),
-                Action::make('invite')
-                    ->label(__('admin/resources/advisory.actions.invite.label'))
-                    ->icon('heroicon-o-envelope')
-                    ->modalSubmitActionLabel(__('admin/resources/advisory.actions.invite.modal_submit_action_label'))
-                    ->modalWidth(Width::Medium)
-                    ->schema([
-                        TextInput::make('name')
-                            ->label(__('admin/resources/advisory.actions.invite.form.name.label'))
-                            ->maxLength(255),
-                        TextInput::make('email')
-                            ->label(__('admin/resources/advisory.actions.invite.form.email.label'))
-                            ->email()
-                            ->required()
-                            ->unique(table: User::class)
-                            ->rules([
-                                fn () => function (string $attribute, $value, Closure $fail) {
-                                    /** @var Advisory $advisory */
-                                    $advisory = $this->ownerRecord;
-
-                                    if (AdvisoryInvite::where('advisory_id', $advisory->id)->where('email', $value)->exists()) {
-                                        $fail(__('admin/resources/advisory.actions.invite.form.email.validation.already_invited'));
-                                    }
-                                },
-                            ])
-                            ->maxLength(255),
-                    ])
-                    ->action(function ($data) {
-                        /** @var Advisory $advisory */
-                        $advisory = $this->ownerRecord;
-
-                        $advisoryInvite = AdvisoryInvite::create([
-                            'advisory_id' => $advisory->id,
-                            'name' => $data['name'],
-                            'email' => $data['email'],
-                            'token' => Str::uuid(),
-                        ]);
-
-                        Mail::to($advisoryInvite->email)
-                            ->send(new AdvisoryInviteMail($advisoryInvite));
-
-                        Notification::make()
-                            ->title(__('admin/resources/advisory.actions.invite.notification.title'))
-                            ->success()
-                            ->send();
-                    }),
-            ])
-            ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
-            ])
-            ->toolbarActions([
-                //
+                AdvisorUserPendingInvitesAction::make()
+                    ->widgetRecord($this->ownerRecord),
+                AdvisorUserInviteAction::make(advisory: $advisory),
             ]);
     }
 }

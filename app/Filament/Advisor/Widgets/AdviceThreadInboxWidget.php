@@ -3,6 +3,9 @@
 namespace App\Filament\Advisor\Widgets;
 
 use App\Filament\Advisor\Resources\Zaken\ZaakResource;
+use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
+use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
+use App\Filament\Shared\Resources\Threads\Filters\AssignedFilter;
 use App\Filament\Shared\Resources\Threads\Filters\UnreadMessagesFilter;
 use App\Filament\Shared\Resources\Threads\Tables\Components\LatestMessageColumn;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
@@ -61,8 +64,13 @@ class AdviceThreadInboxWidget extends TableWidget
                     ->sortable(),
                 UnreadMessagesColumn::make(),
                 LatestMessageColumn::make(),
+                TextColumn::make('assignedUsers.name')
+                    ->label(__('resources/advice_thread.columns.assigned_users.label'))
+                    ->badge(),
             ])
             ->recordActions([
+                AssignToSelfAction::make(),
+                AssignAction::make(),
                 ViewAction::make()
                     ->url(fn (AdviceThread $record) => AdviceThreadResource::getUrl('view', ['record' => $record, 'zaak' => $record->zaak])),
             ])
@@ -70,6 +78,7 @@ class AdviceThreadInboxWidget extends TableWidget
             ->defaultSort('unread_messages_count', 'desc')
             ->filters([
                 AdviceStatusFilter::make(),
+                AssignedFilter::make(),
                 UnreadMessagesFilter::make(),
             ])
             ->filtersLayout(FiltersLayout::AboveContent)
