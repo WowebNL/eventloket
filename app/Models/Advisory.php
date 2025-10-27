@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AdvisoryRole;
 use App\Models\Users\AdvisorUser;
 use Database\Factories\AdvisoryFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,11 @@ class Advisory extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(AdvisorUser::class, 'advisory_user')->withPivot('role');
+    }
+
+    public function adminUsers(): BelongsToMany
+    {
+        return $this->users()->wherePivot('role', AdvisoryRole::Admin);
     }
 
     public function municipalities(): BelongsToMany

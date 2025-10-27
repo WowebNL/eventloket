@@ -14,7 +14,7 @@ class AdviceThreadObserver
     public function created(AdviceThread $adviceThread): void
     {
         /** @var AdvisorUser $advisorUser */
-        foreach ($adviceThread->advisory->users as $advisorUser) {
+        foreach ($adviceThread->advisory->adminUsers as $advisorUser) {
             $advisorUser->notify(new NewAdviceThread($adviceThread));
         }
     }

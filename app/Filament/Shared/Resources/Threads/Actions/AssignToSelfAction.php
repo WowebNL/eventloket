@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\Threads\AdviceThread;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
+use Livewire\Component;
 
 class AssignToSelfAction
 {
@@ -21,7 +22,7 @@ class AssignToSelfAction
 
                 return false;
             })
-            ->action(function (AdviceThread $record, \Livewire\Component $livewire) {
+            ->action(function (AdviceThread $record, Component $livewire) {
                 auth()->user()->can('assign-advisor', [$record, auth()->user()]);
 
                 $record->assignedUsers()->attach(auth()->id());

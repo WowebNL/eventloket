@@ -12,11 +12,13 @@ use App\Livewire\Thread\MessageForm;
 use App\Models\Advisory;
 use App\Models\Message;
 use App\Models\Municipality;
+use App\Models\NotificationPreference;
 use App\Models\Organisation;
 use App\Models\Threads\AdviceThread;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\Notifications\AssignedToAdviceThread;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -132,26 +134,21 @@ test('can be created by reviewer triggers email sending and creates unread', fun
 
     $message = $adviceThread->messages()->first();
 
-    // Should have been sent to both advisors
+    // Should have been sent to advisory admin
     Notification::assertSentTo(
-        [$this->advisor, $this->advisor2],
+        [$this->advisoryAdmin],
         NewAdviceThread::class,
     );
 
     // Because this is the first message, no new message email should have been sent
     Notification::assertNotSentTo(
-        [$this->advisor, $this->advisor2],
+        [$this->advisoryAdmin],
         NewAdviceThreadMessage::class
     );
 
     // Unread message entries should have been created
     $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->advisor->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->advisor2->id,
+        'user_id' => $this->advisoryAdmin->id,
         'message_id' => $message->id,
     ]);
 });
@@ -494,6 +491,12 @@ test('admin can assign multiple advisors to advice thread using AssignAction', f
     expect($this->adviceThread->assignedUsers)->toHaveCount(2);
     expect($this->adviceThread->assignedUsers->pluck('id')->toArray())->toContain($this->advisor->id, $this->advisor2->id);
     expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+
+    // Assert each advisor received AssignedToAdviceThread notificaiton
+    Notification::assertSentTo(
+        [$this->advisor, $this->advisor2],
+        AssignedToAdviceThread::class,
+    );
 });
 
 test('admin can assign single advisor to advice thread using AssignAction', function () {
@@ -516,6 +519,12 @@ test('admin can assign single advisor to advice thread using AssignAction', func
     expect($this->adviceThread->assignedUsers)->toHaveCount(1);
     expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
     expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+
+    // Assert advisor received AssignedToAdviceThread notificaiton
+    Notification::assertSentTo(
+        [$this->advisor],
+        AssignedToAdviceThread::class,
+    );
 });
 
 test('AssignAction only visible to advisory admins', function () {
@@ -558,6 +567,12 @@ test('AssignAction only visible to advisory admins', function () {
 //    expect($this->adviceThread->assignedUsers)->toHaveCount(1);
 //    expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
 //    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+//
+//     // Assert advisor didn't received AssignedToAdviceThread notification
+//     Notification::assertNotSentTo(
+//         [$this->advisor],
+//         AssignedToAdviceThread::class,
+//     );
 // });
 
 test('AssignToSelfAction is not visible when advisor is already assigned', function () {
@@ -618,4 +633,102 @@ test('assigned advisor can submit message in MessageForm', function () {
     $this->adviceThread->refresh();
     expect($this->adviceThread->messages)->toHaveCount(1);
     expect($this->adviceThread->messages->first()->user_id)->toBe($this->advisor->id);
+});
+
+test('sends new advice thread notifications to all advisory admins who have it enabled', function () {
+    AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => $this->reviewer->id,
+        'title' => 'Test advice thread',
+    ]);
+
+    Notification::assertSentTo(
+        [$this->advisoryAdmin],
+        NewAdviceThread::class,
+    );
+
+    Notification::assertNotSentTo(
+        [$this->advisor, $this->advisor2],
+        NewAdviceThread::class,
+    );
+
+    Notification::fake();
+
+    // Now disable the NewAdviceThread notification for the admin
+    NotificationPreference::create([
+        'user_id' => $this->advisoryAdmin->id,
+        'notification_class' => NewAdviceThread::class,
+        'channels' => [],
+    ]);
+
+    AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => $this->reviewer->id,
+        'title' => 'Test advice thread',
+    ]);
+
+    Notification::assertNotSentTo(
+        [$this->advisoryAdmin, $this->advisor, $this->advisor2],
+        NewAdviceThread::class,
+    );
+});
+
+test('sends new advice thread message notifications to all advisory admins of unassigned threads who have it enabled', function () {
+    // Create unassigned advice thread
+    $adviceThread2 = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => $this->reviewer->id,
+        'title' => 'Test advice thread',
+    ]);
+
+    $message1 = Message::factory()->create([
+        'thread_id' => $adviceThread2->id,
+        'user_id' => $this->reviewer->id,
+    ]);
+
+    $message2 = Message::factory()->create([
+        'thread_id' => $adviceThread2->id,
+        'user_id' => $this->reviewer->id,
+    ]);
+
+    Notification::assertSentTo(
+        [$this->advisoryAdmin],
+        NewAdviceThreadMessage::class,
+    );
+
+    Notification::assertNotSentTo(
+        [$this->advisor, $this->advisor2],
+        NewAdviceThreadMessage::class,
+    );
+
+    Notification::fake();
+
+    // Now disable the NewAdviceThreadMessage notification for the admin
+    NotificationPreference::create([
+        'user_id' => $this->advisoryAdmin->id,
+        'notification_class' => NewAdviceThreadMessage::class,
+        'channels' => [],
+    ]);
+
+    $message3 = Message::factory()->create([
+        'thread_id' => $adviceThread2->id,
+        'user_id' => $this->reviewer->id,
+    ]);
+
+    Notification::assertNotSentTo(
+        [$this->advisoryAdmin, $this->advisor, $this->advisor2],
+        NewAdviceThreadMessage::class,
+    );
 });

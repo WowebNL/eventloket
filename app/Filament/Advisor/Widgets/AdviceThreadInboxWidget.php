@@ -81,6 +81,7 @@ class AdviceThreadInboxWidget extends TableWidget
                 AssignedFilter::make(),
                 UnreadMessagesFilter::make(),
             ])
+            ->filtersFormColumns(3)
             ->filtersLayout(FiltersLayout::AboveContent)
             ->deferFilters(false);
     }

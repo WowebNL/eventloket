@@ -2,9 +2,11 @@
 
 namespace App\Filament\Shared\Pages;
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Models\NotificationPreference;
 use App\Notifications\AdviceReminder;
+use App\Notifications\AssignedToAdviceThread;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
@@ -53,7 +55,9 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
 
     protected function getNotifications(): array
     {
-        return match (auth()->user()->role) {
+        $user = auth()->user();
+
+        return match ($user->role) {
             Role::Admin => [],
             Role::MunicipalityAdmin => [],
             Role::ReviewerMunicipalityAdmin,
@@ -64,7 +68,9 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 NewOrganiserThreadMessage::class,
             ],
             Role::Advisor => [
-                NewAdviceThread::class,
+                /** @phpstan-ignore-next-line */
+                ...($user->advisories()->wherePivot('role', AdvisoryRole::Admin)->exists() ? [NewAdviceThread::class] : []),
+                AssignedToAdviceThread::class,
                 NewAdviceThreadMessage::class,
                 AdviceReminder::class,
             ],
