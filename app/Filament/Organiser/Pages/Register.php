@@ -15,7 +15,8 @@ class Register extends \Filament\Auth\Pages\Register
     {
         return $schema
             ->components([
-                $this->getNameFormComponent(),
+                EditProfile::getFirstNameFormComponent(),
+                EditProfile::getLastNameFormComponent(),
                 $this->getEmailFormComponent(),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
@@ -30,6 +31,7 @@ class Register extends \Filament\Auth\Pages\Register
     protected function mutateFormDataBeforeRegister(array $data): array
     {
         $data['role'] = Role::Organiser;
+        $data['name'] = $data['first_name'].' '.$data['last_name'];
 
         return $data;
     }
