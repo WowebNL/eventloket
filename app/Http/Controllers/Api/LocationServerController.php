@@ -80,16 +80,15 @@ class LocationServerController extends Controller
             $adressen = json_decode($data['addresses'], true);
 
             foreach ($adressen as $adres) {
-                $brkIdentificatie = (new LocatieserverService)->getBrkIdentificationByPostcodeHuisnummer($adres['postcode'], $adres['houseNumber']);
-                $municipality = $brkIdentificatie ? Municipality::where('brk_identification', $brkIdentificatie)->select(['brk_identification', 'name'])->first() : null;
-                if ($municipality) {
-                    $responseData = $this->updateResponseDataItems($responseData, collect([$municipality]), ['all.items', 'addresses.items']);
-                    $responseData = $this->updateResponseDataWithin($responseData, fn () => true, ['addresses.within', 'all.within']);
-                } else {
-                    $responseData = $this->updateResponseDataWithin($responseData, fn () => false, ['addresses.within', 'all.within']);
-                }
+                $responseData = $this->handleSingleAdres($adres, $responseData);
             }
         }
+
+        if (isset($data['address'])) {
+            $adres = json_decode($data['address'], true);
+            $responseData = $this->handleSingleAdres($adres, $responseData);
+        }
+
         $responseData['all']['object'] = $this->getObjectFromItems(Arr::get($responseData, 'all.items'));
 
         $responseData['all']['items'] = array_values($responseData['all']['items']->toArray());
@@ -97,6 +96,20 @@ class LocationServerController extends Controller
         return response()->json([
             'data' => $responseData,
         ]);
+    }
+
+    private function handleSingleAdres(array $adres, array $responseData): array
+    {
+        $brkIdentificatie = (new LocatieserverService)->getBrkIdentificationByPostcodeHuisnummer($adres['postcode'], $adres['houseNumber']);
+        $municipality = $brkIdentificatie ? Municipality::where('brk_identification', $brkIdentificatie)->select(['brk_identification', 'name'])->first() : null;
+        if ($municipality) {
+            $responseData = $this->updateResponseDataItems($responseData, collect([$municipality]), ['all.items', 'addresses.items']);
+            $responseData = $this->updateResponseDataWithin($responseData, fn () => true, ['addresses.within', 'all.within']);
+        } else {
+            $responseData = $this->updateResponseDataWithin($responseData, fn () => false, ['addresses.within', 'all.within']);
+        }
+
+        return $responseData;
     }
 
     private function updateResponseDataItems(array $responseData, Collection $items, array $paths, array $fields = ['brk_identification', 'name'], string $unique = 'brk_identification'): array
