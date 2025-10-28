@@ -37,7 +37,7 @@ class MunicipalityUserPolicy
      */
     public function update(User $user, MunicipalityUser $municipalityUser): bool
     {
-        return true; // return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**

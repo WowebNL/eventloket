@@ -51,7 +51,13 @@ class MunicipalityResource extends Resource
                 Select::make('zaaktypen')
                     ->label(__('admin/resources/municipality.columns.zaaktypen.label'))
                     ->multiple()
-                    ->relationship(name: 'zaaktypen', titleAttribute: 'name', modifyQueryUsing: fn ($query) => $query->where(['is_active' => true, 'municipality_id' => null]))
+                    ->relationship(name: 'zaaktypen', titleAttribute: 'name', modifyQueryUsing: fn ($query) => $query->where(['is_active' => true])->where(function ($q) use ($schema) {
+                        if ($schema->getRecord()) {
+                            /** @var \App\Models\Municipality $record */
+                            $record = $schema->getRecord();
+                            $q->whereNull('municipality_id')->orWhere('municipality_id', $record->id);
+                        }
+                    }))
                     ->preload(),
             ]);
     }
