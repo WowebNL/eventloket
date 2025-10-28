@@ -23,9 +23,10 @@ class LocationServerCheckRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'polygons' => 'required_without_all:addresses,line|nullable|json',
-            'line' => 'required_without_all:addresses,polygons|nullable|json',
-            'addresses' => 'required_without_all:line,polygons|nullable|json',
+            'polygons' => 'required_without_all:addresses,address,line|nullable|json',
+            'line' => 'required_without_all:addresses,address,polygons|nullable|json',
+            'addresses' => 'required_without_all:address,line,polygons|nullable|json',
+            'address' => 'required_without_all:addresses,line,polygons|nullable|json',
         ];
     }
 }
