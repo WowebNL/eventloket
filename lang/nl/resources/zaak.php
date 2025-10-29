@@ -44,5 +44,11 @@ return [
         'assigned_advisor_users' => [
             'label' => 'Toegewezen adviseurs',
         ],
+        'aanwezigen' => [
+            'label' => 'Aanwezigen',
+        ],
+        'types_evenement' => [
+            'label' => 'Type(n) evenement',
+        ],
     ],
 ];

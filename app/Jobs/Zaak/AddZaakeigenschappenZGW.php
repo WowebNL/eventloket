@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Zaak;
 
+use App\Normalizers\OpenFormsNormalizer;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
@@ -47,10 +48,14 @@ class AddZaakeigenschappenZGW implements ShouldQueue
             $waarde = current($eigenschap);
 
             if ($waarde) {
+                if (str_starts_with($waarde, '[') || str_starts_with($waarde, '{')) {
+                    // json value
+                    $waarde = OpenFormsNormalizer::normalizeJson($waarde);
+                }
                 $data = [
                     'zaak' => $zaak->url,
                     'eigenschap' => $catalogiEigenschap->url,
-                    'waarde' => current($eigenschap),
+                    'waarde' => $waarde,
                 ];
 
                 $openzaak->zaken()->zaken()->zaakeigenschappen(basename($this->zaakUrlZGW))->store($data);
