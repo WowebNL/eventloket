@@ -140,6 +140,7 @@ class FormSubmissionObject implements Arrayable
             if ($asFeatures) {
                 $feature = new Feature($geometry);
                 $feature = $feature->withProperty('name', $bagObject->weergavenaam);
+
                 return $feature;
             }
 
