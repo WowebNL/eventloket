@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\MunicipalityResource\Pages\CreateMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\EditMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\ListMunicipalities;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityAdminUsersRelationManager;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerMunicipalityAdminUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerUsersRelationManager;
 use App\Models\Municipality;
 use Filament\Actions\EditAction;
@@ -51,7 +52,13 @@ class MunicipalityResource extends Resource
                 Select::make('zaaktypen')
                     ->label(__('admin/resources/municipality.columns.zaaktypen.label'))
                     ->multiple()
-                    ->relationship(name: 'zaaktypen', titleAttribute: 'name', modifyQueryUsing: fn ($query) => $query->where(['is_active' => true, 'municipality_id' => null]))
+                    ->relationship(name: 'zaaktypen', titleAttribute: 'name', modifyQueryUsing: fn ($query) => $query->where(['is_active' => true])->where(function ($q) use ($schema) {
+                        if ($schema->getRecord()) {
+                            /** @var \App\Models\Municipality $record */
+                            $record = $schema->getRecord();
+                            $q->whereNull('municipality_id')->orWhere('municipality_id', $record->id);
+                        }
+                    }))
                     ->preload(),
             ]);
     }
@@ -93,6 +100,7 @@ class MunicipalityResource extends Resource
     {
         return [
             ReviewerUsersRelationManager::class,
+            ReviewerMunicipalityAdminUsersRelationManager::class,
             MunicipalityAdminUsersRelationManager::class,
         ];
     }
