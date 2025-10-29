@@ -90,22 +90,21 @@ class FormSubmissionObject implements Arrayable
             $locationService = new LocatieserverService;
             foreach (json_decode($json, true) as $array) {
                 $array = Arr::first($array);
-                $bagObject = $locationService->getBagObjectByPostcodeHuisnummer(
-                    $array['postcode'],
-                    $array['houseNumber'],
-                    $array['houseLetter'] ?? null,
-                    $array['houseNumberAddition'] ?? null
-                );
-                if ($bagObject) {
-                    $this->zaakEventAddresses[] = $bagObject;
-                    $geometry = Point::fromText($bagObject->centroide_ll, 4326);
-                    if ($asFeatures) {
-                        $feature = new Feature($geometry);
-                        $feature = $feature->withProperty('name', $bagObject->weergavenaam);
-                        $features[] = $feature;
-                    }
+                $geometry = $this->getGeometryFromAddress($array, $locationService, $asFeatures);
+
+                if ($geometry) {
                     $geometries[] = $geometry;
                 }
+            }
+        }
+
+        if (isset($this->event_location['bag_address']) && ! empty($this->event_location['bag_address'])) {
+            $json = OpenFormsNormalizer::normalizeJson($this->event_location['bag_address']);
+            $locationService = new LocatieserverService;
+            $array = json_decode($json, true);
+            $geometry = $this->getGeometryFromAddress($array, $locationService, $asFeatures);
+            if ($geometry) {
+                $geometries[] = $geometry;
             }
         }
 
@@ -124,6 +123,30 @@ class FormSubmissionObject implements Arrayable
         }
 
         return '';
+    }
+
+    private function getGeometryFromAddress(array $address, LocatieserverService $locationService, bool $asFeatures = false): Point|Feature|null
+    {
+        $bagObject = $locationService->getBagObjectByPostcodeHuisnummer(
+            $address['postcode'],
+            $address['houseNumber'],
+            $address['houseLetter'] ?? null,
+            $address['houseNumberAddition'] ?? null
+        );
+
+        if ($bagObject) {
+            $this->zaakEventAddresses[] = $bagObject;
+            $geometry = Point::fromText($bagObject->centroide_ll, 4326);
+            if ($asFeatures) {
+                $feature = new Feature($geometry);
+                $feature = $feature->withProperty('name', $bagObject->weergavenaam);
+                return $feature;
+            }
+
+            return $geometry;
+        }
+
+        return null;
     }
 
     public function toArray(): array
