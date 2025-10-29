@@ -11,13 +11,13 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 
-class MunicipalityAdminUsersRelationManager extends RelationManager
+class ReviewerMunicipalityAdminUsersRelationManager extends RelationManager
 {
-    protected static string $relationship = 'municipalityAdminUsers';
+    protected static string $relationship = 'reviewerMunicipalityAdminUsers';
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
-        return __('resources/municipality_admin_user.plural_label');
+        return __('resources/reviewer_admin_user.plural_label');
     }
 
     public function form(Schema $schema): Schema
@@ -27,11 +27,12 @@ class MunicipalityAdminUsersRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        return MunicipalityAdminUserTable::configure($table)
-            ->headerActions([
-                MunicipalityAdminUserPendingInvitesAction::make()
-                    ->widgetRecord($this->ownerRecord),
-                MunicipalityAdminUserInviteAction::make(),
-            ]);
+        return MunicipalityAdminUserTable::configure($table);
+        // TODO make correct header actions
+        // ->headerActions([
+        //     MunicipalityAdminUserPendingInvitesAction::make()
+        //         ->widgetRecord($this->ownerRecord),
+        //     MunicipalityAdminUserInviteAction::make(),
+        // ]);
     }
 }

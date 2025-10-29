@@ -6,6 +6,7 @@ use App\Filament\Admin\Resources\MunicipalityResource\Pages\CreateMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\EditMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\ListMunicipalities;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityAdminUsersRelationManager;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerMunicipalityAdminUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerUsersRelationManager;
 use App\Models\Municipality;
 use Filament\Actions\EditAction;
@@ -99,6 +100,7 @@ class MunicipalityResource extends Resource
     {
         return [
             ReviewerUsersRelationManager::class,
+            ReviewerMunicipalityAdminUsersRelationManager::class,
             MunicipalityAdminUsersRelationManager::class,
         ];
     }
