@@ -26,6 +26,7 @@ use Filament\Schemas\Schema;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Woweb\Openzaak\Openzaak;
 
 class ZaakInfolist
@@ -41,7 +42,8 @@ class ZaakInfolist
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             TextEntry::make('reference_data.risico_classificatie')
-                ->label(__('resources/zaak.columns.risico_classificatie.label')),
+                ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
             TextEntry::make('reference_data.organisator')
@@ -65,6 +67,14 @@ class ZaakInfolist
             TextEntry::make('reference_data.eind_evenement')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_evenement.label')),
+            TextEntry::make('reference_data.aanwezigen')
+                ->label(__('resources/zaak.columns.aanwezigen.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.types_evenement')
+                ->label(__('resources/zaak.columns.types_evenement.label'))
+                ->bulleted()
+                ->formatStateUsing(fn ($state) => Str::ucfirst(Str::lower(Str::headline($state))))
+                ->visible(fn ($state) => ! empty($state)),
         ];
     }
 
