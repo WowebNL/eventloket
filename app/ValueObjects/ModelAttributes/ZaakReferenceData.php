@@ -21,11 +21,11 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
     public ?string $naam_locatie_evenement;
 
     public function __construct(
-        public string $risico_classificatie,
         public string $start_evenement,
         public string $eind_evenement,
         public string $registratiedatum,
         public string $status_name,
+        public ?string $risico_classificatie = null,
         public ?string $naam_locatie_eveneme = null, // due to limit char restriction in OZ
         public ?string $naam_evenement = null,
         public ?string $organisator = null,

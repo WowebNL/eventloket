@@ -24,7 +24,7 @@ class NormalizeOpenformsInput
                     $value = $request->input($field);
 
                     // param sometimes is 'None' when empty
-                    if ($value === 'None') {
+                    if ($value === 'None' || $value === null) {
                         $request->merge([$field => null]);
 
                         continue;
