@@ -8,13 +8,16 @@ use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
+use App\Observers\MunicipalityObserver;
 use Brick\Geo\Geometry;
 use Database\Factories\MunicipalityFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+#[ObservedBy(MunicipalityObserver::class)]
 class Municipality extends Model implements HasGeometry
 {
     /** @use HasFactory<MunicipalityFactory> */
@@ -71,6 +74,11 @@ class Municipality extends Model implements HasGeometry
     public function allAdminUsers()
     {
         return $this->municipalityUsers()->admins();
+    }
+
+    public function variables()
+    {
+        return $this->hasMany(MunicipalityVariable::class);
     }
 
     public function users(): BelongsToMany

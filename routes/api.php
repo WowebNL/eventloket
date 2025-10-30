@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\FormSessionController;
 use App\Http\Controllers\Api\LocationServerController;
+use App\Http\Controllers\Api\MunicipalityVariableController;
 use App\Http\Controllers\Api\OpenNotificationsController;
 use App\Http\Middleware\Api\NormalizeOpenformsInput;
 use Illuminate\Support\Facades\Route;
@@ -11,4 +12,5 @@ Route::group(['middleware' => [EnsureClientIsResourceOwner::class, NormalizeOpen
     Route::post('/locationserver/check', [LocationServerController::class, 'check'])->name('api.locationserver.check');
     Route::get('/formsessions', FormSessionController::class)->name('api.formsessions.check');
     Route::post('/open-notifications/listen', [OpenNotificationsController::class, 'listen'])->name('api.open-notifications.listen');
+    Route::get('/municipality-variables/{municipality:brk_identification}', MunicipalityVariableController::class)->name('api.municipality-variables');
 });

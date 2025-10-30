@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\MunicipalityResource\Pages\ListMunicipalities;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityAdminUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerMunicipalityAdminUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerUsersRelationManager;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\VariablesRelationManager;
 use App\Models\Municipality;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
@@ -102,6 +103,7 @@ class MunicipalityResource extends Resource
             ReviewerUsersRelationManager::class,
             ReviewerMunicipalityAdminUsersRelationManager::class,
             MunicipalityAdminUsersRelationManager::class,
+            VariablesRelationManager::class,
         ];
     }
 
