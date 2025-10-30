@@ -2,11 +2,15 @@
 
 namespace App\Notifications;
 
+use App\Models\Threads\AdviceThread;
 use App\Models\User;
+use App\Models\Users\AdvisorUser;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 
 class NewZaakDocument extends BaseNotification
@@ -35,8 +39,10 @@ class NewZaakDocument extends BaseNotification
     /**
      * Get the mail representation of the notification.
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toMail(User $notifiable): MailMessage
     {
+        $tenant = $this->getTenantIdentificationForUser($notifiable);
+
         return (new MailMessage)
             ->subject(__('notification/new-zaak-document.mail.subject.'.$this->type, [
                 'event' => $this->eventName,
@@ -46,7 +52,7 @@ class NewZaakDocument extends BaseNotification
                 'event' => $this->eventName,
                 'filename' => $this->documentTitle,
                 'viewUrl' => route('filament.organiser.resources.zaken.view', [
-                    'tenant' => $this->zaak->organisation->uuid,
+                    'tenant' => $tenant,
                     'record' => $this->zaak->id,
                 ]),
             ]);
@@ -54,6 +60,8 @@ class NewZaakDocument extends BaseNotification
 
     public function toDatabase(User $notifiable): array
     {
+        $tenant = $this->getTenantIdentificationForUser($notifiable);
+
         return FilamentNotification::make()
             ->title(__('notification/new-zaak-document.database.title.'.$this->type, [
                 'event' => $this->eventName,
@@ -65,11 +73,24 @@ class NewZaakDocument extends BaseNotification
                 Action::make('view')
                     ->label(__('View'))
                     ->url(route('filament.organiser.resources.zaken.view', [
-                        'tenant' => $this->zaak->organisation->uuid,
+                        'tenant' => $tenant,
                         'record' => $this->zaak->id,
                     ]))
                     ->markAsRead(),
             ])
             ->getDatabaseMessage();
+    }
+
+    private function getTenantIdentificationForUser(User $notifiable): string|int
+    {
+        return match (get_class($notifiable)) {
+            OrganiserUser::class => $this->zaak->organisation->uuid,
+            AdvisorUser::class => $this->zaak->adviceThreads->map(function (Model $thread) use ($notifiable) {
+                /** @var AdviceThread $thread */
+                return in_array($thread->advisory_id, $notifiable->advisories->pluck('id')->toArray());
+            }
+            )->first(),
+            default => $this->zaak->municipality->id
+        };
     }
 }

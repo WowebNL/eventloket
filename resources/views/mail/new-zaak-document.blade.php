@@ -4,7 +4,7 @@
 {{
     __('notification/new-zaak-document.mail.body.' . $type, [
         'event' => $event,
-        'municipality' => $municipality,
+        'filename' => $filename,
     ])
 }}
 
