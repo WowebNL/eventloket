@@ -47,7 +47,7 @@ class NewOrganiserThread extends BaseNotification
                 ->subject(__('notification/new-organiser-thread.organiser_mail.subject', [
                     'event' => $this->eventName,
                 ]))
-                ->markdown('mail.new-organiser-thread-organiser', [
+                ->markdown('mail.new-organiser-thread', [
                     'isOrganiserMail' => true,
                     'organisation' => $this->organisationName,
                     'event' => $this->eventName,
