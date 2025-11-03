@@ -36,6 +36,7 @@ return [
 
         'key' => [
             'label' => 'Sleutel',
+            'info' => 'De sleutel mag alleen letters, cijfers en underscores (_) bevatten.',
         ],
 
         'type' => [
