@@ -12,11 +12,12 @@ use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Icon as ComponentsIcon;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class MunicipalityVariableForm
 {
@@ -36,7 +37,11 @@ class MunicipalityVariableForm
                     ->required()
                     ->maxLength(255)
                     ->disabledOn('edit')
-                    ->rules(['alpha_dash', Rule::doesntContain(['-'])])
+                    ->belowContent([
+                        ComponentsIcon::make(Heroicon::InformationCircle),
+                        __('resources/municipality_variable.form.key.info'),
+                    ])
+                    ->rules('regex:/^[A-Za-z0-9_]+$/')
                     ->unique(
                         table: 'municipality_variables',
                         column: 'key',
