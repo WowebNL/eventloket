@@ -28,7 +28,7 @@ class MunicipalityVariableForm
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set('key', Str::slug($state))),
+                    ->afterStateUpdated(fn (Set $set, string $operation, ?string $state) => $operation != 'edit' ? $set('key', Str::slug($state)) : null),
 
                 TextInput::make('key')
                     ->label(__('resources/municipality_variable.form.key.label'))

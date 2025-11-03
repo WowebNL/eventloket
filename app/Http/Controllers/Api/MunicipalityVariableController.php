@@ -13,6 +13,7 @@ class MunicipalityVariableController extends Controller
      */
     public function __invoke(Request $request, Municipality $municipality)
     {
+        $asKeyValue = $request->boolean('as_key_value', false);
         $variables = $municipality
             ->variables()
             ->withTrashed()
@@ -29,7 +30,7 @@ class MunicipalityVariableController extends Controller
             });
 
         return response()->json([
-            'data' => $variables,
+            'data' => $asKeyValue ? $variables->pluck('value', 'key') : $variables,
         ]);
     }
 }
