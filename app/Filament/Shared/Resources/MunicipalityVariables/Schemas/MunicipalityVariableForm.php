@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class MunicipalityVariableForm
 {
@@ -28,13 +29,14 @@ class MunicipalityVariableForm
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Set $set, string $operation, ?string $state) => $operation != 'edit' ? $set('key', Str::slug($state)) : null),
+                    ->afterStateUpdated(fn (Set $set, string $operation, ?string $state) => $operation != 'edit' ? $set('key', Str::slug($state, '_')) : null),
 
                 TextInput::make('key')
                     ->label(__('resources/municipality_variable.form.key.label'))
                     ->required()
                     ->maxLength(255)
                     ->disabledOn('edit')
+                    ->rules(['alpha_dash', Rule::doesntContain(['-'])])
                     ->unique(
                         table: 'municipality_variables',
                         column: 'key',
