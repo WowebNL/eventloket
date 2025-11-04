@@ -27,6 +27,11 @@ return [
         ],
 
     ],
+    'actions' => [
+        'create' => [
+            'label' => 'Variabele aanmaken',
+        ],
+    ],
 
     'form' => [
 

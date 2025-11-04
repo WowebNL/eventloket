@@ -4,6 +4,7 @@ namespace App\Filament\Admin\Resources\MunicipalityResource\RelationManagers;
 
 use App\Filament\Shared\Resources\MunicipalityVariables\Schemas\MunicipalityVariableForm;
 use App\Filament\Shared\Resources\MunicipalityVariables\Tables\MunicipalityVariablesTable;
+use Filament\Actions\CreateAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -25,6 +26,9 @@ class VariablesRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        return MunicipalityVariablesTable::configure($table);
+        return MunicipalityVariablesTable::configure($table)
+            ->headerActions([
+                CreateAction::make(__('resources/municipality_variable.actions.create.label')),
+            ]);
     }
 }
