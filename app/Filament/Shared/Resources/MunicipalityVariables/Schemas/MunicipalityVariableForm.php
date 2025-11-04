@@ -10,6 +10,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Forms\Components\Toggle;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Icon as ComponentsIcon;
@@ -46,9 +47,17 @@ class MunicipalityVariableForm
                         table: 'municipality_variables',
                         column: 'key',
                         ignorable: fn ($record) => $record,
-                        modifyRuleUsing: function ($rule) {
-                            /** @phpstan-ignore-next-line */
-                            return $rule->where('municipality_id', Filament::getCurrentPanel()->getId() === 'municipality' ? Filament::getTenant()->id : null);
+                        modifyRuleUsing: function ($rule, $livewire) {
+                            if ($livewire instanceof RelationManager) {
+                                $id = $livewire->getOwnerRecord()->id;
+                            } elseif (Filament::getCurrentPanel()->getId() === 'municipality') {
+                                $id = Filament::getTenant()->id;
+                            } else {
+                                $id = null;
+
+                            }
+
+                            return $rule->where('municipality_id', $id);
                         },
                     ),
 
