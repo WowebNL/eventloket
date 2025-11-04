@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\MunicipalityVariables\Schemas;
 
 use App\Enums\MunicipalityVariableType;
+use App\Models\Municipality;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -49,9 +50,13 @@ class MunicipalityVariableForm
                         ignorable: fn ($record) => $record,
                         modifyRuleUsing: function ($rule, $livewire) {
                             if ($livewire instanceof RelationManager) {
-                                $id = $livewire->getOwnerRecord()->id;
+                                /** @var Municipality $record */
+                                $record = $livewire->getOwnerRecord();
+                                $id = $record->id;
                             } elseif (Filament::getCurrentPanel()->getId() === 'municipality') {
-                                $id = Filament::getTenant()->id;
+                                /** @var Municipality $record */
+                                $record = Filament::getTenant();
+                                $id = $record->id;
                             } else {
                                 $id = null;
 
