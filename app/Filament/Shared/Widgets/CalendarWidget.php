@@ -9,6 +9,7 @@ use App\Filament\Shared\Exports\ExtendedEventExporter;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
+use App\Filament\Shared\Resources\Zaken\Tables\ZakenTable;
 use App\Models\Event;
 use App\Models\Municipality;
 use App\Models\Organisation;
@@ -26,6 +27,10 @@ use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Enums\FiltersLayout;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Table;
 use Guava\Calendar\Filament\Actions\ViewAction;
 use Guava\Calendar\ValueObjects\DatesSetInfo;
 use Guava\Calendar\ValueObjects\FetchInfo;
@@ -38,9 +43,14 @@ use Illuminate\Support\HtmlString;
 use Livewire\Component;
 use LogicException;
 
-class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
+class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements Tables\Contracts\HasTable
 {
     use HasFilters;
+    use Tables\Concerns\InteractsWithTable {
+        Tables\Concerns\InteractsWithTable::normalizeTableFilterValuesFromQueryString insteadof HasFilters;
+    }
+
+    protected string $view = 'filament.shared.widgets.calendar-widget';
 
     protected static bool $isDiscovered = false;
 
@@ -60,6 +70,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
     public ?CarbonImmutable $start = null;
 
     public ?CarbonImmutable $end = null;
+
+    public string $viewMode = 'calendar'; // 'calendar' or 'table'
 
     protected function onDatesSet(DatesSetInfo $info): void
     {
@@ -112,10 +124,21 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
         };
 
         return [
+            Action::make('toggleView')
+                ->label(fn () => $this->viewMode === 'calendar' ? 'Lijst weergave' : 'Kalender weergave')
+                ->icon(fn () => $this->viewMode === 'calendar' ? 'heroicon-o-list-bullet' : 'heroicon-o-calendar')
+                ->action(fn () => $this->viewMode = $this->viewMode === 'calendar' ? 'table' : 'calendar'),
             FilterAction::make()
                 ->schema($this->getFilterSchema())
                 ->badge(fn () => count(array_filter($this->filters ?? [])))
-                ->after(fn () => $this->dispatch('calendar--refresh')),
+                ->after(function () {
+                    if ($this->viewMode === 'calendar') {
+                        $this->dispatch('calendar--refresh');
+                    } else {
+                        // Reset table to refresh with new filters
+                        $this->resetTable();
+                    }
+                }),
             ExportAction::make()
                 ->exporter($exporter)
                 ->label('Evenementen exporteren')
@@ -217,7 +240,54 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
         return [];
     }
 
-    protected function getEvents(FetchInfo $info): Collection|array|Builder
+    // Table configuration for list view
+    public function table(Table $table): Table
+    {
+        return ZakenTable::configure($table)
+            ->query($this->getEvents())
+            ->defaultSort('reference_data->start_evenement')
+            ->recordActions([
+                $this->viewAction(),
+            ])
+            ->filtersLayout(FiltersLayout::AboveContent)
+            ->filtersFormColumns(2)
+            ->deferFilters(false)
+            ->filters([
+                Filter::make('range')
+                    ->columnSpanFull()
+                    ->columns(2)
+                    ->schema([
+                        DatePicker::make('from')
+                            ->label(__('shared/widgets/calendar.filters.range.from.label'))
+                            ->placeholder(__('shared/widgets/calendar.filters.range.from.placeholder'))
+                            ->native(false)
+                            ->closeOnDateSelection()
+                            ->format(config('app.date_format'))
+                            ->displayFormat(config('app.date_format'))
+                            ->default(now()->startOfDay()),
+                        DatePicker::make('to')
+                            ->label(__('shared/widgets/calendar.filters.range.to.label'))
+                            ->placeholder(__('shared/widgets/calendar.filters.range.to.placeholder'))
+                            ->native(false)
+                            ->closeOnDateSelection()
+                            ->format(config('app.date_format'))
+                            ->displayFormat(config('app.date_format')),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '>=', $date),
+                            )
+                            ->when(
+                                $data['to'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '<=', $date),
+                            );
+                    }),
+            ]);
+    }
+
+    protected function getEvents(?FetchInfo $info = null): Collection|array|Builder
     {
         if (in_array(auth()->user()->role, [Role::Organiser, Role::Advisor])) {
             $query = Event::query();
@@ -229,9 +299,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
     }
 
     // Let child widgets add their own constraints.
-    protected function applyContextFilters(Builder $query, FetchInfo $info): Builder
+    protected function applyContextFilters(Builder $query, ?FetchInfo $info = null): Builder
     {
-        $query->whereBetween('reference_data->start_evenement', [$info->start, $info->end]);
+        if ($info) {
+            $query->whereBetween('reference_data->start_evenement', [$info->start, $info->end]);
+        }
 
         $filters = $this->filters ?? [];
 
