@@ -22,16 +22,9 @@ class MunicipalityVariablesTable
                     ->label(__('resources/municipality_variable.columns.key.label')),
                 TextColumn::make('type')
                     ->label(__('resources/municipality_variable.columns.type.label')),
-                TextColumn::make('value')
+                TextColumn::make('formatted_filament_table_value')
                     ->label(__('resources/municipality_variable.columns.value.label'))
-                    ->limit()
-                    ->formatStateUsing(function ($state) {
-                        if (is_bool($state)) {
-                            return $state ? __('Ja') : __('Nee');
-                        }
-
-                        return $state;
-                    }),
+                    ->limit(),
                 IconColumn::make('is_default')
                     ->label(__('resources/municipality_variable.columns.is_default.label'))
                     ->hidden(fn ($livewire) => $livewire instanceof ListMunicipalityVariables),
