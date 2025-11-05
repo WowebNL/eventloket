@@ -54,4 +54,19 @@ class MunicipalityVariable extends Model
             },
         );
     }
+
+    protected function formattedFilamentTableValue(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => match ($this->type) {
+                MunicipalityVariableType::Text => (string) $this->value,
+                MunicipalityVariableType::Number => (float) $this->value,
+                MunicipalityVariableType::DateRange => implode(' - ', array_reverse($this->value)), /** @phpstan-ignore argument.type */
+                MunicipalityVariableType::TimeRange => implode(' - ', array_reverse($this->value)), /** @phpstan-ignore argument.type */
+                MunicipalityVariableType::DateTimeRange => implode(' - ', array_reverse($this->value)), /** @phpstan-ignore argument.type */
+                MunicipalityVariableType::Boolean => $this->value ? __('Ja') : __('Nee'),
+                default => $this->value,
+            },
+        );
+    }
 }
