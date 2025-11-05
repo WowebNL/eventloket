@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Models\Advisory;
 use App\Models\User;
@@ -28,7 +29,7 @@ class AdvisorySeeder extends Seeder
             $advisorUsers = User::factory(['role' => Role::Advisor])->createMany(rand(1, 3));
 
             foreach ($advisorUsers as $advisorUser) {
-                $advisory->users()->attach($advisorUser->id);
+                $advisory->users()->attach($advisorUser->id, ['role' => AdvisoryRole::Member]);
             }
         }
     }

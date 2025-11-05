@@ -76,6 +76,11 @@ class Municipality extends Model implements HasGeometry
         return $this->municipalityUsers()->admins();
     }
 
+    public function locations()
+    {
+        return $this->hasMany(Location::class);
+    }
+
     public function variables()
     {
         return $this->hasMany(MunicipalityVariable::class);
