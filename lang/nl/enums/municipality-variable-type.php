@@ -19,4 +19,7 @@ return [
     'boolean' => [
         'label' => 'Ja of Nee',
     ],
+    'report_question' => [
+        'label' => 'Meldingvraag',
+    ],
 ];

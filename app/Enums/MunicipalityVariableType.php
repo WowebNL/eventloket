@@ -12,6 +12,7 @@ enum MunicipalityVariableType: string implements HasLabel
     case TimeRange = 'time_range';
     case DateTimeRange = 'date_time_range';
     case Boolean = 'boolean';
+    case ReportQuestion = 'report_question';
 
     public function getLabel(): string
     {

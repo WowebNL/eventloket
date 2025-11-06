@@ -3,17 +3,9 @@
 namespace App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityVariables\Pages;
 
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityVariables\MunicipalityVariableResource;
-use Filament\Actions\DeleteAction;
-use Filament\Resources\Pages\EditRecord;
+use App\Filament\Shared\Resources\MunicipalityVariables\Pages\EditMunicipalityVariable as PagesEditMunicipalityVariable;
 
-class EditMunicipalityVariable extends EditRecord
+class EditMunicipalityVariable extends PagesEditMunicipalityVariable
 {
     protected static string $resource = MunicipalityVariableResource::class;
-
-    protected function getHeaderActions(): array
-    {
-        return [
-            DeleteAction::make(),
-        ];
-    }
 }

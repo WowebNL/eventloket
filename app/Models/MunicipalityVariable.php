@@ -17,6 +17,8 @@ class MunicipalityVariable extends Model
     /** @use HasFactory<\Database\Factories\MunicipalityVariableFactory> */
     use HasFactory, SoftDeletes;
 
+    protected $appends = ['order'];
+
     protected $fillable = [
         'municipality_id',
         'name',
@@ -67,6 +69,15 @@ class MunicipalityVariable extends Model
                 MunicipalityVariableType::Boolean => $this->value ? __('Ja') : __('Nee'),
                 default => $this->value,
             },
+        );
+    }
+
+    /** @return Attribute<int|null, void> */
+    protected function order(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->type === MunicipalityVariableType::ReportQuestion
+                ? (int) substr($this->key, -1) : null,
         );
     }
 }
