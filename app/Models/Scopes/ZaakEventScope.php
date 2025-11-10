@@ -21,7 +21,7 @@ class ZaakEventScope implements Scope
 
             return;
         }
-        $builder->select('id', 'public_id', 'reference_data', 'zaaktype_id', 'organisation_id')->with(['organisation' => function ($query) {
+        $builder->select('id', 'public_id', 'reference_data', 'zaaktype_id', 'organisation_id', 'zgw_zaak_url')->with(['organisation' => function ($query) {
             $query->select('id', 'name', 'type');
         }, 'zaaktype']);
     }
