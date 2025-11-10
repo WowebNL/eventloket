@@ -11,6 +11,7 @@ class AdvisorCalendarWidget extends CalendarWidget
     {
         return [
             $this->municipalitiesFilter(),
+            $this->zaaktypesFilter(),
             $this->statusNameFilter(),
             $this->organisationsFilter(),
             RisicoClassificatiesSelect::make(),
