@@ -38,7 +38,7 @@ class Organisation extends Model
     {
         return Attribute::make(
             get: function ($value, array $attributes) {
-                if (! $attributes['bag_id']) {
+                if (! isset($attributes['bag_id']) || ! $attributes['bag_id']) {
                     return null;
                 }
 

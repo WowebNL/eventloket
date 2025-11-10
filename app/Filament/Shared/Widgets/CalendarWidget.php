@@ -3,7 +3,9 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
-use App\Filament\Shared\Exports\EventExporter;
+use App\Filament\Shared\Exports\AdvisorEventExporter;
+use App\Filament\Shared\Exports\BaseEventExporter;
+use App\Filament\Shared\Exports\ExtendedEventExporter;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
@@ -28,6 +30,7 @@ use Guava\Calendar\Filament\Actions\ViewAction;
 use Guava\Calendar\ValueObjects\DatesSetInfo;
 use Guava\Calendar\ValueObjects\FetchInfo;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +64,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
     protected function onDatesSet(DatesSetInfo $info): void
     {
         $this->start = $info->view->currentStart;
-        $this->end = $info->view->currentStart->endOfMonth()->toImmutable();
+        $this->end = $info->view->currentEnd;
+        $this->js("document.querySelector('.ec-today').innerText = 'Vandaag'"); // quickfix to translate 'Today' button
     }
 
     public function viewAction(): ViewAction
@@ -101,13 +105,19 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
     public function getHeaderActions(): array
     {
+        $exporter = match (auth()->user()->role) {
+            Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => ExtendedEventExporter::class,
+            Role::Advisor => AdvisorEventExporter::class,
+            default => BaseEventExporter::class,
+        };
+
         return [
             FilterAction::make()
                 ->schema($this->getFilterSchema())
                 ->badge(fn () => count(array_filter($this->filters ?? [])))
                 ->after(fn () => $this->dispatch('calendar--refresh')),
             ExportAction::make()
-                ->exporter(EventExporter::class)
+                ->exporter($exporter)
                 ->label('Evenementen exporteren')
                 ->modalHeading('Evenementen exporteren')
                 ->columnMapping(false)
@@ -149,7 +159,55 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
                 ->modifyQueryUsing(fn (Builder $query, array $options) => $this->applyContextFilters($query, new FetchInfo([
                     'startStr' => $options['start_date'],
                     'endStr' => $options['end_date'],
-                ]))),
+                ])))
+                ->extraModalFooterActions([
+                    Action::make('exportToGeojson')
+                        ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Advisor, Role::Admin]))
+                        ->label('Exporteer naar GeoJSON')
+                        ->icon('heroicon-o-arrow-top-right-on-square')
+                        ->action(function (array $mountedActions) {
+                            $data = $mountedActions[0]->getRawData();
+                            $filters = $data;
+                            unset($filters['start_date'], $filters['end_date']);
+
+                            $query = auth()->user()->role === Role::Advisor ? Event::query() : Zaak::query();
+                            $events = $this->applyContextFilters(
+                                $query,
+                                new FetchInfo([
+                                    'startStr' => $data['start_date'],
+                                    'endStr' => $data['end_date'],
+                                ]),
+                            )->get();
+
+                            $features = $events->map(function (Model $zaak) {
+                                /** @var Zaak $zaak */
+                                $geometry = $zaak->openzaak->zaakgeometrie;
+                                if ($geometry) {
+                                    return [
+                                        'type' => 'Feature',
+                                        'geometry' => $geometry,
+                                        'properties' => $zaak->toArray(), // change this
+                                    ];
+                                }
+
+                                return null;
+                            })->filter();
+                            $geojson = json_encode([
+                                'type' => 'FeatureCollection',
+                                'features' => $features->values()->toArray(),
+                            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+                            $filename = 'export_evenementen_'.now()->format('Y-m-d_H-i-s').'.geojson';
+
+                            file_put_contents(storage_path('app/public/'.$filename), $geojson);
+
+                            return response()->streamDownload(function () use ($geojson) {
+                                echo $geojson;
+                            }, $filename, ['Content-Type' => 'application/geo+json']);
+                        })
+                        ->color('primary')
+                        ->button(),
+                ]),
         ];
     }
 
@@ -161,7 +219,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
     protected function getEvents(FetchInfo $info): Collection|array|Builder
     {
-        if (in_array(auth()->user()->role, [Role::Organiser])) {
+        if (in_array(auth()->user()->role, [Role::Organiser, Role::Advisor])) {
             $query = Event::query();
         } else {
             $query = Zaak::query();
@@ -216,7 +274,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
             ->options(fn () => Organisation::query()->orderBy('name')->pluck('name', 'id'))
             ->multiple()
             ->searchable()
-            ->preload();
+            ->preload()
+            ->visible(fn () => auth()->user()->role !== Role::Organiser);
     }
 
     protected function applyOrganisationsFilter(Builder $query, array $filters)
@@ -271,11 +330,14 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
 
             $query->where(function (Builder $q) use ($term) {
                 $q->where('reference_data->naam_evenement', 'like', "%{$term}%")
-//                    ->orWhere('reference_data->indiener_naam', 'like', "%{$term}%") // TODO: Implement when indiener fields are added
-//                    ->orWhere('reference_data->indiener_email', 'like', "%{$term}%")
-                    ->orWhere('public_id', 'like', "%{$term}%")
-                    ->orWhereHas('organisation', fn (Builder $oq) => $oq->where('name', 'like', "%{$term}%"));
+                    ->orWhere('public_id', 'like', "%{$term}%");
             });
+            if (auth()->user()->role !== Role::Organiser) {
+                $query
+                    ->orWhere('reference_data->organisator', 'like', "%{$term}%")
+                    ->orWhereHas('organisation', fn (Builder $oq) => $oq->where('name', 'like', "%{$term}%")->orWhere('email', 'like', "%{$term}%"))
+                    ->orWhereHas('organiserUser', fn (Builder $ouq) => $ouq->where('name', 'like', "%{$term}%")->orWhere('email', 'like', "%{$term}%"));
+            }
         }
     }
 
@@ -283,7 +345,17 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget
     {
         return Select::make('zaaktypes')
             ->label(__('resources/zaak.columns.zaaktype.label'))
-            ->options(fn () => Zaaktype::query()->orderBy('name')->pluck('name', 'id'))
+            ->options(function () {
+                $query = Zaaktype::query()->orderBy('name');
+
+                if (in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])) {
+                    /** @var Municipality $municipality */
+                    $municipality = Filament::getTenant();
+                    $query->where('municipality_id', $municipality->id);
+                }
+
+                return $query->pluck('name', 'id');
+            })
             ->multiple()
             ->searchable()
             ->preload();
