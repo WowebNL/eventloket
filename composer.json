@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "brick/geo": "^0.13.1",
+        "dotswan/filament-map-picker": "^2.0",
         "filament/filament": "^4.0",
         "filament/spatie-laravel-settings-plugin": "^4.0",
         "guava/calendar": "^2.0",

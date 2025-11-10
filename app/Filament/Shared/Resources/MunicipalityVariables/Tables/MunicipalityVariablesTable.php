@@ -15,6 +15,8 @@ class MunicipalityVariablesTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modelLabel(__('resources/municipality_variable.label'))
+            ->pluralModelLabel(__('resources/municipality_variable.plural_label'))
             ->columns([
                 TextColumn::make('name')
                     ->label(__('resources/municipality_variable.columns.name.label')),
