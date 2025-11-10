@@ -25,6 +25,12 @@ return [
         'is_default' => [
             'label' => 'Is standaard',
         ],
+        'created_at' => [
+            'label' => 'Aangemaakt op',
+        ],
+        'updated_at' => [
+            'label' => 'Bijgewerkt op',
+        ],
 
     ],
     'actions' => [
@@ -60,5 +66,8 @@ return [
             'label' => 'Einde',
         ],
 
+        'order' => [
+            'label' => 'Volgorde van de vraag',
+        ],
     ],
 ];

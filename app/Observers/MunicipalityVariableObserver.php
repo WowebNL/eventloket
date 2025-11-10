@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\MunicipalityVariableType;
 use App\Models\Municipality;
 use App\Models\MunicipalityVariable;
 
@@ -32,6 +33,21 @@ class MunicipalityVariableObserver
         if ($municipalityVariable->municipality_id === null) {
             // An admin has deleted a default variable. Delete this variable from all municipalities.
             MunicipalityVariable::where('key', $municipalityVariable->key)->delete();
+        }
+
+        if ($municipalityVariable->municipality_id && $municipalityVariable->type === MunicipalityVariableType::ReportQuestion) {
+            // Reorder the remaining report questions for this municipality
+            $municipalityVariables = MunicipalityVariable::where('municipality_id', $municipalityVariable->municipality_id)
+                ->where('type', 'report_question')
+                ->orderBy('key')
+                ->get();
+
+            $order = 1;
+            foreach ($municipalityVariables as $variable) {
+                $variable->key = 'report_question_'.$order;
+                $variable->save();
+                $order++;
+            }
         }
     }
 }

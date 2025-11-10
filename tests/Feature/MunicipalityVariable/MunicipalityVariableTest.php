@@ -3,11 +3,16 @@
 
 use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
+use App\Filament\Admin\Resources\MunicipalityVariables\Pages\CreateMunicipalityVariable;
+use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityVariables\Pages\CreateMunicipalityVariable as PagesCreateMunicipalityVariable;
 use App\Models\Municipality;
 use App\Models\MunicipalityVariable;
 use App\Models\User;
 use App\Models\Users\MunicipalityAdminUser;
+use Filament\Facades\Filament;
 use Laravel\Passport\Client;
+
+use function Pest\Livewire\livewire;
 
 test('allows admins to manage default variables across all municipalities', function () {
     // arrange: admin user, two municipalities, a default variable definition
@@ -525,4 +530,95 @@ test('default variables can be soft-deleted by admin', function () {
     ]);
 
     expect($municipalityAdmin->can('delete', $anotherDefaultVar))->toBe(false);
+});
+
+test('admin can not create report question variables as default variables', function () {
+    // arrange
+    $admin = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+    $municipality = Municipality::factory()->create();
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs($admin);
+
+    livewire(CreateMunicipalityVariable::class)
+        ->fillForm([
+            'name' => 'Report Question 1',
+            'key' => 'report_question_1',
+            'type' => MunicipalityVariableType::ReportQuestion,
+            'value' => 'Is this a test?',
+        ])->call('create')
+        ->assertHasFormErrors(['type']);
+});
+
+test('municipality admin can create report question variable', function () {
+    $municipality = Municipality::factory()->create();
+    $municipalityAdmin = User::factory()->create([
+        'email' => 'advisor@example.com',
+        'role' => Role::ReviewerMunicipalityAdmin,
+    ]);
+    $municipalityAdmin->municipalities()->attach($municipality);
+
+    expect($municipalityAdmin->can('create', MunicipalityVariable::class))->toBe(true);
+
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    $this->actingAs($municipalityAdmin);
+    Filament::setTenant($municipality);
+    // make sure panel is booted with tenant, otherwise observers and scopes arent applied
+    Filament::bootCurrentPanel();
+
+    livewire(PagesCreateMunicipalityVariable::class, [
+        'tenantRecord' => $municipality,
+    ])
+        ->assertSchemaExists('form')
+        ->fillForm([
+            'name' => 'Report Question 1',
+            'type' => MunicipalityVariableType::ReportQuestion,
+            'value' => 'Is this a test?',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $this->assertDatabaseCount('municipality_variables', 1);
+
+});
+
+test('municipality admin cannot create more then 5 variables of type report question', function () {
+    $municipality = Municipality::factory()->create();
+    $municipalityAdmin = User::factory()->create([
+        'email' => 'advisor@example.com',
+        'role' => Role::ReviewerMunicipalityAdmin,
+    ]);
+    $municipalityAdmin->municipalities()->attach($municipality);
+
+    foreach (range(1, 5) as $i) {
+        MunicipalityVariable::factory()->create([
+            'municipality_id' => $municipality->id,
+            'type' => MunicipalityVariableType::ReportQuestion,
+            'key' => 'report_question_'.$i,
+        ]);
+    }
+
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    $this->actingAs($municipalityAdmin);
+    Filament::setTenant($municipality);
+    // make sure panel is booted with tenant, otherwise observers and scopes arent applied
+    Filament::bootCurrentPanel();
+
+    livewire(PagesCreateMunicipalityVariable::class, [
+        'tenantRecord' => $municipality,
+    ])
+        ->assertSchemaExists('form')
+        ->fillForm([
+            'name' => 'Report Question 6',
+            'type' => MunicipalityVariableType::ReportQuestion,
+            'value' => 'Is this a test?',
+        ])
+        ->call('create')
+        ->assertHasFormErrors();
+
+    $this->assertDatabaseCount('municipality_variables', 5);
+
 });

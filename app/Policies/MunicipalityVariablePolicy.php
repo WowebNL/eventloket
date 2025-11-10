@@ -67,7 +67,7 @@ class MunicipalityVariablePolicy
             return true;
         }
 
-        if (($user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser) && $user->canAccessMunicipality($municipalityVariable->municipality_id)) {
+        if (($user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser) && $municipalityVariable->municipality_id && $user->canAccessMunicipality($municipalityVariable->municipality_id)) {
             return true;
         }
 

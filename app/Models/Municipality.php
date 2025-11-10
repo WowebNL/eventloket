@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Casts\AsGeoJson;
+use App\Enums\MunicipalityVariableType;
 use App\Models\Contracts\HasGeometry;
 use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\MunicipalityUser;
@@ -84,6 +85,12 @@ class Municipality extends Model implements HasGeometry
     public function variables()
     {
         return $this->hasMany(MunicipalityVariable::class);
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\MunicipalityVariable, $this> */
+    public function reportQuestions(): HasMany
+    {
+        return $this->variables()->where('type', MunicipalityVariableType::ReportQuestion);
     }
 
     public function users(): BelongsToMany

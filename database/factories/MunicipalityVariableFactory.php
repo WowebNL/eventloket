@@ -51,6 +51,7 @@ class MunicipalityVariableFactory extends Factory
                 'start' => fake()->dateTime()->format('Y-m-d H:i:s'),
                 'end' => fake()->dateTime()->format('Y-m-d H:i:s'),
             ],
+            MunicipalityVariableType::ReportQuestion => fake()->paragraph(),
         };
     }
 
