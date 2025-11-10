@@ -13,7 +13,7 @@ class DocumentRequest extends FormRequest
     public function authorize(): bool
     {
         // TODO refactor this later
-        return auth()->check() && in_array(auth()->user()->role, [Role::Reviewer, Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Organiser]);
+        return auth()->check() && in_array(auth()->user()->role, [Role::Reviewer, Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Organiser, Role::Advisor]);
     }
 
     /**
