@@ -80,13 +80,13 @@ class LocationServerController extends Controller
 
             $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items', 'line.items']);
 
-            if ($startModel && $start = $startModel->first()) {
+            if ($start = $startModel->first()) {
                 $responseData['line']['start'] = [
                     'brk_identification' => $start->brk_identification,
                     'name' => $start->name,
                 ];
             }
-            if ($endModel && $end = $endModel->first()) {
+            if ($end = $endModel->first()) {
                 $responseData['line']['end'] = [
                     'brk_identification' => $end->brk_identification,
                     'name' => $end->name,
