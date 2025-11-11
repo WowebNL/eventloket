@@ -34,6 +34,9 @@ class LocationServerController extends Controller
             'line' => [
                 'items' => collect(),
                 'within' => null,
+                'start' => null,
+                'end' => null,
+                'start_end_equal' => null,
             ],
             'addresses' => [
                 'items' => collect(),
@@ -64,6 +67,7 @@ class LocationServerController extends Controller
         }
 
         if (isset($data['line'])) {
+            /** @var \Brick\Geo\LineString $line */
             $line = (new GeoJsonReader)->read($data['line']);
             $geometryEngine = $geometryEngine ?? new PdoEngine(DB::connection()->getPdo());
             $checkIntersects = $checkIntersects ?? new CheckIntersects($geometryEngine);
@@ -71,9 +75,25 @@ class LocationServerController extends Controller
 
             /** @var Collection<\App\Models\Municipality> $items */
             $items = $checkIntersects->checkIntersectsWithModels($line);
+            $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
+            $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());
 
             $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items', 'line.items']);
+
+            if ($startModel && $start = $startModel->first()) {
+                $responseData['line']['start'] = [
+                    'brk_identification' => $start->brk_identification,
+                    'name' => $start->name,
+                ];
+            }
+            if ($endModel && $end = $endModel->first()) {
+                $responseData['line']['end'] = [
+                    'brk_identification' => $end->brk_identification,
+                    'name' => $end->name,
+                ];
+            }
             $responseData = $this->updateResponseDataWithin($responseData, fn () => $checkWithin->checkWithinAllGeometriesFromModels($line), ['line.within', 'all.within']);
+            $responseData['line']['start_end_equal'] = $startModel->first()->id == $endModel->first()->id;
         }
 
         if (isset($data['addresses'])) {
