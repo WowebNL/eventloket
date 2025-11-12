@@ -26,7 +26,11 @@ class AdvisorySeeder extends Seeder
         foreach ($advisories as $name) {
             $advisory = Advisory::factory()->create(['name' => $name]);
 
-            $advisorUsers = User::factory(['role' => Role::Advisor])->createMany(rand(1, 3));
+            $advisorUsers = User::factory([
+                'role' => Role::Advisor,
+                'app_authentication_secret' => null,
+                'app_authentication_recovery_codes' => null,
+            ])->createMany(rand(1, 3));
 
             foreach ($advisorUsers as $advisorUser) {
                 $advisory->users()->attach($advisorUser->id, ['role' => AdvisoryRole::Member]);
