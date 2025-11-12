@@ -93,7 +93,9 @@ class LocationServerController extends Controller
                 ];
             }
             $responseData = $this->updateResponseDataWithin($responseData, fn () => $checkWithin->checkWithinAllGeometriesFromModels($line), ['line.within', 'all.within']);
-            $responseData['line']['start_end_equal'] = $startModel->first()->id == $endModel->first()->id;
+            if (! $startModel->isEmpty() && ! $endModel->isEmpty()) {
+                $responseData['line']['start_end_equal'] = $startModel->first()->id == $endModel->first()->id;
+            }
         }
 
         if (isset($data['addresses'])) {
