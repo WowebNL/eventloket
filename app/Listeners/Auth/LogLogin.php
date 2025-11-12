@@ -3,9 +3,9 @@
 namespace App\Listeners\Auth;
 
 use Filament\Facades\Filament;
-use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
 
-class LogFailedLogin
+class LogLogin
 {
     /**
      * Create the event listener.
@@ -18,18 +18,18 @@ class LogFailedLogin
     /**
      * Handle the event.
      */
-    public function handle(Failed $event): void
+    public function handle(Login $event): void
     {
         activity('auth')
-            ->event('login_failed')
+            ->event('login')
             ->withProperties([
                 'guard' => $event->guard,
-                'credentials' => $event->credentials,
+                'remember' => $event->remember,
                 'ip' => request()->ip(),
                 'user_agent' => request()->userAgent(),
                 'login_path' => request()->path(),
                 'panel' => Filament::getCurrentPanel()?->getId(),
             ])
-            ->log('Failed login attempt');
+            ->log('User logged in');
     }
 }
