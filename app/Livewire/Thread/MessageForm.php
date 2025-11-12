@@ -201,7 +201,7 @@ class MessageForm extends Component implements HasActions, HasSchemas
             ->record($this->thread);
     }
 
-    public function assignToSelfAction(): Action
+    public function assign_to_selfAction(): Action
     {
         return AssignToSelfAction::make()
             ->record($this->thread);

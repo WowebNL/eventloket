@@ -39,7 +39,11 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
         }
 
         $municipalityUsers = User::factory()
-            ->state(fn () => ['role' => fake()->randomElement([Role::Advisor, Role::MunicipalityAdmin])])
+            ->state(fn () => [
+                'role' => fake()->randomElement([Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin]),
+                'app_authentication_secret' => null,
+                'app_authentication_recovery_codes' => null,
+            ])
             ->createMany(10);
 
         $municipalities = Municipality::all();

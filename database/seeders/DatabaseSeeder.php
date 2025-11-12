@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             OrganisationSeeder::class,
             AdvisorySeeder::class,
             ZaakSeeder::class,
+            ThreadSeeder::class,
         ]);
     }
 }

@@ -587,7 +587,7 @@ test('AssignToSelfAction is not visible when advisor is already assigned', funct
         'thread' => $this->adviceThread,
     ])
         ->assertActionNotMounted('assign_to_self')
-        ->assertActionDoesNotExist('assign_to_self');
+        ->assertActionDisabled('assign_to_self');
 });
 
 test('AssignToSelfAction is visible when advisor is not assigned', function () {

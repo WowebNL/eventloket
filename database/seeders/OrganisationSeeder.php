@@ -18,7 +18,11 @@ class OrganisationSeeder extends Seeder
     {
         $organisations = Organisation::factory(['type' => OrganisationType::Business])->createMany(10);
 
-        $organiserUsers = User::factory(['role' => Role::Organiser])->createMany(10);
+        $organiserUsers = User::factory([
+            'role' => Role::Organiser,
+            'app_authentication_secret' => null,
+            'app_authentication_recovery_codes' => null,
+        ])->createMany(10);
 
         foreach ($organiserUsers as $user) {
             $randomOrganisations = $organisations->shuffle()->take(rand(1, 3));
