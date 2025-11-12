@@ -10,3 +10,7 @@
 .utrecht-form-label--checkbox {
         padding-inline-start: calc(var(--_of-checkbox-label-shift) + var(--of-utrecht-form-label-checkbox-padding-inline-start))!important;
 }
+
+.openforms-formio-content table {
+    width: 100%;
+}
