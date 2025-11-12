@@ -86,14 +86,19 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->modelLabel(__('resources/zaak.label'))
             ->pluralModelLabel(__('resources/zaak.plural_label'))
             ->extraModalFooterActions([
-                Action::make('view')
-                    ->label(__('shared/widgets/calendar.view_case'))
-                    ->icon('heroicon-o-arrow-top-right-on-square')
-                    ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
-                    ->color('primary')
-                    ->button()
-                    ->visible(fn () => in_array(auth()->user()->role, [Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Reviewer])),
+                $this->viewActionFooterAction(),
             ]);
+    }
+
+    public function viewActionFooterAction()
+    {
+        return Action::make('view')
+            ->label(__('shared/widgets/calendar.view_case'))
+            ->icon('heroicon-o-arrow-top-right-on-square')
+            ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
+            ->color('primary')
+            ->button()
+            ->visible(fn () => in_array(auth()->user()->role, [Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Reviewer]));
     }
 
     public function defaultSchema(Schema $schema): Schema
@@ -253,7 +258,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->query($this->getEvents())
             ->defaultSort('reference_data->start_evenement')
             ->recordActions([
-                $this->viewAction(),
+                \Filament\Actions\ViewAction::make()
+                    ->schema(fn (Schema $schema) => $this->defaultSchema($schema))
+                    ->extraModalFooterActions([
+                        $this->viewActionFooterAction(),
+                    ]),
             ])
             ->filtersLayout(FiltersLayout::AboveContent)
             ->filtersFormColumns(2)
