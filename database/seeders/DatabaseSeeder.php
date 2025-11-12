@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             SouthLimburgMunicipalitiesSeeder::class,
             OrganisationSeeder::class,
             AdvisorySeeder::class,
+            ZaakSeeder::class,
         ]);
     }
 }

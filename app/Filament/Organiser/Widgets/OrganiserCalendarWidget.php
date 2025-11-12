@@ -19,7 +19,7 @@ class OrganiserCalendarWidget extends CalendarWidget
         ];
     }
 
-    protected function applyContextFilters(Builder $query, FetchInfo $info): Builder
+    protected function applyContextFilters(Builder $query, ?FetchInfo $info = null): Builder
     {
         $query = parent::applyContextFilters($query, $info);
 
