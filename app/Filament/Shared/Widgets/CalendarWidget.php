@@ -127,7 +127,13 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             Action::make('toggleView')
                 ->label(fn () => $this->viewMode === 'calendar' ? 'Lijst weergave' : 'Kalender weergave')
                 ->icon(fn () => $this->viewMode === 'calendar' ? 'heroicon-o-list-bullet' : 'heroicon-o-calendar')
-                ->action(fn () => $this->viewMode = $this->viewMode === 'calendar' ? 'table' : 'calendar'),
+                ->action(fn () => $this->viewMode = $this->viewMode === 'calendar' ? 'table' : 'calendar')
+                ->after(function () {
+                    if ($this->viewMode === 'table') {
+                        $this->start = CarbonImmutable::parse(now()->startOfDay());
+                        $this->end = null;
+                    }
+                }),
             FilterAction::make()
                 ->schema($this->getFilterSchema())
                 ->badge(fn () => count(array_filter($this->filters ?? [])))
@@ -151,8 +157,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
                     return [
                         ...($livewire->filters ?? []),
-                        'start_date' => $this->start->format('Y-m-d'),
-                        'end_date' => $this->end->format('Y-m-d'),
+                        'start_date' => $this->start?->format('Y-m-d'),
+                        'end_date' => $this->end?->format('Y-m-d'),
                     ];
                 })
                 ->schema([
@@ -264,14 +270,16 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->closeOnDateSelection()
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
-                            ->default(now()->startOfDay()),
+                            ->default(now()->startOfDay())
+                            ->afterStateUpdated(fn ($state) => $this->start = $state ? CarbonImmutable::parse($state) : null),
                         DatePicker::make('to')
                             ->label(__('shared/widgets/calendar.filters.range.to.label'))
                             ->placeholder(__('shared/widgets/calendar.filters.range.to.placeholder'))
                             ->native(false)
                             ->closeOnDateSelection()
                             ->format(config('app.date_format'))
-                            ->displayFormat(config('app.date_format')),
+                            ->displayFormat(config('app.date_format'))
+                            ->afterStateUpdated(fn ($state) => $this->end = $state ? CarbonImmutable::parse($state) : null),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
