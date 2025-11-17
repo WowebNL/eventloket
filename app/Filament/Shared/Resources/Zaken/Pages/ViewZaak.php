@@ -53,6 +53,19 @@ class ViewZaak extends ViewRecord
 
     protected static string $resource = ZaakResource::class;
 
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        activity('views')
+            ->event('view')
+            ->performedOn($this->record)
+            ->withProperties(array_filter([
+                'url' => request()->fullUrl(),
+            ]))
+            ->log('Viewed record');
+    }
+
     #[On('refreshZaak')]
     public function refresh(): void {}
 

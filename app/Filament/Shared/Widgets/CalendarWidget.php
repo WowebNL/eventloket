@@ -85,6 +85,16 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return ViewAction::make()
             ->modelLabel(__('resources/zaak.label'))
             ->pluralModelLabel(__('resources/zaak.plural_label'))
+            ->before(function (Zaak $record) {
+                activity('views')
+                    ->event('view')
+                    ->performedOn($record)
+                    ->withProperties(array_filter([
+                        'url' => request()->fullUrl(),
+                        'type' => 'agenda_item_modal',
+                    ]))
+                    ->log('Viewed record in modal');
+            })
             ->extraModalFooterActions([
                 $this->viewActionFooterAction(),
             ]);
