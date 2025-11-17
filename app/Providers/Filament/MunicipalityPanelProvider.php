@@ -87,7 +87,7 @@ class MunicipalityPanelProvider extends PanelProvider
                 NavigationItem::make('workingstock')
                     ->label(__('resources/zaak.filters.workingstock.options.me'))
                     ->group(__('resources/zaak.plural_label'))
-                    ->badge(fn (): int => Zaak::where('handled_status_set_by_user_id', auth()->id())->count())
+                    ->badge(fn (): int => Zaak::where('handled_status_set_by_user_id', auth()->id())->whereNull('reference_data->resultaat')->count())
                     ->icon(Heroicon::Inbox)
                     ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock' => ['workingstock' => 'me']]]))
                     ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock.workingstock') == 'me'),
