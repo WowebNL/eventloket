@@ -9,8 +9,11 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThre
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
 use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
+use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use App\ValueObjects\ZGW\StatusType;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
@@ -178,7 +181,82 @@ class ZaakInfolist
                                             }),
                                     ])),
                                 TextEntry::make('reference_data.status_name')
-                                    ->label(__('resources/zaak.columns.status.label')),
+                                    ->label(__('resources/zaak.columns.status.label'))
+                                    ->afterLabel(Schema::end([
+                                        Icon::make('heroicon-o-pencil-square'),
+                                        Action::make('editStatus')
+                                            ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_status.label'))
+                                            ->fillForm(function (Zaak $record): array {
+                                                return [
+                                                    'status' => $record->openzaak->status['statustype'],
+                                                ];
+                                            })
+                                            ->schema([
+                                                Select::make('status')
+                                                    ->label(__('resources/zaak.columns.status.label'))
+                                                    ->options(function () use ($zaak) {
+                                                        return (new Openzaak)->catalogi()->statustypen()->getAll(['zaaktype' => $zaak->openzaak->zaaktype])->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
+                                                    })->required(),
+                                            ])
+                                            ->action(function ($data, $record) {
+                                                if ($data['status'] != $record->openzaak->status['statustype']) {
+                                                    $openzaak = new Openzaak;
+                                                    $statusType = new StatusType(...$openzaak->get($data['status'])->toArray());
+
+                                                    $openzaak->zaken()->statussen()->store([
+                                                        'zaak' => $record->openzaak->url,
+                                                        'datumStatusGezet' => Carbon::now()->setTimezone('UTC')->toAtomString(),
+                                                        'statustoelichting' => __('Status gezet via :app', ['app' => config('app.name')]),
+                                                        'statustype' => $data['status'],
+                                                    ]);
+
+                                                    if ($statusType->volgnummer == 1) {
+                                                        $record->handled_status_set_by_user_id = null;
+                                                    } else {
+                                                        $record->handled_status_set_by_user_id = auth()->id();
+                                                    }
+
+                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['status_name' => $statusType->omschrijving]));
+                                                    $record->save();
+
+                                                    $record->clearZgwCache();
+
+                                                    Notification::make()
+                                                        ->success()
+                                                        ->title(__('Status is gewijzigd'))
+                                                        ->send();
+                                                } else {
+                                                    Notification::make()
+                                                        ->info()
+                                                        ->title(__('De geselecteerde status is gelijk aan de huidige status'))
+                                                        ->send();
+                                                }
+                                            })
+                                            ->modalSubmitAction(fn (Action $action) => $action->label(__('Opslaan'))),
+                                    ]))
+                                    ->formatStateUsing(function (Zaak $record, $state) {
+                                        /** @var MunicipalityUser $user */
+                                        $user = $record->handledStatusSetByUser;
+                                        if ($user) {
+                                            $state .= new HtmlString(Blade::render(
+                                                '<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">'.__('municipality/resources/zaak.infolist.sections.actions.handled_status_set_by.label', ['user' => '<span class="font-medium">'.$user->name.'</span>']).'</p>'
+                                            ));
+                                        }
+
+                                        return $state;
+                                    })
+                                    ->html(true),
+                                // ->afterContent(function (Zaak $record) {
+                                //     if ($record->handled_status_set_by_user_id) {
+                                //         $user = $record->handledStatusSetByUser;
+                                //         if ($user) {
+                                //             return new HtmlString(Blade::render(
+                                //                 '<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">'.__('municipality/resources/zaak.infolist.sections.actions.handled_status_set_by.label', ['user' => '<span class="font-medium">'.$user->name.'</span>']).'</p>'
+                                //             ));
+                                //         }
+                                //     }
+                                //     return null;
+                                // })
                             ])
                             ->columnSpan(4)
                             ->hidden(fn (Zaak $record) => $record->reference_data->resultaat),

@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\Tables;
 
 use App\Enums\Role;
+use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
@@ -38,6 +39,11 @@ class ZakenTable
                     ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))
                     ->sortable(),
+                TextColumn::make('handledStatusSetByUser.name')
+                    ->label(__('resources/zaak.columns.handled_status_set_by_user.label'))
+                    ->sortable()
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
                     ->sortable()
@@ -50,6 +56,9 @@ class ZakenTable
                     ->forceSearchCaseInsensitive(),
             ])
             ->filters([
+                WorkingstockFilter::make()
+                    ->columnSpan(2)
+                    ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])),
                 SelectFilter::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
                     ->options([
