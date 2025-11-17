@@ -13,6 +13,7 @@ final readonly class StatusType implements Arrayable
         public string $omschrijving,
         public string $omschrijvingGeneriek,
         public string $zaaktype,
+        public int $volgnummer,
         public bool $isEindstatus,
         ...$otherParams
     ) {
@@ -26,6 +27,7 @@ final readonly class StatusType implements Arrayable
             'omschrijving' => $this->omschrijving,
             'omschrijvingGeneriek' => $this->omschrijvingGeneriek,
             'zaaktype' => $this->zaaktype,
+            'volnummer' => $this->volgnummer,
             'isEindstatus' => $this->isEindstatus,
             'otherParams' => $this->otherParams,
         ];

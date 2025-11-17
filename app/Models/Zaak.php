@@ -6,6 +6,7 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationType;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
+use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
@@ -47,6 +48,7 @@ class Zaak extends Model implements Eventable
         'organisation_id',
         'organiser_user_id',
         'reference_data',
+        'handled_status_set_by_user_id',
     ];
 
     protected function casts(): array
@@ -70,6 +72,11 @@ class Zaak extends Model implements Eventable
     public function organiserUser(): BelongsTo
     {
         return $this->belongsTo(OrganiserUser::class, 'organiser_user_id', 'id');
+    }
+
+    public function handledStatusSetByUser(): BelongsTo
+    {
+        return $this->belongsTo(MunicipalityUser::class, 'handled_status_set_by_user_id', 'id');
     }
 
     public function organiserThreads()

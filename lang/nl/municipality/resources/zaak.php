@@ -102,6 +102,12 @@ return [
                     'edit_risico_classificatie' => [
                         'label' => 'Wijzigen',
                     ],
+                    'edit_status' => [
+                        'label' => 'Wijzigen',
+                    ],
+                ],
+                'handled_status_set_by' => [
+                    'label' => 'Door :user',
                 ],
             ],
         ],

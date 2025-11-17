@@ -50,5 +50,18 @@ return [
         'types_evenement' => [
             'label' => 'Type(n) evenement',
         ],
+        'handled_status_set_by_user' => [
+            'label' => 'In behandeling door',
+        ],
+    ],
+    'filters' => [
+        'workingstock' => [
+            'label' => 'Snelfilter werkvoorraad',
+            'options' => [
+                'me' => 'Mijn werkvoorraad',
+                'new' => 'Nieuw',
+                'all' => 'Alle zaken',
+            ],
+        ],
     ],
 ];

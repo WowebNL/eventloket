@@ -40,6 +40,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use LogicException;
 
@@ -49,6 +50,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     use Tables\Concerns\InteractsWithTable {
         Tables\Concerns\InteractsWithTable::normalizeTableFilterValuesFromQueryString insteadof HasFilters;
     }
+
+    #[Url]
+    public ?string $viewtype = null;
 
     protected string $view = 'filament.shared.widgets.calendar-widget';
 
@@ -72,6 +76,13 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     public ?CarbonImmutable $end = null;
 
     public string $viewMode = 'calendar'; // 'calendar' or 'table'
+
+    public function mount()
+    {
+        if (in_array($this->viewtype, ['calendar', 'table'])) {
+            $this->viewMode = $this->viewtype;
+        }
+    }
 
     protected function onDatesSet(DatesSetInfo $info): void
     {
