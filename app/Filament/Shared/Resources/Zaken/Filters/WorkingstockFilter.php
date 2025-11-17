@@ -30,7 +30,7 @@ class WorkingstockFilter
                     )
                     ->when(
                         $data['workingstock'] === 'me',
-                        fn (Builder $query, $date): Builder => $query->where('handled_status_set_by_user_id', auth()->id()),
+                        fn (Builder $query, $date): Builder => $query->where('handled_status_set_by_user_id', auth()->id())->whereNull('reference_data->resultaat'),
                     );
             });
     }
