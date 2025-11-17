@@ -43,4 +43,12 @@ return [
             ],
         ],
     ],
+
+    'actions' => [
+        'request_advice' => [
+            'label' => 'Advies uitvragen',
+            'success' => 'Adviesvraag is uitgestuurd',
+            'already_requested' => 'Deze adviesvraag is al uitgestuurd',
+        ],
+    ],
 ];

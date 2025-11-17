@@ -6,6 +6,7 @@ use Filament\Support\Contracts\HasLabel;
 
 enum AdviceStatus: string implements HasLabel
 {
+    case Concept = 'concept';
     case Asked = 'asked';
     case InProgress = 'in_progress';
     case AdvisoryReplied = 'advisory_replied';

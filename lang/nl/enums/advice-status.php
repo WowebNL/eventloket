@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'concept' => [
+        'label' => 'Concept',
+    ],
     'asked' => [
         'label' => 'Advies gevraagd',
     ],
