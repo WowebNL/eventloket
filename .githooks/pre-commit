@@ -14,7 +14,7 @@ if docker info >/dev/null 2>&1; then
     ./vendor/bin/sail php vendor/bin/rector process --dry-run || exit 1
 
     echo "Running Pest ..."
-    ./vendor/bin/sail pest || exit 1
+    ./vendor/bin/sail pest --parallel || exit 1
 else
     echo "⚠️ Docker is not running – falling back to local commands..."
 
@@ -28,7 +28,7 @@ else
     php vendor/bin/rector process --dry-run || exit 1
 
     echo "Running Pest ..."
-    ./vendor/bin/pest || exit 1
+    ./vendor/bin/pest --parallel || exit 1
 fi
 
 echo "✅ All checks passed!"

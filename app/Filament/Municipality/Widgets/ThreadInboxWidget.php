@@ -4,6 +4,7 @@ namespace App\Filament\Municipality\Widgets;
 
 use App\Enums\ThreadType;
 use App\Filament\Municipality\Resources\Zaken\ZaakResource;
+use App\Filament\Shared\Resources\Threads\Actions\RequestAdviceAction;
 use App\Filament\Shared\Resources\Threads\Filters\UnreadMessagesFilter;
 use App\Filament\Shared\Resources\Threads\Tables\Components\LatestMessageColumn;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
@@ -67,6 +68,7 @@ class ThreadInboxWidget extends TableWidget
                 LatestMessageColumn::make(),
             ])
             ->recordActions([
+                RequestAdviceAction::make(),
                 ViewAction::make()
                     ->url(fn (Thread $record) => $this->threadResourceClass($record)::getUrl('view', ['record' => $record, 'zaak' => $record->zaak])),
             ])

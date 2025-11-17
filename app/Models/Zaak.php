@@ -8,6 +8,7 @@ use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
+use App\Observers\ZaakObserver;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzZaak;
@@ -16,6 +17,7 @@ use App\ValueObjects\ZGW\BesluitType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -34,6 +36,7 @@ use Woweb\Openzaak\Openzaak;
  * @property-read Municipality $municipality
  * @property-read Collection<Informatieobject> $documenten
  */
+#[ObservedBy(ZaakObserver::class)]
 class Zaak extends Model implements Eventable
 {
     use HasFactory, HasUuids;
