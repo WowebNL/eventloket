@@ -6,7 +6,9 @@ use App\Enums\Role;
 use App\Enums\ThreadType;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
+use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
+use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
@@ -132,14 +134,15 @@ class Thread extends Model
 
         $panel = match (get_class($user)) {
             AdvisorUser::class => 'advisor',
-            ReviewerUser::class, ReviewerMunicipalityAdminUser::class => 'municipality',
+            ReviewerUser::class, ReviewerMunicipalityAdminUser::class, MunicipalityAdminUser::class => 'municipality',
             OrganiserUser::class => 'organiser',
-            default => throw new \Exception('Unknown receiver class'),
+            AdminUser::class => 'admin',
+            default => throw new \Exception('Unknown receiver class '.get_class($user)),
         };
 
         $tenant = match (get_class($user)) {
             AdvisorUser::class => $this->advisory_id,
-            ReviewerUser::class, ReviewerMunicipalityAdminUser::class => $this->zaak->municipality->id,
+            ReviewerUser::class, ReviewerMunicipalityAdminUser::class, MunicipalityAdminUser::class => $this->zaak->municipality->id,
             OrganiserUser::class => $this->zaak->organisation->uuid,
             default => throw new \Exception('Unknown user class'),
         };
