@@ -1,13 +1,23 @@
 <?php
 
 use App\Enums\Role;
+use App\Filament\Admin\Pages\ManageOrganiserPanel;
 use App\Filament\Admin\Pages\ManageWelcome;
 use App\Filament\Municipality\Clusters\Settings;
+use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\User;
+use App\Models\Zaak;
+use App\Models\Zaaktype;
 use App\Policies\AdvisoryPolicy;
+use App\Policies\ZaakPolicy;
+use App\Settings\OrganiserPanelSettings;
+use App\Settings\WelcomeSettings;
+use Database\Seeders\OrganisationSeeder;
 use Filament\Facades\Filament;
+
+use function Pest\Livewire\livewire;
 
 beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
@@ -148,33 +158,62 @@ test('only admin can access welcome page settings', function () {
     expect(ManageWelcome::canAccess())->toBeFalse();
 });
 
-// TODO Michel
-// test('admin can update welcome page settings', function () {
-//    $this->actingAs($this->admin);
-//    Filament::setTenant($this->municipality1);
+test('admin can update welcome page settings', function () {
+    $this->actingAs($this->admin);
 
-//    livewire(ManageWelcome::class)->fillForm([
-//        'title' => 'New Title',
-//        'tagline' => 'New Tagline',
-//        'intro' => 'New Intro',
-//    ])->call('save');
+    livewire(ManageWelcome::class)->fillForm([
+        'title' => 'New Title',
+        'tagline' => 'New Tagline',
+        'intro' => 'New Intro',
+    ])->call('save');
 
-//    $settings = app(WelcomeSettings::class);
-//    expect($settings->title)->toBe('New Title');
-//    expect($settings->tagline)->toBe('New Tagline');
-//    expect($settings->intro)->toBe('New Intro');
-// });
+    $settings = app(WelcomeSettings::class);
+    expect($settings->title)->toBe('New Title');
+    expect($settings->tagline)->toBe('New Tagline');
+    expect($settings->intro)->toBe('<p>New Intro</p>');
+});
 
-// // TODO Michel
-// test('admin can update organiser panel settings', function () {
-//    $this->actingAs($this->admin);
+test('admin can update organiser panel settings', function () {
+    $this->actingAs($this->admin);
 
-//    Filament::setTenant($this->municipality1);
+    livewire(ManageOrganiserPanel::class)->fillForm([
+        'intro' => 'New Intro',
+    ])->call('save');
 
-//    livewire(ManageOrganiserPanel::class)->fillForm([
-//        'intro' => 'New Intro',
-//    ])->call('save');
+    $settings = app(OrganiserPanelSettings::class);
+    expect($settings->intro)->toBe('<p>New Intro</p>');
 
-//    $settings = app(OrganiserPanelSettings::class);
-//    expect($settings->intro)->toBe('New Intro');
-// });
+});
+
+test('admin can access all zaken from all municipalities', function () {
+    $this->seed(OrganisationSeeder::class);
+
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality1->id,
+        'name' => 'Evenementenvergunning '.$this->municipality1->name,
+        'is_active' => true,
+    ]);
+
+    $zaaktype2 = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality2->id,
+        'name' => 'Evenementenvergunning '.$this->municipality2->name,
+        'is_active' => true,
+    ]);
+    $zaken = Zaak::factory()
+        ->count(2)
+        ->for($zaaktype)
+        ->create();
+
+    $moreZaken = Zaak::factory()
+        ->count(3)
+        ->for($zaaktype2)
+        ->create([]);
+    $this->actingAs($this->admin);
+
+    expect(app()->make(ZaakPolicy::class)->viewAny($this->admin))->toBeTrue();
+
+    livewire(ListZaken::class)
+        ->assertOk()
+        ->assertCanSeeTableRecords(Zaak::all());
+
+});

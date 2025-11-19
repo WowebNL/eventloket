@@ -19,7 +19,7 @@ class ZaakFactory extends Factory
     {
         return [
             'public_id' => 'ZAAK-'.fake()->unique()->randomNumber(5),
-            'zgw_zaak_url' => fake()->url,
+            'zgw_zaak_url' => fake()->unique()->url,
             'data_object_url' => fake()->url,
             'reference_data' => new ZaakReferenceData(
                 'A',

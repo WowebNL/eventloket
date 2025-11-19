@@ -16,6 +16,7 @@ class ZaakPolicy
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Organiser => true,
             Role::Advisor => true,
+            Role::Admin => true,
             default => false,
         };
     }
@@ -32,6 +33,7 @@ class ZaakPolicy
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
             Role::Advisor => true,
+            Role::Admin => true,
             default => false,
         };
     }
