@@ -280,7 +280,7 @@ class ZaakInfolist
                                 Tab::make('Organisatievragen')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
-                                    ->visible(fn (Zaak $record) => Filament::getCurrentPanel()->getId() === 'municipality')
+                                    ->visible(fn (Zaak $record) => Filament::getCurrentPanel()->getId() === 'municipality' || Filament::getCurrentPanel()->getId() === 'admin')
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()
