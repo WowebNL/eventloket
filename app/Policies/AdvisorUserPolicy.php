@@ -15,15 +15,10 @@ class AdvisorUserPolicy
      */
     public function viewAny(User $user): bool
     {
-        if ($user->role == Role::Admin) {
-            return true;
-        }
-
-        if ($user->role == Role::Advisor) {
-            return true;
-        }
-
-        return false;
+        return match ($user->role) {
+            Role::Admin, Role::Advisor, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => true,
+            default => false,
+        };
     }
 
     /**
@@ -31,15 +26,10 @@ class AdvisorUserPolicy
      */
     public function view(User $user, AdvisorUser $advisorUser): bool
     {
-        if ($user->role == Role::Admin) {
-            return true;
-        }
-
-        if ($user->role == Role::Advisor) {
-            return true;
-        }
-
-        return false;
+        return match ($user->role) {
+            Role::Admin, Role::Advisor, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => true,
+            default => false,
+        };
     }
 
     /**
@@ -61,6 +51,11 @@ class AdvisorUserPolicy
 
         if ($user->role == Role::Admin) {
             return true;
+        }
+
+        if ($user->role == Role::MunicipalityAdmin || $user->role == Role::ReviewerMunicipalityAdmin) {
+            /** @phpstan-ignore-next-line */
+            return $advisorUser->advisories->count() == 1 && in_array($advisorUser->advisories->first()->id, $user->municipalities->pluck('id')->toArray());
         }
 
         if ($user->role == Role::Advisor) {
@@ -89,6 +84,11 @@ class AdvisorUserPolicy
 
         if ($user->role == Role::Admin) {
             return true;
+        }
+
+        if ($user->role == Role::MunicipalityAdmin || $user->role == Role::ReviewerMunicipalityAdmin) {
+            /** @phpstan-ignore-next-line */
+            return $advisorUser->advisories->count() == 1 && in_array($advisorUser->advisories->first()->id, $user->municipalities->pluck('id')->toArray());
         }
 
         if ($user->role == Role::Advisor) {
