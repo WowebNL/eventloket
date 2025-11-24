@@ -21,7 +21,7 @@
     @script
     <script>
         $js('checkLocalStorage', function() {
-            let submission = localStorage.getItem("{{ $formId }}");
+            let submission = sessionStorage.getItem("{{ $formId }}");
             if(submission) {
                 @this.checkSubmissionSession(submission);
             } else {
@@ -33,7 +33,7 @@
         $js('listenLocalStorage', function() {
             const interval = setInterval(function() {
                 console.log('listenLocalStorage');
-                let submission = localStorage.getItem("{{ $formId }}");
+                let submission = sessionStorage.getItem("{{ $formId }}");
                 if(submission) {
                     @this.updateFormsubmissionSession(submission);
                     @this.$js.checkIfSubmissionChanges(submission);
@@ -43,18 +43,18 @@
         });
 
         $js('loadFormWithRef', function(submission) {
-            localStorage.setItem("{{ $formId }}", submission);
+            sessionStorage.setItem("{{ $formId }}", submission);
             @this.$js.checkIfSubmissionChanges(submission);
             @this.$js.loadForm();
         });
         $js('deleteStorageRef', function(submission) {
-            localStorage.removeItem("{{ $formId }}");
+            sessionStorage.removeItem("{{ $formId }}");
         });
 
         $js('checkIfSubmissionChanges', function (submission) {
             const interval = setInterval(function() {
                 console.log('checkIfSubmissionChanges');
-                let currentSubmission = localStorage.getItem("{{ $formId }}");
+                let currentSubmission = sessionStorage.getItem("{{ $formId }}");
                 if(currentSubmission && currentSubmission !== submission) {
                     @this.updateFormsubmissionSession(currentSubmission);
                 }
