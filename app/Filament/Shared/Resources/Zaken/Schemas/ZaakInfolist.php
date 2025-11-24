@@ -122,7 +122,7 @@ class ZaakInfolist
                                     ->date(config('app.date_format'))
                                     ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),
                             ]))
-                            ->columnSpan(8),
+                            ->columnSpan(fn ($record) => $record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin]) ? 8 : 12),
                         Section::make(__('municipality/resources/zaak.infolist.sections.actions.label'))
                             ->description(__('municipality/resources/zaak.infolist.sections.actions.description'))
                             ->schema([
@@ -259,7 +259,7 @@ class ZaakInfolist
                                 // })
                             ])
                             ->columnSpan(4)
-                            ->hidden(fn (Zaak $record) => $record->reference_data->resultaat),
+                            ->hidden(fn (Zaak $record) => $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
                         self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()

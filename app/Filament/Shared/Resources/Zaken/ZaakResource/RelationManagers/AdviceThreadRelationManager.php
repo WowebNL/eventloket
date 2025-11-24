@@ -15,19 +15,19 @@ class AdviceThreadRelationManager extends RelationManager
 
     protected static ?string $relatedResource = AdviceThreadResource::class;
 
-    public function filterTableQuery(Builder $query): Builder
-    {
-        $query = parent::filterTableQuery($query);
+    // public function filterTableQuery(Builder $query): Builder
+    // {
+    //     $query = parent::filterTableQuery($query);
 
-        if (Filament::getCurrentPanel()->getId() === 'advisor') {
-            /** @var \App\Models\Advisory $tenant */
-            $tenant = Filament::getTenant();
+    //     if (Filament::getCurrentPanel()->getId() === 'advisor') {
+    //         /** @var \App\Models\Advisory $tenant */
+    //         $tenant = Filament::getTenant();
 
-            return $query->where('advisory_id', $tenant->id);
-        }
+    //         return $query->where('advisory_id', $tenant->id);
+    //     }
 
-        return $query;
-    }
+    //     return $query;
+    // }
 
     public function table(Table $table): Table
     {

@@ -395,7 +395,7 @@ test('visiting advice thread page marks messages as read for auth user', functio
 });
 
 // Advisor can only see advice threads from their advisory for a zaak
-test('advisor can only see advice threads from their advisory', function () {
+test('advisor can see advice threads from all advisories', function () {
     // Create another advisory with different advisor
     $otherAdvisory = Advisory::factory()->create(['name' => 'Politie']);
     $otherAdvisor = User::factory()->create(['role' => Role::Advisor]);
@@ -429,8 +429,7 @@ test('advisor can only see advice threads from their advisory', function () {
         'pageClass' => ViewZaak::class,
     ])
         ->assertSuccessful()
-        ->assertCanSeeTableRecords([$myAdviceThread])
-        ->assertCanNotSeeTableRecords([$otherAdviceThread]);
+        ->assertCanSeeTableRecords([$myAdviceThread, $otherAdviceThread]);
 });
 
 // Municipality can see all advice threads for a zaak
@@ -599,6 +598,31 @@ test('AssignToSelfAction is visible when advisor is not assigned', function () {
         'thread' => $this->adviceThread,
     ])
         ->assertActionVisible('assign_to_self');
+});
+
+test('Advisory cannot add message to advice thread from another advisory', function () {
+    // Create another advisory and advice thread
+    $otherAdvisory = Advisory::factory()->create(['name' => 'Politie']);
+    $otherAdviceThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $otherAdvisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'created_by' => $this->reviewer->id,
+        'title' => 'Test advice thread',
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisoryAdmin);
+    Filament::setTenant($this->advisory);
+    Filament::bootCurrentPanel();
+
+    livewire(ViewAdviceThread::class, [
+        'record' => $otherAdviceThread->id,
+        'parentRecord' => $this->zaak,
+    ])
+        ->assertSuccessful()
+        ->assertDontSeeLivewire(MessageForm::class);
 });
 
 test('unassigned advisor cannot submit message in MessageForm', function () {

@@ -75,7 +75,9 @@
         @endif
 
         <div class="my-6">
-            <livewire:thread.message-form :thread="$record"/>
+            @if($this->loadMessageForm())
+                <livewire:thread.message-form :thread="$record"/>
+            @endif
         </div>
     </div>
 </x-dynamic-component>
