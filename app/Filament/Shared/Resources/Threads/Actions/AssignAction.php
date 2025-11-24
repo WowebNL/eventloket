@@ -30,7 +30,7 @@ class AssignAction
                 $user = auth()->user();
 
                 if ($user->role === Role::Advisor) {
-                    return $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
+                    return $user->canAccessAdvisory($record->advisory_id, as: AdvisoryRole::Admin);
                 }
 
                 return false;

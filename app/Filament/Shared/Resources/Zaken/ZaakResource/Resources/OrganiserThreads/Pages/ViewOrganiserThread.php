@@ -32,4 +32,9 @@ class ViewOrganiserThread extends ViewRecord
             EditAction::make(),
         ];
     }
+
+    public function loadMessageForm(): bool
+    {
+        return true;
+    }
 }

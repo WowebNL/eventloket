@@ -5,6 +5,7 @@ namespace App\Filament\Shared\Resources\Threads\Actions;
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Models\Threads\AdviceThread;
+use App\Models\Users\AdvisorUser;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Livewire\Component;
@@ -17,7 +18,10 @@ class AssignToSelfAction
             ->label(__('resources/advice_thread.actions.assign_to_self.label'))
             ->visible(function (AdviceThread $record) {
                 if (auth()->user()->role === Role::Advisor) {
-                    return $record->assignedUsers->doesntContain(auth()->id());
+                    /** @var AdvisorUser $user */
+                    $user = auth()->user();
+
+                    return $user->canAccessAdvisory($record->advisory_id) && $record->assignedUsers->doesntContain(auth()->id());
                 }
 
                 return false;
