@@ -10,7 +10,7 @@ class AdvisorUserPendingInvitesAction
     public static function make(): PendingInvitesAction
     {
         return PendingInvitesAction::make()
-            ->modalHeading(__('admin/resources/organisation.widgets.pending_invites.heading'))
+            ->modalHeading(__('resources/advisor_user.widgets.pending_invites.heading'))
             ->widget(PendingAdvisoryInvitesWidget::class);
     }
 }

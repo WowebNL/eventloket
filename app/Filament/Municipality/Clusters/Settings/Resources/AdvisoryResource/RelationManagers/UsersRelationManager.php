@@ -2,7 +2,9 @@
 
 namespace App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\RelationManagers;
 
+use App\Enums\AdvisoryRole;
 use App\Filament\Shared\Pages\EditProfile;
+use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserPendingInvitesAction;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
@@ -12,6 +14,7 @@ use Filament\Actions\Action;
 use Filament\Actions\AttachAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -73,6 +76,8 @@ class UsersRelationManager extends RelationManager
             ])
             ->headerActions([
                 AttachAction::make(),
+                AdvisorUserPendingInvitesAction::make()
+                    ->widgetRecord($this->ownerRecord),
                 Action::make('invite')
                     ->label(__('admin/resources/advisory.actions.invite.label'))
                     ->icon('heroicon-o-envelope')
@@ -98,6 +103,9 @@ class UsersRelationManager extends RelationManager
                                 },
                             ])
                             ->maxLength(255),
+                        Checkbox::make('makeAdmin')
+                            ->label(__('admin/resources/advisory.actions.invite.form.make_admin.label'))
+                            ->helperText(__('admin/resources/advisory.actions.invite.form.make_admin.helper_text')),
                     ])
                     ->action(function ($data) {
                         /** @var Advisory $advisory */
@@ -107,6 +115,7 @@ class UsersRelationManager extends RelationManager
                             'advisory_id' => $advisory->id,
                             'name' => $data['name'],
                             'email' => $data['email'],
+                            'role' => $data['makeAdmin'] ? AdvisoryRole::Admin : AdvisoryRole::Member,
                             'token' => Str::uuid(),
                         ]);
 

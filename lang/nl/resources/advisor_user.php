@@ -68,10 +68,10 @@ return [
 
             'action' => 'Openstaande uitnodigingen',
 
-            'heading' => 'Openstaande organisatoruitnodigingen',
+            'heading' => 'Openstaande adviseur uitnodigingen',
 
-            'label' => 'Organisatoruitnodiging',
-            'plural_label' => 'Organisatoruitnodigingen',
+            'label' => 'Adviseuruitnodiging',
+            'plural_label' => 'Adviseuruitnodigingen',
 
             'columns' => [
 
