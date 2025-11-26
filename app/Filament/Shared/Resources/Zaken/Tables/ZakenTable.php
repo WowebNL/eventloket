@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\Tables;
 
 use App\Enums\Role;
+use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
@@ -59,6 +60,9 @@ class ZakenTable
                 WorkingstockFilter::make()
                     ->columnSpan(2)
                     ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])),
+                AdvisorWorkingstockFilter::make()
+                    ->columnSpan(2)
+                    ->visible(fn () => auth()->user()->role === Role::Advisor),
                 SelectFilter::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
                     ->options([
