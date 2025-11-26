@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\MunicipalityAdminUsers\Tables;
 
 use App\Enums\Role;
 use App\Models\User;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
@@ -43,6 +44,7 @@ class MunicipalityAdminUserTable
             ])
             ->recordActions([
                 EditAction::make(),
+                DeleteAction::make(),
             ])
             ->toolbarActions([
                 //
