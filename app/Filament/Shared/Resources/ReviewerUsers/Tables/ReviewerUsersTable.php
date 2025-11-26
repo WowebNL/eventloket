@@ -4,7 +4,6 @@ namespace App\Filament\Shared\Resources\ReviewerUsers\Tables;
 
 use App\Enums\Role;
 use App\Models\Users\MunicipalityUser;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
@@ -45,7 +44,6 @@ class ReviewerUsersTable
             ])
             ->recordActions([
                 EditAction::make(),
-                DeleteAction::make(),
             ])
             ->toolbarActions([
                 //

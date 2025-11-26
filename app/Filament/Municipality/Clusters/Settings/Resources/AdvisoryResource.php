@@ -22,7 +22,7 @@ class AdvisoryResource extends Resource
 
     protected static ?string $cluster = Settings::class;
 
-    protected static bool $isScopedToTenant = false;
+    protected static ?string $tenantOwnershipRelationshipName = 'municipalities';
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-lifebuoy';
 
