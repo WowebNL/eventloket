@@ -45,7 +45,13 @@ class AdminUserPolicy
      */
     public function delete(User $user, AdminUser $adminUser): bool
     {
-        return $user->role === Role::Admin;
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
+        // Admin users cannot delete other admin users (including themselves)
+        return false;
     }
 
     /**
@@ -53,6 +59,11 @@ class AdminUserPolicy
      */
     public function restore(User $user, AdminUser $adminUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         return $user->role === Role::Admin;
     }
 
@@ -61,6 +72,11 @@ class AdminUserPolicy
      */
     public function forceDelete(User $user, AdminUser $adminUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         return $user->role === Role::Admin;
     }
 }

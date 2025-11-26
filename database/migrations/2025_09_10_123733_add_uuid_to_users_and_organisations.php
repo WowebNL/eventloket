@@ -1,9 +1,9 @@
 <?php
 
 use App\Models\Organisation;
-use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -18,10 +18,11 @@ return new class extends Migration
             $table->uuid('uuid')->nullable()->after('id');
         });
 
-        User::whereNull('uuid')->get()->each(function (User $user) {
-            $user->uuid = (string) Str::uuid();
-            $user->save();
-        });
+        // Update users without UUIDs using raw DB query to avoid model scopes
+        $users = DB::select('SELECT id FROM users WHERE uuid IS NULL');
+        foreach ($users as $user) {
+            DB::update('UPDATE users SET uuid = ? WHERE id = ?', [(string) Str::uuid(), $user->id]);
+        }
 
         Schema::table('users', function (Blueprint $table) {
             $table->uuid('uuid')->nullable(false)->change();
