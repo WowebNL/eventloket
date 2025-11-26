@@ -15,7 +15,11 @@ class AdvisoryPolicy
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        return match ($user->role) {
+            Role::Admin => true,
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => true,
+            default => false,
+        };
     }
 
     /**
@@ -23,7 +27,16 @@ class AdvisoryPolicy
      */
     public function view(User $user, Advisory $advisory): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        return match ($user->role) {
+            Role::Admin => true,
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => function () use ($user, $advisory) {
+                // Check if the user has access to all advisory municipalities
+                return ! $advisory->municipalities->isEmpty() && $advisory->municipalities->pluck('id')
+                    ->diff($user->municipalities->pluck('id')) // @phpstan-ignore-line
+                    ->isEmpty();
+            },
+            default => false,
+        };
     }
 
     /**
