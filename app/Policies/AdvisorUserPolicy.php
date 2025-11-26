@@ -78,6 +78,11 @@ class AdvisorUserPolicy
      */
     public function delete(User $user, AdvisorUser $advisorUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         if ($user->id == $advisorUser->id) {
             return true;
         }
@@ -116,6 +121,11 @@ class AdvisorUserPolicy
      */
     public function restore(User $user, AdvisorUser $advisorUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         return false;
     }
 
@@ -124,6 +134,11 @@ class AdvisorUserPolicy
      */
     public function forceDelete(User $user, AdvisorUser $advisorUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         return false;
     }
 }

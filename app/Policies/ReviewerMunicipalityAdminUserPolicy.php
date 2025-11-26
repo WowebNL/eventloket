@@ -45,6 +45,11 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function delete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
@@ -53,6 +58,11 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function restore(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
@@ -61,6 +71,11 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function forceDelete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
+        // Soft-deleted users cannot perform actions
+        if ($user->trashed()) {
+            return false;
+        }
+
         return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 }

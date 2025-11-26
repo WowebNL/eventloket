@@ -16,6 +16,7 @@ use Filament\Auth\MultiFactor\App\Contracts\HasAppAuthenticationRecovery;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -25,7 +26,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuid, Notifiable;
+    use HasFactory, HasUuid, Notifiable, SoftDeletes;
 
     protected $table = 'users';
 
@@ -91,6 +92,11 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
     public function notificationPreferences()
     {
         return $this->hasMany(NotificationPreference::class);
+    }
+
+    public function municipalities()
+    {
+        return $this->belongsToMany(Municipality::class, 'municipality_user');
     }
 
     /**
