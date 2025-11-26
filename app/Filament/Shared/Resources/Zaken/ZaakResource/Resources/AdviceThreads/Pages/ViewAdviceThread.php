@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Pages;
 
 use App\Enums\Role;
+use App\Filament\Shared\Resources\Threads\Actions\RequestAdviceAction;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
 use App\Models\Threads\AdviceThread;
 use App\Models\Users\AdvisorUser;
@@ -32,6 +33,7 @@ class ViewAdviceThread extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            RequestAdviceAction::make(),
             EditAction::make(),
         ];
     }

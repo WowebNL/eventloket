@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers;
 
+use App\Enums\AdviceStatus;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
 use Filament\Actions\CreateAction;
 use Filament\Facades\Filament;
@@ -15,19 +16,22 @@ class AdviceThreadRelationManager extends RelationManager
 
     protected static ?string $relatedResource = AdviceThreadResource::class;
 
-    // public function filterTableQuery(Builder $query): Builder
-    // {
-    //     $query = parent::filterTableQuery($query);
+    public function filterTableQuery(Builder $query): Builder
+    {
+        $query = parent::filterTableQuery($query);
 
-    //     if (Filament::getCurrentPanel()->getId() === 'advisor') {
-    //         /** @var \App\Models\Advisory $tenant */
-    //         $tenant = Filament::getTenant();
+        if (Filament::getCurrentPanel()->getId() === 'advisor') {
+            /** @var \App\Models\Advisory $tenant */
+            $tenant = Filament::getTenant();
 
-    //         return $query->where('advisory_id', $tenant->id);
-    //     }
+            //            $query->where('advisory_id', $tenant->id);
+            $query->where('advice_status', '!=', AdviceStatus::Concept);
 
-    //     return $query;
-    // }
+            return $query;
+        }
+
+        return $query;
+    }
 
     public function table(Table $table): Table
     {

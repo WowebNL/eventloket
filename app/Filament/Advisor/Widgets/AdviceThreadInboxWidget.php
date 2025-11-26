@@ -2,6 +2,7 @@
 
 namespace App\Filament\Advisor\Widgets;
 
+use App\Enums\AdviceStatus;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource;
 use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
 use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
@@ -37,7 +38,7 @@ class AdviceThreadInboxWidget extends TableWidget
     {
         return AdviceThreadsTable::configure($table)
             /** @phpstan-ignore-next-line */
-            ->query(fn (): Builder => AdviceThread::query()->advice()->where('advisory_id', Filament::getTenant()->id))
+            ->query(fn (): Builder => AdviceThread::query()->advice()->where('advisory_id', Filament::getTenant()->id)->where('advice_status', '!=', AdviceStatus::Concept))
             ->columns([
                 TextColumn::make('zaak.reference_data.naam_evenement')
                     ->label(__('resources/advice_thread.columns.event.label'))

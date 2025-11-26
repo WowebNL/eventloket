@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Tables;
 
+use App\Filament\Shared\Resources\Threads\Actions\RequestAdviceAction;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdviceStatusFilter;
 use Filament\Actions\ViewAction;
@@ -43,6 +44,7 @@ class AdviceThreadsTable
                 AdviceStatusFilter::make(),
             ])
             ->recordActions([
+                RequestAdviceAction::make(),
                 ViewAction::make(),
             ])
             ->toolbarActions([

@@ -5,6 +5,7 @@ namespace App\Filament\Admin\Resources;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\CreateMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\EditMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\ListMunicipalities;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\DefaultAdviceQuestionsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\LocationsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityAdminUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerMunicipalityAdminUsersRelationManager;
@@ -106,6 +107,7 @@ class MunicipalityResource extends Resource
             MunicipalityAdminUsersRelationManager::class,
             LocationsRelationManager::class,
             VariablesRelationManager::class,
+            DefaultAdviceQuestionsRelationManager::class,
         ];
     }
 

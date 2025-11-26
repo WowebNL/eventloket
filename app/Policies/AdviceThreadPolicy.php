@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\AdviceStatus;
 use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Models\Thread;
@@ -27,7 +28,7 @@ class AdviceThreadPolicy
     {
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
+            Role::Advisor => $adviceThread->advice_status != AdviceStatus::Concept,
             default => false,
         };
     }
