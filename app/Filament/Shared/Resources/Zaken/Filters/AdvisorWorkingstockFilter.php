@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Filament\Shared\Resources\Zaken\Filters;
+
+use Filament\Forms\Components\ToggleButtons;
+use Filament\Tables\Filters\Filter;
+use Illuminate\Database\Eloquent\Builder;
+
+class AdvisorWorkingstockFilter
+{
+    public static function make()
+    {
+        return Filter::make('workingstock')
+            ->schema([
+                ToggleButtons::make('workingstock')
+                    ->default('new')
+                    ->label(__('resources/zaak.filters.workingstock.label'))
+                    ->grouped()
+                    ->options([
+                        'new' => __('resources/zaak.filters.workingstock.options.new'),
+                        'me' => __('resources/zaak.filters.workingstock.options.me'),
+                        'all' => __('resources/zaak.filters.workingstock.options.all'),
+                    ]),
+            ])
+            ->query(function (Builder $query, array $data): Builder {
+                return $query
+                    ->when(
+                        isset($data['workingstock']) && $data['workingstock'] === 'new',
+                        fn (Builder $query, $date): Builder => $query
+                            ->whereHas('adviceThreads', fn (Builder $query) => $query->whereDoesntHave('assignedUsers')),
+                    )
+                    ->when(
+                        isset($data['workingstock']) && $data['workingstock'] === 'me',
+                        fn (Builder $query, $date): Builder => $query
+                            ->whereHas('adviceThreads.assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id())),
+                    );
+            });
+    }
+}
