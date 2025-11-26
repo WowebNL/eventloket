@@ -24,7 +24,7 @@ class AdviceThreadRelationManager extends RelationManager
             /** @var \App\Models\Advisory $tenant */
             $tenant = Filament::getTenant();
 
-            $query->where('advisory_id', $tenant->id);
+            //            $query->where('advisory_id', $tenant->id);
             $query->where('advice_status', '!=', AdviceStatus::Concept);
 
             return $query;
