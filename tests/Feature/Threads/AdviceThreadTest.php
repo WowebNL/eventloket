@@ -118,7 +118,7 @@ test('can be created by reviewer triggers email sending and creates unread', fun
         ->assertFormExists()
         ->fillForm([
             'advisory_id' => $this->advisory->id,
-            'advice_due_at' => now()->addDays(10),
+            'advice_due_at' => now()->addDays(16),
             'title' => fake()->sentence(),
             'body' => fake()->paragraph(),
         ])

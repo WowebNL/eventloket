@@ -33,7 +33,7 @@ class DefaultAdviceQuestionTable
 
                 TextColumn::make('response_deadline_days')
                     ->label(__('resources/default_advice_question.columns.response_deadline_days.label'))
-                    ->suffix(' dagen')
+                    ->suffix(__('resources/default_advice_question.columns.response_deadline_days.suffix'))
                     ->sortable(),
 
                 TextColumn::make('created_at')

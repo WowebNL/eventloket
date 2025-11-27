@@ -2,6 +2,8 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Schemas;
 
+use Carbon\Carbon;
+use Closure;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
@@ -23,8 +25,20 @@ class AdviceThreadForm
                     ->required(),
 
                 DateTimePicker::make('advice_due_at')
-                    ->default(now()->addDays(10)->setTime(17, 0))
-                    ->label(__('resources/advice_thread.form.advice_due_at.label')),
+                    ->default(now()->addDays(14)->setTime(17, 0))
+                    ->label(__('resources/advice_thread.form.advice_due_at.label'))
+                    ->helperText(__('resources/advice_thread.form.advice_due_at.helper_text'))
+                    ->rules([
+                        fn (): Closure => function (string $attribute, $value, Closure $fail) {
+                            $date = Carbon::parse($value);
+
+                            $min = now()->addBusinessDays(10);
+
+                            if ($date->lt($min)) {
+                                $fail(__('resources/advice_thread.form.advice_due_at.rules.10_business_days_in_future', ['date' => $min->format('d/m/Y')]));
+                            }
+                        },
+                    ]),
 
                 Section::make()
                     ->columnSpanFull()

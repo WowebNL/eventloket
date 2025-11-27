@@ -45,7 +45,7 @@ class DefaultAdviceQuestionForm
                     ->helperText(__('resources/default_advice_question.form.response_deadline_days.helper'))
                     ->required()
                     ->numeric()
-                    ->minValue(1)
+                    ->minValue(10)
                     ->default(14),
             ]);
     }
