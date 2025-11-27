@@ -8,6 +8,7 @@ use App\Models\Users\OrganiserUser;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 
 class NewOrganiserThread extends BaseNotification
@@ -93,5 +94,10 @@ class NewOrganiserThread extends BaseNotification
                     ->markAsRead(),
             ])
             ->getDatabaseMessage();
+    }
+
+    public function logSubject(): Model
+    {
+        return $this->organiserThread;
     }
 }

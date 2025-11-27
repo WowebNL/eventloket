@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\Zaken\Pages;
 
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
+use App\Filament\Shared\Resources\Zaken\Widgets\ActivityLogWidget;
 use App\Filament\Shared\Resources\Zaken\ZaakResource;
 use App\Jobs\Zaak\AddBesluitZGW;
 use App\Jobs\Zaak\AddFinalStatusZGW;
@@ -77,6 +78,16 @@ class ViewZaak extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('activity')
+                ->visible(fn (Zaak $record) => auth()->user()->can('viewActivity', $record))
+                ->label('Bekijk activiteiten')
+                ->color('gray')
+                ->slideOver()
+                ->modalSubmitAction(false)
+                ->modalContent(fn () => view('filament.components.modal-widget', [
+                    'widget' => ActivityLogWidget::class,
+                    'record' => $this->record,
+                ])),
             Action::make('finish_zaak')
                 ->label(__('municipality/resources/zaak.header_actions.finish_zaak.label'))
                 ->schema([

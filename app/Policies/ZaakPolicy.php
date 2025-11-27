@@ -38,6 +38,16 @@ class ZaakPolicy
         };
     }
 
+    public function viewActivity(User $user, Zaak $zaak)
+    {
+        return match ($user->role) {
+            /** @phpstan-ignore-next-line */
+            Role::Reviewer, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => $user->canAccessMunicipality($zaak->zaaktype->municipality_id),
+            Role::Admin => true,
+            default => false,
+        };
+    }
+
     /**
      * Determine whether the user can create models.
      */

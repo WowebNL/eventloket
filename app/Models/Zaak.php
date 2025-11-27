@@ -27,6 +27,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
 
@@ -39,7 +41,7 @@ use Woweb\Openzaak\Openzaak;
 #[ObservedBy(ZaakObserver::class)]
 class Zaak extends Model implements Eventable
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, LogsActivity;
 
     protected $table = 'zaken';
 
@@ -251,5 +253,11 @@ class Zaak extends Model implements Eventable
         Cache::forget("zaak.{$this->id}.documenten");
         Cache::forget("zaak.{$this->id}.zaakdata");
         Cache::forget("zaak.{$this->id}.besluiten");
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logUnguarded();
     }
 }

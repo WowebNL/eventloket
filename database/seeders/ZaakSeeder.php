@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Jobs\Zaak\CreateZaak;
 use App\Models\Municipality;
 use App\Models\Organisation;
-use App\Models\Zaak;
 use App\Models\Zaaktype;
-use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
+use Woweb\Openzaak\Openzaak;
 
 class ZaakSeeder extends Seeder
 {
@@ -42,40 +42,18 @@ class ZaakSeeder extends Seeder
         $statuses = ['Ontvangen', 'In behandeling', 'Geregistreerd', 'Afgehandeld'];
         $risicoClassificaties = ['A', 'B', 'C'];
 
-        foreach ($municipalities as $municipality) {
-            // Create a zaaktype for each municipality
-            $zaaktype = Zaaktype::factory()->create([
-                'municipality_id' => $municipality->id,
-                'name' => 'Evenementenvergunning '.$municipality->name,
-                'is_active' => true,
-            ]);
+        Artisan::call('app:sync-zaaktypen');
 
-            // Create 5-8 zaken for each municipality
-            $numberOfZaken = rand(5, 8);
+        foreach (Municipality::all() as $municipality) {
+            Zaaktype::where('name', 'like', "%{$municipality->name}%")->update(['municipality_id' => $municipality->id, 'is_active' => true]);
+        }
 
-            for ($i = 0; $i < $numberOfZaken; $i++) {
-                $startDate = Carbon::now()->addDays(rand(-30, 90)); // Events from 30 days ago to 90 days in future
-                $endDate = $startDate->copy()->addHours(rand(2, 12)); // Events last 2-12 hours
-                $organisation = $organisations->random();
+        $openzaak = new Openzaak;
 
-                Zaak::factory()->create([
-                    'zaaktype_id' => $zaaktype->id,
-                    'organisation_id' => $organisation->id,
-                    'reference_data' => new ZaakReferenceData(
-                        start_evenement: $startDate->toISOString(),
-                        eind_evenement: $endDate->toISOString(),
-                        registratiedatum: Carbon::now()->subDays(rand(1, 30))->toISOString(),
-                        status_name: $statuses[array_rand($statuses)],
-                        risico_classificatie: $risicoClassificaties[array_rand($risicoClassificaties)],
-                        naam_locatie_eveneme: $this->getRandomLocation(),
-                        naam_evenement: $eventNames[array_rand($eventNames)],
-                        organisator: $organisation->name,
-                        resultaat: rand(0, 1) ? 'Goedgekeurd' : null,
-                        aanwezigen: rand(50, 5000),
-                        types_evenement: $this->getRandomEventTypes(),
-                    ),
-                ]);
-            }
+        $zaken = $openzaak->zaken()->zaken()->getAll()->take(-25);
+
+        foreach ($zaken as $zaak) {
+            CreateZaak::dispatch($zaak['url']);
         }
     }
 

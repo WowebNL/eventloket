@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property ThreadType $type
@@ -28,7 +30,7 @@ use Illuminate\Support\Collection;
 class Thread extends Model
 {
     /** @use HasFactory<\Database\Factories\ThreadFactory> */
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $table = 'threads';
 
@@ -152,5 +154,11 @@ class Thread extends Model
             'zaak' => $this->zaak_id,
             'record' => $this->id,
         ]);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logUnguarded();
     }
 }

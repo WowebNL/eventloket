@@ -7,6 +7,7 @@ use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 
 class NewAdviceThread extends BaseNotification
@@ -69,5 +70,10 @@ class NewAdviceThread extends BaseNotification
                     ->markAsRead(),
             ])
             ->getDatabaseMessage();
+    }
+
+    public function logSubject(): Model
+    {
+        return $this->adviceThread;
     }
 }

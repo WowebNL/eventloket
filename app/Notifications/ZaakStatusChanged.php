@@ -7,6 +7,7 @@ use App\Models\Zaak;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Messages\MailMessage;
 
 class ZaakStatusChanged extends BaseNotification
@@ -76,5 +77,10 @@ class ZaakStatusChanged extends BaseNotification
                     ->markAsRead(),
             ])
             ->getDatabaseMessage();
+    }
+
+    public function logSubject(): Model
+    {
+        return $this->zaak;
     }
 }
