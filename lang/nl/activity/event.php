@@ -6,4 +6,8 @@ return [
     'lockout' => 'Geblokkeerd',
 
     'view' => 'Bekeken',
+
+    'created' => 'Aangemaakt',
+    'updated' => 'Bijgewerkt',
+    'deleted' => 'Verwijderd',
 ];

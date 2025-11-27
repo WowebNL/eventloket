@@ -4,8 +4,8 @@ namespace App\Filament\Admin\Resources\Activities;
 
 use App\Filament\Admin\Resources\Activities\Pages\ListActivities;
 use App\Filament\Admin\Resources\Activities\Pages\ViewActivity;
-use App\Filament\Admin\Resources\Activities\Schemas\ActivityInfolist;
-use App\Filament\Admin\Resources\Activities\Tables\ActivitiesTable;
+use App\Filament\Shared\Resources\Activities\Schemas\ActivityInfolist;
+use App\Filament\Shared\Resources\Activities\Tables\ActivitiesTable;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
