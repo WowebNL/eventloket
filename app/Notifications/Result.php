@@ -10,6 +10,7 @@ use App\Models\Zaak;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Notifications\Messages\MailMessage;
 use Woweb\Openzaak\Openzaak;
@@ -83,5 +84,10 @@ class Result extends BaseNotification
                     ->markAsRead(),
             ])
             ->getDatabaseMessage();
+    }
+
+    public function logSubject(): Model
+    {
+        return $this->zaak;
     }
 }

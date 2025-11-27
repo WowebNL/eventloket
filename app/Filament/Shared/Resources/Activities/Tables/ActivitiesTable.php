@@ -36,12 +36,18 @@ class ActivitiesTable
                     ->searchable(),
                 TextColumn::make('subject_type')
                     ->label(__('resources/activity.columns.subject.label'))
-                    ->formatStateUsing(fn ($state) => match ($state) {
-                        Zaak::class => __('resources/zaak.label'),
-                        AdviceThread::class => __('resources/advice_thread.label'),
-                        OrganiserThread::class => __('resources/organiser_thread.label'),
-                        Message::class => __('resources/message.label'),
-                        default => $state,
+                    ->formatStateUsing(function ($state, Activity $record) {
+                        if ($record->log_name === 'notifications') {
+                            return $record->properties['notification']::getLabel() ?? 'Notificatie';
+                        }
+
+                        return match ($state) {
+                            Zaak::class => __('resources/zaak.label'),
+                            AdviceThread::class => __('resources/advice_thread.label'),
+                            OrganiserThread::class => __('resources/organiser_thread.label'),
+                            Message::class => __('resources/message.label'),
+                            default => $state,
+                        };
                     })
                     ->description(fn (Activity $record) => match ($record->subject_type) {
                         /** @phpstan-ignore-next-line */

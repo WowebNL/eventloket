@@ -7,6 +7,8 @@ return [
 
     'view' => 'Bekeken',
 
+    'sent' => 'Verzonden',
+
     'created' => 'Aangemaakt',
     'updated' => 'Bijgewerkt',
     'deleted' => 'Verwijderd',
