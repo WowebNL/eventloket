@@ -10,9 +10,9 @@ class AdvisorWorkingstockFilter
 {
     public static function make()
     {
-        return Filter::make('workingstock')
+        return Filter::make('workingstock-advisor')
             ->schema([
-                ToggleButtons::make('workingstock')
+                ToggleButtons::make('workingstock-adv')
                     ->default('new')
                     ->label(__('resources/zaak.filters.workingstock.label'))
                     ->grouped()

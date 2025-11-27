@@ -393,7 +393,7 @@ test('filter form schema is configured correctly', function () {
 
     $toggleButtons = $schema[0];
 
-    expect($toggleButtons->getName())->toBe('workingstock')
+    expect($toggleButtons->getName())->toBe('workingstock-adv')
         ->and($toggleButtons->getLabel())->toBe(__('resources/zaak.filters.workingstock.label'))
         ->and($toggleButtons->getDefaultState())->toBe('new');
 });
