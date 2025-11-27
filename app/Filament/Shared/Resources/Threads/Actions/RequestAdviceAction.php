@@ -20,44 +20,47 @@ class RequestAdviceAction
             ->color('primary')
             ->requiresConfirmation()
             ->visible(fn (Model $record) => Filament::getCurrentPanel()->getId() === 'municipality' && $record instanceof AdviceThread && $record->advice_status === AdviceStatus::Concept)
-            ->action(function (AdviceThread $record) {
-                // Prevent reverting to concept - only allow transition to 'asked'
-                if ($record->advice_status !== AdviceStatus::Concept) {
-                    Notification::make()
-                        ->danger()
-                        ->title(__('resources/thread.actions.request_advice.already_requested'))
-                        ->send();
+            ->action(fn (AdviceThread $record) => self::requestAdvice($record));
+    }
 
-                    return;
-                }
+    public static function requestAdvice(AdviceThread $record)
+    {
+        // Prevent reverting to concept - only allow transition to 'asked'
+        if ($record->advice_status !== AdviceStatus::Concept) {
+            Notification::make()
+                ->danger()
+                ->title(__('resources/thread.actions.request_advice.already_requested'))
+                ->send();
 
-                // Update status to 'asked'
-                $record->advice_status = AdviceStatus::Asked->value;
-                $record->created_by = auth()->id();
+            return;
+        }
 
-                // Calculate and set deadline based on diff between created_at and due_at
-                if ($record->advice_due_at) {
-                    $record->advice_due_at = now()->addDays(round($record->created_at->diffInDays($record->advice_due_at)));
-                }
+        // Update status to 'asked'
+        $record->advice_status = AdviceStatus::Asked->value;
+        $record->created_by = auth()->id();
 
-                // Update the first message timestamp to current time
-                /** @var Message $firstMessage */
-                $firstMessage = $record->messages()->oldest()->first();
-                if ($firstMessage) {
-                    $firstMessage->user_id = auth()->id();
-                    $firstMessage->updated_at = now();
-                    $firstMessage->created_at = now();
-                    $firstMessage->saveQuietly(); // Save without triggering observers
-                }
+        // Calculate and set deadline based on diff between created_at and due_at
+        if ($record->advice_due_at) {
+            $record->advice_due_at = now()->addDays(round($record->created_at->diffInDays($record->advice_due_at)));
+        }
 
-                $record->save();
+        // Update the first message timestamp to current time
+        /** @var Message $firstMessage */
+        $firstMessage = $record->messages()->oldest()->first();
+        if ($firstMessage) {
+            $firstMessage->user_id = auth()->id();
+            $firstMessage->updated_at = now();
+            $firstMessage->created_at = now();
+            $firstMessage->saveQuietly(); // Save without triggering observers
+        }
 
-                // The AdviceThreadObserver will handle notifications
+        $record->save();
 
-                Notification::make()
-                    ->success()
-                    ->title(__('resources/thread.actions.request_advice.success'))
-                    ->send();
-            });
+        // The AdviceThreadObserver will handle notifications
+
+        Notification::make()
+            ->success()
+            ->title(__('resources/thread.actions.request_advice.success'))
+            ->send();
     }
 }

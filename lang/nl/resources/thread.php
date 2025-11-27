@@ -50,5 +50,9 @@ return [
             'success' => 'Adviesvraag is uitgestuurd',
             'already_requested' => 'Deze adviesvraag is al uitgestuurd',
         ],
+        'bulk_request_advice' => [
+            'label' => 'Adviezen uitvragen',
+            'modal_heading' => 'Weet je zeker dat je al deze adviezen wilt uitvragen?',
+        ],
     ],
 ];
