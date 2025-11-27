@@ -11,6 +11,8 @@ use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
+use App\Support\CarbonBusinessDaysMixin;
+use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
@@ -46,6 +48,8 @@ class AppServiceProvider extends ServiceProvider
             Password::defaults(fn () => Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised());
         }
         Passport::tokensExpireIn(CarbonInterval::days(config('app.api.token_expire_in_days')));
+
+        Carbon::mixin(new CarbonBusinessDaysMixin);
 
         $this->bindCustomMethods();
     }

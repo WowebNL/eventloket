@@ -2,12 +2,16 @@
 
 namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Tables;
 
+use App\Enums\AdviceStatus;
 use App\Filament\Shared\Resources\Threads\Actions\RequestAdviceAction;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdviceStatusFilter;
+use Filament\Actions\BulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Collection;
 
 class AdviceThreadsTable
 {
@@ -48,7 +52,17 @@ class AdviceThreadsTable
                 ViewAction::make(),
             ])
             ->toolbarActions([
-                //
-            ]);
+                BulkAction::make('bulk_request_advice')
+                    ->visible(fn (): bool => Filament::getCurrentPanel()->getId() === 'municipality')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->label(__('resources/thread.actions.bulk_request_advice.label'))
+                    ->requiresConfirmation()
+                    ->modalDescription(__('resources/thread.actions.bulk_request_advice.modal_heading'))
+                    ->authorizeIndividualRecords(fn ($record) => $record->advice_status === AdviceStatus::Concept)
+                    ->action(fn (Collection $records) => $records->each(fn ($record) => RequestAdviceAction::requestAdvice($record))),
+            ])
+            ->checkIfRecordIsSelectableUsing(
+                fn ($record): bool => $record->advice_status === AdviceStatus::Concept,
+            );
     }
 }
