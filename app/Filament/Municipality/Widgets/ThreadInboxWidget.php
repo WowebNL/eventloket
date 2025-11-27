@@ -59,7 +59,7 @@ class ThreadInboxWidget extends TableWidget
                     ->url(fn (Thread $record) => ZaakResource::getUrl('view', ['record' => $record->zaak])),
                 TextColumn::make('type')
                     ->label(__('resources/thread.columns.type.label'))
-                    ->description(fn (Thread $record) => get_class($record) === AdviceThread::class ? $record->advisory->name : $record->zaak->organisation->name)
+                    ->description(fn (Thread $record) => get_class($record) === AdviceThread::class ? $record->advisory?->name : $record->zaak?->organisation?->name) /** @phpstan-ignore-line */
                     ->sortable(),
                 TextColumn::make('title')
                     ->label(__('resources/advice_thread.columns.title.label'))
