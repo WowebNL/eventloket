@@ -26,16 +26,26 @@ class AcceptOrganisationInvite extends AbstractAcceptInvite
 
     protected function getTenantId(): string
     {
-        /** @var \App\Models\Organisation $organisation */
+        /** @var \App\Models\Organisation|null $organisation */
         $organisation = $this->invite->organisation;
+
+        if (! $organisation) {
+            abort(404, 'This organisation no longer exists.');
+        }
 
         return $organisation->uuid;
     }
 
     protected function attachTenantRelation(User $user): void
     {
+        $organisation = $this->invite->organisation;
+
+        if (! $organisation) {
+            abort(404, 'This organisation no longer exists.');
+        }
+
         /** @phpstan-ignore-next-line */
-        $this->invite->organisation->users()->attach($user, [
+        $organisation->users()->attach($user, [
             'role' => $this->invite->role,
         ]);
     }

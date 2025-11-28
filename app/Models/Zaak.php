@@ -31,7 +31,7 @@ use Woweb\Openzaak\Openzaak;
 
 /**
  * @property-read ZaakReferenceData $reference_data
- * @property-read Organisation $organisation
+ * @property-read ?Organisation $organisation
  * @property-read Municipality $municipality
  * @property-read Collection<Informatieobject> $documenten
  */
@@ -111,7 +111,7 @@ class Zaak extends Model implements Eventable
     public function relatedUsers(): array
     {
         return array_merge(
-            $this->organisation->users->all(),
+            $this->organisation?->users->all() ?? [],
             $this->adviceThreads->map(function ($thread) {
                 /** @var \App\Models\Threads\AdviceThread $thread */
                 return $thread->advisory->users->all();
