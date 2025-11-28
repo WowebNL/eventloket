@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\DocumentVertrouwelijkheden;
-use App\Enums\OrganisationType;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
@@ -69,7 +68,7 @@ class Zaak extends Model implements Eventable
 
     public function organisation(): BelongsTo
     {
-        return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
+        return $this->belongsTo(Organisation::class);
     }
 
     public function organiserUser(): BelongsTo
