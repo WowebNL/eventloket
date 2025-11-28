@@ -32,7 +32,7 @@ return new class extends Migration
             $table->uuid('uuid')->nullable()->after('id');
         });
 
-        Organisation::whereNull('uuid')->get()->each(function (Organisation $organisation) {
+        Organisation::withTrashed()->whereNull('uuid')->get()->each(function (Organisation $organisation) {
             $organisation->uuid = (string) Str::uuid();
             $organisation->save();
         });
