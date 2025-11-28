@@ -7,6 +7,7 @@ use App\Models\FormsubmissionSession;
 use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Panel;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +48,16 @@ class NewRequest extends Page
     public function getTitle(): string
     {
         return '';
+    }
+
+    public function formSaved(): void
+    {
+        Notification::make()
+            ->title(__('Formulier succesvol opgeslagen'))
+            ->body(__('Het formulier is succesvol opgeslagen. Om het formulier opnieuw te openen dien je op de link uit de mail te klikken.'))
+            ->success()
+            ->send()
+            ->persistent();
     }
 
     public static function getNavigationLabel(): string
