@@ -93,4 +93,9 @@ class NewZaakDocument extends BaseNotification
             default => $this->zaak->municipality->id
         };
     }
+
+    public function logSubject(): Model
+    {
+        return $this->zaak;
+    }
 }
