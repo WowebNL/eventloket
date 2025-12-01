@@ -22,7 +22,7 @@ return new class extends Migration
                 DB::statement('ALTER TABLE municipality_variables ADD not_deleted_virtual BOOLEAN GENERATED ALWAYS AS (IF(deleted_at IS NULL, 1, NULL)) VIRTUAL;');
                 $table->unique(['municipality_id', 'key', 'not_deleted_virtual'], 'municipality_variables_unique_key_municipality_not_deleted');
             } else {
-                DB::statement('CREATE UNIQUE INDEX “municipality_variables_unique_key_municipality_not_deleted” ON municipality_variables(municipality_id, key, deleted_at) WHERE deleted_at IS NULL;');
+                DB::statement('CREATE UNIQUE INDEX "municipality_variables_unique_key_municipality_not_deleted" ON municipality_variables (municipality_id, key) WHERE deleted_at IS NULL;');
             }
 
             $table->foreign('municipality_id')->references('id')->on('municipalities')->onDelete('cascade');
@@ -35,7 +35,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('municipality_variables', function (Blueprint $table) {
-            $table->dropUnique('municipality_variables_unique_key_municipality_deleted_at');
+            $table->dropUnique('municipality_variables_unique_key_municipality_not_deleted');
 
             $table->unique(['municipality_id', 'key']);
         });
