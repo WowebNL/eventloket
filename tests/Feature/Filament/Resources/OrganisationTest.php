@@ -71,7 +71,7 @@ test('admin can edit organisation', function () {
     $this->assertDatabaseHas(Organisation::class, $formData);
 });
 
-test('admin can delete organisation', function () {
+test('admin can soft delete organisation', function () {
     $record = Organisation::factory(['type' => OrganisationType::Business])->create();
 
     livewire(EditOrganisation::class, [
@@ -81,7 +81,7 @@ test('admin can delete organisation', function () {
         ->callAction(DeleteAction::class)
         ->assertSuccessful();
 
-    $this->assertModelMissing($record);
+    $this->assertSoftDeleted($record);
 });
 
 test('admin can list organisation users on edit organisation page', function () {

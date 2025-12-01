@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\DocumentVertrouwelijkheden;
-use App\Enums\OrganisationType;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
@@ -32,7 +31,7 @@ use Woweb\Openzaak\Openzaak;
 
 /**
  * @property-read ZaakReferenceData $reference_data
- * @property-read Organisation $organisation
+ * @property-read ?Organisation $organisation
  * @property-read Municipality $municipality
  * @property-read Collection<Informatieobject> $documenten
  */
@@ -69,7 +68,7 @@ class Zaak extends Model implements Eventable
 
     public function organisation(): BelongsTo
     {
-        return $this->belongsTo(Organisation::class)->where('type', OrganisationType::Business);
+        return $this->belongsTo(Organisation::class);
     }
 
     public function organiserUser(): BelongsTo
@@ -112,7 +111,7 @@ class Zaak extends Model implements Eventable
     public function relatedUsers(): array
     {
         return array_merge(
-            $this->organisation->users->all(),
+            $this->organisation?->users->all() ?? [],
             $this->adviceThreads->map(function ($thread) {
                 /** @var \App\Models\Threads\AdviceThread $thread */
                 return $thread->advisory->users->all();

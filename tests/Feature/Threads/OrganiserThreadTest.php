@@ -202,6 +202,48 @@ test('can be created by organiser triggers email sending and creates unread', fu
     ]);
 });
 
+test('can be created by organiser personal organisation too triggers email sending and creates unread', function () {
+    $personalOrganisation = Organisation::factory()->create(['name' => 'Test Organisation', 'type' => OrganisationType::Personal]);
+
+    $personalOrganisation->users()->attach($this->organiser, ['role' => OrganisationRole::Member]);
+
+    $personalZaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $personalOrganisation->id,
+        'reference_data' => new ZaakReferenceData(
+            'A',
+            now(),
+            now()->addDay(),
+            now(),
+            'Ontvangen',
+            'Test locatie',
+            'Test event'
+        ),
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    $this->actingAs($this->organiser);
+    Filament::setTenant($personalOrganisation);
+
+    livewire(CreateOrganiserThread::class, [
+        'parentRecord' => $personalZaak,
+    ])
+        ->assertFormExists()
+        ->fillForm([
+            'title' => fake()->sentence(),
+            'body' => fake()->paragraph(),
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $personalZaak->refresh();
+
+    expect($personalZaak->organiserThreads()->count())->toBe(1);
+
+    $organiserThread = $personalZaak->organiserThreads()->first();
+    expect($organiserThread->messages()->count())->toBe(1);
+});
+
 // Municipality user can send messages
 test('municipality user can send text messages', function () {
     $organiserThread = OrganiserThread::forceCreate([
