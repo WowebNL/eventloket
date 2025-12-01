@@ -354,7 +354,8 @@ test('enforces unique keys per municipality', function () {
     ]);
 
     // act & assert: attempt duplicate key in same municipality
-    expect(function () use ($municipality) {
+    $exceptionThrown = false;
+    try {
         MunicipalityVariable::factory()->create([
             'municipality_id' => $municipality->id,
             'key' => 'schoolyear', // Duplicate key
@@ -363,7 +364,24 @@ test('enforces unique keys per municipality', function () {
             'value' => '2025-2026',
             'is_default' => false,
         ]);
-    })->toThrow(\Illuminate\Database\QueryException::class);
+    } catch (\Illuminate\Database\QueryException $e) {
+        $exceptionThrown = true;
+
+        // Check for unique constraint violation based on database type
+        $dbConnection = config('database.default');
+        if ($dbConnection === 'pgsql') {
+            expect($e->getCode())->toBe('23505'); // PostgreSQL unique constraint violation
+        } elseif ($dbConnection === 'mysql') {
+            expect($e->getCode())->toBe('23000'); // MySQL duplicate entry error
+        }
+    }
+
+    expect($exceptionThrown)->toBe(true);
+
+    // Refresh the database connection to clear any aborted transaction state (mainly for PostgreSQL)
+    if (config('database.default') === 'pgsql') {
+        \Illuminate\Support\Facades\DB::reconnect();
+    }
 
     // But different municipalities should allow same key
     $anotherMunicipality = Municipality::factory()->create();
@@ -378,6 +396,7 @@ test('enforces unique keys per municipality', function () {
     ]);
 
     expect($variableInAnotherMunicipality)->toBeInstanceOf(MunicipalityVariable::class);
+
 });
 
 test('validates type-specific values (text, number, bool, date_range)', function () {
