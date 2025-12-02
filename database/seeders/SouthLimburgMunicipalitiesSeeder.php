@@ -38,6 +38,10 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
             dispatch(new \App\Jobs\ProcessSyncGeometryOnMunicipality($model));
         }
 
+        if(config('app.env') == 'production') {
+            return;
+        }
+
         $municipalityUsers = User::factory()
             ->state(fn () => [
                 'role' => fake()->randomElement([Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin]),
