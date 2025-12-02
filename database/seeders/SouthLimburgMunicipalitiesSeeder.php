@@ -38,7 +38,7 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
             dispatch(new \App\Jobs\ProcessSyncGeometryOnMunicipality($model));
         }
 
-        if(config('app.env') == 'production') {
+        if (config('app.env') == 'production') {
             return;
         }
 
