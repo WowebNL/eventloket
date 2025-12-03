@@ -47,6 +47,23 @@ test('admin can create location through relation manager', function () {
         'street_name' => 'Relation Street',
         'city_name' => 'Utrecht',
         'active' => true,
+        'geometry' => [
+            'lat' => 51.41319724,
+            'lng' => 5.43674043,
+            'geojson' => [
+                'features' => [
+                    [
+                        'properties' => [],
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'coordinates' => [5.43674043, 51.41319724],
+                            'type' => 'Point',
+                        ],
+                    ],
+                ],
+                'type' => 'FeatureCollection',
+            ],
+        ],
     ];
 
     livewire(LocationsRelationManager::class, [
@@ -211,9 +228,7 @@ test('locations relation manager validates required fields on create', function 
         ])
         ->assertHasTableActionErrors([
             'name' => 'required',
-            'postal_code' => 'required',
-            'house_number' => 'required',
-            'street_name' => 'required',
+            'geometry' => 'required',
         ]);
 });
 
