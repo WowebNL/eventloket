@@ -6,7 +6,7 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.4",
         "brick/geo": "^0.13.1",
         "dotswan/filament-map-picker": "dev-master",
         "filament/filament": "^4.0",
