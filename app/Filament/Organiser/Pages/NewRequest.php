@@ -68,7 +68,7 @@ class NewRequest extends Page
     public function updateFormsubmissionSession(string $submissionUUid)
     {
         $submissionUUid = trim($submissionUUid, '"');
-        if ($submissionUUid && $user = Filament::auth()->user()) {
+        if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
             /** @var Organisation $tenant */
             $tenant = Filament::getTenant();
             /** @var OrganiserUser $user */
@@ -79,7 +79,7 @@ class NewRequest extends Page
     public function checkSubmissionSession(string $submissionUUid)
     {
         $submissionUUid = trim($submissionUUid, '"');
-        if ($submissionUUid && $user = Filament::auth()->user()) {
+        if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
             /** @var Organisation $tenant */
             $tenant = Filament::getTenant();
             /** @var OrganiserUser $user */
