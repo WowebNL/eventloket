@@ -11,8 +11,10 @@ class EventsController extends Controller
     public function check(CheckEventsRequest $request)
     {
         $data = $request->validated();
-        $zaken = Zaak::whereBetween('reference_data->start_evenement', [$data['start_date'], $data['end_date']])
-            ->orWhereBetween('reference_data->eind_evenement', [$data['start_date'], $data['end_date']])
+        $zaken = Zaak::where(function ($query) use ($data) {
+            $query->whereBetween('reference_data->start_evenement', [$data['start_date'], $data['end_date']])
+                ->orWhereBetween('reference_data->eind_evenement', [$data['start_date'], $data['end_date']]);
+        })
             ->whereHas('municipality', function ($query) use ($data) {
                 $query->where('brk_identification', $data['municipality']);
             })
