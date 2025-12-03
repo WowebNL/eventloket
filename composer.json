@@ -8,7 +8,7 @@
     "require": {
         "php": "^8.2",
         "brick/geo": "^0.13.1",
-        "dotswan/filament-map-picker": "^2.0",
+        "dotswan/filament-map-picker": "dev-master",
         "filament/filament": "^4.0",
         "filament/spatie-laravel-settings-plugin": "^4.0",
         "guava/calendar": "^2.0",
@@ -42,6 +42,10 @@
         "webbingbrasil/filament-maps": {
             "type": "vcs",
             "url": "git@github.com:Michel-Verhoeven/filament-maps.git"
+        },
+        "dotswan/filament-map-picker": {
+            "type": "vcs",
+            "url": "git@github.com:LorensoD/filament-map-picker.git"
         }
     },
     "autoload": {

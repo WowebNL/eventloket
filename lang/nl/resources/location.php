@@ -91,6 +91,9 @@ return [
 
         'geometry' => [
             'label' => 'Locatie',
+            'validation' => [
+                'geojson_required' => 'Plaats minimaal één geometrie op de kaart.',
+            ],
         ],
 
         'bagid' => [

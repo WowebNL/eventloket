@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Locations\Schemas;
 
+use Closure;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -76,19 +77,18 @@ class LocationForm
                     ->geoMan(true)
                     ->geoManPosition('topright')
                     ->drawText(false)
-//                    ->afterStateHydrated(function ($state, $component) {
-//                        // Ensure map loads properly in edit mode
-//                        if ($state) {
-//                            $component->state($state);
-//                        }
-//                    })
+                    ->maxZoom(19) // Prevents gray maps on edit
                     ->extraStyles([
                         'min-height: 30rem',
                         'border-radius: 0.5rem',
                     ])
                     ->required()
-                    ->validationMessages([
-                        'required' => 'Plaats minimaal één geometrie op de kaart.',
+                    ->rules([
+                        fn (): Closure => function (string $attribute, $value, Closure $fail) {
+                            if (! isset($value['geojson']['features']) || empty($value['geojson']['features'])) {
+                                $fail(__('resources/location.form.geometry.validation.geojson_required'));
+                            }
+                        },
                     ]),
             ]);
     }
