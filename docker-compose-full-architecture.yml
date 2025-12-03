@@ -1,0 +1,409 @@
+services:
+    # ========================================
+    # EXISTING LARAVEL APPLICATION SERVICES
+    # ========================================
+    
+    laravel.test:
+        build:
+            context: ./vendor/laravel/sail/runtimes/8.4
+            dockerfile: Dockerfile
+            args:
+                WWWGROUP: '${WWWGROUP}'
+        image: sail-8.4/app
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        ports:
+            - '${APP_PORT:-80}:80'
+            - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: '${SAIL_XDEBUG_MODE:-off}'
+            XDEBUG_CONFIG: '${SAIL_XDEBUG_CONFIG:-client_host=host.docker.internal}'
+            IGNITION_LOCAL_SITES_PATH: '${PWD}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            - mysql
+            - redis
+            - pgsql
+
+    mysql:
+        image: 'mysql/mysql-server:8.0'
+        ports:
+            - '${FORWARD_DB_PORT:-3306}:3306'
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ROOT_HOST: '%'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        volumes:
+            - 'sail-mysql:/var/lib/mysql'
+            - './vendor/laravel/sail/database/mysql/create-testing-database.sh:/docker-entrypoint-initdb.d/10-create-testing-database.sh'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - mysqladmin
+                - ping
+                - '-p${DB_PASSWORD}'
+            retries: 3
+            timeout: 5s
+
+    mailpit:
+        image: 'axllent/mailpit:latest'
+        ports:
+            - '${FORWARD_MAILPIT_PORT:-1025}:1025'
+            - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
+        networks:
+            - sail
+
+    redis:
+        image: 'redis:alpine'
+        ports:
+            - '${FORWARD_REDIS_PORT:-6379}:6379'
+        volumes:
+            - 'sail-redis:/data'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - redis-cli
+                - ping
+            retries: 3
+            timeout: 5s
+
+    pgsql:
+        image: 'postgis/postgis:17-3.5'
+        platform: linux/amd64
+        ports:
+            - '${FORWARD_DB_PORT:-5432}:5432'
+        environment:
+            PGPASSWORD: '${DB_PASSWORD:-secret}'
+            POSTGRES_DB: '${DB_DATABASE}'
+            POSTGRES_USER: '${DB_USERNAME}'
+            POSTGRES_PASSWORD: '${DB_PASSWORD:-secret}'
+        volumes:
+            - 'sail-pgsql:/var/lib/postgresql/data'
+            - './vendor/laravel/sail/database/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
+            - './docker/pgsql/init-postgis.sql:/docker-entrypoint-initdb.d/20-init-postgis.sql'
+            - './docker/pgsql/init-openzaak-databases.sql:/docker-entrypoint-initdb.d/30-init-openzaak-databases.sql'
+        networks:
+            - sail
+        healthcheck:
+            test:
+                - CMD
+                - pg_isready
+                - '-q'
+                - '-d'
+                - '${DB_DATABASE}'
+                - '-U'
+                - '${DB_USERNAME}'
+            retries: 3
+            timeout: 5s
+
+    # ========================================
+    # OPEN ZAAK ECOSYSTEM SERVICES
+    # ========================================
+
+    # Open Zaak - Zaakgericht Werken APIs (latest: 1.26.0)
+    open-zaak:
+        image: 'openzaak/open-zaak:1.26.0'
+        platform: linux/amd64
+        ports:
+            - '8001:8000'
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=openzaak
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/1
+            - CACHE_AXES=redis:6379/1
+            - SECRET_KEY=very-secret-key-change-in-production
+            - ALLOWED_HOSTS=localhost,open-zaak,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/1
+            - CELERY_RESULT_BACKEND=redis://redis:6379/1
+            - IS_HTTPS=no
+            - SUBPATH=
+            - DEBUG=1
+            - NOTIFICATIONS_DISABLED=0
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=True
+            - OPENZAAK_SUPERUSER_USERNAME=admin
+            - OPENZAAK_SUPERUSER_EMAIL=admin@localhost
+            - DJANGO_SUPERUSER_PASSWORD=admin
+        volumes:
+            - 'openzaak-media:/app/media'
+            - 'openzaak-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        healthcheck:
+            test: ['CMD', 'python', '/app/src/manage.py', 'check', '--deploy']
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # Open Zaak Celery Worker
+    open-zaak-worker:
+        image: 'openzaak/open-zaak:1.26.0'
+        platform: linux/amd64
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=openzaak
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/1
+            - CACHE_AXES=redis:6379/1
+            - SECRET_KEY=very-secret-key-change-in-production
+            - ALLOWED_HOSTS=localhost,open-zaak,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/1
+            - CELERY_RESULT_BACKEND=redis://redis:6379/1
+            - IS_HTTPS=no
+            - SUBPATH=
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=True
+        command: /celery_worker.sh
+        volumes:
+            - 'openzaak-media:/app/media'
+            - 'openzaak-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+    # Open Notificaties - Notification routing service (latest: 1.14.0)
+    open-notificaties:
+        image: 'openzaak/open-notificaties:1.14.0'
+        platform: linux/amd64
+        ports:
+            - '8002:8000'
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=notificaties
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/2
+            - CACHE_AXES=redis:6379/2
+            - SECRET_KEY=very-secret-key-change-in-production-notificaties
+            - ALLOWED_HOSTS=localhost,open-notificaties,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/2
+            - CELERY_RESULT_BACKEND=redis://redis:6379/2
+            - IS_HTTPS=no
+            - SUBPATH=
+            - DEBUG=1
+            - DJANGO_SETTINGS_MODULE=nrc.conf.docker
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=True
+            - OPENNOTIFICATIES_SUPERUSER_USERNAME=admin
+            - OPENNOTIFICATIES_SUPERUSER_EMAIL=admin@localhost
+            - DJANGO_SUPERUSER_PASSWORD=admin
+        volumes:
+            - 'notificaties-media:/app/media'
+            - 'notificaties-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+    # Open Forms - Form builder and management (latest stable: 3.3.8)
+    open-forms:
+        image: 'openformulieren/open-forms:3.3.8'
+        platform: linux/amd64
+        ports:
+            - '8003:8000'
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=openforms
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/3
+            - CACHE_AXES=redis:6379/3
+            - SECRET_KEY=very-secret-key-change-in-production-openforms
+            - ALLOWED_HOSTS=localhost,open-forms,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/3
+            - CELERY_RESULT_BACKEND=redis://redis:6379/3
+            - IS_HTTPS=no
+            - SUBPATH=
+            - DEBUG=1
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=yes
+            - TWO_FACTOR_FORCE_OTP_ADMIN=False
+            - TWO_FACTOR_PATCH_ADMIN=False
+            - EMAIL_HOST=mailpit
+            - EMAIL_PORT=1025
+            - DEFAULT_FROM_EMAIL=open-forms@localhost
+        command: >
+            sh -c "python src/manage.py migrate &&
+                   echo \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@localhost', 'admin') if not User.objects.filter(username='admin').exists() else None\" | python src/manage.py shell &&
+                   python src/manage.py runserver 0.0.0.0:8000"
+        volumes:
+            - 'openforms-media:/app/media'
+            - 'openforms-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+    # Open Forms Celery Worker
+    open-forms-worker:
+        image: 'openformulieren/open-forms:3.3.8'
+        platform: linux/amd64
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=openforms
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/3
+            - CACHE_AXES=redis:6379/3
+            - SECRET_KEY=very-secret-key-change-in-production-openforms
+            - ALLOWED_HOSTS=localhost,open-forms,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/3
+            - CELERY_RESULT_BACKEND=redis://redis:6379/3
+            - IS_HTTPS=no
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=True
+        command: /celery_worker.sh
+        volumes:
+            - 'openforms-media:/app/media'
+            - 'openforms-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+    # Objecttypes API - Object type definitions (latest: 3.4.0)
+    objecttypes-api:
+        image: 'maykinmedia/objecttypes-api:3.4.0'
+        platform: linux/amd64
+        ports:
+            - '8004:8000'
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=objecttypes
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/4
+            - CACHE_AXES=redis:6379/4
+            - SECRET_KEY=very-secret-key-change-in-production-objecttypes
+            - ALLOWED_HOSTS=localhost,objecttypes-api,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/4
+            - CELERY_RESULT_BACKEND=redis://redis:6379/4
+            - IS_HTTPS=no
+            - SUBPATH=
+            - DEBUG=1
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=True
+            - OBJECTTYPE_SUPERUSER_USERNAME=admin
+            - OBJECTTYPE_SUPERUSER_EMAIL=admin@localhost
+            - OBJECTTYPE_SUPERUSER_PASSWORD=admin
+        volumes:
+            - 'objecttypes-media:/app/media'
+            - 'objecttypes-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+    # Objects API - Object instance management (latest: 3.5.0)
+    objects-api:
+        image: 'maykinmedia/objects-api:3.5.0'
+        platform: linux/amd64
+        ports:
+            - '8005:8000'
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=objects
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/5
+            - CACHE_AXES=redis:6379/5
+            - SECRET_KEY=very-secret-key-change-in-production-objects
+            - ALLOWED_HOSTS=localhost,objects-api,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/5
+            - CELERY_RESULT_BACKEND=redis://redis:6379/5
+            - IS_HTTPS=no
+            - SUBPATH=
+            - DEBUG=1
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=True
+            - OBJECTS_SUPERUSER_USERNAME=admin
+            - OBJECTS_SUPERUSER_EMAIL=admin@localhost
+            - OBJECTS_SUPERUSER_PASSWORD=admin
+        volumes:
+            - 'objects-media:/app/media'
+            - 'objects-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+networks:
+    sail:
+        driver: bridge
+
+volumes:
+    # Existing volumes
+    sail-mysql:
+        driver: local
+    sail-redis:
+        driver: local
+    sail-pgsql:
+        driver: local
+    
+    # Open Zaak ecosystem volumes
+    openzaak-media:
+        driver: local
+    openzaak-private-media:
+        driver: local
+    notificaties-media:
+        driver: local
+    notificaties-private-media:
+        driver: local
+    openforms-media:
+        driver: local
+    openforms-private-media:
+        driver: local
+    objecttypes-media:
+        driver: local
+    objecttypes-private-media:
+        driver: local
+    objects-media:
+        driver: local
+    objects-private-media:
+        driver: local
