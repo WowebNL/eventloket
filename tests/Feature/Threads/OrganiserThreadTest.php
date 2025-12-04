@@ -109,9 +109,14 @@ test('can be created by municipality reviewer triggers email sending and creates
 
     $message = $organiserThread->messages()->first();
 
-    // Should have been sent to all organisation workers and municipality handlers
+    // Should have been sent to all organisation users but not to reviewer2 (who didn't create or send message)
     Notification::assertSentTo(
-        [$this->organiser, $this->organiser2, $this->reviewer2],
+        [$this->organiser, $this->organiser2],
+        NewOrganiserThread::class
+    );
+
+    Notification::assertNotSentTo(
+        [$this->reviewer2],
         NewOrganiserThread::class
     );
 
@@ -132,7 +137,7 @@ test('can be created by municipality reviewer triggers email sending and creates
         'message_id' => $message->id,
     ]);
 
-    $this->assertDatabaseHas('unread_messages', [
+    $this->assertDatabaseMissing('unread_messages', [
         'user_id' => $this->reviewer2->id,
         'message_id' => $message->id,
     ]);
@@ -169,13 +174,13 @@ test('can be created by organiser triggers email sending and creates unread', fu
 
     $message = $organiserThread->messages()->first();
 
-    // Should have been sent to all organisation workers and municipality handlers
+    // Should have been sent to other organisation users but not municipality users (who didn't create or send message)
     Notification::assertSentTo(
-        [$this->organiser2, $this->reviewer, $this->reviewer2],
+        [$this->organiser2],
         NewOrganiserThread::class
     );
     Notification::assertNotSentTo(
-        [$this->organiser],
+        [$this->organiser, $this->reviewer, $this->reviewer2],
         NewOrganiserThread::class
     );
 
@@ -185,18 +190,18 @@ test('can be created by organiser triggers email sending and creates unread', fu
         NewOrganiserThreadMessage::class,
     );
 
-    // Unread message entries should have been created for all participants except creator
+    // Unread message entries should have been created for participants except creator
     $this->assertDatabaseHas('unread_messages', [
         'user_id' => $this->organiser2->id,
         'message_id' => $message->id,
     ]);
 
-    $this->assertDatabaseHas('unread_messages', [
+    $this->assertDatabaseMissing('unread_messages', [
         'user_id' => $this->reviewer->id,
         'message_id' => $message->id,
     ]);
 
-    $this->assertDatabaseHas('unread_messages', [
+    $this->assertDatabaseMissing('unread_messages', [
         'user_id' => $this->reviewer2->id,
         'message_id' => $message->id,
     ]);
@@ -271,20 +276,20 @@ test('municipality user can send text messages', function () {
 
     expect($organiserThread->messages()->count())->toBe(1);
 
-    // Everybody except for the reviewer who sent the message received an email
+    // Only the thread creator (organiser) and organisation users receive notifications, not reviewer2 who hasn't participated
     Notification::assertSentTo(
-        [$this->organiser, $this->organiser2, $this->reviewer2],
+        [$this->organiser, $this->organiser2],
         NewOrganiserThreadMessage::class,
     );
 
     Notification::assertNotSentTo(
-        [$this->reviewer],
+        [$this->reviewer, $this->reviewer2],
         NewOrganiserThreadMessage::class,
     );
 
     $message = $organiserThread->messages()->first();
 
-    // Unread message entries should have been created for everyone except sender
+    // Unread message entries should have been created for participants except sender
     $this->assertDatabaseHas('unread_messages', [
         'user_id' => $this->organiser->id,
         'message_id' => $message->id,
@@ -295,7 +300,7 @@ test('municipality user can send text messages', function () {
         'message_id' => $message->id,
     ]);
 
-    $this->assertDatabaseHas('unread_messages', [
+    $this->assertDatabaseMissing('unread_messages', [
         'user_id' => $this->reviewer2->id,
         'message_id' => $message->id,
     ]);
@@ -328,26 +333,26 @@ test('organiser can send text messages', function () {
 
     expect($organiserThread->messages()->count())->toBe(1);
 
-    // Everybody except for the organiser who sent the message received an email
+    // Only the thread creator (reviewer) and other organisation users receive notifications, not reviewer2 who hasn't participated
     Notification::assertSentTo(
-        [$this->reviewer, $this->reviewer2, $this->organiser2],
+        [$this->reviewer, $this->organiser2],
         NewOrganiserThreadMessage::class
     );
 
     Notification::assertNotSentTo(
-        [$this->organiser],
+        [$this->organiser, $this->reviewer2],
         NewOrganiserThreadMessage::class
     );
 
     $message = $organiserThread->messages()->first();
 
-    // Unread message entries should have been created for everyone except sender
+    // Unread message entries should have been created for participants except sender
     $this->assertDatabaseHas('unread_messages', [
         'user_id' => $this->reviewer->id,
         'message_id' => $message->id,
     ]);
 
-    $this->assertDatabaseHas('unread_messages', [
+    $this->assertDatabaseMissing('unread_messages', [
         'user_id' => $this->reviewer2->id,
         'message_id' => $message->id,
     ]);
@@ -509,6 +514,9 @@ test('visiting organiser thread page marks messages as read for auth user', func
         'thread_id' => $organiserThread->id,
         'user_id' => $this->organiser2->id,
     ]);
+
+    // Manually mark messages as unread for reviewer (since they wouldn't normally be notified)
+    $this->reviewer->unreadMessages()->attach([$message1->id, $message2->id]);
 
     // Verify messages are initially unread
     expect($this->reviewer->unreadMessages()->count())->toBe(2);

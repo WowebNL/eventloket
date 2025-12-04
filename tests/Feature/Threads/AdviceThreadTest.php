@@ -184,28 +184,28 @@ test('advisor can send text messages and this changes advice status to replied',
     expect($adviceThread->messages()->count())->toBe(1);
     expect($adviceThread->advice_status)->toBe(AdviceStatus::AdvisoryReplied);
 
-    // Everybody except for the advisor who sent the message received an email
-    // Also advisor 2 shouldn't have received an email because that advisor was not assigned
-    // to the advice thread
+    // Only the municipality user who created the thread should receive a notification
+    // The advisor who sent the message should not receive a notification
+    // reviewer2 should not receive a notification because they did not create the thread or send any messages
     Notification::assertSentTo(
-        [$this->reviewer, $this->reviewer2],
+        [$this->reviewer],
         NewAdviceThreadMessage::class
     );
 
     Notification::assertNotSentTo(
-        [$this->advisor, $this->advisor2],
+        [$this->advisor, $this->advisor2, $this->reviewer2],
         NewAdviceThreadMessage::class
     );
 
     $message = $adviceThread->messages()->first();
 
-    // Unread message entries should have been created
+    // Unread message entry should have been created only for the thread creator
     $this->assertDatabaseHas('unread_messages', [
         'user_id' => $this->reviewer->id,
         'message_id' => $message->id,
     ]);
 
-    $this->assertDatabaseHas('unread_messages', [
+    $this->assertDatabaseMissing('unread_messages', [
         'user_id' => $this->reviewer2->id,
         'message_id' => $message->id,
     ]);

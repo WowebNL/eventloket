@@ -113,15 +113,25 @@ class ViewZaak extends ViewRecord
                                 ));
                             }
 
-                            // also notify municipality users
-                            foreach ($record->municipality->users as $recipient) {
+                            if ($record->handled_status_set_by_user_id) {
                                 /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                $recipient = $record->handledStatusSetByUser;
                                 $recipient->notify(new Result(
                                     zaak: $record,
                                     tenant: $record->municipality,
                                     title: $finishZaakObject->message_title,
                                     message: $finishZaakObject->message_content,
                                 ));
+                            } else {
+                                foreach ($record->municipality->allReviewerUsers as $recipient) {
+                                    /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                    $recipient->notify(new Result(
+                                        zaak: $record,
+                                        tenant: $record->municipality,
+                                        title: $finishZaakObject->message_title,
+                                        message: $finishZaakObject->message_content,
+                                    ));
+                                }
                             }
                         },
                     ])->dispatch();

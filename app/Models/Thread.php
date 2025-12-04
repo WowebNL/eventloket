@@ -121,7 +121,21 @@ class Thread extends Model
             default => collect(),
         };
 
-        $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers;
+        // Get municipality users who are participating in this thread:
+        // - The user who created the thread (if any)
+        // - Users who have sent messages in the thread
+        $municipalityUserIds = collect();
+
+        if ($this->created_by) {
+            $municipalityUserIds->push($this->created_by);
+        }
+
+        $messageUserIds = $this->messages()->pluck('user_id');
+        $municipalityUserIds = $municipalityUserIds->merge($messageUserIds)->unique();
+
+        $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers()
+            ->whereIn('users.id', $municipalityUserIds)
+            ->get();
 
         return $threadParticipants->merge($municipalityReviewerUsers);
     }

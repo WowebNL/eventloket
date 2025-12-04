@@ -22,6 +22,11 @@ beforeEach(function () {
         'name' => 'Brandweer',
     ]);
 
+    $this->advisoryAdmin = User::factory()->create([
+        'email' => 'admin@advisory.com',
+        'role' => Role::Advisor,
+    ]);
+
     $this->advisor = User::factory()->create([
         'email' => 'advisor@example.com',
         'role' => Role::Advisor,
@@ -32,6 +37,7 @@ beforeEach(function () {
         'role' => Role::Advisor,
     ]);
 
+    $this->advisory->users()->attach($this->advisoryAdmin, ['role' => AdvisoryRole::Admin]);
     $this->advisory->users()->attach($this->advisor, ['role' => AdvisoryRole::Member]);
     $this->advisory->users()->attach($this->advisor2, ['role' => AdvisoryRole::Member]);
 
@@ -67,8 +73,8 @@ beforeEach(function () {
     Notification::fake();
 });
 
-it('SendAdviceReminders notifies advisory users for due threads at 5/3/0 days', function () {
-    // Matching threads
+it('SendAdviceReminders notifies advisory admin users for unassigned threads', function () {
+    // Unassigned threads - should notify only advisory admin users
     $t5 = AdviceThread::forceCreate([
         'zaak_id' => $this->zaak->id,
         'type' => ThreadType::Advice,
@@ -100,21 +106,61 @@ it('SendAdviceReminders notifies advisory users for due threads at 5/3/0 days', 
     // Run job
     (new SendAdviceReminders)->handle();
 
-    // All advisory users on each matching thread receive exactly one notification
+    // Only advisory admin users receive reminders for unassigned threads
     foreach ([5 => $t5, 3 => $t3, 0 => $t0] as $days => $thread) {
-        foreach ($thread->advisory->users as $user) {
-            Notification::assertSentTo(
-                $user,
-                AdviceReminder::class,
-                function (AdviceReminder $notification) use ($user, $thread, $days) {
-                    // Check subject contains event + the relative time phrase
-                    $mail = $notification->toMail($user);
-                    $when = trans_choice('notification/advice-reminder.when', $days, ['count' => $days]);
+        Notification::assertSentTo(
+            $this->advisoryAdmin,
+            AdviceReminder::class,
+            function (AdviceReminder $notification) use ($thread, $days) {
+                // Check subject contains event + the relative time phrase
+                $mail = $notification->toMail($this->advisoryAdmin);
+                $when = trans_choice('notification/advice-reminder.when', $days, ['count' => $days]);
 
-                    return Str::contains($mail->subject, $thread->zaak->reference_data->naam_evenement)
-                        && Str::contains($mail->subject, $when);
-                }
-            );
-        }
+                return Str::contains($mail->subject, $thread->zaak->reference_data->naam_evenement)
+                    && Str::contains($mail->subject, $when);
+            }
+        );
+
+        // Regular advisory members should NOT receive reminders for unassigned threads
+        Notification::assertNotSentTo(
+            [$this->advisor, $this->advisor2],
+            AdviceReminder::class
+        );
     }
+});
+
+it('SendAdviceReminders notifies only assigned users for assigned threads', function () {
+    // Assigned thread - should notify only assigned users
+    $assignedThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(3),
+        'created_by' => $this->reviewer->id,
+        'title' => 'Assigned advice thread',
+    ]);
+
+    // Assign specific advisor to the thread
+    $assignedThread->assignedUsers()->attach($this->advisor);
+
+    // Run job
+    (new SendAdviceReminders)->handle();
+
+    // Only the assigned advisor receives the reminder
+    Notification::assertSentTo(
+        $this->advisor,
+        AdviceReminder::class,
+        function (AdviceReminder $notification) use ($assignedThread) {
+            $mail = $notification->toMail($this->advisor);
+
+            return Str::contains($mail->subject, $assignedThread->zaak->reference_data->naam_evenement);
+        }
+    );
+
+    // Other advisory users should NOT receive reminders
+    Notification::assertNotSentTo(
+        [$this->advisoryAdmin, $this->advisor2],
+        AdviceReminder::class
+    );
 });
