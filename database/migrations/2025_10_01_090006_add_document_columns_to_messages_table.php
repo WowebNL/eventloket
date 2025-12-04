@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('messages', function (Blueprint $table) {
             $table->text('body')->nullable()->change();
-            $table->json('documents')->after('body')->nullable();
+            $table->jsonb('documents')->after('body')->nullable();
         });
     }
 
