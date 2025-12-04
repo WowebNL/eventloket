@@ -25,12 +25,12 @@ class AdvisorWorkingstockFilter
             ->query(function (Builder $query, array $data): Builder {
                 return $query
                     ->when(
-                        isset($data['workingstock']) && $data['workingstock'] === 'new',
+                        isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'new',
                         fn (Builder $query, $date): Builder => $query
                             ->whereHas('adviceThreads', fn (Builder $query) => $query->whereDoesntHave('assignedUsers')),
                     )
                     ->when(
-                        isset($data['workingstock']) && $data['workingstock'] === 'me',
+                        isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'me',
                         fn (Builder $query, $date): Builder => $query
                             ->whereHas('adviceThreads.assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id())),
                     );

@@ -126,7 +126,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
     // Apply filter with 'new' option
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'new']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'new']);
 
     $results = $filteredQuery->get();
 
@@ -207,7 +207,7 @@ test('filter with me option shows zaken assigned to current user', function () {
     // Apply filter with 'me' option
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'me']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'me']);
 
     $results = $filteredQuery->get();
 
@@ -265,7 +265,7 @@ test('filter with all option shows all zaken', function () {
     // Apply filter with 'all' option
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'all']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'all']);
 
     $results = $filteredQuery->get();
 
@@ -300,7 +300,7 @@ test('filter query function works correctly with builder', function () {
     $query = Zaak::query();
 
     // Test that the query method returns a Builder instance
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'new']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'new']);
 
     expect($filteredQuery)->toBeInstanceOf(Builder::class);
 });
@@ -322,7 +322,7 @@ test('filter handles invalid workingstock value gracefully', function () {
     $query = Zaak::query();
 
     // Apply filter with invalid workingstock value
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'invalid']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'invalid']);
 
     expect($filteredQuery)->toBeInstanceOf(Builder::class);
 
@@ -371,14 +371,14 @@ test('filter works with multiple advice threads on same zaak', function () {
     // Test 'new' filter - should NOT show zaak if ANY thread is assigned
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $newFilterQuery = $filter->apply($query, ['workingstock' => 'new']);
+    $newFilterQuery = $filter->apply($query, ['workingstock-adv' => 'new']);
 
     // Should not return the zaak since it has at least one unassigned thread
     // But also has an assigned thread, so behavior depends on implementation
 
     // Test 'me' filter - should show zaak since user is assigned to one thread
     $query = Zaak::query();
-    $meFilterQuery = $filter->apply($query, ['workingstock' => 'me']);
+    $meFilterQuery = $filter->apply($query, ['workingstock-adv' => 'me']);
     $meResults = $meFilterQuery->get();
 
     expect($meResults)->toHaveCount(1)

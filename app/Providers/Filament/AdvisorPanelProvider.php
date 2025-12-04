@@ -84,21 +84,21 @@ class AdvisorPanelProvider extends PanelProvider
                     ->group(__('resources/zaak.plural_label'))
                     ->badge(fn (): int => Zaak::whereHas('adviceThreads', fn (Builder $query) => $query->whereDoesntHave('assignedUsers'))->count())
                     ->icon(Heroicon::InboxArrowDown)
-                    ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock' => ['workingstock' => 'new']]]))
-                    ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock.workingstock') == 'new'),
+                    ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'new']]]))
+                    ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock-advisor.workingstock-adv') == 'new'),
                 NavigationItem::make('workingstock')
                     ->label(__('resources/zaak.filters.workingstock.options.me'))
                     ->group(__('resources/zaak.plural_label'))
                     ->badge(fn (): int => Zaak::whereHas('adviceThreads.assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->count())
                     ->icon(Heroicon::Inbox)
-                    ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock' => ['workingstock' => 'me']]]))
-                    ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock.workingstock') == 'me'),
+                    ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'me']]]))
+                    ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock-advisor.workingstock-adv') == 'me'),
                 NavigationItem::make('allzaken')
                     ->label(__('resources/zaak.filters.workingstock.options.all'))
                     ->group(__('resources/zaak.plural_label'))
                     ->icon(Heroicon::InboxStack)
-                    ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock' => ['workingstock' => 'all']]]))
-                    ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock.workingstock') == 'all'),
+                    ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'all']]]))
+                    ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock-advisor.workingstock-adv') == 'all'),
             ]);
     }
 }
