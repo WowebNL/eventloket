@@ -5,11 +5,13 @@ namespace App\Filament\Shared\Resources\Zaken\Tables;
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
+use App\Models\Zaak;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Cache;
 
 class ZakenTable
 {
@@ -65,9 +67,15 @@ class ZakenTable
                     ->visible(fn () => auth()->user()->role === Role::Advisor),
                 SelectFilter::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
-                    ->options([
-                        'Ontvangen' => 'Ontvangen',
-                    ])
+                    ->options(function () {
+                        return Cache::remember('zaak_status_name_options', 60 * 60 * 24, function () {
+                            return Zaak::all()
+                                ->pluck('reference_data.status_name')
+                                ->unique()
+                                ->sort()
+                                ->mapWithKeys(fn ($status_name) => [$status_name => $status_name]);
+                        });
+                    })
                     ->multiple()
                     ->attribute('reference_data->status_name'),
                 SelectFilter::make('reference_data.risico_classificatie')
