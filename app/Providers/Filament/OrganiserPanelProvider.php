@@ -48,6 +48,7 @@ class OrganiserPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->globalSearch(false)
             ->databaseNotifications()
             ->discoverClusters(in: app_path('Filament/Organiser/Clusters'), for: 'App\\Filament\\Organiser\\Clusters')
             ->login()

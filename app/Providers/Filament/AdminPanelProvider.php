@@ -41,6 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->globalSearch(false)
             ->databaseNotifications()
             ->login()
             ->passwordReset()
