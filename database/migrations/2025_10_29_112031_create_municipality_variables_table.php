@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('key');
             $table->string('type');
-            $table->json('value');
+            $table->jsonb('value');
             $table->boolean('is_default')->default(false);
             $table->timestamps();
             $table->softDeletes();

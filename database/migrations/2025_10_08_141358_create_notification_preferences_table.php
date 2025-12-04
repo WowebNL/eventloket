@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('notification_class');
-            $table->json('channels');
+            $table->jsonb('channels');
             $table->timestamps();
 
             $table->unique(['user_id', 'notification_class']);

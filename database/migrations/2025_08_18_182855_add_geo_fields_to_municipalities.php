@@ -17,7 +17,7 @@ return new class extends Migration
         Schema::table('municipalities', function (Blueprint $table) {
             $table->string('brk_identification')->after('name')->nullable()->unique()->startingValue('GM');
             $table->uuid('brk_uuid')->after('brk_identification')->nullable();
-            $table->json('geometry')->after('brk_identification')->nullable();
+            $table->jsonb('geometry')->after('brk_identification')->nullable();
         });
 
         if ($runSeeder) {

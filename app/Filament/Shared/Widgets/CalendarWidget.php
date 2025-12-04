@@ -38,7 +38,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -401,9 +400,10 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->label('Status')
             ->options(function () {
                 return Cache::remember('zaak_status_name_options', 60 * 60 * 24, function () {
-                    return Zaak::query()
-                        ->select(DB::raw("DISTINCT JSON_UNQUOTE(JSON_EXTRACT(reference_data, '$.status_name')) as status_name"))
-                        ->pluck('status_name')
+                    return Zaak::all()
+                        ->pluck('reference_data.status_name')
+                        ->unique()
+                        ->sort()
                         ->mapWithKeys(fn ($status_name) => [$status_name => $status_name]);
                 });
             })
