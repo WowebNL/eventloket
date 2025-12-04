@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Municipality\Pages\Calendar;
 use App\Filament\Municipality\Pages\Dashboard;
 use App\Filament\Shared\Pages\EditProfile;
+use App\Filament\Shared\Pages\Login;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Municipality;
 use App\Models\Zaak;
@@ -52,8 +53,9 @@ class MunicipalityPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->globalSearch(false)
             ->databaseNotifications()
-            ->login()
+            ->login(Login::class)
             ->passwordReset()
             ->profile(EditProfile::class)
             ->multiFactorAuthentication([

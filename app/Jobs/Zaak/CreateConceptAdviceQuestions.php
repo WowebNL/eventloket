@@ -51,7 +51,7 @@ class CreateConceptAdviceQuestions implements ShouldQueue
                 'title' => $defaultQuestion->title,
                 'advisory_id' => $defaultQuestion->advisory_id,
                 'advice_status' => AdviceStatus::Concept,
-                'advice_due_at' => now()->addBusinessDays($defaultQuestion->response_deadline_days),
+                'advice_due_at' => now()->addDays($defaultQuestion->response_deadline_days),
                 'created_by' => null, // System-generated
             ]);
 

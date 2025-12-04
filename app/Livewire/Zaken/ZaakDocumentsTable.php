@@ -45,6 +45,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     {
         return $table
             ->records(fn (): Collection => $this->zaak->documenten->map(fn ($item) => $item->toArray()))
+            ->defaultSort('created_at', direction: 'desc')
             ->columns([
                 TextColumn::make('titel'),
                 TextColumn::make('informatieobjecttype')

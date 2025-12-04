@@ -9,6 +9,7 @@ use App\Filament\Organiser\Pages\Register;
 use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
 use App\Filament\Organiser\Widgets\Intro;
 use App\Filament\Organiser\Widgets\Shortlink;
+use App\Filament\Shared\Pages\Login;
 use App\Models\Organisation;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
@@ -48,9 +49,10 @@ class OrganiserPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->globalSearch(false)
             ->databaseNotifications()
             ->discoverClusters(in: app_path('Filament/Organiser/Clusters'), for: 'App\\Filament\\Organiser\\Clusters')
-            ->login()
+            ->login(Login::class)
             ->registration(Register::class)
             ->tenantRegistration(RegisterOrganisation::class)
             ->tenantProfile(EditOrganisationProfile::class)

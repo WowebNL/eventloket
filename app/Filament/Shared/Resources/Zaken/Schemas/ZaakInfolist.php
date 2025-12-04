@@ -307,10 +307,6 @@ class ZaakInfolist
                                         Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
                                     ]),
                                 LocationsTab::make(),
-                                Tab::make('log')
-                                    ->label(__('municipality/resources/zaak.infolist.tabs.log.label'))
-                                    ->icon('heroicon-o-clock')
-                                    ->schema([]),
                             ])
                             ->columnSpanFull(),
                     ]),

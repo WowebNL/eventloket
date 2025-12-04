@@ -85,7 +85,7 @@ beforeEach(function () {
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -665,7 +665,7 @@ test('sends new advice thread notifications to all advisory admins who have it e
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -694,7 +694,7 @@ test('sends new advice thread notifications to all advisory admins who have it e
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -712,7 +712,7 @@ test('sends new advice thread message notifications to all advisory admins of un
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
