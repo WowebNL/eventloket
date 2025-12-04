@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Advisor\Pages\Dashboard;
 use App\Filament\Shared\Pages\EditProfile;
+use App\Filament\Shared\Pages\Login;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Advisory;
 use App\Models\Zaak;
@@ -54,7 +55,7 @@ class AdvisorPanelProvider extends PanelProvider
             ])
             ->globalSearch(false)
             ->databaseNotifications()
-            ->login()
+            ->login(Login::class)
             ->passwordReset()
             ->profile(EditProfile::class)
             ->multiFactorAuthentication([
