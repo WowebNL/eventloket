@@ -8,5 +8,5 @@ return [
         'advisor' => 'adviseur',
         'municipality' => 'gemeente',
         'organiser' => 'organisator',
-    ]
+    ],
 ];
