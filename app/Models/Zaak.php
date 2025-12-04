@@ -112,13 +112,15 @@ class Zaak extends Model implements Eventable
      */
     public function relatedUsers(): array
     {
+        $handlers = $this->handled_status_set_by_user_id ? [$this->handledStatusSetByUser] : $this->municipality->allReviewerUsers->all();
+
         return array_merge(
             $this->organisation?->users->all() ?? [],
             $this->adviceThreads->map(function ($thread) {
                 /** @var \App\Models\Threads\AdviceThread $thread */
                 return $thread->advisory->users->all();
             })->flatten(1)->all(),
-            $this->municipality->allReviewerUsers->all()
+            $handlers ? $handlers : []
         );
     }
 

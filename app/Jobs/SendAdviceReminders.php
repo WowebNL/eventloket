@@ -36,8 +36,13 @@ class SendAdviceReminders implements ShouldQueue
 
             /** @var AdviceThread $thread */
             foreach ($threads as $thread) {
+                // Notify assigned users if any, otherwise notify advisory admin users
+                $usersToNotify = $thread->assignedUsers->count()
+                    ? $thread->assignedUsers
+                    : $thread->advisory->adminUsers;
+
                 /** @var AdvisorUser $user */
-                foreach ($thread->advisory->users as $user) {
+                foreach ($usersToNotify as $user) {
                     $user->notify(new AdviceReminder($thread, $daysBeforeDue));
                 }
             }
