@@ -38,6 +38,7 @@ class LocationServerController extends Controller
                 'end' => null,
                 'start_end_equal' => null,
             ],
+            'lines' => [],
             'addresses' => [
                 'items' => collect(),
                 'within' => null,
@@ -55,6 +56,7 @@ class LocationServerController extends Controller
             $checkWithin = new CheckWithin($geometryEngine);
 
             foreach ($polygons as $object) {
+                // dd($object);
                 /** @var Polygon $polygon */
                 $polygon = (new GeoJsonReader)->read(json_encode($object));
 
@@ -95,6 +97,61 @@ class LocationServerController extends Controller
             $responseData = $this->updateResponseDataWithin($responseData, fn () => $checkWithin->checkWithinAllGeometriesFromModels($line), ['line.within', 'all.within']);
             if (! $startModel->isEmpty() && ! $endModel->isEmpty()) {
                 $responseData['line']['start_end_equal'] = $startModel->first()->id == $endModel->first()->id;
+            }
+        }
+
+        if (isset($data['lines'])) {
+            $lines = json_decode($data['lines']);
+            $geometryEngine = $geometryEngine ?? new PdoEngine(DB::connection()->getPdo());
+            $checkIntersects = $checkIntersects ?? new CheckIntersects($geometryEngine);
+            $checkWithin = $checkWithin ?? new CheckWithin($geometryEngine);
+
+            foreach ($lines as $lineObject) {
+                /** @var \Brick\Geo\LineString $line */
+                $line = (new GeoJsonReader)->read(json_encode($lineObject));
+
+                /** @var Collection<\App\Models\Municipality> $items */
+                $items = $checkIntersects->checkIntersectsWithModels($line);
+                $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
+                $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());
+
+                $lineData = [
+                    'items' => array_values($items->select(['brk_identification', 'name'])->toArray()),
+                    'within' => $checkWithin->checkWithinAllGeometriesFromModels($line),
+                    'start' => null,
+                    'end' => null,
+                    'start_end_equal' => null,
+                ];
+
+                if ($start = $startModel->first()) {
+                    $lineData['start'] = [
+                        'brk_identification' => $start->brk_identification,
+                        'name' => $start->name,
+                    ];
+                }
+                if ($end = $endModel->first()) {
+                    $lineData['end'] = [
+                        'brk_identification' => $end->brk_identification,
+                        'name' => $end->name,
+                    ];
+                }
+                if (! $startModel->isEmpty() && ! $endModel->isEmpty()) {
+                    $lineData['start_end_equal'] = $startModel->first()->id == $endModel->first()->id;
+                }
+
+                $responseData['lines'][] = $lineData;
+                $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items']);
+            }
+
+            // If lines contains only 1 item, also set it as the single line response
+            if (count($responseData['lines']) === 1) {
+                $responseData['line'] = [
+                    'items' => collect($responseData['lines'][0]['items']),
+                    'within' => $responseData['lines'][0]['within'],
+                    'start' => $responseData['lines'][0]['start'],
+                    'end' => $responseData['lines'][0]['end'],
+                    'start_end_equal' => $responseData['lines'][0]['start_end_equal'],
+                ];
             }
         }
 

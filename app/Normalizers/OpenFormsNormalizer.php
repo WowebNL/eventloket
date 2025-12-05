@@ -32,9 +32,11 @@ class OpenFormsNormalizer
         // check if value is an array, if so it contains multiple geojsons
         if (is_array($value)) {
             foreach ($value as $key => &$item) {
-                // the object key in an array is the name of the input field it is comming from, we dont need that
-                $item = reset($item);
-                $item = self::normalizeCoordinates($item);
+                // item is an array which contains multiple items, we only need the item with a coordinates key
+                $item = collect($item)->first(fn ($element) => isset($element->coordinates));
+                if ($item) {
+                    $item = self::normalizeCoordinates($item);
+                }
             }
         } elseif (is_object($value)) {
             $value = self::normalizeCoordinates($value);
@@ -48,8 +50,8 @@ class OpenFormsNormalizer
         $value = json_decode($value);
         if (is_array($value)) {
             foreach ($value as $key => &$item) {
-                // the object key in an array is the name of the input field it is comming from, we dont need that
-                $item = reset($item);
+                // item is an array which contains multiple items, we only need the item with a postcode key
+                $item = collect($item)->first(fn ($element) => isset($element->postcode));
             }
         }
 
