@@ -117,7 +117,7 @@ class LocationServerController extends Controller
 
                 $lineData = [
                     'items' => array_values($items->select(['brk_identification', 'name'])->toArray()),
-                    'within' => $checkWithin->checkWithinAllGeometriesFromModels($line),
+                    'within' => null,
                     'start' => null,
                     'end' => null,
                     'start_end_equal' => null,
@@ -140,7 +140,13 @@ class LocationServerController extends Controller
                 }
 
                 $responseData['lines'][] = $lineData;
+
                 $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items']);
+                $responseData = $this->updateResponseDataWithin($responseData, fn () => $checkWithin->checkWithinAllGeometriesFromModels($line), ['all.within']);
+
+                // Update the within value for the current line in the lines array
+                $lastIndex = count($responseData['lines']) - 1;
+                $responseData['lines'][$lastIndex]['within'] = $checkWithin->checkWithinAllGeometriesFromModels($line);
             }
 
             // If lines contains only 1 item, also set it as the single line response
