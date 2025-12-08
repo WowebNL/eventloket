@@ -64,9 +64,10 @@ class OzZaak implements Arrayable
             ? $this->_expand['status']['_expand']['statustype']['omschrijving']
             : null;
 
-        $this->data_object_url = Arr::has($this->_expand, 'zaakobjecten.0.object') && str_contains(Arr::get($this->_expand, 'zaakobjecten.0.object'), config('openzaak.objectsapi.url'))
-            ? Arr::get($this->_expand, 'zaakobjecten.0.object')
-            : null;
+        $this->data_object_url = Arr::first(
+            $this->_expand['zaakobjecten'] ?? [],
+            fn ($item) => isset($item['object']) && str_contains($item['object'], config('openzaak.objectsapi.url'))
+        )['object'] ?? null;
 
         $this->eigenschappen = Arr::has($this->_expand, 'eigenschappen')
             ? Arr::map($this->_expand['eigenschappen'], fn ($item) => new ZaakEigenschap(...$item))
