@@ -61,14 +61,20 @@ class FormSubmissionObject implements Arrayable
 
         if (isset($this->event_location['line']) && ! empty($this->event_location['line']) && $this->event_location['line'] != 'None') {
             $json = OpenFormsNormalizer::normalizeGeoJson(OpenFormsNormalizer::normalizeJson($this->event_location['line']));
+
             $array = json_decode($json, true);
-            $geometry = (new GeoJsonReader)->read(json_encode($array));
-            if ($asFeatures) {
-                $feature = new Feature($geometry);
-                $feature = $feature->withProperty('name', __('Route evenement'));
-                $features[] = $feature;
+            $array = collect($array)->first(fn ($element) => isset($element['coordinates']));
+
+            if ($array) {
+                $geometry = (new GeoJsonReader)->read(json_encode($array));
+                if ($asFeatures) {
+                    $feature = new Feature($geometry);
+                    $feature = $feature->withProperty('name', __('Route evenement'));
+                    $features[] = $feature;
+                }
+                $geometries[] = $geometry;
             }
-            $geometries[] = $geometry;
+
         }
 
         if (isset($this->event_location['multipolygons']) && ! empty($this->event_location['multipolygons']) && $this->event_location['multipolygons'] != 'None') {
