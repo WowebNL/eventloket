@@ -20,6 +20,22 @@
                                         console.log('Navigation found in descendants');
                                         findSaveButton();
                                     }
+                                    
+                                    // Check for utrecht-data-list__item-value elements containing JSON
+                                    if(addedNode.classList && addedNode.classList.contains('utrecht-data-list__item-value')) {
+                                        if(addedNode.textContent && addedNode.textContent.includes('{"type":')) {
+                                            addedNode.style.display = 'none';
+                                        }
+                                    }
+                                    // Check descendants for utrecht-data-list__item-value
+                                    const dataListElements = addedNode.querySelectorAll && addedNode.querySelectorAll('.utrecht-data-list__item-value');
+                                    if(dataListElements && dataListElements.length > 0) {
+                                        dataListElements.forEach(function(element) {
+                                            if(element.textContent && element.textContent.includes('{"type":')) {
+                                                element.style.display = 'none';
+                                            }
+                                        });
+                                    }
                                 }
                             });
                         }
