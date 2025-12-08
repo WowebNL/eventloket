@@ -74,7 +74,11 @@ class FormSubmissionObject implements Arrayable
         if (isset($this->event_location['multipolygons']) && ! empty($this->event_location['multipolygons']) && $this->event_location['multipolygons'] != 'None') {
             $json = OpenFormsNormalizer::normalizeJson($this->event_location['multipolygons']);
             foreach (json_decode($json, true) as $array) {
-                $array = Arr::first($array);
+                $array = collect($array)->first(fn ($element) => isset($element['coordinates']));
+
+                if (! $array) {
+                    continue;
+                }
                 $geometry = (new GeoJsonReader)->read(json_encode($array));
                 if ($asFeatures) {
                     $feature = new Feature($geometry);
@@ -89,7 +93,11 @@ class FormSubmissionObject implements Arrayable
             $json = OpenFormsNormalizer::normalizeJson($this->event_location['bag_addresses']);
             $locationService = new LocatieserverService;
             foreach (json_decode($json, true) as $array) {
-                $array = Arr::first($array);
+                $array = collect($array)->first(fn ($element) => isset($element['postcode']));
+
+                if (! $array) {
+                    continue;
+                }
                 $geometry = $this->getGeometryFromAddress($array, $locationService, $asFeatures);
 
                 if ($geometry) {
