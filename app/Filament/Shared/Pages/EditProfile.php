@@ -11,6 +11,7 @@ use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
 use App\Notifications\NewOrganiserThreadMessage;
+use App\Notifications\NewZaak;
 use App\Notifications\NewZaakDocument;
 use App\Notifications\Result;
 use App\Notifications\ZaakStatusChanged;
@@ -62,6 +63,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             Role::MunicipalityAdmin => [],
             Role::ReviewerMunicipalityAdmin,
             Role::Reviewer => [
+                NewZaak::class,
                 NewAdviceThreadMessage::class,
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,
@@ -77,6 +79,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 NewZaakDocument::class,
             ],
             Role::Organiser => [
+                NewZaak::class,
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,
                 ZaakStatusChanged::class,
