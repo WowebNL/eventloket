@@ -11,9 +11,11 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class AdvisorUserTable
@@ -55,9 +57,10 @@ class AdvisorUserTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make(),
                 DetachAction::make()->visible(fn (AdvisorUser $record) => $record->advisories()->count() > 1),
                 DeleteAction::make()->visible(fn (AdvisorUser $record) => $record->id !== auth()->id()),

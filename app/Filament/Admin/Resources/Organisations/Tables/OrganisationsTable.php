@@ -5,7 +5,9 @@ namespace App\Filament\Admin\Resources\Organisations\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class OrganisationsTable
@@ -40,9 +42,10 @@ class OrganisationsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
