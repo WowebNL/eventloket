@@ -73,6 +73,7 @@ class Zaak extends Model implements Eventable
         return $this->belongsTo(Organisation::class);
     }
 
+    /** @return BelongsTo<\App\Models\Users\OrganiserUser, $this> */
     public function organiserUser(): BelongsTo
     {
         return $this->belongsTo(OrganiserUser::class, 'organiser_user_id', 'id');

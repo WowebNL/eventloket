@@ -30,6 +30,7 @@ class Zaaktype extends Model
         return $this->hasMany(Zaak::class);
     }
 
+    /** @return BelongsTo<\App\Models\Municipality, $this> */
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
