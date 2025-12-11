@@ -4,8 +4,6 @@ namespace App\Filament\Shared\Resources\MunicipalityVariables\Tables;
 
 use App\Enums\MunicipalityVariableType;
 use App\Filament\Admin\Resources\MunicipalityVariables\Pages\ListMunicipalityVariables;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -57,9 +55,6 @@ class MunicipalityVariablesTable
                 EditAction::make(),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }
