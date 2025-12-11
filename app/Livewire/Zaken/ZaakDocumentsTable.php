@@ -73,17 +73,17 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ]))
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-eye'),
-                Action::make('downloaden')
-                    // ->label(__('municipality/resources/zaak.actions.download.label'))
-                    ->url(fn (array $record): string => route('zaak.documents.view', [
-                        'zaak' => $this->zaak->id,
-                        'documentuuid' => $record['uuid'],
-                        'type' => 'download',
-                    ]))
-                    ->openUrlInNewTab()
-                    ->icon('heroicon-o-arrow-down-tray'),
+                NewDocumentVersionAction::make($this->zaak),
                 ActionGroup::make([
-                    NewDocumentVersionAction::make($this->zaak),
+                    Action::make('downloaden')
+                    // ->label(__('municipality/resources/zaak.actions.download.label'))
+                        ->url(fn (array $record): string => route('zaak.documents.view', [
+                            'zaak' => $this->zaak->id,
+                            'documentuuid' => $record['uuid'],
+                            'type' => 'download',
+                        ]))
+                        ->openUrlInNewTab()
+                        ->icon('heroicon-o-arrow-down-tray'),
                     Action::make('audittrail')
                         ->label(__('Audit trail'))
                         ->icon('heroicon-o-clock')

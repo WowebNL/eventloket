@@ -16,7 +16,7 @@ class NewDocumentVersionAction
     public static function make(Zaak $zaak): Action
     {
         return Action::make('new-version')
-            ->label(__('Nieuwe versie toevoegen'))
+            ->label(__('Nieuwe versie'))
             ->icon('heroicon-o-plus-circle')
             ->modalSubmitAction(fn (Action $action) => $action->label(__('Nieuwe versie toevoegen')))
             ->schema(fn (array $record) => self::schema($record['titel']))

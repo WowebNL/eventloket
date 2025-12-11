@@ -33,7 +33,7 @@ class ListDocumentAuditTrails extends Component implements HasActions, HasSchema
         return $table
             ->records(fn (): Collection => collect($this->audittrail)->map(fn (array $item) => (new DocumentAuditTrail(...$item))->toArray()))
             ->columns([
-                TextColumn::make('aanmaakdatum')->label(__('Datum'))->dateTime(app('app.datetime_format')),
+                TextColumn::make('aanmaakdatum')->label(__('Datum'))->dateTime(config('app.datetime_format')),
                 TextColumn::make('friendlyAction')->label(__('Actie')),
                 TextColumn::make('applicatieWeergave')->label(__('Applicatie')),
                 TextColumn::make('gebruikersWeergave')->label(__('Gebruiker')),
