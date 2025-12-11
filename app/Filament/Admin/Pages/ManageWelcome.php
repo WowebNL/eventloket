@@ -53,7 +53,7 @@ class ManageWelcome extends SettingsPage
                     ->label(__('admin/pages/manage-welcome.form.welcome_image.label'))
                     ->acceptedFileTypes([
                         'image/png',
-                        'image/jpeg'
+                        'image/jpeg',
                     ])
                     ->maxSize(10240) // 10MB
                     ->disk('public'),

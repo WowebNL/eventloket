@@ -51,7 +51,6 @@ class UploadDocumentAction
             Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
                 ->options(function () {
-                    /** @phpstan-ignore-next-line */
                     $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
                     $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
                     $options = [];
