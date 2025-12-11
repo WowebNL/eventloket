@@ -13,6 +13,7 @@ use App\Filament\Shared\Resources\Zaken\Tables\ZakenTable;
 use App\Models\Event;
 use App\Models\Municipality;
 use App\Models\Organisation;
+use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\CarbonImmutable;
@@ -124,7 +125,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
             ->color('primary')
             ->button()
-            ->visible(fn () => in_array(auth()->user()->role, [Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Reviewer]));
+            ->visible(function (Zaak $record) {
+                $user = auth()->user();
+
+                return $user instanceof MunicipalityUser && $user->canAccessMunicipality($record->zaaktype->municipality_id);
+            });
     }
 
     public function defaultSchema(Schema $schema): Schema
