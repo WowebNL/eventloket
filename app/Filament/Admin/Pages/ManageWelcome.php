@@ -51,7 +51,11 @@ class ManageWelcome extends SettingsPage
                     ->required(),
                 FileUpload::make('preview_image')
                     ->label(__('admin/pages/manage-welcome.form.welcome_image.label'))
-                    ->image()
+                    ->acceptedFileTypes([
+                        'image/png',
+                        'image/jpeg'
+                    ])
+                    ->maxSize(10240) // 10MB
                     ->disk('public'),
                 RichEditor::make('intro')
                     ->label(__('admin/pages/manage-welcome.form.intro.label'))

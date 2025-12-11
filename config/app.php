@@ -139,4 +139,51 @@ return [
     'date_format' => env('APP_DATE_FORMAT', 'd-m-Y'),
     'datetime_format' => env('APP_DATETIME_FORMAT', 'd-m-Y H:i'),
 
+    'document_file_types' => env('APP_DOCUMENT_FILE_TYPES', [
+        // Images
+        'image/*',
+
+        // PDF & text
+        'application/pdf',
+        'text/plain',
+        'text/csv',
+        'application/rtf',
+
+        // Word
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+
+        // Excel
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+
+        // PowerPoint
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+
+        // OpenDocument formats
+        'application/vnd.oasis.opendocument.text',        // .odt
+        'application/vnd.oasis.opendocument.spreadsheet', // .ods
+        'application/vnd.oasis.opendocument.presentation', // .odp
+
+        // GPX & Geo formats
+        'application/gpx+xml',
+        'application/xml',              // GPX is XML-based
+        'application/octet-stream',     // Some GPX tools export incorrectly
+        'application/vnd.google-earth.kml+xml',  // .kml
+        'application/vnd.google-earth.kmz',      // .kmz
+        'application/geo+json',                  // .geojson
+        'application/json',                      // sometimes used for geojson
+
+        // CAD formats (widely used)
+        'application/acad',                      // .dwg
+        'application/x-acad',
+        'application/x-dwg',
+        'image/vnd.dwg',                         // DWG (sometimes reported as image/*)
+        'application/dxf',                       // .dxf
+        'application/x-dxf',
+        'model/vnd.dwf',                         // .dwf
+        'application/vnd.dwf',
+        'application/vnd.autocad.dwg',
+    ]),
 ];
