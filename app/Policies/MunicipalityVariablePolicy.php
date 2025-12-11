@@ -87,6 +87,7 @@ class MunicipalityVariablePolicy
             ($user instanceof MunicipalityAdminUser || $user instanceof ReviewerMunicipalityAdminUser)
             && $user->canAccessMunicipality($municipalityVariable->municipality_id)
             && ! $municipalityVariable->is_default
+            && MunicipalityVariable::where('is_default', true)->where('key', $municipalityVariable->key)->count() < 1
         ) {
             return true;
         }
