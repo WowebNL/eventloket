@@ -25,6 +25,7 @@ class ViewZaak extends ViewRecord
     {
         return [
             Action::make('prefil_new_request')
+                ->hidden()
                 ->label('Nieuwe aanvraag')
                 ->tooltip('Start een nieuwe aanvraag waarbij de gegevens uit het aanvraagformulier van deze zaak vooraf ingevuld zijn.')
                 ->action(function (Zaak $record) {
