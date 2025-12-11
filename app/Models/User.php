@@ -52,8 +52,7 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         'email',
         'email_verified_at',
         'phone',
-        'password',
-        'role',
+        'password'
     ];
 
     /**
@@ -62,10 +61,13 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
      * @var list<string>
      */
     protected $hidden = [
+        'role',
         'password',
         'remember_token',
         'app_authentication_secret',
         'app_authentication_recovery_codes',
+        'openzaak_jwt',
+        'openzaak_jwt_valid_till'
     ];
 
     /**

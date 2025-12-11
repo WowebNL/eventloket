@@ -66,7 +66,7 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
 
         $nameParts = explode(' ', $data['name'], 2);
 
-        $user = User::create([
+        $user = new User([
             'first_name' => $nameParts[0],
             'last_name' => $nameParts[1] ?? null,
             'name' => $data['name'],
@@ -74,8 +74,11 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
             'email_verified_at' => now(),
             'phone' => $data['phone'],
             'password' => $data['password'],
-            'role' => $this->getRole(),
         ]);
+
+        $user->role = $this->getRole();
+
+        $user->save();
 
         $this->attachTenantRelation($user);
 
@@ -104,7 +107,9 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
         $this->attachTenantRelation(auth()->user());
 
         if ($this->getPanelName() == 'admin') {
-            auth()->user()->update(['role' => $this->getRole()]);
+            $user = auth()->user();
+            $user->role = $this->getRole();
+            $user->save();
         }
 
         $this->invite->delete();
