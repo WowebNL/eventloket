@@ -13,6 +13,7 @@ use App\Filament\Shared\Resources\Zaken\Tables\ZakenTable;
 use App\Models\Event;
 use App\Models\Municipality;
 use App\Models\Organisation;
+use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\CarbonImmutable;
@@ -80,6 +81,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     {
         if (in_array($this->viewtype, ['calendar', 'table'])) {
             $this->viewMode = $this->viewtype;
+
+            if ($this->viewMode === 'table') {
+                $this->start = CarbonImmutable::parse(now()->startOfDay());
+                $this->end = null;
+            }
         }
     }
 
@@ -118,7 +124,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
             ->color('primary')
             ->button()
-            ->visible(fn () => in_array(auth()->user()->role, [Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Reviewer]));
+            ->visible(function (Zaak $record) {
+                $user = auth()->user();
+
+                return $user instanceof MunicipalityUser && $user->canAccessMunicipality($record->zaaktype->municipality_id);
+            });
     }
 
     public function defaultSchema(Schema $schema): Schema
@@ -299,7 +309,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->closeOnDateSelection()
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
-                            ->default(now()->startOfDay())
+                            ->default(fn () => $this->start)
                             ->afterStateUpdated(fn ($state) => $this->start = $state ? CarbonImmutable::parse($state) : null),
                         DatePicker::make('to')
                             ->label(__('shared/widgets/calendar.filters.range.to.label'))
@@ -308,6 +318,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->closeOnDateSelection()
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
+                            ->default(fn () => $this->end)
                             ->afterStateUpdated(fn ($state) => $this->end = $state ? CarbonImmutable::parse($state) : null),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
@@ -329,7 +340,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         if (in_array(auth()->user()->role, [Role::Organiser, Role::Advisor])) {
             $query = Event::query();
         } else {
-            $query = Zaak::query();
+            $query = Zaak::query()->withoutGlobalScopes();
         }
 
         return $this->applyContextFilters($query, $info);

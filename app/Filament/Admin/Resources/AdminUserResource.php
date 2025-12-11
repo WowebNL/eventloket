@@ -9,9 +9,11 @@ use App\Filament\Shared\Pages\EditProfile;
 use App\Models\User;
 use App\Models\Users\AdminUser;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class AdminUserResource extends Resource
@@ -54,9 +56,10 @@ class AdminUserResource extends Resource
                     ->label(__('admin/resources/admin.columns.role.label')),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
