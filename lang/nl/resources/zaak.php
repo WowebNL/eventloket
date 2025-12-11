@@ -53,6 +53,12 @@ return [
         'handled_status_set_by_user' => [
             'label' => 'In behandeling door',
         ],
+        'resultaat' => [
+            'label' => 'Resultaat',
+        ],
+        'naam_locatie_evenement' => [
+            'label' => 'Naam locatie evenement',
+        ],
     ],
     'filters' => [
         'workingstock' => [
