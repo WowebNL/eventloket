@@ -51,7 +51,6 @@ class UploadDocumentAction
             Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
                 ->options(function () {
-                    /** @phpstan-ignore-next-line */
                     $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
                     $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
                     $options = [];
@@ -68,6 +67,7 @@ class UploadDocumentAction
                 ->label(__('Bestand'))
                 ->required()
                 ->maxSize(20480) // 20MB
+                ->acceptedFileTypes(config('app.document_file_types'))
                 ->directory('documents')
                 ->visibility('private')
                 ->storeFileNamesIn('file_name'),

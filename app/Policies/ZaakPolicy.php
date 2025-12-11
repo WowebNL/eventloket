@@ -17,7 +17,6 @@ class ZaakPolicy
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Organiser => true,
             Role::Advisor => true,
             Role::Admin => true,
-            default => false,
         };
     }
 

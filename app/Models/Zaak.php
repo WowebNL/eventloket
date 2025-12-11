@@ -155,7 +155,6 @@ class Zaak extends Model implements Eventable
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
                     return $this->getDocuments();
                 } else {
-                    /** @phpstan-ignore-next-line */
                     return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
                 }
             },
@@ -183,7 +182,6 @@ class Zaak extends Model implements Eventable
             get: function ($value, $attributes) {
                 return $this->getBesluiten()->each(function (Besluit $besluit) {
                     $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                        /** @phpstan-ignore-next-line */
                         'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))),
                     ]));
                 });

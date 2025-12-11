@@ -41,7 +41,6 @@ class Zaaktype extends Model
     {
         // TODO: user need to see type in zaakdocumentstable and besluiteninfolist, only need type name there
         return Attribute::make(
-            /** @phpstan-ignore-next-line */
             get: fn () => $this->getDocumentTypes()->filter(fn (InformatieobjectType $type) => in_array($type->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)))->sortBy('omschrijving'),
         );
     }

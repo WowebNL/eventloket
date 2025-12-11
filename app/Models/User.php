@@ -22,6 +22,7 @@ use Illuminate\Notifications\Notifiable;
 
 /**
  * @property array<string>|null $app_authentication_recovery_codes
+ * @property Role $role
  */
 class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
@@ -53,7 +54,6 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         'email_verified_at',
         'phone',
         'password',
-        'role',
     ];
 
     /**
@@ -62,10 +62,13 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
      * @var list<string>
      */
     protected $hidden = [
+        'role',
         'password',
         'remember_token',
         'app_authentication_secret',
         'app_authentication_recovery_codes',
+        'openzaak_jwt',
+        'openzaak_jwt_valid_till',
     ];
 
     /**

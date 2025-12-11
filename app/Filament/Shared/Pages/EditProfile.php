@@ -85,8 +85,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 ZaakStatusChanged::class,
                 NewZaakDocument::class,
                 Result::class,
-            ],
-            default => throw new \Exception('Unknown role'),
+            ]
         };
     }
 

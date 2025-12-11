@@ -46,6 +46,7 @@ class NewDocumentVersionAction
                 ->label(__('Bestand'))
                 ->required()
                 ->maxSize(20480) // 20MB
+                ->acceptedFileTypes(config('app.document_file_types'))
                 ->directory('documents')
                 ->visibility('private')
                 ->storeFileNamesIn('file_name'),
