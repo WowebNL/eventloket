@@ -22,6 +22,7 @@ class UploadDocumentAction
         return Action::make('upload')
             ->label(__('Nieuw bestand toevoegen'))
             ->icon('heroicon-o-arrow-up-tray')
+            ->tooltip(__('Wanneer je voor de eerste keer een bestand toevoegt, kies dan voor "Nieuw bestand". Indien je eerder een bestand toegevoegd hebt en je wilt dit nogmaals toevoegen als een nieuwe versie, kies dan voor "Nieuwe versie"'))
             ->modalSubmitAction(fn (Action $action) => $action->label(__('Bestand toevoegen')))
             ->schema(self::schema($zaak))
             ->modalAutofocus(false)
