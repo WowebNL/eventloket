@@ -107,6 +107,8 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
         if ($this->thread->type == ThreadType::Advice && $this->thread->advice_status === AdviceStatus::Asked && auth()->user()->role === Role::Advisor) {
             $this->thread->update(['advice_status' => AdviceStatus::AdvisoryReplied]);
+        } elseif ($this->thread->type == ThreadType::Advice && in_array($this->thread->advice_status, [AdviceStatus::InProgress, AdviceStatus::AdvisoryReplied]) && auth()->user()->role !== Role::Advisor) {
+            $this->thread->update(['advice_status' => AdviceStatus::Asked]);
         }
 
         $this->form->fill(); // reset form state

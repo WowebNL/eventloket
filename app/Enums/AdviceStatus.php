@@ -14,6 +14,7 @@ enum AdviceStatus: string implements HasLabel
     case NeedsMoreInfo = 'needs_more_info';
     case ApprovedWithConditions = 'approved_with_conditions';
     case Rejected = 'rejected';
+    case NoReaction = 'no_reaction';
 
     public function getLabel(): string
     {
