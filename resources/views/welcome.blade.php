@@ -120,7 +120,7 @@
             <a href="{{ route('filament.municipality.auth.login') }}" class="hover:underline me-4 md:me-6">{{ __('welcome.footer.handler_login.label') }}</a>
         </li>
         <li>
-            <a href="{{ route('filament.admin.auth.login') }}" class="hover:underline me-4 md:me-6">{{ __('welcome.footer.admin_login.label') }}</a>
+            <a href="{{ route('filament.municipality.auth.login') }}" class="hover:underline me-4 md:me-6">{{ __('welcome.footer.admin_login.label') }}</a>
         </li>
     </ul>
     </div>
