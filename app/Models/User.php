@@ -54,6 +54,7 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
         'email_verified_at',
         'phone',
         'password',
+        'role',
     ];
 
     /**
