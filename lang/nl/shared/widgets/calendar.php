@@ -20,4 +20,14 @@ return [
             ],
         ],
     ],
+
+    'actions' => [
+        'import' => [
+            'label' => 'Evenementen importeren',
+            'completed_notification' => [
+                'body' => 'Je evenementen import is voltooid en :count rijen zijn geïmporteerd',
+                'failed' => ' :count rijen konden niet geïmporteerd worden.',
+            ],
+        ],
+    ],
 ];
