@@ -26,7 +26,7 @@ class PendingAdvisoryInvitesWidget extends TableWidget
                     ->label(__('admin/resources/advisory.widgets.pending_invites.columns.email.label'))
                     ->searchable(),
                 TextColumn::make('name')
-                    ->label(__('admin/resources/advisory.widgets.pending_invites.columns.email.label'))
+                    ->label(__('admin/resources/advisory.widgets.pending_invites.columns.name.label'))
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('admin/resources/advisory.widgets.pending_invites.columns.created_at.label'))
