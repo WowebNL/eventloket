@@ -104,6 +104,16 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
     }
 
     /**
+     * Always store email in lowercase for consistency
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: fn (string $value) => strtolower($value),
+        );
+    }
+
+    /**
      * setup name based on first and last name
      */
     protected function name(): Attribute
