@@ -155,7 +155,6 @@ class MunicipalityVariableForm
                                         ->label(__('resources/municipality_variable.form.end.label'))
                                         ->seconds(false)
                                         ->closeOnDateSelection()
-                                        ->after('value.start')
                                         ->required(),
                                 ]),
                         ],
