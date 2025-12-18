@@ -36,9 +36,9 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public string|array|null $types_evenement = null,
         ...$otherParams
     ) {
-        $this->start_evenement_datetime = Carbon::parse($this->start_evenement);
-        $this->eind_evenement_datetime = Carbon::parse($this->eind_evenement);
-        $this->registratiedatum_datetime = Carbon::parse($this->registratiedatum);
+        $this->start_evenement_datetime = $this->parseDateTime($this->start_evenement);
+        $this->eind_evenement_datetime = $this->parseDateTime($this->eind_evenement);
+        $this->registratiedatum_datetime = $this->parseDateTime($this->registratiedatum);
         if ($this->naam_locatie_eveneme) {
             $this->naam_locatie_evenement = $this->naam_locatie_eveneme;
         } else {
@@ -52,6 +52,22 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         }
 
         $this->otherParams = $otherParams;
+    }
+
+    private function parseDateTime(string $dateTime): Carbon
+    {
+        // Try ISO 8601 format first (2025-09-26T12:00:00+02:00)
+        if (str_contains($dateTime, 'T')) {
+            return Carbon::parse($dateTime, 'Europe/Amsterdam');
+        }
+
+        // Try Dutch format (1 januari 2026 21:00)
+        try {
+            return Carbon::createFromLocaleFormat('j F Y H:i', 'nl', $dateTime, 'Europe/Amsterdam');
+        } catch (\Exception $e) {
+            // Fallback to standard parsing
+            return Carbon::parse($dateTime, 'Europe/Amsterdam');
+        }
     }
 
     public function toArray(): array
