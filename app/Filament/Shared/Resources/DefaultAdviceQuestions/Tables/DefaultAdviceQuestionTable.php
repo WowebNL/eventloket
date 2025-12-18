@@ -13,8 +13,8 @@ class DefaultAdviceQuestionTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->modelLabel(__('resources/location.label'))
-            ->pluralModelLabel(__('resources/location.plural_label'))
+            ->modelLabel(__('resources/default_advice_question.label'))
+            ->pluralModelLabel(__('resources/default_advice_question.plural_label'))
             ->columns([
                 TextColumn::make('advisory.name')
                     ->label(__('resources/default_advice_question.columns.advisory.label'))
