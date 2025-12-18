@@ -64,10 +64,10 @@ class ZaakInfolist
             TextEntry::make('organiserUser.email')
                 ->label(__('resources/zaak.columns.email-organiser.label'))
                 ->visible(fn (?string $state) => ! empty($state)),
-            TextEntry::make('reference_data.start_evenement')
+            TextEntry::make('reference_data.start_evenement_datetime')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.start_evenement.label')),
-            TextEntry::make('reference_data.eind_evenement')
+            TextEntry::make('reference_data.eind_evenement_datetime')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_evenement.label')),
             TextEntry::make('reference_data.aanwezigen')

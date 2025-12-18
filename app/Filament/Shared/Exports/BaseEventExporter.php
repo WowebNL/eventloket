@@ -29,17 +29,17 @@ class BaseEventExporter extends Exporter
                 ->label(__('municipality/resources/zaak.infolist.tabs.locations.information.location_name.label')),
             ExportColumn::make('openzaak.zaakAddresses')
                 ->label(__('municipality/resources/zaak.infolist.tabs.locations.information.address.label')),
-            ExportColumn::make('reference_data.start_evenement')
+            ExportColumn::make('reference_data.start_evenement_datetime')
                 ->label(__('resources/zaak.columns.start_evenement.label'))
-                ->formatStateUsing(fn ($state) => date(config('app.datetime_format'), strtotime($state))),
-            ExportColumn::make('reference_data.eind_evenement')
+                ->formatStateUsing(fn ($state) => $state?->format(config('app.datetime_format'))),
+            ExportColumn::make('reference_data.eind_evenement_datetime')
                 ->label(__('resources/zaak.columns.eind_evenement.label'))
-                ->formatStateUsing(fn ($state) => date(config('app.datetime_format'), strtotime($state))),
+                ->formatStateUsing(fn ($state) => $state?->format(config('app.datetime_format'))),
             ExportColumn::make('organisation.name')
                 ->label(__('municipality/resources/zaak.columns.organisator.label')),
-            ExportColumn::make('reference_data.registratiedatum')
+            ExportColumn::make('reference_data.registratiedatum_datetime')
                 ->label(__('resources/zaak.columns.registratiedatum.label'))
-                ->formatStateUsing(fn ($state) => date(config('app.date_format'), strtotime($state))),
+                ->formatStateUsing(fn ($state) => $state?->format(config('app.date_format'))),
             ExportColumn::make('reference_data.status_name')
                 ->label(__('resources/zaak.columns.status.label')),
         ];
