@@ -55,7 +55,7 @@ class AdvisorUserPolicy
 
         if ($user->role == Role::MunicipalityAdmin || $user->role == Role::ReviewerMunicipalityAdmin) {
             /** @phpstan-ignore-next-line */
-            return $advisorUser->advisories->count() == 1 && in_array($advisorUser->advisories->first()->id, $user->municipalities->pluck('id')->toArray());
+            return $advisorUser->advisories->count() == 1 && in_array($advisorUser->advisories->first()->municipalities->first()->id, $user->municipalities->pluck('id')->toArray());
         }
 
         if ($user->role == Role::Advisor) {
