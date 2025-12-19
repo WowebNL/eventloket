@@ -101,6 +101,15 @@ return [
                 'actions' => [
                     'edit_risico_classificatie' => [
                         'label' => 'Wijzigen',
+                        'fields' => [
+                            'risico_classificatie' => [
+                                'label' => 'Risicoclassificatie',
+                            ],
+                            'risico_classificatie_toelichting' => [
+                                'label' => 'Toelichting risicoclassificatie',
+                                'helper_text' => 'Beargumenteer waarom je de risico classificatie wijzigt.',
+                            ],
+                        ],
                     ],
                     'edit_status' => [
                         'label' => 'Wijzigen',
