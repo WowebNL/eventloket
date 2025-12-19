@@ -52,6 +52,9 @@ class AdvisoryResource extends Resource
                     ->label(__('admin/resources/advisory.columns.name.label'))
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('municipalities.name')
+                    ->label(__('admin/resources/advisory.columns.municipalities.label'))
+                    ->separator(', '),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

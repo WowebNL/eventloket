@@ -10,6 +10,10 @@ return [
             'label' => 'Naam',
         ],
 
+        'municipalities' => [
+            'label' => 'Gemeenten',
+        ],
+
     ],
 
     'user' => [
