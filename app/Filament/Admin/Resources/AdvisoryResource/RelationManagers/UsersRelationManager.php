@@ -2,11 +2,13 @@
 
 namespace App\Filament\Admin\Resources\AdvisoryResource\RelationManagers;
 
+use App\Enums\AdvisoryRole;
 use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserInviteAction;
 use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserPendingInvitesAction;
 use App\Filament\Shared\Resources\AdvisorUsers\Schemas\AdvisorUserForm;
 use App\Filament\Shared\Resources\AdvisorUsers\Tables\AdvisorUserTable;
 use App\Models\Advisory;
+use Filament\Actions\AttachAction;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -43,6 +45,13 @@ class UsersRelationManager extends RelationManager
 
         return AdvisorUserTable::configure($table, $advisory)
             ->headerActions([
+                AttachAction::make()
+                    ->preloadRecordSelect()
+                    ->multiple()
+                    ->mutateDataUsing(fn (array $data): array => [
+                        ...$data,
+                        'role' => AdvisoryRole::Member,
+                    ]),
                 AdvisorUserPendingInvitesAction::make()
                     ->widgetRecord($this->ownerRecord),
                 AdvisorUserInviteAction::make(advisory: $advisory),
