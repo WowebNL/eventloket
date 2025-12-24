@@ -35,6 +35,10 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public ?string $aanwezigen = null,
         public string|array|null $types_evenement = null,
         public ?string $risico_toelichting = null,
+        public ?string $start_opbouw = null,
+        public ?string $eind_opbouw = null,
+        public ?string $start_afbouw = null,
+        public ?string $eind_afbouw = null,
         ...$otherParams
     ) {
         $this->start_evenement_datetime = $this->parseDateTime($this->start_evenement);
@@ -86,6 +90,10 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
             'resultaat' => $this->resultaat,
             'aanwezigen' => $this->aanwezigen,
             'types_evenement' => is_array($this->types_evenement) ? $this->types_evenement : $this->types_evenement_array,
+            'start_opbouw' => $this->start_opbouw,
+            'eind_opbouw' => $this->eind_opbouw,
+            'start_afbouw' => $this->start_afbouw,
+            'eind_afbouw' => $this->eind_afbouw,
         ];
     }
 

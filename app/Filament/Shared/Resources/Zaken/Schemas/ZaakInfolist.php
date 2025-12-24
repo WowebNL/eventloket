@@ -72,6 +72,22 @@ class ZaakInfolist
             TextEntry::make('reference_data.eind_evenement_datetime')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_evenement.label')),
+            TextEntry::make('reference_data.start_opbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_opbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.eind_opbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_opbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.start_afbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_afbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.eind_afbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_afbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('reference_data.aanwezigen')
                 ->label(__('resources/zaak.columns.aanwezigen.label'))
                 ->visible(fn ($state) => ! empty($state)),
