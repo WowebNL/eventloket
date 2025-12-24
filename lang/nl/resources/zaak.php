@@ -59,6 +59,18 @@ return [
         'naam_locatie_evenement' => [
             'label' => 'Naam locatie evenement',
         ],
+        'start_opbouw' => [
+            'label' => 'Start opbouw',
+        ],
+        'eind_opbouw' => [
+            'label' => 'Eind opbouw',
+        ],
+        'start_afbouw' => [
+            'label' => 'Start afbouw',
+        ],
+        'eind_afbouw' => [
+            'label' => 'Eind afbouw',
+        ],
     ],
     'filters' => [
         'workingstock' => [
