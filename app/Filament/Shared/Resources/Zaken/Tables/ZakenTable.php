@@ -65,17 +65,19 @@ class ZakenTable
                     ->toggleable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
-                TextColumn::make('reference_data.start_evenement_datetime')
+                TextColumn::make('reference_data.start_evenement')
                     ->label(__('resources/zaak.columns.start_evenement.label'))
                     ->dateTime(config('app.datetime_format'))
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
+                    ->sortable()
                     ->forceSearchCaseInsensitive(),
-                TextColumn::make('reference_data.eind_evenement_datetime')
+                TextColumn::make('reference_data.eind_evenement')
                     ->label(__('resources/zaak.columns.eind_evenement.label'))
                     ->dateTime(config('app.datetime_format'))
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
+                    ->sortable()
                     ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.naam_locatie_evenement')
                     ->label(__('resources/zaak.columns.naam_locatie_evenement.label'))

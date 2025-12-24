@@ -325,11 +325,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         return $query
                             ->when(
                                 $data['from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement_datetime', '>=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '>=', $date),
                             )
                             ->when(
                                 $data['to'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement_datetime', '<=', $date),
+                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '<=', $date),
                             );
                     }),
             ]);
@@ -350,7 +350,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     protected function applyContextFilters(Builder $query, ?FetchInfo $info = null): Builder
     {
         if ($info) {
-            $query->whereBetween('reference_data->start_evenement_datetime', [$info->start, $info->end]);
+            $query->whereBetween('reference_data->start_evenement', [$info->start, $info->end]);
         }
 
         $filters = $this->filters ?? [];
