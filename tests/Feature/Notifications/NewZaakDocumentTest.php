@@ -95,7 +95,7 @@ test('Notification markdown mail rendered correctly', function () {
     $viewDataForReviewer = $mailMessageForReviewer->viewData;
 
     $this->assertStringContainsString(
-        route('filament.organiser.resources.zaken.view', [
+        route('filament.municipality.resources.zaken.view', [
             'tenant' => $this->municipality->id,
             'record' => $this->zaak->id,
         ]),
@@ -106,7 +106,7 @@ test('Notification markdown mail rendered correctly', function () {
     $viewDataForAdvisor = $mailMessageForAdvisor->viewData;
 
     $this->assertStringContainsString(
-        route('filament.organiser.resources.zaken.view', [
+        route('filament.advisor.resources.zaken.view', [
             'tenant' => $this->zaak->adviceThreads->map(fn ($thread) => in_array($thread->advisory_id, $this->advisor->advisories->pluck('id')->toArray()))->first(),
             'record' => $this->zaak->id,
         ]),
