@@ -42,7 +42,7 @@ class ZakenTable
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
-                TextColumn::make('reference_data.registratiedatum_datetime')
+                TextColumn::make('created_at')
                     ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))
                     ->sortable()
@@ -68,14 +68,12 @@ class ZakenTable
                 TextColumn::make('reference_data.start_evenement_datetime')
                     ->label(__('resources/zaak.columns.start_evenement.label'))
                     ->dateTime(config('app.datetime_format'))
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.eind_evenement_datetime')
                     ->label(__('resources/zaak.columns.eind_evenement.label'))
                     ->dateTime(config('app.datetime_format'))
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
