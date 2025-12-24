@@ -90,7 +90,7 @@ class NewZaakDocument extends BaseNotification
         };
     }
 
-    private function getType(User $notifiable): string|int
+    private function getType(User $notifiable): string
     {
         return match (get_class($notifiable)) {
             OrganiserUser::class => 'organiser',
