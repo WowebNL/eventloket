@@ -10,8 +10,10 @@ use App\Filament\Admin\Resources\AdvisoryResource\RelationManagers\UsersRelation
 use App\Models\Advisory;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -41,6 +43,10 @@ class AdvisoryResource extends Resource
                     ->label(__('admin/resources/advisory.columns.name.label'))
                     ->required()
                     ->maxLength(255),
+                Toggle::make('can_view_any_zaak')
+                    ->inline(false)
+                    ->label(__('admin/resources/advisory.columns.can_view_any_zaak.label'))
+                    ->helperText(__('admin/resources/advisory.columns.can_view_any_zaak.helper_text')),
             ]);
     }
 
@@ -55,6 +61,8 @@ class AdvisoryResource extends Resource
                 TextColumn::make('municipalities.name')
                     ->label(__('admin/resources/advisory.columns.municipalities.label'))
                     ->separator(', '),
+                IconColumn::make('can_view_any_zaak')
+                    ->label(__('admin/resources/advisory.columns.can_view_any_zaak.label')),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

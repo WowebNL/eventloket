@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use Filament\Facades\Filament;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -217,6 +218,7 @@ test('filter with me option shows zaken assigned to current user', function () {
 
 test('filter with all option shows all zaken', function () {
     $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
 
     // Create various zaken
     $zaak1 = Zaak::factory()->create([

@@ -10,6 +10,11 @@ return [
             'label' => 'Naam',
         ],
 
+        'can_view_any_zaak' => [
+            'label' => 'Alle zaken inzien',
+            'helper_text' => 'Maakt het mogelijk om alle zaken en documenten te bekijken. Bewerken is alleen toegestaan bij zaken waarvoor advies is gevraagd.',
+        ],
+
         'municipalities' => [
             'label' => 'Gemeenten',
         ],

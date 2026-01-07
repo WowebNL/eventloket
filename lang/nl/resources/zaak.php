@@ -82,4 +82,8 @@ return [
             ],
         ],
     ],
+    'navigation_groups' => [
+        'with_advice_thread' => 'Zaken met adviesvraag',
+        'all' => 'Eventloket zaken',
+    ],
 ];

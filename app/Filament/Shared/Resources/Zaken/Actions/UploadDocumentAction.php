@@ -26,6 +26,7 @@ class UploadDocumentAction
             ->modalSubmitAction(fn (Action $action) => $action->label(__('Bestand toevoegen')))
             ->schema(self::schema($zaak))
             ->modalAutofocus(false)
+            ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
             ->action(function (array $data, Action $action) use ($zaak): void {
                 self::uploadDocument($data, $zaak);
 
