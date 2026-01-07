@@ -108,7 +108,7 @@ class AdvisorPanelProvider extends PanelProvider
 
                         return $tenant->can_view_any_zaak;
                     })
-                    ->label(__('resources/zaak.filters.workingstock.options.all'))
+                    ->label(__('resources/zaak.filters.workingstock.options.all_eventloket'))
                     ->group(__('resources/zaak.navigation_groups.all'))
                     ->icon(Heroicon::InboxStack)
                     ->url(fn (): string => ListAllZaken::getUrl())

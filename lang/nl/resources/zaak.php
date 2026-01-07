@@ -82,6 +82,7 @@ return [
                 'me' => 'Mijn werkvoorraad',
                 'new' => 'Nieuw',
                 'all' => 'Alle zaken',
+                'all_eventloket' => 'Alle zaken binnen Eventloket',
             ],
         ],
     ],

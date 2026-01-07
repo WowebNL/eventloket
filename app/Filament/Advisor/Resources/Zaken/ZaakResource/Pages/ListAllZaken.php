@@ -8,10 +8,16 @@ use App\Models\Advisory;
 use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Table;
+use Illuminate\Contracts\Support\Htmlable;
 
 class ListAllZaken extends ListRecords
 {
     protected static string $resource = ZaakResource::class;
+
+    public function getTitle(): string|Htmlable
+    {
+        return __('resources/zaak.filters.workingstock.options.all_eventloket');
+    }
 
     public static function canAccess(array $parameters = []): bool
     {
