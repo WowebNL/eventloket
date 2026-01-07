@@ -86,12 +86,12 @@ class Zaak extends Model implements Eventable
 
     public function organiserThreads()
     {
-        return $this->hasMany(OrganiserThread::class)->organiser();
+        return $this->hasMany(OrganiserThread::class, 'zaak_id')->organiser();
     }
 
     public function adviceThreads(): HasMany
     {
-        return $this->hasMany(AdviceThread::class)->advice();
+        return $this->hasMany(AdviceThread::class, 'zaak_id')->advice();
     }
 
     public function municipality(): HasOneThrough

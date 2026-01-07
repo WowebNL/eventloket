@@ -47,6 +47,9 @@ return [
         'aanwezigen' => [
             'label' => 'Aanwezigen',
         ],
+        'advisors' => [
+            'label' => 'Adviseurs',
+        ],
         'types_evenement' => [
             'label' => 'Type(n) evenement',
         ],

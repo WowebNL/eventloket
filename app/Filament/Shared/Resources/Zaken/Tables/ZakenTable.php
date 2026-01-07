@@ -5,8 +5,10 @@ namespace App\Filament\Shared\Resources\Zaken\Tables;
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
+use App\Models\Advisory;
 use App\Models\Zaak;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
@@ -104,6 +106,24 @@ class ZakenTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
+                TextColumn::make('advisors')
+                    ->label(__('resources/zaak.columns.advisors.label'))
+                    ->visible(fn () => Filament::getCurrentPanel()->getId() === 'advisor')
+                    ->badge()
+                    ->getStateUsing(function (Zaak $record) {
+                        /** @var Advisory $tenant */
+                        $tenant = Filament::getTenant();
+
+                        return $record->adviceThreads()
+                            ->where('advisory_id', $tenant->id)
+                            ->get()
+                            ->pluck('assignedUsers')
+                            ->flatten()
+                            ->pluck('name')
+                            ->unique()
+                            ->values()
+                            ->toArray();
+                    }),
             ])
             ->reorderableColumns()
             ->filters([
