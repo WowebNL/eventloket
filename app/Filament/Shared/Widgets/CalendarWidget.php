@@ -121,7 +121,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return Action::make('view')
             ->label(__('shared/widgets/calendar.view_case'))
             ->icon('heroicon-o-arrow-top-right-on-square')
-            ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
+            ->url(function (Zaak $record): string {
+                return route('filament.municipality.resources.zaken.view', ['tenant' => $record->municipality, 'record' => $record]);
+            })
             ->color('primary')
             ->button()
             ->visible(function (Zaak $record) {
@@ -337,11 +339,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected function getEvents(?FetchInfo $info = null): Collection|array|Builder
     {
-        if (in_array(auth()->user()->role, [Role::Organiser, Role::Advisor])) {
-            $query = Event::query();
-        } else {
-            $query = Zaak::query()->withoutGlobalScopes();
-        }
+        $query = Event::query();
 
         return $this->applyContextFilters($query, $info);
     }
