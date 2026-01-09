@@ -52,6 +52,7 @@ class Zaak extends Model implements Eventable
         'organisation_id',
         'organiser_user_id',
         'reference_data',
+        'imported_data',
         'handled_status_set_by_user_id',
     ];
 
@@ -59,6 +60,7 @@ class Zaak extends Model implements Eventable
     {
         return [
             'reference_data' => ZaakReferenceData::class,
+            'imported_data' => 'array',
         ];
     }
 
