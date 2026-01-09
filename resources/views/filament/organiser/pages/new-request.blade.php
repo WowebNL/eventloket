@@ -138,6 +138,7 @@
             sessionStorage.setItem(formId, submission);
             @this.$js.checkIfSubmissionChanges(submission);
             @this.$js.loadForm();
+            if(isDebug) console.log('Loaded form with submission ref:', submission);
         });
         
         $js('deleteStorageRef', function() {
@@ -150,7 +151,8 @@
             createInterval('checkIfSubmissionChanges', () => {
                 if (isDebug) console.log('checkIfSubmissionChanges check');
                 let currentSubmission = sessionStorage.getItem(formId);
-                if (currentSubmission && currentSubmission !== submission) {
+                if (currentSubmission != null && currentSubmission !== submission) {
+                    if (isDebug) console.log('Submission changed in storage:', currentSubmission);
                     @this.updateFormsubmissionSession(currentSubmission);
                 }
             }, 5000);
