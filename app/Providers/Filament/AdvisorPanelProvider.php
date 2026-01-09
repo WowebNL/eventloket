@@ -89,7 +89,7 @@ class AdvisorPanelProvider extends PanelProvider
                 NavigationItem::make('workingstock')
                     ->label(__('resources/zaak.filters.workingstock.options.me'))
                     ->group(__('resources/zaak.plural_label'))
-                    ->badge(fn (): int => Zaak::whereHas('adviceThreads.assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->count())
+                    ->badge(fn (): int => Zaak::whereHas('adviceThreads.assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->whereIn('reference_data->status_name', ['Ontvangen', 'In behandeling'])->count())
                     ->icon(Heroicon::Inbox)
                     ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'me']]]))
                     ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock-advisor.workingstock-adv') == 'me'),
