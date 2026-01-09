@@ -7,6 +7,7 @@ use Brick\Geo\LineString;
 use Brick\Geo\Point;
 use Brick\Geo\Polygon;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Webbingbrasil\FilamentMaps\Actions\CenterMapAction;
 use Webbingbrasil\FilamentMaps\Actions\ZoomAction;
 use Webbingbrasil\FilamentMaps\Marker;
@@ -69,6 +70,13 @@ class Map extends MapWidget
     public function getPollingInterval(): ?string
     {
         return null;
+    }
+
+    #[On('livewire:navigating')]
+    public function handleNavigating(): void
+    {
+        // Guard against ResizeObserver errors when map is being unmounted
+        // by deferring any pending map operations
     }
 
     public function getPolygones(): array

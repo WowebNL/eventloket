@@ -33,7 +33,7 @@ class LocationsTab
                     ->columnSpan(4),
                 Fieldset::make(__('municipality/resources/zaak.infolist.tabs.locations.map.label'))
                     ->schema([
-                        Livewire::make(Map::class, fn (Zaak $record) => ['geojson' => $record->openzaak->zaakgeometrie])->key('map-'.Str::uuid()),
+                        Livewire::make(Map::class, fn (Zaak $record) => ['geojson' => $record->openzaak->zaakgeometrie])->key('map-locations'),
                     ])
                     ->columns(1)
                     ->columnSpan(8),

@@ -299,15 +299,17 @@ class ViewZaak extends ViewRecord
                         new AddResultaatZGW($finishZaakObject),
                         new AddFinalStatusZGW($finishZaakObject),
                         function () use ($record, $finishZaakObject) {
-                            foreach ($record->organisation->users as $recipient) {
-                                /** @var \App\Models\Users\MunicipalityUser $recipient */
-                                $recipient->notify(new Result(
-                                    zaak: $record,
-                                    tenant: $record->organisation,
-                                    title: $finishZaakObject->message_title,
-                                    message: $finishZaakObject->message_content,
-                                    attachmentUrls: $finishZaakObject->message_documenten,
-                                ));
+                            if ($record->organisation?->users) {
+                                foreach ($record->organisation->users as $recipient) {
+                                    /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                    $recipient->notify(new Result(
+                                        zaak: $record,
+                                        tenant: $record->organisation,
+                                        title: $finishZaakObject->message_title,
+                                        message: $finishZaakObject->message_content,
+                                        attachmentUrls: $finishZaakObject->message_documenten,
+                                    ));
+                                }
                             }
                         },
                     ]))->dispatch();
