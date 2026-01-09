@@ -60,7 +60,8 @@ class ThreadInboxWidget extends TableWidget
                 TextColumn::make('type')
                     ->label(__('resources/thread.columns.type.label'))
                     ->description(fn (Thread $record) => get_class($record) === AdviceThread::class ?
-                        $record->advisory->name :
+                        /** @phpstan-ignore-next-line */
+                        $record->advisory?->name :
                         $record->zaak->organisation?->name
                     )
                     ->sortable(),
