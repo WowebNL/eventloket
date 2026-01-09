@@ -379,7 +379,7 @@ class ZaakInfolist
                                         return $count > 0 ? $count : null;
                                     })
                                     ->schema([
-                                        Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
+                                        Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class])->key('organiser-threads-'.($schema->model->id ?? 'new')),
                                     ]),
                                 Tab::make('advice_requests')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
@@ -393,7 +393,7 @@ class ZaakInfolist
                                         return $count > 0 ? $count : null;
                                     })
                                     ->schema([
-                                        Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
+                                        Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class])->key('advice-threads-'.($schema->model->id ?? 'new')),
                                     ]),
                                 LocationsTab::make(),
                             ])
