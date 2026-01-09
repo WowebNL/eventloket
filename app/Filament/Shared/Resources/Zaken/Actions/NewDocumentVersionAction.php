@@ -21,6 +21,7 @@ class NewDocumentVersionAction
             ->modalSubmitAction(fn (Action $action) => $action->label(__('Nieuwe versie toevoegen')))
             ->schema(fn (array $record) => self::schema($record['titel']))
             ->modalAutofocus(false)
+            ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
             ->action(function (array $record, array $data, Action $action) use ($zaak): void {
 
                 self::createNewDocumentVersion($record['uuid'], $data, $zaak);

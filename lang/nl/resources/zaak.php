@@ -47,6 +47,9 @@ return [
         'aanwezigen' => [
             'label' => 'Aanwezigen',
         ],
+        'advisors' => [
+            'label' => 'Adviseurs',
+        ],
         'types_evenement' => [
             'label' => 'Type(n) evenement',
         ],
@@ -79,7 +82,12 @@ return [
                 'me' => 'Mijn werkvoorraad',
                 'new' => 'Nieuw',
                 'all' => 'Alle zaken',
+                'all_eventloket' => 'Alle zaken binnen Eventloket',
             ],
         ],
+    ],
+    'navigation_groups' => [
+        'with_advice_thread' => 'Zaken met adviesvraag',
+        'all' => 'Eventloket zaken',
     ],
 ];

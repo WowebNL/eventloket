@@ -47,6 +47,23 @@ class ZaakPolicy
         };
     }
 
+    public function uploadDocument(User $user, Zaak $zaak)
+    {
+        if ($user instanceof \App\Models\Users\AdvisorUser) {
+            $advisoryIds = $zaak->adviceThreads->pluck('advisory_id');
+            $userAdvisoryIds = $user->advisories->pluck('id');
+
+            return $advisoryIds->intersect($userAdvisoryIds)->isNotEmpty();
+        }
+
+        return match ($user->role) {
+            /** @phpstan-ignore-next-line */
+            Role::Reviewer, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => $user->canAccessMunicipality($zaak->zaaktype->municipality_id),
+            Role::Admin => true,
+            default => false,
+        };
+    }
+
     /**
      * Determine whether the user can create models.
      */

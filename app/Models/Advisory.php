@@ -16,7 +16,15 @@ class Advisory extends Model
 
     protected $fillable = [
         'name',
+        'can_view_any_zaak',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'can_view_any_zaak' => 'boolean',
+        ];
+    }
 
     public function users(): BelongsToMany
     {

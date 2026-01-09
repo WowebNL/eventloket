@@ -3,12 +3,14 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Advisor\Pages\Dashboard;
+use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
 use App\Filament\Shared\Pages\EditProfile;
 use App\Filament\Shared\Pages\Login;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Advisory;
 use App\Models\Zaak;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
+use Filament\Facades\Filament;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -81,7 +83,7 @@ class AdvisorPanelProvider extends PanelProvider
             ->navigationItems([
                 NavigationItem::make('newzaken')
                     ->label(__('resources/zaak.filters.workingstock.options.new'))
-                    ->group(__('resources/zaak.plural_label'))
+                    ->group(__('resources/zaak.navigation_groups.with_advice_thread'))
                     ->badge(fn (): int => Zaak::whereHas('adviceThreads', fn (Builder $query) => $query->whereDoesntHave('assignedUsers'))->count())
                     ->icon(Heroicon::InboxArrowDown)
                     ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'new']]]))
@@ -95,10 +97,22 @@ class AdvisorPanelProvider extends PanelProvider
                     ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock-advisor.workingstock-adv') == 'me'),
                 NavigationItem::make('allzaken')
                     ->label(__('resources/zaak.filters.workingstock.options.all'))
-                    ->group(__('resources/zaak.plural_label'))
+                    ->group(__('resources/zaak.navigation_groups.with_advice_thread'))
                     ->icon(Heroicon::InboxStack)
                     ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'all']]]))
                     ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock-advisor.workingstock-adv') == 'all'),
+                NavigationItem::make('all')
+                    ->visible(function (): bool {
+                        /** @var Advisory $tenant */
+                        $tenant = Filament::getTenant();
+
+                        return $tenant->can_view_any_zaak;
+                    })
+                    ->label(__('resources/zaak.filters.workingstock.options.all_eventloket'))
+                    ->group(__('resources/zaak.navigation_groups.all'))
+                    ->icon(Heroicon::InboxStack)
+                    ->url(fn (): string => ListAllZaken::getUrl())
+                    ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListAllZaken::getRouteName())),
             ]);
     }
 }
