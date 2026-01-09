@@ -55,7 +55,7 @@ class NewRequest extends Page
         $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
 
         if ($submissionSession) {
-            $this->js('loadFormWithRef("'.$submissionSession->uuid.'");');
+            $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
         } else {
             $this->js('listenLocalStorage(); loadForm();');
         }
@@ -103,7 +103,7 @@ class NewRequest extends Page
                 $this->js('deleteStorageRef()');
                 if ($submission = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first()) {
                     /** @var FormsubmissionSession $submission */
-                    $this->js('loadFormWithRef("'.$submission->uuid.'");');
+                    $this->js('loadFormWithRef', '"'.$submission->uuid.'"');
                 } else {
                     $this->js('listenLocalStorage(); loadForm();');
                 }
@@ -112,5 +112,21 @@ class NewRequest extends Page
             }
         }
         $this->js('loadForm(); checkIfSubmissionChanges("'.$submissionUUid.'");');
+    }
+
+    public function checkLoadExistingSubmissionSession()
+    {
+        /** @var Organisation $tenant */
+        $tenant = Filament::getTenant();
+        /** @var OrganiserUser $user */
+        $user = Filament::auth()->user();
+        /** @var FormsubmissionSession $submissionSession */
+        $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
+
+        if ($submissionSession) {
+            $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
+        } else {
+            $this->js('listenLocalStorage(); loadForm();');
+        }
     }
 }
