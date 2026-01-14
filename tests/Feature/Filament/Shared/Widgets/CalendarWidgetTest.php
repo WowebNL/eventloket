@@ -14,7 +14,6 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
-use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 
 use function Pest\Livewire\livewire;
@@ -32,14 +31,6 @@ beforeEach(function (): void {
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test event'
-        ),
     ]);
 });
 

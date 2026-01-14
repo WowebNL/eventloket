@@ -10,6 +10,7 @@ use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
+use App\ValueObjects\OzStatustype;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Besluit;
 use App\ValueObjects\ZGW\BesluitType;
@@ -32,9 +33,9 @@ use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
 
 /**
- * @property-read ZaakReferenceData $reference_data
- * @property-read ?Organisation $organisation
- * @property-read Municipality $municipality
+ * @property-read ZaakReferenceData            $reference_data
+ * @property-read ?Organisation                $organisation
+ * @property-read Municipality                 $municipality
  * @property-read Collection<Informatieobject> $documenten
  */
 #[ObservedBy(ZaakObserver::class)]
@@ -237,6 +238,24 @@ class Zaak extends Model implements Eventable
             },
             // set: function($value, $attributes) {
             // }
+        );
+    }
+
+    /** @return Attribute<\App\ValueObjects\OzStatustype, void> */
+    protected function statustype(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $statustypen = Cache::remember('statustypen', 60 * 60 * 24, function () {
+                    return (new Openzaak)->catalogi()->statustypen()->getAll(['pageSize' => 999999999])
+                        ->map(function ($statustype) {
+                            return new OzStatustype(...$statustype);
+                        });
+                });
+
+                // TODO: Eventueel nog cachen
+                return $statustypen->firstWhere('url', $this->reference_data->statustype_url);
+            },
         );
     }
 

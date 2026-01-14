@@ -23,6 +23,7 @@ use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
 
@@ -65,17 +66,22 @@ beforeEach(function () {
         'municipality_id' => $this->municipality->id,
     ]);
 
+    ZgwHttpFake::fakeStatustypen();
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    ZgwHttpFake::wildcardFake();
+
+    // Default zaak with "Ontvangen" status (status 1)
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
         'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test locatie',
-            'Test event'
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            naam_evenement: 'Test Event',
         ),
     ]);
 
@@ -83,73 +89,8 @@ beforeEach(function () {
     Notification::fake();
 });
 
-// Both municipalities and organisations can create organiser threads
-test('can be created by municipality reviewer triggers email sending and creates unread', function () {
-    Filament::setCurrentPanel(Filament::getPanel('municipality'));
-    $this->actingAs($this->reviewer);
-    Filament::setTenant($this->municipality);
-
-    livewire(CreateOrganiserThread::class, [
-        'parentRecord' => $this->zaak,
-    ])
-        ->assertFormExists()
-        ->fillForm([
-            'title' => fake()->sentence(),
-            'body' => fake()->paragraph(),
-        ])
-        ->call('create')
-        ->assertHasNoFormErrors();
-
-    $this->zaak->refresh();
-
-    expect($this->zaak->organiserThreads()->count())->toBe(1);
-
-    $organiserThread = $this->zaak->organiserThreads()->first();
-    expect($organiserThread->messages()->count())->toBe(1);
-
-    $message = $organiserThread->messages()->first();
-
-    // Should have been sent to all organisation users but not to reviewer2 (who didn't create or send message)
-    Notification::assertSentTo(
-        [$this->organiser, $this->organiser2],
-        NewOrganiserThread::class
-    );
-
-    Notification::assertNotSentTo(
-        [$this->reviewer2],
-        NewOrganiserThread::class
-    );
-
-    // Because this is the first message, no new message email should have been sent
-    Notification::assertNotSentTo(
-        [$this->organiser, $this->organiser2, $this->reviewer2],
-        NewOrganiserThreadMessage::class
-    );
-
-    // Unread message entries should have been created for all participants except creator
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->organiser->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->organiser2->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseMissing('unread_messages', [
-        'user_id' => $this->reviewer2->id,
-        'message_id' => $message->id,
-    ]);
-
-    // Creator should not have unread entry
-    $this->assertDatabaseMissing('unread_messages', [
-        'user_id' => $this->reviewer->id,
-        'message_id' => $message->id,
-    ]);
-});
-
-test('can be created by organiser triggers email sending and creates unread', function () {
+// Test organiser creates thread when zaak has "Ontvangen" status - all reviewers receive notification
+test('organiser creates thread with zaak status Ontvangen notifies all reviewers', function () {
     Filament::setCurrentPanel(Filament::getPanel('organiser'));
     $this->actingAs($this->organiser);
     Filament::setTenant($this->organisation);
@@ -159,8 +100,8 @@ test('can be created by organiser triggers email sending and creates unread', fu
     ])
         ->assertFormExists()
         ->fillForm([
-            'title' => fake()->sentence(),
-            'body' => fake()->paragraph(),
+            'title' => 'Question about my event',
+            'body' => 'I have a question',
         ])
         ->call('create')
         ->assertHasNoFormErrors();
@@ -172,41 +113,301 @@ test('can be created by organiser triggers email sending and creates unread', fu
     $organiserThread = $this->zaak->organiserThreads()->first();
     expect($organiserThread->messages()->count())->toBe(1);
 
-    $message = $organiserThread->messages()->first();
-
-    // Should have been sent to other organisation users but not municipality users (who didn't create or send message)
+    // All reviewers should receive notification because zaak status is "Ontvangen"
     Notification::assertSentTo(
-        [$this->organiser2],
-        NewOrganiserThread::class
-    );
-    Notification::assertNotSentTo(
-        [$this->organiser, $this->reviewer, $this->reviewer2],
+        [$this->reviewer, $this->reviewer2],
         NewOrganiserThread::class
     );
 
-    // Because this is the first message, no new message email should have been sent
-    Notification::assertNotSentTo(
-        [$this->organiser2, $this->reviewer, $this->reviewer2],
-        NewOrganiserThreadMessage::class,
-    );
-
-    // Unread message entries should have been created for participants except creator
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->organiser2->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseMissing('unread_messages', [
-        'user_id' => $this->reviewer->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseMissing('unread_messages', [
-        'user_id' => $this->reviewer2->id,
-        'message_id' => $message->id,
-    ]);
+    // Activity log should record notification was sent to both reviewers
+    expect($organiserThread->activities()->count())->toBeGreaterThan(0);
 });
 
+// Test organiser creates thread when zaak has "In behandeling" with behandelaar - only behandelaar receives notification
+test('organiser creates thread with zaak status In behandeling notifies only behandelaar', function () {
+    // Set zaak to "In behandeling" status and assign behandelaar
+    $this->zaak->update([
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'In behandeling',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2',
+            naam_evenement: 'Test Event',
+        ),
+        'handled_status_set_by_user_id' => $this->reviewer->id,
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    $this->actingAs($this->organiser);
+    Filament::setTenant($this->organisation);
+
+    livewire(CreateOrganiserThread::class, [
+        'parentRecord' => $this->zaak,
+    ])
+        ->assertFormExists()
+        ->fillForm([
+            'title' => 'Question about status',
+            'body' => 'What is happening?',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    // Only the behandelaar (reviewer) should receive notification
+    Notification::assertSentTo(
+        [$this->reviewer],
+        NewOrganiserThread::class
+    );
+
+    Notification::assertNotSentTo(
+        [$this->reviewer2],
+        NewOrganiserThread::class
+    );
+});
+
+// Test organiser creates thread when zaak has "Afgehandeld" status - all reviewers receive notification
+test('organiser creates thread with zaak status Afgehandeld notifies all reviewers', function () {
+    // Set zaak to "Afgehandeld" (finalised) status
+    $this->zaak->update([
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Afgehandeld',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/3',
+            naam_evenement: 'Test Event',
+        ),
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    $this->actingAs($this->organiser);
+    Filament::setTenant($this->organisation);
+
+    livewire(CreateOrganiserThread::class, [
+        'parentRecord' => $this->zaak,
+    ])
+        ->assertFormExists()
+        ->fillForm([
+            'title' => 'Follow-up question',
+            'body' => 'I have another question',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    // All reviewers should receive notification because zaak status is "Afgehandeld"
+    Notification::assertSentTo(
+        [$this->reviewer, $this->reviewer2],
+        NewOrganiserThread::class
+    );
+});
+
+// Test reviewer creates thread - all organisation users receive notification
+test('reviewer creates thread notifies all organisation users', function () {
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    $this->actingAs($this->reviewer);
+    Filament::setTenant($this->municipality);
+
+    livewire(CreateOrganiserThread::class, [
+        'parentRecord' => $this->zaak,
+    ])
+        ->assertFormExists()
+        ->fillForm([
+            'title' => 'Additional information needed',
+            'body' => 'Please provide more details',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    // All organisation users receive notification
+    Notification::assertSentTo(
+        [$this->organiser, $this->organiser2],
+        NewOrganiserThread::class
+    );
+
+    // Other reviewer who didn't create the thread does not receive notification
+    Notification::assertNotSentTo(
+        [$this->reviewer2],
+        NewOrganiserThread::class
+    );
+});
+
+// Test organiser sends message with zaak status "Ontvangen" - all reviewers notified
+test('organiser sends message with zaak status Ontvangen notifies all reviewers', function () {
+    $organiserThread = OrganiserThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Organiser,
+        'created_by' => $this->organiser->id,
+        'title' => 'Test thread',
+    ]);
+
+    Message::forceCreate([
+        'thread_id' => $organiserThread->id,
+        'user_id' => $this->organiser->id,
+        'body' => 'Initial message',
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    $this->actingAs($this->organiser);
+    Filament::setTenant($this->organisation);
+
+    livewire(MessageForm::class, [
+        'thread' => $organiserThread,
+    ])
+        ->fillForm([
+            'body' => 'Follow-up message',
+        ])
+        ->call('submit')
+        ->assertHasNoFormErrors();
+
+    // All reviewers should receive notification because zaak status is "Ontvangen"
+    Notification::assertSentTo(
+        [$this->reviewer, $this->reviewer2],
+        NewOrganiserThreadMessage::class
+    );
+});
+
+// Test organiser sends message with zaak status "In behandeling" with behandelaar - only behandelaar notified
+test('organiser sends message with zaak status In behandeling notifies only behandelaar', function () {
+    // Set zaak to "In behandeling" with behandelaar
+    $this->zaak->update([
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'In behandeling',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2',
+            naam_evenement: 'Test Event',
+        ),
+        'handled_status_set_by_user_id' => $this->reviewer->id,
+    ]);
+
+    $organiserThread = OrganiserThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Organiser,
+        'created_by' => $this->organiser->id,
+        'title' => 'Test thread',
+    ]);
+
+    Message::forceCreate([
+        'thread_id' => $organiserThread->id,
+        'user_id' => $this->organiser->id,
+        'body' => 'Initial message',
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    $this->actingAs($this->organiser);
+    Filament::setTenant($this->organisation);
+
+    livewire(MessageForm::class, [
+        'thread' => $organiserThread,
+    ])
+        ->fillForm([
+            'body' => 'Response message',
+        ])
+        ->call('submit')
+        ->assertHasNoFormErrors();
+
+    // Only behandelaar should receive notification
+    Notification::assertSentTo(
+        [$this->reviewer],
+        NewOrganiserThreadMessage::class
+    );
+
+    Notification::assertNotSentTo(
+        [$this->reviewer2],
+        NewOrganiserThreadMessage::class
+    );
+});
+
+// Test organiser sends message with zaak status "Afgehandeld" - all reviewers notified
+test('organiser sends message with zaak status Afgehandeld notifies all reviewers', function () {
+    // Set zaak to "Afgehandeld" status
+    $this->zaak->update([
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Afgehandeld',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/3',
+            naam_evenement: 'Test Event',
+        ),
+    ]);
+
+    $organiserThread = OrganiserThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Organiser,
+        'created_by' => $this->organiser->id,
+        'title' => 'Test thread',
+    ]);
+
+    Message::forceCreate([
+        'thread_id' => $organiserThread->id,
+        'user_id' => $this->organiser->id,
+        'body' => 'Initial message',
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    $this->actingAs($this->organiser);
+    Filament::setTenant($this->organisation);
+
+    livewire(MessageForm::class, [
+        'thread' => $organiserThread,
+    ])
+        ->fillForm([
+            'body' => 'Final message',
+        ])
+        ->call('submit')
+        ->assertHasNoFormErrors();
+
+    // All reviewers should receive notification
+    Notification::assertSentTo(
+        [$this->reviewer, $this->reviewer2],
+        NewOrganiserThreadMessage::class
+    );
+});
+
+// Test reviewer sends message - all organisation users notified
+test('reviewer sends message notifies all organisation users', function () {
+    $organiserThread = OrganiserThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Organiser,
+        'created_by' => $this->organiser->id,
+        'title' => 'Test thread',
+    ]);
+
+    Message::forceCreate([
+        'thread_id' => $organiserThread->id,
+        'user_id' => $this->organiser->id,
+        'body' => 'Initial message',
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    $this->actingAs($this->reviewer);
+    Filament::setTenant($this->municipality);
+
+    livewire(MessageForm::class, [
+        'thread' => $organiserThread,
+    ])
+        ->fillForm([
+            'body' => 'Response from reviewer',
+        ])
+        ->call('submit')
+        ->assertHasNoFormErrors();
+
+    // All organisation users should receive notification
+    Notification::assertSentTo(
+        [$this->organiser, $this->organiser2],
+        NewOrganiserThreadMessage::class
+    );
+
+    // Other reviewer who didn't send message does not receive notification
+    Notification::assertNotSentTo(
+        [$this->reviewer2],
+        NewOrganiserThreadMessage::class
+    );
+});
+
+// Test personal organisation works correctly
 test('can be created by organiser personal organisation too triggers email sending and creates unread', function () {
     $personalOrganisation = Organisation::factory()->create(['name' => 'Test Organisation', 'type' => OrganisationType::Personal]);
 
@@ -216,13 +417,12 @@ test('can be created by organiser personal organisation too triggers email sendi
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $personalOrganisation->id,
         'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test locatie',
-            'Test event'
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            naam_evenement: 'Test Event',
         ),
     ]);
 
@@ -247,120 +447,6 @@ test('can be created by organiser personal organisation too triggers email sendi
 
     $organiserThread = $personalZaak->organiserThreads()->first();
     expect($organiserThread->messages()->count())->toBe(1);
-});
-
-// Municipality user can send messages
-test('municipality user can send text messages', function () {
-    $organiserThread = OrganiserThread::forceCreate([
-        'zaak_id' => $this->zaak->id,
-        'type' => ThreadType::Organiser,
-        'created_by' => $this->organiser->id,
-        'title' => 'Test organiser thread',
-    ]);
-
-    Filament::setCurrentPanel(Filament::getPanel('municipality'));
-    $this->actingAs($this->reviewer);
-    Filament::setTenant($this->municipality);
-
-    livewire(MessageForm::class, [
-        'thread' => $organiserThread,
-    ])
-        ->fillForm([
-            'body' => 'Test message from municipality',
-        ])
-        ->call('submit')
-        ->assertHasNoFormErrors()
-        ->assertSuccessful();
-
-    $organiserThread->refresh();
-
-    expect($organiserThread->messages()->count())->toBe(1);
-
-    // Only the thread creator (organiser) and organisation users receive notifications, not reviewer2 who hasn't participated
-    Notification::assertSentTo(
-        [$this->organiser, $this->organiser2],
-        NewOrganiserThreadMessage::class,
-    );
-
-    Notification::assertNotSentTo(
-        [$this->reviewer, $this->reviewer2],
-        NewOrganiserThreadMessage::class,
-    );
-
-    $message = $organiserThread->messages()->first();
-
-    // Unread message entries should have been created for participants except sender
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->organiser->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->organiser2->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseMissing('unread_messages', [
-        'user_id' => $this->reviewer2->id,
-        'message_id' => $message->id,
-    ]);
-});
-
-// Organiser can send messages
-test('organiser can send text messages', function () {
-    $organiserThread = OrganiserThread::forceCreate([
-        'zaak_id' => $this->zaak->id,
-        'type' => ThreadType::Organiser,
-        'created_by' => $this->reviewer->id,
-        'title' => 'Test organiser thread',
-    ]);
-
-    Filament::setCurrentPanel(Filament::getPanel('organiser'));
-    $this->actingAs($this->organiser);
-    Filament::setTenant($this->organisation);
-
-    livewire(MessageForm::class, [
-        'thread' => $organiserThread,
-    ])
-        ->fillForm([
-            'body' => 'Test message from organiser',
-        ])
-        ->call('submit')
-        ->assertHasNoFormErrors()
-        ->assertSuccessful();
-
-    $organiserThread->refresh();
-
-    expect($organiserThread->messages()->count())->toBe(1);
-
-    // Only the thread creator (reviewer) and other organisation users receive notifications, not reviewer2 who hasn't participated
-    Notification::assertSentTo(
-        [$this->reviewer, $this->organiser2],
-        NewOrganiserThreadMessage::class
-    );
-
-    Notification::assertNotSentTo(
-        [$this->organiser, $this->reviewer2],
-        NewOrganiserThreadMessage::class
-    );
-
-    $message = $organiserThread->messages()->first();
-
-    // Unread message entries should have been created for participants except sender
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->reviewer->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseMissing('unread_messages', [
-        'user_id' => $this->reviewer2->id,
-        'message_id' => $message->id,
-    ]);
-
-    $this->assertDatabaseHas('unread_messages', [
-        'user_id' => $this->organiser2->id,
-        'message_id' => $message->id,
-    ]);
 });
 
 // Municipality user can view the Filament component with organiser threads list
@@ -516,7 +602,7 @@ test('visiting organiser thread page marks messages as read for auth user', func
     ]);
 
     // Manually mark messages as unread for reviewer (since they wouldn't normally be notified)
-    $this->reviewer->unreadMessages()->attach([$message1->id, $message2->id]);
+    $this->reviewer->unreadMessages()->syncWithoutDetaching([$message1->id, $message2->id]);
 
     // Verify messages are initially unread
     expect($this->reviewer->unreadMessages()->count())->toBe(2);

@@ -21,7 +21,6 @@ use App\Models\Zaaktype;
 use App\Notifications\AssignedToAdviceThread;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
-use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
@@ -69,15 +68,6 @@ beforeEach(function () {
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test locatie',
-            'Test event'
-        ),
     ]);
 
     $this->adviceThread = AdviceThread::forceCreate([

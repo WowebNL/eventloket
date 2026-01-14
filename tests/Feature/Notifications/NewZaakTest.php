@@ -75,6 +75,7 @@ test('when zaak is created, organiser who created it and reviewer users should b
             eind_evenement: now()->addDay(),
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test Event'
         ),
@@ -116,6 +117,7 @@ test('when zaak is created without organiser_user_id, only reviewer users should
             eind_evenement: now()->addDay(),
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test Event'
         ),
@@ -152,6 +154,7 @@ test('users who unsubscribed from notification should not receive it', function 
             eind_evenement: now()->addDay(),
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test Event'
         ),
@@ -181,6 +184,7 @@ test('notification uses different texts and links based on user type', function 
             eind_evenement: now()->addDay(),
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test Event'
         ),

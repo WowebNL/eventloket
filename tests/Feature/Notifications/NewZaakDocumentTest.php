@@ -115,7 +115,7 @@ test('Notification markdown mail rendered correctly', function () {
 
 });
 
-test('Organisation user receives notification for new zaak document', function () {
+test('Organisation user receives notification for new zaak document and activity log is created', function () {
     Notification::fake();
 
     $this->zaak->organisation->users()->each(function (User $user) {
@@ -129,9 +129,13 @@ test('Organisation user receives notification for new zaak document', function (
             return in_array('mail', $channels) && in_array('database', $channels);
         }
     );
+
+    // Verify activity log was created for the zaak
+    $this->zaak->refresh();
+    expect($this->zaak->activities()->count())->toBeGreaterThan(0);
 });
 
-test('Municipality user receives notification for new zaak document', function () {
+test('Municipality user receives notification for new zaak document and activity log is created', function () {
     Notification::fake();
 
     $this->zaak->municipality->users()->each(function (User $user) {
@@ -145,9 +149,13 @@ test('Municipality user receives notification for new zaak document', function (
             return in_array('mail', $channels) && in_array('database', $channels);
         }
     );
+
+    // Verify activity log was created for the zaak
+    $this->zaak->refresh();
+    expect($this->zaak->activities()->count())->toBeGreaterThan(0);
 });
 
-test('Advisory user receives notification for new zaak document', function () {
+test('Advisory user receives notification for new zaak document and activity log is created', function () {
     Notification::fake();
 
     $this->zaak->adviceThreads->first()->advisory->users()->each(function (User $user) {
@@ -161,4 +169,8 @@ test('Advisory user receives notification for new zaak document', function () {
             return in_array('mail', $channels) && in_array('database', $channels);
         }
     );
+
+    // Verify activity log was created for the zaak
+    $this->zaak->refresh();
+    expect($this->zaak->activities()->count())->toBeGreaterThan(0);
 });
