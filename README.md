@@ -20,8 +20,8 @@ This platform streamlines the entire permit application process for events in th
 - **Framework**: Laravel 12.x
 - **PHP Version**: PHP 8.4+
 - **Frontend**: Tailwind CSS, Vite
-- **Admin Panel**: Filament 3.x
-- **Database**: MySQL
+- **Admin Panel**: Filament 4.x
+- **Database**: PostgreSQL 17+ or MySQL 8+
 - **Queue System**: Redis
 - **Docker Support**: Laravel Sail
 
