@@ -31,7 +31,6 @@ class AcceptAdvisoryInvite extends AbstractAcceptInvite
 
     protected function attachTenantRelation(User $user): void
     {
-        /** @phpstan-ignore-next-line */
         $this->invite->advisory->users()->attach($user, [
             'role' => $this->invite->role,
         ]);
