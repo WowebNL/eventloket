@@ -148,7 +148,7 @@ test('advisor can send text messages and this changes advice status to replied',
         'zaak_id' => $this->zaak->id,
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
-        'advice_status' => AdviceStatus::Asked,
+        'advice_status' => AdviceStatus::InProgress,
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -538,31 +538,31 @@ test('AssignAction only visible to advisory admins', function () {
         ->assertActionVisible('assign');
 });
 
-// test('advisor can assign themselves to advice thread using AssignToSelfAction', function () {
-//    Filament::setCurrentPanel(Filament::getPanel('advisor'));
-//    $this->actingAs($this->advisor);
-//    Filament::setTenant($this->advisory);
-//
-//    expect($this->adviceThread->assignedUsers)->toHaveCount(0);
-//    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::Asked);
-//
-//    livewire(MessageForm::class, [
-//        'thread' => $this->adviceThread,
-//    ])
-//        ->callAction('assign_to_self');
-//
-//    $this->adviceThread->refresh();
-//
-//    expect($this->adviceThread->assignedUsers)->toHaveCount(1);
-//    expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
-//    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
-//
-//     // Assert advisor didn't received AssignedToAdviceThread notification
-//     Notification::assertNotSentTo(
-//         [$this->advisor],
-//         AssignedToAdviceThread::class,
-//     );
-// });
+test('advisor can assign themselves to advice thread using AssignToSelfAction', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(0);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::Asked);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->callAction('assign_to_self');
+
+    $this->adviceThread->refresh();
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(1);
+    expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+
+    // Assert advisor didn't received AssignedToAdviceThread notification
+    Notification::assertNotSentTo(
+        [$this->advisor],
+        AssignedToAdviceThread::class,
+    );
+});
 
 test('AssignToSelfAction is not visible when advisor is already assigned', function () {
     Filament::setCurrentPanel(Filament::getPanel('advisor'));
