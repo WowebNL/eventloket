@@ -10,9 +10,11 @@ use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
 use App\Filament\Shared\Resources\Zaken\Tables\ZakenTable;
+use App\Models\Advisory;
 use App\Models\Event;
 use App\Models\Municipality;
 use App\Models\Organisation;
+use App\Models\Users\AdvisorUser;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
@@ -122,6 +124,12 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->label(__('shared/widgets/calendar.view_case'))
             ->icon('heroicon-o-arrow-top-right-on-square')
             ->url(function (Zaak $record): string {
+                $currentPanelId = Filament::getCurrentPanel()?->getId();
+
+                if ($currentPanelId === 'advisor') {
+                    return route('filament.advisor.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]);
+                }
+
                 return route('filament.municipality.resources.zaken.view', ['tenant' => $record->municipality, 'record' => $record]);
             })
             ->color('primary')
@@ -129,7 +137,18 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->visible(function (Zaak $record) {
                 $user = auth()->user();
 
-                return $user instanceof MunicipalityUser && $user->canAccessMunicipality($record->zaaktype->municipality_id);
+                if ($user instanceof MunicipalityUser) {
+                    return $user->canAccessMunicipality($record->zaaktype->municipality_id);
+                }
+
+                if ($user instanceof AdvisorUser) {
+                    /** @var Advisory $tenant */
+                    $tenant = Filament::getTenant();
+
+                    return $tenant->can_view_any_zaak;
+                }
+
+                return false;
             });
     }
 
