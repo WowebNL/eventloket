@@ -11,7 +11,6 @@ use App\Models\Threads\OrganiserThread;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
-use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Tables\Table;
 use Spatie\Activitylog\Models\Activity;
 
@@ -30,14 +29,6 @@ beforeEach(function (): void {
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test event'
-        ),
     ]);
 
     $this->user = User::factory()->create([

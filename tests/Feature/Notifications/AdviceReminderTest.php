@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Notifications\AdviceReminder;
-use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
@@ -58,15 +57,6 @@ beforeEach(function () {
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test locatie',
-            'Test event'
-        ),
     ]);
 
     Mail::fake();

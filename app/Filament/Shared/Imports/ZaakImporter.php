@@ -119,6 +119,7 @@ class ZaakImporter extends Importer
                 eind_evenement: Carbon::createFromFormat('d/m/y', $this->data['end_date'])->startOfDay(),
                 registratiedatum: $this->data['submission_date'],
                 status_name: $this->data['status'],
+                statustype_url: '',
                 risico_classificatie: null,
                 naam_locatie_eveneme: null,
                 naam_evenement: $this->data['event_name'],

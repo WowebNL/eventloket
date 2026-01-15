@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Notifications\NewAdviceThread;
+use Tests\Fakes\ZgwHttpFake;
 
 beforeEach(function () {
     Notification::fake();
@@ -33,8 +34,13 @@ beforeEach(function () {
         'municipality_id' => $this->municipality->id,
     ]);
 
+    ZgwHttpFake::fakeStatustypen();
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    ZgwHttpFake::wildcardFake();
+
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
     ]);
 
     $this->user = User::factory()->create();

@@ -33,6 +33,7 @@ test('can check events within date range and municipality', function () {
             eind_evenement: '2025-01-17',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Event 1'
         ),
     ]);
@@ -44,6 +45,7 @@ test('can check events within date range and municipality', function () {
             eind_evenement: '2025-01-22',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Event 2'
         ),
     ]);
@@ -69,6 +71,7 @@ test('returns events that start within date range', function () {
             eind_evenement: '2025-02-05', // Ends after range
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Event Starting In Range'
         ),
     ]);
@@ -94,6 +97,7 @@ test('returns events that end within date range', function () {
             eind_evenement: '2025-01-15',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Event Ending In Range'
         ),
     ]);
@@ -120,6 +124,7 @@ test('excludes events from other municipalities', function () {
             eind_evenement: '2025-01-17',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Target Municipality Event'
         ),
     ]);
@@ -132,6 +137,7 @@ test('excludes events from other municipalities', function () {
             eind_evenement: '2025-01-17',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Other Municipality Event'
         ),
     ]);
@@ -158,6 +164,7 @@ test('excludes events outside date range', function () {
             eind_evenement: '2025-01-05',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Event Before Range'
         ),
     ]);
@@ -170,6 +177,7 @@ test('excludes events outside date range', function () {
             eind_evenement: '2025-02-05',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Event After Range'
         ),
     ]);
@@ -211,6 +219,7 @@ test('limits results to 10 events', function () {
                 eind_evenement: '2025-01-17',
                 registratiedatum: now(),
                 status_name: 'Ontvangen',
+                statustype_url: '',
                 naam_evenement: "Event {$i}"
             ),
         ]);
@@ -259,6 +268,7 @@ test('handles datetime format in start_date and end_date', function () {
             eind_evenement: '2025-01-17',
             registratiedatum: now(),
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'DateTime Test Event'
         ),
     ]);

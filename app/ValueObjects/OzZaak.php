@@ -13,6 +13,8 @@ class OzZaak implements Arrayable
 {
     public readonly ?string $status_name;
 
+    public readonly ?string $statustype_url;
+
     public readonly ?array $status;
 
     public readonly Carbon $startdatum_datetime;
@@ -62,6 +64,10 @@ class OzZaak implements Arrayable
 
         $this->status_name = Arr::has($this->_expand, 'status._expand.statustype.omschrijving')
             ? $this->_expand['status']['_expand']['statustype']['omschrijving']
+            : null;
+
+        $this->statustype_url = Arr::has($this->_expand, 'status._expand.statustype.url')
+            ? $this->_expand['status']['_expand']['statustype']['url']
             : null;
 
         $this->data_object_url = Arr::first(

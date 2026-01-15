@@ -55,15 +55,6 @@ beforeEach(function () {
     $this->zaakWithAdvice = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'zgw_zaak_url' => $zgwZaakUrl,
-        'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test locatie',
-            'Test event'
-        ),
     ]);
 
     AdviceThread::forceCreate([

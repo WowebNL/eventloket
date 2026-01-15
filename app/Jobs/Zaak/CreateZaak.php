@@ -64,6 +64,7 @@ class CreateZaak implements ShouldQueue
                         [
                             'registratiedatum' => $ozZaak->registratiedatum,
                             'status_name' => $ozZaak->status_name,
+                            'statustype_url' => $ozZaak->statustype_url,
                             'organisator' => $organisator,
                         ]
                     )

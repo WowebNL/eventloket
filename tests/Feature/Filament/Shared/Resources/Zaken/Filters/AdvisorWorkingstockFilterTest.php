@@ -89,6 +89,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Zaak'
         ),
     ]);
@@ -110,6 +111,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Zaak 2'
         ),
     ]);
@@ -147,6 +149,7 @@ test('filter with me option shows zaken assigned to current user', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'My Zaak'
         ),
     ]);
@@ -170,6 +173,7 @@ test('filter with me option shows zaken assigned to current user', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Other Zaak'
         ),
     ]);
@@ -193,6 +197,7 @@ test('filter with me option shows zaken assigned to current user', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Unassigned Zaak'
         ),
     ]);
@@ -229,6 +234,7 @@ test('filter with all option shows all zaken', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Zaak 1'
         ),
     ]);
@@ -241,6 +247,7 @@ test('filter with all option shows all zaken', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Zaak 2'
         ),
     ]);
@@ -286,6 +293,7 @@ test('filter query function works correctly with builder', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Zaak'
         ),
     ]);
@@ -346,6 +354,7 @@ test('filter works with multiple advice threads on same zaak', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Multi-thread Zaak'
         ),
     ]);

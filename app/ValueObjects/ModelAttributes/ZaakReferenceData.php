@@ -27,6 +27,7 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public string $eind_evenement,
         public string $registratiedatum,
         public string $status_name,
+        public string $statustype_url,
         public ?string $risico_classificatie = null,
         public ?string $naam_locatie_eveneme = null, // due to limit char restriction in OZ
         public ?string $naam_evenement = null,
@@ -84,6 +85,7 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
             'eind_evenement' => $this->eind_evenement,
             'registratiedatum' => $this->registratiedatum,
             'status_name' => $this->status_name,
+            'statustype_url' => $this->statustype_url,
             'naam_evenement' => $this->naam_evenement,
             'naam_locatie_evenement' => $this->naam_locatie_evenement,
             'organisator' => $this->organisator,
