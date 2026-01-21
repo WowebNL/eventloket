@@ -203,8 +203,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 }),
             ExportAction::make()
                 ->exporter($exporter)
-                ->label('Evenementen exporteren')
-                ->modalHeading('Evenementen exporteren')
+                ->label(__('shared/widgets/calendar.actions.export.label'))
+                ->modalHeading(__('shared/widgets/calendar.actions.export.label'))
                 ->columnMapping(false)
                 ->fillForm(function (Component $livewire) {
                     if (! property_exists($livewire, 'filters')) {
