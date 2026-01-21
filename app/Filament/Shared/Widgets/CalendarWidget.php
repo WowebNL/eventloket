@@ -34,6 +34,7 @@ use Filament\Tables;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Guava\Calendar\Concerns\CanRefreshCalendar;
 use Guava\Calendar\Filament\Actions\ViewAction;
 use Guava\Calendar\ValueObjects\DatesSetInfo;
 use Guava\Calendar\ValueObjects\FetchInfo;
@@ -48,6 +49,7 @@ use LogicException;
 
 class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements Tables\Contracts\HasTable
 {
+    use CanRefreshCalendar;
     use HasFilters;
     use Tables\Concerns\InteractsWithTable {
         Tables\Concerns\InteractsWithTable::normalizeTableFilterValuesFromQueryString insteadof HasFilters;
@@ -195,7 +197,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 ->badge(fn () => count(array_filter($this->filters ?? [])))
                 ->after(function () {
                     if ($this->viewMode === 'calendar') {
-                        $this->dispatch('calendar--refresh');
+                        $this->refreshRecords();
                     } else {
                         // Reset table to refresh with new filters
                         $this->resetTable();
