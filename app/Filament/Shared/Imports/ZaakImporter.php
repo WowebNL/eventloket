@@ -2,13 +2,17 @@
 
 namespace App\Filament\Shared\Imports;
 
+use App\Models\Municipality;
 use App\Models\Zaak;
+use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Carbon\Carbon;
+use Filament\Actions\Imports\Exceptions\RowImportFailedException;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Number;
 
 class ZaakImporter extends Importer
@@ -132,7 +136,8 @@ class ZaakImporter extends Importer
             ImportColumn::make('municipality_code')
                 ->label('Gemeentecode')
                 ->requiredMapping()
-                ->rules(['required', 'max:255']),
+                ->helperText('start altijd met GM en moet bestaan in de applicatie')
+                ->rules(['required', 'exists:municipalities,brk_identification']),
 
             ImportColumn::make('status')
                 ->label('Status')
@@ -141,7 +146,8 @@ class ZaakImporter extends Importer
             ImportColumn::make('type')
                 ->label('Type')
                 ->requiredMapping()
-                ->rules(['required', 'max:255']),
+                ->helperText('vooraankondiging, melding of vergunning')
+                ->rules(['required', 'in:vooraankondiging,melding,vergunning']),
         ];
     }
 
@@ -152,7 +158,26 @@ class ZaakImporter extends Importer
 
     public function fillRecord(): void
     {
+        $municipality = Municipality::where('brk_identification', $this->data['municipality_code'])
+            ->first();
+
+        if (! $municipality) {
+            throw new RowImportFailedException(__('Gemeente met code :code niet gevonden.', ['code' => $this->data['municipality_code']]));
+        }
+
+        $operator = DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
+
+        /** @var Zaaktype $zaaktype */
+        $zaaktype = $municipality->zaaktypen()
+            ->where('name', $operator, '%'.$this->data['type'].'%')
+            ->first();
+
+        if (! $zaaktype) {
+            throw new RowImportFailedException(__('Geen zaaktype gevonden voor het opgegeven type: :type binnen de gemeente :municipality', ['type' => $this->data['type'], 'municipality' => $municipality->name]));
+        }
+
         $this->record = new Zaak([
+            'zaaktype_id' => $zaaktype->id,
             'reference_data' => new ZaakReferenceData(
                 start_evenement: self::parseDate($this->data['start_date']),
                 eind_evenement: self::parseDate($this->data['end_date']),
@@ -165,7 +190,7 @@ class ZaakImporter extends Importer
                 organisator: $this->data['organisation_name'],
                 resultaat: null,
                 aanwezigen: $this->data['expected_visitors'],
-                types_evenement: [$this->data['type']],
+                types_evenement: [$this->data['event_type']],
             ),
             'imported_data' => $this->data,
         ]);
