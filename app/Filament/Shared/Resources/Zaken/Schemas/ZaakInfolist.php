@@ -117,7 +117,7 @@ class ZaakInfolist
                     ->date(config('app.date_format')),
             ])
             ->columnSpan(4)
-            ->visible(fn (Zaak $record) => $record->openzaak->resultaat);
+            ->visible(fn (Zaak $record) => $record->openzaak->resultaat ?? false);
     }
 
     public static function configure(Schema $schema): Schema
