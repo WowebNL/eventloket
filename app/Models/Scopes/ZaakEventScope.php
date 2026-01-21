@@ -14,8 +14,8 @@ class ZaakEventScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        if (auth()->check() && auth()->user()->role == Role::Advisor) {
-            $builder->select('id', 'public_id', 'reference_data', 'zaaktype_id', 'organisation_id', 'organiser_user_id', 'zgw_zaak_url')->with(['organisation' => function ($query) {
+        if (auth()->check() && in_array(auth()->user()->role, [Role::Advisor, Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])) {
+            $builder->select('id', 'public_id', 'reference_data', 'zaaktype_id', 'organisation_id', 'organiser_user_id', 'zgw_zaak_url', 'imported_data')->with(['organisation' => function ($query) {
                 $query->select('id', 'name', 'type', 'email', 'phone', 'address');
             }, 'zaaktype', 'organiserUser']);
 

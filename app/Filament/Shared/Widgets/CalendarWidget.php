@@ -25,6 +25,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Pages\Dashboard\Actions\FilterAction;
 use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
@@ -162,12 +163,18 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->schema(ZaakInfolist::informationschema())
                         ->columns(2),
                     LocationsTab::make(),
+                    Tabs\Tab::make('imported')
+                        ->label(__('Geïmporteerde informatie'))
+                        ->visible(fn (Zaak $record) => ! empty($record->imported_data))
+                        ->schema([
+                            KeyValueEntry::make('imported_data')
+                                ->hiddenLabel()
+                                ->keyLabel(__('Sleutel'))
+                                ->valueLabel(__('Waarde'))
+                                ->columns(1),
+                        ]),
                 ])
                 ->columnSpanFull(),
-            // Section::make()
-            //     ->columns(2)
-            //     ->schema(ZaakInfolist::informationschema())
-            //     ->columnSpan(8),
         ]);
     }
 
