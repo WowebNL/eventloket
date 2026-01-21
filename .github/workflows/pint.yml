@@ -10,4 +10,4 @@ jobs:
           uses: aglipanci/laravel-pint-action@latest
           with:
             preset: laravel
-            onlyDirty: true
+            testMode: true
