@@ -10,19 +10,58 @@ use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Number;
-use Illuminate\Validation\Rule;
 
 class ZaakImporter extends Importer
 {
     protected static ?string $model = Zaak::class;
 
+    /**
+     * Supported date formats for import
+     */
+    protected static array $dateFormats = [
+        'd/m/Y',
+        'd-m-Y',
+        'd/m/y',
+        'd-m-y',
+        'Y-m-d',
+        'd/n/Y',
+        'd-n-Y',
+        'd/n/y',
+        'd-n-y',
+    ];
+
+    /**
+     * Parse a date string using multiple supported formats
+     */
+    protected static function parseDate(?string $date): ?Carbon
+    {
+        if (empty($date)) {
+            return null;
+        }
+
+        foreach (self::$dateFormats as $format) {
+            try {
+                $parsed = Carbon::createFromFormat($format, $date);
+                if ($parsed !== null && $parsed->year >= 1000) {
+                    return $parsed->startOfDay();
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
     public static function getColumns(): array
     {
+        $dateFormatsRule = 'date_format:'.implode(',', self::$dateFormats);
+
         return [
             ImportColumn::make('submission_date')
                 ->label('Aanvraagdatum')
                 ->requiredMapping()
-                ->rules(['required', 'max:255', 'date']),
+                ->rules(['required', 'max:255', $dateFormatsRule]),
 
             ImportColumn::make('contact_first_name')
                 ->label('Voornaam contactpersoon')
@@ -84,11 +123,11 @@ class ZaakImporter extends Importer
             ImportColumn::make('start_date')
                 ->label('Startdatum')
                 ->requiredMapping()
-                ->rules(['required', 'max:255', Rule::date()->format('d/m/y')]),
+                ->rules(['required', 'max:255', $dateFormatsRule]),
             ImportColumn::make('end_date')
                 ->label('Einddatum')
                 ->requiredMapping()
-                ->rules(['required', 'max:255', Rule::date()->format('d/m/y')]),
+                ->rules(['required', 'max:255', $dateFormatsRule]),
 
             ImportColumn::make('municipality_code')
                 ->label('Gemeentecode')
@@ -115,9 +154,9 @@ class ZaakImporter extends Importer
     {
         $this->record = new Zaak([
             'reference_data' => new ZaakReferenceData(
-                start_evenement: Carbon::createFromFormat('d/m/y', $this->data['start_date'])->startOfDay(),
-                eind_evenement: Carbon::createFromFormat('d/m/y', $this->data['end_date'])->startOfDay(),
-                registratiedatum: $this->data['submission_date'],
+                start_evenement: self::parseDate($this->data['start_date']),
+                eind_evenement: self::parseDate($this->data['end_date']),
+                registratiedatum: self::parseDate($this->data['submission_date']),
                 status_name: $this->data['status'],
                 statustype_url: '',
                 risico_classificatie: null,
