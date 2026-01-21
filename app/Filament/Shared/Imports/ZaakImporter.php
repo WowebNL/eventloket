@@ -205,10 +205,10 @@ class ZaakImporter extends Importer
 
     public static function getCompletedNotificationBody(Import $import): string
     {
-        $body = __('shared/widgets/calendar.actions.import.completed_notification.body', ['count' => Number::format($import->successful_rows)]);
+        $body = trans_choice('shared/widgets/calendar.actions.import.completed_notification.body', $import->successful_rows, ['count' => Number::format($import->successful_rows)]);
 
         if ($failedRowsCount = $import->getFailedRowsCount()) {
-            $body .= __('shared/widgets/calendar.actions.import.completed_notification.failed', ['count' => Number::format($failedRowsCount)]);
+            $body .= trans_choice('shared/widgets/calendar.actions.import.completed_notification.failed', $failedRowsCount, ['count' => Number::format($failedRowsCount)]);
         }
 
         return $body;
