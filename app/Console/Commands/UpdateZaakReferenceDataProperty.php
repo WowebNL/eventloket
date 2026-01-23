@@ -2,8 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\Zaak\ClearZaakCache;
 use App\Jobs\Zaak\CreateZaak;
 use App\Models\Zaak;
+use App\ValueObjects\OpenNotification;
 use Illuminate\Console\Command;
 use Illuminate\Console\Concerns\InteractsWithIO;
 
@@ -71,7 +73,16 @@ class UpdateZaakReferenceDataProperty extends Command
             ->lazy()
             ->each(function (Zaak $zaak) use (&$dispatched, $bar) {
                 if ($zaak->zgw_zaak_url) {
-                    CreateZaak::dispatch($zaak->zgw_zaak_url);
+                    dispatch(new ClearZaakCache(
+                        new OpenNotification(
+                            hoofdObject: $zaak->zgw_zaak_url,
+                            actie: '',
+                            kanaal: '',
+                            resource: '',
+                            resourceUrl: '',
+                            aanmaakdatum: '',
+                        )
+                    ));
                 }
 
                 $dispatched++;
@@ -82,7 +93,7 @@ class UpdateZaakReferenceDataProperty extends Command
         $this->line('');
         $this->line('');
 
-        $this->info("✅ Dispatched $dispatched CreateZaak jobs to the queue!");
+        $this->info("✅ Dispatched $dispatched resync reference_data jobs to the queue!");
         $this->info('Jobs will be processed by your queue worker.');
         $this->line('');
         $this->info('Monitor jobs with: php artisan queue:monitor');
