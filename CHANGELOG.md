@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.1 - 2026-01-27
+
+### What's Changed
+
+#### 🔥 Hotfix
+
+* Fix: organiser can add documents to own organisation zaken (#255) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.2.0...v0.2.1
+
 ## v0.2.0 - 2026-01-22
 
 ### What's Changed
@@ -8,6 +18,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 ```
 #### ✨ New feautures
