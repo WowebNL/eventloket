@@ -2,7 +2,6 @@
 
 namespace App\Notifications;
 
-use App\Models\Threads\AdviceThread;
 use App\Models\User;
 use App\Models\Users\AdvisorUser;
 use App\Models\Users\OrganiserUser;
@@ -81,11 +80,10 @@ class NewZaakDocument extends BaseNotification
     {
         return match (get_class($notifiable)) {
             OrganiserUser::class => $this->zaak->organisation->uuid,
-            AdvisorUser::class => $this->zaak->adviceThreads->map(function (Model $thread) use ($notifiable) {
-                /** @var AdviceThread $thread */
-                return in_array($thread->advisory_id, $notifiable->advisories->pluck('id')->toArray());
-            }
-            )->first(),
+            /** @phpstan-ignore-next-line */
+            AdvisorUser::class => $this->zaak->adviceThreads()
+                ->whereIn('advisory_id', $notifiable->advisories->pluck('id')->toArray())
+                ->first()->advisory_id,
             default => $this->zaak->municipality->id
         };
     }
