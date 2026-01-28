@@ -4,7 +4,6 @@ namespace App\Filament\Municipality\Clusters\Settings\Resources;
 
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings;
-use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\CreateMunicipalityAdminUser;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\EditMunicipalityAdminUser;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\Pages\ListMunicipalityAdminUsers;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityAdminUserResource\RelationManagers\MunicipalitiesRelationManager;
@@ -30,8 +29,6 @@ class MunicipalityAdminUserResource extends Resource
     protected static ?int $navigationSort = 0;
 
     protected static ?string $cluster = Settings::class;
-
-    protected static bool $isScopedToTenant = false;
 
     protected static ?string $tenantOwnershipRelationshipName = 'municipalities';
 
@@ -114,7 +111,6 @@ class MunicipalityAdminUserResource extends Resource
     {
         return [
             'index' => ListMunicipalityAdminUsers::route('/'),
-            'create' => CreateMunicipalityAdminUser::route('/create'),
             'edit' => EditMunicipalityAdminUser::route('/{record}/edit'),
         ];
     }
