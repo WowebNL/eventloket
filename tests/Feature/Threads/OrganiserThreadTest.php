@@ -41,7 +41,11 @@ beforeEach(function () {
         'email' => 'reviewer2@example.com',
         'role' => Role::Reviewer,
     ]);
-    $this->municipality->users()->attach([$this->reviewer->id, $this->reviewer2->id]);
+    $this->municipalityAdmin = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+    $this->municipality->users()->attach([$this->reviewer->id, $this->reviewer2->id, $this->municipalityAdmin->id]);
 
     // Organisation users
     $this->organiser = User::factory()->create([
@@ -119,6 +123,12 @@ test('organiser creates thread with zaak status Ontvangen notifies all reviewers
         NewOrganiserThread::class
     );
 
+    // MunicipalityAdmin should NOT receive notification
+    Notification::assertNotSentTo(
+        [$this->municipalityAdmin],
+        NewOrganiserThread::class
+    );
+
     // Activity log should record notification was sent to both reviewers
     expect($organiserThread->activities()->count())->toBeGreaterThan(0);
 });
@@ -160,7 +170,7 @@ test('organiser creates thread with zaak status In behandeling notifies only beh
     );
 
     Notification::assertNotSentTo(
-        [$this->reviewer2],
+        [$this->reviewer2, $this->municipalityAdmin],
         NewOrganiserThread::class
     );
 });
@@ -264,6 +274,12 @@ test('organiser sends message with zaak status Ontvangen notifies all reviewers'
         [$this->reviewer, $this->reviewer2],
         NewOrganiserThreadMessage::class
     );
+
+    // MunicipalityAdmin should NOT receive notification
+    Notification::assertNotSentTo(
+        [$this->municipalityAdmin],
+        NewOrganiserThreadMessage::class
+    );
 });
 
 // Test organiser sends message with zaak status "In behandeling" with behandelaar - only behandelaar notified
@@ -314,7 +330,7 @@ test('organiser sends message with zaak status In behandeling notifies only beha
     );
 
     Notification::assertNotSentTo(
-        [$this->reviewer2],
+        [$this->reviewer2, $this->municipalityAdmin],
         NewOrganiserThreadMessage::class
     );
 });
@@ -364,6 +380,12 @@ test('organiser sends message with zaak status Afgehandeld notifies all reviewer
         [$this->reviewer, $this->reviewer2],
         NewOrganiserThreadMessage::class
     );
+
+    // MunicipalityAdmin should NOT receive notification
+    Notification::assertNotSentTo(
+        [$this->municipalityAdmin],
+        NewOrganiserThreadMessage::class
+    );
 });
 
 // Test reviewer sends message - all organisation users notified
@@ -401,8 +423,9 @@ test('reviewer sends message notifies all organisation users', function () {
     );
 
     // Other reviewer who didn't send message does not receive notification
+    // MunicipalityAdmin should NOT receive notification
     Notification::assertNotSentTo(
-        [$this->reviewer2],
+        [$this->reviewer2, $this->municipalityAdmin],
         NewOrganiserThreadMessage::class
     );
 });

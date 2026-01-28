@@ -134,6 +134,12 @@ test('when zaak is created without organiser_user_id, only reviewer users should
         [$this->reviewer, $this->reviewerMunicipalityAdmin],
         NewZaak::class
     );
+
+    // MunicipalityAdmin should NOT be notified
+    Notification::assertNotSentTo(
+        [$this->municipalityAdmin],
+        NewZaak::class
+    );
 });
 
 test('users who unsubscribed from notification should not receive it', function () {
