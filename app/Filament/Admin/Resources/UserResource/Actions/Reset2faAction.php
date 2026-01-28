@@ -31,6 +31,11 @@ class Reset2faAction
                     ->body(__('admin/resources/all-users.actions.reset_2fa.notification.body', ['name' => $record->name]))
                     ->success()
                     ->send();
+
+                activity()
+                    ->event('updated')
+                    ->performedOn($record)
+                    ->log('User 2FA reset by admin');
             });
     }
 }
