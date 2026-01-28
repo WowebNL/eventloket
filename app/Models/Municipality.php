@@ -69,7 +69,7 @@ class Municipality extends Model implements HasGeometry
 
     public function allReviewerUsers(): BelongsToMany
     {
-        return $this->belongsToMany(MunicipalityUser::class, 'municipality_user');
+        return $this->municipalityUsers()->reviewers();
     }
 
     public function allAdminUsers()

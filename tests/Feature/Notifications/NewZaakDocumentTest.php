@@ -37,7 +37,13 @@ beforeEach(function () {
             'role' => Role::Reviewer,
         ]);
 
+    $this->municipalityAdmin = User::factory()
+        ->create([
+            'role' => Role::MunicipalityAdmin,
+        ]);
+
     $this->municipality->users()->attach($this->reviewer);
+    $this->municipality->users()->attach($this->municipalityAdmin);
 
     $this->zaaktype = Zaaktype::factory()->create([
         'municipality_id' => $this->municipality->id,
@@ -138,7 +144,7 @@ test('Organisation user receives notification for new zaak document and activity
 test('Municipality user receives notification for new zaak document and activity log is created', function () {
     Notification::fake();
 
-    $this->zaak->municipality->users()->each(function (User $user) {
+    $this->zaak->municipality->reviewerUsers()->each(function (User $user) {
         $user->notify(new NewZaakDocument($this->zaak, 'document.pdf', 'new'));
     });
 
@@ -148,6 +154,12 @@ test('Municipality user receives notification for new zaak document and activity
         function (NewZaakDocument $notification, $channels) {
             return in_array('mail', $channels) && in_array('database', $channels);
         }
+    );
+
+    // MunicipalityAdmin should NOT be notified
+    Notification::assertNotSentTo(
+        [$this->municipalityAdmin],
+        NewZaakDocument::class
     );
 
     // Verify activity log was created for the zaak
