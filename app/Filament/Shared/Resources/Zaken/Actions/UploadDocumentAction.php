@@ -5,6 +5,7 @@ namespace App\Filament\Shared\Resources\Zaken\Actions;
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Models\Zaak;
+use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -69,7 +70,8 @@ class UploadDocumentAction
                 ->label(__('Bestand'))
                 ->required()
                 ->maxSize(20480) // 20MB
-                ->acceptedFileTypes(config('app.document_file_types'))
+                ->mimeTypeMap(config('app.document_mime_type_mappings'))
+                ->rule(DocumentUploadType::fileUploadRule())
                 ->directory('documents')
                 ->visibility('private')
                 ->storeFileNamesIn('file_name'),
@@ -88,7 +90,7 @@ class UploadDocumentAction
             'taal' => 'dut',
             'bestandsnaam' => $data['file_name'],
             'bestandsomvang' => Storage::size($data['file']),
-            'formaat' => Storage::mimeType($data['file']),
+            'formaat' => DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null),
             'inhoud' => base64_encode(Storage::get($data['file'])),
             'informatieobjecttype' => $data['informatieobjecttype'],
             'indicatieGebruiksrecht' => false,

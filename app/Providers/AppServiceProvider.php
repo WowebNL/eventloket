@@ -13,6 +13,7 @@ use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Support\CarbonBusinessDaysMixin;
+use App\Support\Uploads\DocumentUploadType;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
@@ -46,6 +47,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        DocumentUploadType::assertConfigurationIsSafe(array_values((array) config('app.document_file_types', [])));
+
         // Register custom case-insensitive user provider
         Auth::provider('case-insensitive-eloquent', function ($app, array $config) {
             return new CaseInsensitiveUserProvider($app['hash'], $config['model']);
