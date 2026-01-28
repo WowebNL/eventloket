@@ -13,6 +13,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Filament\Tables\Table;
 use Spatie\Activitylog\Models\Activity;
+use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
 
@@ -44,6 +45,8 @@ beforeEach(function (): void {
 
     // Clear any auto-logged activities
     Activity::query()->delete();
+
+    ZgwHttpFake::fakeStatustypen();
 });
 
 test('table can be configured', function () {

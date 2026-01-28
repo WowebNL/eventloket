@@ -55,9 +55,11 @@ beforeEach(function () {
 
     $this->reviewer = User::factory()->create(['role' => Role::Reviewer]);
     $this->reviewer2 = User::factory()->create(['role' => Role::Reviewer]);
+    $this->municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
 
     $this->municipality->users()->attach($this->reviewer);
     $this->municipality->users()->attach($this->reviewer2);
+    $this->municipality->users()->attach($this->municipalityAdmin);
 
     $this->organisation = Organisation::factory()->create();
 
@@ -177,13 +179,14 @@ test('advisor can send text messages and this changes advice status to replied',
     // Only the municipality user who created the thread should receive a notification
     // The advisor who sent the message should not receive a notification
     // reviewer2 should not receive a notification because they did not create the thread or send any messages
+    // MunicipalityAdmin should not receive a notification
     Notification::assertSentTo(
         [$this->reviewer],
         NewAdviceThreadMessage::class
     );
 
     Notification::assertNotSentTo(
-        [$this->advisor, $this->advisor2, $this->reviewer2],
+        [$this->advisor, $this->advisor2, $this->reviewer2, $this->municipalityAdmin],
         NewAdviceThreadMessage::class
     );
 
