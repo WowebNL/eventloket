@@ -23,6 +23,38 @@ beforeEach(function () {
     $this->municipality->users()->attach($this->municipalityAdmin);
 });
 
+test('municipality admin can only see admins from their own municipality', function () {
+    // Arrange - Create another municipality with its own admin
+    $otherMunicipality = Municipality::factory()->create([
+        'name' => 'Other Municipality',
+    ]);
+
+    $otherMunicipalityAdmin = User::factory()->create([
+        'email' => 'other-municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $otherMunicipality->users()->attach($otherMunicipalityAdmin);
+
+    // Create an admin for the current municipality
+    $currentMunicipalityAdmin = User::factory()->create([
+        'email' => 'current-municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($currentMunicipalityAdmin);
+
+    $this->actingAs($this->municipalityAdmin);
+
+    Filament::setTenant($this->municipality);
+    Filament::bootCurrentPanel();
+
+    // Act & Assert
+    livewire(ListMunicipalityAdminUsers::class)
+        ->assertCanSeeTableRecords([$this->municipalityAdmin, $currentMunicipalityAdmin])
+        ->assertCanNotSeeTableRecords([$otherMunicipalityAdmin]);
+});
+
 test('municipality admin can change municipality admin role using select column', function () {
     // Arrange
     $targetUser = User::factory()->create([
