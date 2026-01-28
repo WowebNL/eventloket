@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\Actions;
 
 use App\Models\Zaak;
+use App\Support\Uploads\DocumentUploadType;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -47,7 +48,8 @@ class NewDocumentVersionAction
                 ->label(__('Bestand'))
                 ->required()
                 ->maxSize(20480) // 20MB
-                ->acceptedFileTypes(config('app.document_file_types'))
+                ->mimeTypeMap(config('app.document_mime_type_mappings'))
+                ->rule(DocumentUploadType::fileUploadRule())
                 ->directory('documents')
                 ->visibility('private')
                 ->storeFileNamesIn('file_name'),
@@ -65,7 +67,7 @@ class NewDocumentVersionAction
                 'auteur' => auth()->user()->name,
                 'bestandsnaam' => $data['file_name'],
                 'bestandsomvang' => Storage::size($data['file']),
-                'formaat' => Storage::mimeType($data['file']),
+                'formaat' => DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null),
                 'lock' => $lockString,
                 'indicatieGebruiksrecht' => false,
             ]
