@@ -14,6 +14,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Spatie\Activitylog\Models\Activity;
+use Tests\Fakes\ZgwHttpFake;
 
 covers(ActivityLogWidget::class);
 
@@ -25,9 +26,14 @@ beforeEach(function (): void {
         'municipality_id' => $this->municipality->id,
     ]);
 
+    ZgwHttpFake::fakeStatustypen();
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    ZgwHttpFake::wildcardFake();
+
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
     ]);
 
     $this->user = User::factory()->create([
@@ -221,12 +227,12 @@ test('widget does not show activities for threads of other zaken', function () {
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
         'reference_data' => new ZaakReferenceData(
-            'B',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Other event'
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            naam_evenement: 'Test Event',
         ),
     ]);
 
@@ -263,12 +269,12 @@ test('widget does not show activities for messages in threads of other zaken', f
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
         'reference_data' => new ZaakReferenceData(
-            'B',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Other event'
+            start_evenement: now()->addDays(30)->toIso8601String(),
+            eind_evenement: now()->addDays(31)->toIso8601String(),
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            naam_evenement: 'Test Event',
         ),
     ]);
 
