@@ -95,3 +95,116 @@ test('renders and shows organiser calendar page', function () {
         ->assertOk()
         ->assertSeeLivewire(OrganiserCalendarWidget::class);
 });
+
+test('calendar widget can switch between calendar and table view', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    livewire(MunicipalityCalendarWidget::class)
+        ->assertSet('viewMode', 'calendar')
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'calendar');
+});
+
+test('calendar widget preserves filters when switching views', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    $filters = [
+        'municipalities' => [$this->municipality->id],
+        'search' => 'test event',
+    ];
+
+    livewire(MunicipalityCalendarWidget::class)
+        ->assertSet('viewMode', 'calendar')
+        ->set('filters', $filters)
+        ->assertSet('filters', $filters)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertSet('filters', $filters)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'calendar')
+        ->assertSet('filters', $filters);
+});
+
+test('calendar widget calls refreshRecords when filters change in calendar view', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->assertSet('viewMode', 'calendar');
+
+    // Apply filters via the filter action
+    $component->callAction('filter', data: [
+        'municipalities' => [$this->municipality->id],
+    ]);
+
+    // Verify filters were applied
+    expect($component->get('filters'))->toHaveKey('municipalities');
+});
+
+test('calendar widget resets table when filters change in table view', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table');
+
+    // Apply filters via the filter action
+    $component->callAction('filter', data: [
+        'municipalities' => [$this->municipality->id],
+    ]);
+
+    // Verify filters were applied
+    expect($component->get('filters'))->toHaveKey('municipalities');
+});
+
+test('calendar view remains mounted when switching to table view', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->assertSet('viewMode', 'calendar')
+        ->assertSee('data-calendar') // Calendar should be rendered
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertSee('data-calendar'); // Calendar should still be in DOM (just hidden)
+});
