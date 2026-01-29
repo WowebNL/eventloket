@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.2 - 2026-01-29
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Never unmount calendar views in calendar widget by @LorensoD in https://github.com/WowebNL/eventloket/pull/257
+* Scope list municipality admin user page to tenant by @LorensoD  in https://github.com/WowebNL/eventloket/pull/258
+* MunicipalityAdmin shouldn’t receive notifications by @LorensoD in https://github.com/WowebNL/eventloket/pull/260
+* Add tests for generating correct URLs in NewZaakDocument notifications by @LorensoD in https://github.com/WowebNL/eventloket/pull/263
+* Faq on homepage uses accordion by @Michel-Verhoeven in https://github.com/WowebNL/eventloket/pull/268
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.2.1...v0.2.2
+
 ## v0.2.0 - 2026-01-22
 
 ### What's Changed
@@ -8,6 +22,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 ```
 #### ✨ New feautures
