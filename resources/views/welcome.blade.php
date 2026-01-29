@@ -87,14 +87,24 @@
           </div>
           <div class="w-full lg:w-1/2">
             <div class="lg:max-w-xl">
-              <div class="accordion-group" data-accordion="default-accordion">
+              <div class="space-y-2" data-accordion="faq">
                 @foreach($faqs as $faq)
-                <div
-                  class=" pb-8 border-b border-solid border-gray-200 "
-                >
-                    <h5 class="leading-8 text-gray-600 text-xl mt-2">{{ $faq['question'] }}</h5>
-                    <div class="text-base font-normal text-gray-600 [&>p]:mt-3 [&_a]:text-blue-600 [&_a]:underline [&>h2]:text-4xl [&>h3]:text-2xl [&>h2,&>h3]:font-semibold [&>h2]:tracking-tight [&>h2,&>h3]:text-gray-900 [&>h2,&>h3]:mt-2 [&>blockquote]:p-4 [&>blockquote]:my-4 [&>blockquote]:border-s-4 [&>blockquote]:border-gray-300 [&>blockquote]:bg-gray-50 [&>blockquote]:dark:border-gray-500 [&>blockquote]:dark:bg-gray-800 [&>ul]:list-disc [&>ol]:list-decimal [&>ul,&>ol]:ms-5 [&>ul]:mt-3 [&>ol]:mt-3 [&>li]:mt-1">
-                      {!! str($faq['answer'])->sanitizeHtml() !!}
+                <div class="border-b border-solid border-gray-200" data-accordion-item>
+                    <button type="button" class="flex w-full items-center justify-between gap-4 py-4 text-left cursor-pointer" data-accordion-trigger aria-expanded="false">
+                      <h5 class="leading-8 text-gray-600 text-xl ">{{ $faq['question'] }}</h5>
+                      <span class="shrink-0 ">
+                        <svg viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400" data-accordion-icon="plus">
+                          <path fill-rule="evenodd" d="M10 4.75a.75.75 0 0 1 .75.75v3.75h3.75a.75.75 0 0 1 0 1.5H10.75v3.75a.75.75 0 0 1-1.5 0V10.75H5.5a.75.75 0 0 1 0-1.5h3.75V5.5A.75.75 0 0 1 10 4.75Z" clip-rule="evenodd" />
+                        </svg>
+                        <svg viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-400 hidden" data-accordion-icon="minus">
+                          <path fill-rule="evenodd" d="M5.5 9.25a.75.75 0 0 0 0 1.5h9a.75.75 0 0 0 0-1.5h-9Z" clip-rule="evenodd" />
+                        </svg>
+                      </span>
+                    </button>
+                    <div class="hidden" data-accordion-panel>
+                      <div class="pb-6 text-base font-normal text-gray-600 [&>p]:mt-3 [&_a]:text-blue-600 [&_a]:underline [&>h2]:text-4xl [&>h3]:text-2xl [&>h2,&>h3]:font-semibold [&>h2]:tracking-tight [&>h2,&>h3]:text-gray-900 [&>h2,&>h3]:mt-2 [&>blockquote]:p-4 [&>blockquote]:my-4 [&>blockquote]:border-s-4 [&>blockquote]:border-gray-300 [&>blockquote]:bg-gray-50 [&>blockquote]:dark:border-gray-500 [&>blockquote]:dark:bg-gray-800 [&>ul]:list-disc [&>ol]:list-decimal [&>ul,&>ol]:ms-5 [&>ul]:mt-3 [&>ol]:mt-3 [&>li]:mt-1">
+                        {!! str($faq['answer'])->sanitizeHtml() !!}
+                      </div>
                     </div>
                 </div>
                 @endforeach
