@@ -1,8 +1,6 @@
-# Versie 0.2.2-beta.1 - Wat is er nieuw?
+# Versie 0.2.2 - Wat is er nieuw?
 
-**Releasedatum:** 28 januari 2026
-
-> Dit is een **beta release**. Bedoeld om te testen op de testomgeving; functionaliteit kan nog wijzigen richting de definitieve v0.2.2.
+**Releasedatum:** 29 januari 2026
 
 ---
 
@@ -44,29 +42,15 @@ Wisselen tussen de **kalenderweergave** en **tabelweergave** is stabieler. De ka
 
 ---
 
+### FAQ op de landingspagina: inklapbaar en overzichtelijk
+
+**Voor wie:** Bezoekers van de landingspagina
+
+De FAQ-sectie op de landingspagina is nu inklapbaar. Vragen kunnen worden open- en dichtgeklapt, waardoor de pagina overzichtelijker is.
+
+---
+
 ## 📱 Wat moet je doen?
 
 ### Voor eindgebruikers
 **Niets!** De verbeteringen worden automatisch toegepast na de update.
-
----
-
-## ✅ Testinstructie (beta)
-
-- Notificaties (document):
-  - Upload een nieuw document bij een zaak.
-  - Controleer dat een reviewer de notificatie ontvangt.
-  - Controleer dat een gemeente-beheerder **geen** notificatie ontvangt.
-  - Open de “Bekijk zaak” link (email/notification) als organisator, adviseur en reviewer en controleer dat je op de juiste zaak uitkomt.
-
-- Notificaties (organisatie of adviesvragen):
-  - Start een organisatie of adviesvraag en plaats een bericht.
-  - Controleer dat relevante reviewers/ontvangers notificaties ontvangen.
-  - Controleer dat een gemeente-beheerder **geen** notificatie ontvangt.
-
-- Gemeente-beheerders:
-  - Log in als gemeente-beheerder van Gemeente A en controleer dat je geen beheerders van Gemeente B ziet.
-
-- Kalenderwidget:
-  - Wissel meerdere keren tussen “Kalender” en “Tabel”.
-  - Stel filters in en controleer dat de kalender ververst en dat filters behouden blijven.
