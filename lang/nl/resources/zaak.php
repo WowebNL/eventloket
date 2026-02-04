@@ -90,4 +90,28 @@ return [
         'with_advice_thread' => 'Zaken met adviesvraag',
         'all' => 'Eventloket zaken',
     ],
+    'actions' => [
+        'change_zaaktype' => [
+            'label' => 'Zaaktype wijzigen',
+            'modal_heading' => 'Zaaktype wijzigen',
+            'modal_description' => 'Let op: het wijzigen van het zaaktype kan invloed hebben op de verdere afhandeling van de zaak.',
+            'modal_submit_label' => 'Wijzigen',
+            'form' => [
+                'new_zaaktype_id' => [
+                    'label' => 'Nieuw zaaktype',
+                    'helper_text' => 'Selecteer het nieuwe zaaktype voor deze zaak.',
+                ],
+            ],
+            'notifications' => [
+                'success' => [
+                    'title' => 'Zaaktype gewijzigd',
+                    'body' => 'Het zaaktype is succesvol gewijzigd naar \':zaaktype\'.',
+                ],
+                'error' => [
+                    'title' => 'Fout bij wijzigen zaaktype',
+                    'body' => 'Er is een fout opgetreden bij het wijzigen van het zaaktype: :error',
+                ],
+            ],
+        ],
+    ],
 ];

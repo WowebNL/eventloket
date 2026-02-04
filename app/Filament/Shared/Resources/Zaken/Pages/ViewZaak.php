@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\Zaken\Pages;
 
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
+use App\Filament\Shared\Resources\Zaken\Actions\ChangeZaaktypeAction;
 use App\Filament\Shared\Resources\Zaken\Widgets\ActivityLogWidget;
 use App\Filament\Shared\Resources\Zaken\ZaakResource;
 use App\Jobs\Zaak\AddBesluitZGW;
@@ -78,6 +79,8 @@ class ViewZaak extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            /** @phpstan-ignore-next-line */
+            ChangeZaaktypeAction::make($this->record),
             Action::make('activity')
                 ->visible(fn (Zaak $record) => auth()->user()->can('viewActivity', $record))
                 ->label('Bekijk activiteiten')
