@@ -47,10 +47,10 @@ class BaseEventExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'Je evenementen export is afgerond en '.Number::format($export->successful_rows).' '.str('rij')->plural($export->successful_rows).' zijn geëxporteerd.';
+        $body = trans_choice('shared/widgets/calendar.actions.export.completed_notification.body', $export->successful_rows, ['count' => Number::format($export->successful_rows)]);
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' '.Number::format($failedRowsCount).' '.str('rij')->plural($failedRowsCount).' konden niet worden geëxporteerd.';
+            $body .= trans_choice('shared/widgets/calendar.actions.export.completed_notification.failed', $failedRowsCount, ['count' => Number::format($failedRowsCount)]);
         }
 
         return $body;
