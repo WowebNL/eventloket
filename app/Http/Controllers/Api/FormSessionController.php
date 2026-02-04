@@ -41,6 +41,10 @@ class FormSessionController extends Controller
             ];
         }
 
+        if ($formSubmission->prefillZaak) {
+            $data['prefill_data'] = $formSubmission->prefillZaak->zaakdata?->record['data']['data'] ?? null;
+        }
+
         return response()->json(['message' => 'Valid session', 'data' => $data]);
     }
 }

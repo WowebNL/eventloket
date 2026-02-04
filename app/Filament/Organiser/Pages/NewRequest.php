@@ -18,13 +18,16 @@ class NewRequest extends Page
     #[Locked]
     public $formId;
 
+    #[Locked]
+    public $prefillZaakReference = null;
+
     public $loadForm = false;
 
     protected static ?string $slug = 'new-request/{openform?}';
 
     protected static ?int $navigationSort = 1;
 
-    protected static string|array $routeMiddleware = ValidateOpenFormsPrefill::class; // prefill causes issues with openform submission, workaround for now is to save the of submission id from localstorage to the db
+    // protected static string|array $routeMiddleware = ValidateOpenFormsPrefill::class; // prefill causes issues with openform submission, workaround for now is to save the of submission id from localstorage to the db
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
@@ -43,6 +46,11 @@ class NewRequest extends Page
     public function mount(): void
     {
         $this->formId = config('services.open_forms.main_form_uuid');
+
+        // Retrieve prefill_zaak_reference from session if available
+        if (session()->has('prefill_zaak_reference')) {
+            $this->prefillZaakReference = session()->pull('prefill_zaak_reference');
+        }
     }
 
     public function checkInitialLoad()
@@ -54,10 +62,15 @@ class NewRequest extends Page
         /** @var FormsubmissionSession $submissionSession */
         $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
 
+        if ($this->prefillZaakReference && $submissionSession) {
+            $submissionSession->update(['prefill_zaak_reference' => $this->prefillZaakReference]);
+            $this->prefillZaakReference = null;
+        }
+
         if ($submissionSession) {
             $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
         } else {
-            $this->js('listenLocalStorage(); loadForm();');
+            $this->js('loadForm();');
         }
     }
 
@@ -85,48 +98,16 @@ class NewRequest extends Page
     {
         $submissionUUid = trim($submissionUUid, '"');
         if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
-            /** @var Organisation $tenant */
-            $tenant = Filament::getTenant();
-            /** @var OrganiserUser $user */
-            $resp = $user->formsubmissionSessions()->firstOrCreate(['uuid' => $submissionUUid], ['user_id' => $user->id, 'organisation_id' => $tenant->id]);
-        }
-    }
-
-    public function checkSubmissionSession(string $submissionUUid)
-    {
-        $submissionUUid = trim($submissionUUid, '"');
-        if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
-            /** @var Organisation $tenant */
-            $tenant = Filament::getTenant();
-            /** @var OrganiserUser $user */
-            if (! $user->formsubmissionSessions()->where(['uuid' => $submissionUUid, 'organisation_id' => $tenant->id])->exists()) {
-                $this->js('deleteStorageRef()');
-                if ($submission = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first()) {
-                    /** @var FormsubmissionSession $submission */
-                    $this->js('loadFormWithRef', '"'.$submission->uuid.'"');
-                } else {
-                    $this->js('listenLocalStorage(); loadForm();');
-                }
-
-                return;
+            if ($this->prefillZaakReference) {
+                $prefill_zaak_reference = $this->prefillZaakReference;
+                $this->prefillZaakReference = null;
+            } else {
+                $prefill_zaak_reference = null;
             }
-        }
-        $this->js('loadForm(); checkIfSubmissionChanges("'.$submissionUUid.'");');
-    }
-
-    public function checkLoadExistingSubmissionSession()
-    {
-        /** @var Organisation $tenant */
-        $tenant = Filament::getTenant();
-        /** @var OrganiserUser $user */
-        $user = Filament::auth()->user();
-        /** @var FormsubmissionSession $submissionSession */
-        $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
-
-        if ($submissionSession) {
-            $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
-        } else {
-            $this->js('listenLocalStorage(); loadForm();');
+            /** @var Organisation $tenant */
+            $tenant = Filament::getTenant();
+            /** @var OrganiserUser $user */
+            $resp = $user->formsubmissionSessions()->firstOrCreate(['uuid' => $submissionUUid], ['user_id' => $user->id, 'organisation_id' => $tenant->id, 'prefill_zaak_reference' => $prefill_zaak_reference]);
         }
     }
 }

@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FormsubmissionSession extends Model
 {
-    protected $fillable = ['uuid', 'user_id', 'organisation_id'];
+    protected $fillable = ['uuid', 'user_id', 'organisation_id', 'prefill_zaak_reference'];
+
+    protected $primaryKey = 'uuid';
 
     public $incrementing = false;
 
@@ -21,5 +23,10 @@ class FormsubmissionSession extends Model
     public function organisation(): BelongsTo
     {
         return $this->belongsTo(Organisation::class);
+    }
+
+    public function prefillZaak(): BelongsTo
+    {
+        return $this->belongsTo(Zaak::class, 'prefill_zaak_reference', 'id');
     }
 }
