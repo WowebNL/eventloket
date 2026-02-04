@@ -36,8 +36,9 @@ class ZaakImporter extends Importer
 
     /**
      * Parse a date string using multiple supported formats
+     * Returns date string in Y-m-d format
      */
-    protected static function parseDate(?string $date): ?Carbon
+    protected static function parseDate(?string $date): ?string
     {
         if (empty($date)) {
             return null;
@@ -47,7 +48,7 @@ class ZaakImporter extends Importer
             try {
                 $parsed = Carbon::createFromFormat($format, $date);
                 if ($parsed !== null && $parsed->year >= 1000) {
-                    return $parsed->startOfDay();
+                    return $parsed->format('Y-m-d');
                 }
             } catch (\Exception $e) {
                 continue;
