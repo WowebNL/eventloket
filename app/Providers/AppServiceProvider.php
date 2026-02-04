@@ -39,6 +39,12 @@ class AppServiceProvider extends ServiceProvider
                 ListApplications::class,
             ]
         );
+
+        // Use custom Export model to fix user relationship caching issues
+        $this->app->bind(
+            \Filament\Actions\Exports\Models\Export::class,
+            \App\Models\Export::class
+        );
     }
 
     /**
