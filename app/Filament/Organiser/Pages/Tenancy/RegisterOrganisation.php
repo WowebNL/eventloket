@@ -10,6 +10,7 @@ use App\Services\LocatieserverService;
 use App\ValueObjects\Pdok\BagObject;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
 use Filament\Pages\Tenancy\RegisterTenant;
 use Filament\Schemas\Components\Fieldset;
@@ -51,47 +52,75 @@ class RegisterOrganisation extends RegisterTenant
                 Fieldset::make('bag_address')
                     ->label(__('organiser/pages/tenancy/register.form.address.label'))
                     ->schema([
+                        Checkbox::make('use_postbus')
+                            ->label(__('organiser/pages/tenancy/register.form.use_postbus.label'))
+                            ->live()
+                            ->afterStateUpdated(function (?bool $state) {
+                                if ($state) {
+                                    $this->data['bag_address']['straatnaam'] = 'Postbus';
+                                    $this->data['bag_address']['huisletter'] = null;
+                                    $this->data['bag_address']['huisnummertoevoeging'] = null;
+                                    $this->bagAddress = [];
+                                    $this->data['address'] = '';
+                                } else {
+                                    $this->data['bag_address']['straatnaam'] = null;
+                                }
+                            })
+                            ->columnSpanFull(),
                         TextInput::make('bag_address.postcode')
                             ->label(__('organiser/pages/tenancy/register.form.postcode.label'))
                             ->required()
                             ->maxLength(6)
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (?string $state) {
-                                if ($state && $this->data['bag_address']['huisnummer']) {
-                                    $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($state, $this->data['bag_address']['huisnummer']));
+                                if (! $this->data['use_postbus']) {
+                                    if ($state && $this->data['bag_address']['huisnummer']) {
+                                        $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($state, $this->data['bag_address']['huisnummer']));
+                                    }
                                 }
                             }),
                         TextInput::make('bag_address.huisnummer')
-                            ->label(__('organiser/pages/tenancy/register.form.huisnummer.label'))
+                            ->label(fn () => ($this->data['use_postbus'])
+                                ? __('organiser/pages/tenancy/register.form.postbusnummer.label')
+                                : __('organiser/pages/tenancy/register.form.huisnummer.label'))
                             ->required()
                             ->maxLength(255)
                             ->live(onBlur: true)
                             ->afterStateUpdated(function (?string $state) {
-                                if ($state && $this->data['bag_address']['postcode']) {
-                                    $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($this->data['bag_address']['postcode'], $state));
+                                if (! $this->data['use_postbus']) {
+                                    if ($state && $this->data['bag_address']['postcode']) {
+                                        $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($this->data['bag_address']['postcode'], $state));
+                                    }
                                 }
                             }),
                         TextInput::make('bag_address.huisletter')
                             ->label(__('organiser/pages/tenancy/register.form.huisletter.label'))
                             ->maxLength(255)
                             ->live(onBlur: true)
+                            ->hidden(fn () => $this->data['use_postbus'])
                             ->afterStateUpdated(function (?string $state) {
-                                if ($this->data['bag_address']['huisnummer'] && $this->data['bag_address']['postcode']) {
-                                    $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($this->data['bag_address']['postcode'], $this->data['bag_address']['huisnummer'], $state, $this->data['bag_address']['huisnummertoevoeging'] ?? null));
+                                if (! $this->data['use_postbus']) {
+                                    if ($this->data['bag_address']['huisnummer'] && $this->data['bag_address']['postcode']) {
+                                        $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($this->data['bag_address']['postcode'], $this->data['bag_address']['huisnummer'], $state, $this->data['bag_address']['huisnummertoevoeging'] ?? null));
+                                    }
                                 }
                             }),
                         TextInput::make('bag_address.huisnummertoevoeging')
                             ->label(__('organiser/pages/tenancy/register.form.huisnummertoevoeging.label'))
                             ->maxLength(255)
                             ->live(onBlur: true)
+                            ->hidden(fn () => $this->data['use_postbus'])
                             ->afterStateUpdated(function (?string $state) {
-                                if ($this->data['bag_address']['huisnummer'] && $this->data['bag_address']['postcode']) {
-                                    $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($this->data['bag_address']['postcode'], $this->data['bag_address']['huisnummer'], $this->data['bag_address']['huisletter'] ?? null, $state));
+                                if (! $this->data['use_postbus']) {
+                                    if ($this->data['bag_address']['huisnummer'] && $this->data['bag_address']['postcode']) {
+                                        $this->handleBagAddressChange((new LocatieserverService)->getBagObjectByPostcodeHuisnummer($this->data['bag_address']['postcode'], $this->data['bag_address']['huisnummer'], $this->data['bag_address']['huisletter'] ?? null, $state));
+                                    }
                                 }
                             }),
                         TextInput::make('bag_address.straatnaam')
                             ->label(__('organiser/pages/tenancy/register.form.straatnaam.label'))
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->hidden(fn () => $this->data['use_postbus']),
                         TextInput::make('bag_address.woonplaatsnaam')
                             ->label(__('organiser/pages/tenancy/register.form.woonplaatsnaam.label'))
                             ->maxLength(255),
@@ -99,6 +128,7 @@ class RegisterOrganisation extends RegisterTenant
                             ->label(__('organiser/pages/tenancy/register.form.address.label'))
                             ->disabled()
                             ->dehydrated()
+                            ->hidden(fn () => $this->data['use_postbus'])
                             ->columnSpanFull(),
                     ])
                     ->columns(2)
@@ -145,6 +175,15 @@ class RegisterOrganisation extends RegisterTenant
     {
         if ($this->bagAddress) {
             $data['bag_id'] = Arr::get($this->bagAddress, 'id');
+        }
+
+        if ($data['use_postbus'] === true) {
+            $postcode = $data['bag_address']['postcode'];
+            $huisnummer = $data['bag_address']['huisnummer'];
+            $straatnaam = 'Postbus';
+            $woonplaatsnaam = $data['bag_address']['woonplaatsnaam'];
+
+            $data['address'] = "$straatnaam $huisnummer, $postcode $woonplaatsnaam";
         }
 
         $organisation = Organisation::create([
