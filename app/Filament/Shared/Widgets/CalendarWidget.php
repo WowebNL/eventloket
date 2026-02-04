@@ -25,6 +25,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Pages\Dashboard\Actions\FilterAction;
 use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
@@ -34,6 +35,7 @@ use Filament\Tables;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Guava\Calendar\Concerns\CanRefreshCalendar;
 use Guava\Calendar\Filament\Actions\ViewAction;
 use Guava\Calendar\ValueObjects\DatesSetInfo;
 use Guava\Calendar\ValueObjects\FetchInfo;
@@ -48,6 +50,7 @@ use LogicException;
 
 class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements Tables\Contracts\HasTable
 {
+    use CanRefreshCalendar;
     use HasFilters;
     use Tables\Concerns\InteractsWithTable {
         Tables\Concerns\InteractsWithTable::normalizeTableFilterValuesFromQueryString insteadof HasFilters;
@@ -162,12 +165,18 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->schema(ZaakInfolist::informationschema())
                         ->columns(2),
                     LocationsTab::make(),
+                    Tabs\Tab::make('imported')
+                        ->label(__('Geïmporteerde informatie'))
+                        ->visible(fn (Zaak $record) => ! empty($record->imported_data))
+                        ->schema([
+                            KeyValueEntry::make('imported_data')
+                                ->hiddenLabel()
+                                ->keyLabel(__('Sleutel'))
+                                ->valueLabel(__('Waarde'))
+                                ->columns(1),
+                        ]),
                 ])
                 ->columnSpanFull(),
-            // Section::make()
-            //     ->columns(2)
-            //     ->schema(ZaakInfolist::informationschema())
-            //     ->columnSpan(8),
         ]);
     }
 
@@ -195,7 +204,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 ->badge(fn () => count(array_filter($this->filters ?? [])))
                 ->after(function () {
                     if ($this->viewMode === 'calendar') {
-                        $this->dispatch('calendar--refresh');
+                        $this->refreshRecords();
                     } else {
                         // Reset table to refresh with new filters
                         $this->resetTable();

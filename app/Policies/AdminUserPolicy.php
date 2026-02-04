@@ -21,6 +21,10 @@ class AdminUserPolicy
      */
     public function view(User $user, AdminUser $adminUser): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 

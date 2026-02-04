@@ -140,6 +140,10 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
+                if (! $attributes['zgw_zaak_url']) {
+                    return null;
+                }
+
                 return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
                     return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype')->all());
                 });
@@ -194,6 +198,10 @@ class Zaak extends Model implements Eventable
 
     private function getBesluiten(): Collection
     {
+        if (! $this->zgw_zaak_url) {
+            return collect();
+        }
+
         return Cache::rememberForever("zaak.{$this->id}.besluiten", function () {
             $openzaak = new Openzaak;
             $besluiten = $openzaak->besluiten()->besluiten()->getAll(['zaak' => $this->zgw_zaak_url]);
@@ -216,6 +224,10 @@ class Zaak extends Model implements Eventable
 
     private function getDocuments()
     {
+        if (! $this->zgw_zaak_url) {
+            return collect();
+        }
+
         return Cache::rememberForever("zaak.{$this->id}.documenten", function () {
             $openzaak = new Openzaak;
             $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);

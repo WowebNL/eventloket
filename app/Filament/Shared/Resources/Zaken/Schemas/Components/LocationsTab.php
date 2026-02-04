@@ -18,6 +18,7 @@ class LocationsTab
             ->label(__('municipality/resources/zaak.infolist.tabs.locations.label'))
             ->icon('heroicon-o-map-pin')
             ->columns(12)
+            ->visible(fn (Zaak $record) => $record->openzaak)
             ->schema([
                 Fieldset::make(__('municipality/resources/zaak.infolist.tabs.locations.information.label'))
                     ->schema([
