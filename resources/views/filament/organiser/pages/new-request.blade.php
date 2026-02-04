@@ -60,6 +60,7 @@
                                                             if (currentSubmission) {
                                                                 if(isDebug) console.log('Update vanaf click listener ref:', currentSubmission);
                                                                 @this.updateFormsubmissionSession(currentSubmission);
+                                                                summaryProgressFound = false;
                                                             }
                                                         }
                                                     }, 100);
