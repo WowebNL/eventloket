@@ -62,12 +62,7 @@ class NewRequest extends Page
         /** @var FormsubmissionSession $submissionSession */
         $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
 
-        if ($this->prefillZaakReference && $submissionSession) {
-            $submissionSession->update(['prefill_zaak_reference' => $this->prefillZaakReference]);
-            $this->prefillZaakReference = null;
-        }
-
-        if ($submissionSession) {
+        if ($submissionSession && ! $this->prefillZaakReference) {
             $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
         } else {
             $this->js('loadForm();');
