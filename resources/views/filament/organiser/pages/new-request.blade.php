@@ -3,6 +3,8 @@
         <script src="{{ config('services.open_forms.base_url') }}/static/sdk/open-forms-sdk.js"></script>
         <script>
             const isDebug = {{ config('app.debug') ? 'true' : 'false' }};
+            const formId = '{{ $formId }}';
+            let summaryProgressFound = false;
             
             document.addEventListener('DOMContentLoaded', function() {
                 document.body.classList.add('utrecht-document', 'openforms-theme');
@@ -37,6 +39,45 @@
                                                 element.style.display = 'none';
                                             }
                                         });
+                                    }
+
+                                    // Check for login button container and attach click listener to first button
+                                    const loginContainers = addedNode.classList && addedNode.classList.contains('openforms-login-button')
+                                        ? [addedNode]
+                                        : (addedNode.querySelectorAll ? Array.from(addedNode.querySelectorAll('.openforms-login-button')) : []);
+
+                                    if (loginContainers.length > 0) {
+                                        loginContainers.forEach(function(container) {
+                                            const firstButton = container.querySelector('button');
+                                            if (firstButton && !firstButton.hasAttribute('data-login-listener')) {
+                                                firstButton.addEventListener('click', function() {
+                                                    if(isDebug) console.log('clicked login button');
+                                                    
+                                                    const waitForSummary = setInterval(function() {
+                                                        if (summaryProgressFound) {
+                                                            clearInterval(waitForSummary);
+                                                            const currentSubmission = sessionStorage.getItem(formId);
+                                                            if (currentSubmission) {
+                                                                if(isDebug) console.log('Update vanaf click listener ref:', currentSubmission);
+                                                                @this.updateFormsubmissionSession(currentSubmission);
+                                                            }
+                                                        }
+                                                    }, 100);
+                                                });
+                                                firstButton.setAttribute('data-login-listener', 'true');
+                                            }
+                                        });
+                                    }
+
+                                    // Check for openforms-summary-progress to set flag
+                                    if(addedNode.classList && addedNode.classList.contains('openforms-summary-progress')) {
+                                        summaryProgressFound = true;
+                                        if (isDebug) console.log('Summary progress found');
+                                    }
+                                    const summaryProgressElements = addedNode.querySelectorAll && addedNode.querySelectorAll('.openforms-summary-progress');
+                                    if(summaryProgressElements && summaryProgressElements.length > 0) {
+                                        summaryProgressFound = true;
+                                        if (isDebug) console.log('Summary progress found in descendants');
                                     }
                                 }
                             });
@@ -102,6 +143,7 @@
     <div wire:init="checkInitialLoad()"></div>
     
     @script
+    {{-- TDODO needs cleanup but leave it here for now if version gets declined --}}
     <script>
         const isDebug = {{ config('app.debug') ? 'true' : 'false' }};
         const intervals = new Map();
@@ -119,7 +161,7 @@
         window.addEventListener('beforeunload', () => {
             clearAllIntervals();
         });
-        
+
         $js('listenLocalStorage', function() {
             createInterval('listenLocalStorage', () => {
                 if (isDebug) console.log('listenLocalStorage check');
@@ -136,7 +178,6 @@
         $js('loadFormWithRef', function(submission) {
             currentSubmission = submission;
             sessionStorage.setItem(formId, submission);
-            @this.$js.checkIfSubmissionChanges(submission);
             @this.$js.loadForm();
             if(isDebug) console.log('Loaded form with submission ref:', submission);
         });
