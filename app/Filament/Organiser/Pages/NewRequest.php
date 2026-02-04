@@ -62,6 +62,9 @@ class NewRequest extends Page
         /** @var FormsubmissionSession $submissionSession */
         $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
 
+        if ($this->prefillZaakReference) {
+            $this->js('deleteStorageRef();');
+        }
         if ($submissionSession && ! $this->prefillZaakReference) {
             $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
         } else {
