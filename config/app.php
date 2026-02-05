@@ -139,7 +139,14 @@ return [
     'date_format' => env('APP_DATE_FORMAT', 'd-m-Y'),
     'datetime_format' => env('APP_DATETIME_FORMAT', 'd-m-Y H:i'),
 
+    'document_mime_type_mappings' => [
+        'eml' => 'message/rfc822',
+        'emlx' => 'message/rfc822',
+        'msg' => 'application/vnd.ms-outlook',
+
+    ],
     'document_file_types' => env('APP_DOCUMENT_FILE_TYPES', [
+
         // Images
         'image/*',
 
@@ -169,7 +176,6 @@ return [
         // GPX & Geo formats
         'application/gpx+xml',
         'application/xml',              // GPX is XML-based
-        'application/octet-stream',     // Some GPX tools export incorrectly
         'application/vnd.google-earth.kml+xml',  // .kml
         'application/vnd.google-earth.kmz',      // .kmz
         'application/geo+json',                  // .geojson
@@ -185,5 +191,9 @@ return [
         'model/vnd.dwf',                         // .dwf
         'application/vnd.dwf',
         'application/vnd.autocad.dwg',
+
+        // email formats
+        'message/rfc822', // .eml .emlx
+        'application/vnd.ms-outlook', // .msg
     ]),
 ];
