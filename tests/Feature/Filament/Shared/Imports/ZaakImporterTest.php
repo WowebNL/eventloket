@@ -66,17 +66,56 @@ test('parseDate handles all supported date formats correctly', function () {
     foreach ($testCases as [$input, $expected]) {
         $parsed = invokeZaakImporterMethod('parseDate', [$input]);
 
-        expect($parsed)
-            ->toBeInstanceOf(Carbon::class)
-            ->and($parsed->format('Y-m-d'))->toBe($expected);
+        expect($parsed)->toBe($expected);
     }
 });
 
-test('parseDate sets time to start of day', function () {
-    $date = '19/02/2026';
-    $parsed = invokeZaakImporterMethod('parseDate', [$date]);
+test('parseDate handles datetime formats with hours and minutes', function () {
+    $testCases = [
+        ['07/06/2026 18:30', '2026-06-07T18:30:00+02:00'], // d/m/Y H:i
+        ['07-06-2026 18:30', '2026-06-07T18:30:00+02:00'], // d-m-Y H:i
+        ['2026-06-07 18:30', '2026-06-07T18:30:00+02:00'], // Y-m-d H:i
+        ['07/6/2026 09:15', '2026-06-07T09:15:00+02:00'],  // d/n/Y H:i
+    ];
 
-    expect($parsed->format('H:i:s'))->toBe('00:00:00');
+    foreach ($testCases as [$input, $expected]) {
+        $parsed = invokeZaakImporterMethod('parseDate', [$input]);
+
+        expect($parsed)->toBe($expected);
+    }
+});
+
+test('parseDate handles datetime formats with hours minutes and seconds', function () {
+    $testCases = [
+        ['07/06/2026 18:30:45', '2026-06-07T18:30:45+02:00'], // d/m/Y H:i:s
+        ['07-06-2026 18:30:45', '2026-06-07T18:30:45+02:00'], // d-m-Y H:i:s
+        ['2026-06-07 18:30:45', '2026-06-07T18:30:45+02:00'], // Y-m-d H:i:s
+    ];
+
+    foreach ($testCases as [$input, $expected]) {
+        $parsed = invokeZaakImporterMethod('parseDate', [$input]);
+
+        expect($parsed)->toBe($expected);
+    }
+});
+
+test('parseDate uses Amsterdam timezone for datetime formats', function () {
+    $input = '15/06/2026 14:30';
+    $parsed = invokeZaakImporterMethod('parseDate', [$input]);
+
+    // Parse the result to check timezone
+    $carbon = Carbon::parse($parsed);
+
+    expect($carbon->timezone->getName())->toBe('+02:00')
+        ->and($carbon->format('Y-m-d\TH:i:sP'))->toBe('2026-06-15T14:30:00+02:00');
+});
+
+test('parseDate returns date-only format when no time is provided', function () {
+    $input = '19/02/2026';
+    $parsed = invokeZaakImporterMethod('parseDate', [$input]);
+
+    expect($parsed)->toBe('2026-02-19')
+        ->and($parsed)->not->toContain('T');
 });
 
 test('parseDate returns null for empty string', function () {
@@ -161,7 +200,7 @@ test('fillRecord creates zaak with reference_data containing all required fields
         ->and($referenceData->status_name)->toBe('Verleend');
 });
 
-test('fillRecord parses all dates correctly in reference_data', function () {
+test('fillRecord parses date-only formats correctly in reference_data', function () {
     // Arrange
     $municipality = Municipality::factory()->create(['brk_identification' => 'GM0003']);
     $zaaktype = Zaaktype::factory()->create([
@@ -190,12 +229,77 @@ test('fillRecord parses all dates correctly in reference_data', function () {
     // Assert
     $record = getImporterRecord($importer);
     $referenceData = $record->reference_data;
-    expect($referenceData->registratiedatum_datetime)->toBeInstanceOf(Carbon::class)
-        ->and($referenceData->registratiedatum_datetime->format('Y-m-d'))->toBe('2026-02-19')
-        ->and($referenceData->start_evenement_datetime)->toBeInstanceOf(Carbon::class)
-        ->and($referenceData->start_evenement_datetime->format('Y-m-d'))->toBe('2026-02-25')
-        ->and($referenceData->eind_evenement_datetime)->toBeInstanceOf(Carbon::class)
-        ->and($referenceData->eind_evenement_datetime->format('Y-m-d'))->toBe('2026-02-26');
+    expect($referenceData->registratiedatum)->toBe('2026-02-19')
+        ->and($referenceData->start_evenement)->toBe('2026-02-25')
+        ->and($referenceData->eind_evenement)->toBe('2026-02-26');
+});
+
+test('fillRecord parses datetime formats correctly in reference_data', function () {
+    // Arrange
+    $municipality = Municipality::factory()->create(['brk_identification' => 'GM0009']);
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'name' => 'Vooraankondiging',
+    ]);
+
+    $data = [
+        'municipality_code' => 'GM0009',
+        'type' => 'vooraankondiging',
+        'submission_date' => '19/02/2026 10:30',
+        'start_date' => '25/02/2026 18:00',
+        'end_date' => '26/02/2026 23:30',
+        'status' => 'Openbaar',
+        'event_name' => 'Evening Party',
+        'organisation_name' => 'Party Org',
+        'expected_visitors' => '200',
+        'event_type' => 'Celebration',
+    ];
+
+    $importer = createImporterWithData($data);
+
+    // Act
+    $importer->fillRecord();
+
+    // Assert
+    $record = getImporterRecord($importer);
+    $referenceData = $record->reference_data;
+    expect($referenceData->registratiedatum)->toBe('2026-02-19T10:30:00+01:00')
+        ->and($referenceData->start_evenement)->toBe('2026-02-25T18:00:00+01:00')
+        ->and($referenceData->eind_evenement)->toBe('2026-02-26T23:30:00+01:00');
+});
+
+test('fillRecord handles mixed date and datetime formats', function () {
+    // Arrange
+    $municipality = Municipality::factory()->create(['brk_identification' => 'GM0010']);
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'name' => 'Melding',
+    ]);
+
+    $data = [
+        'municipality_code' => 'GM0010',
+        'type' => 'melding',
+        'submission_date' => '19/02/2026',
+        'start_date' => '25/02/2026 14:30',
+        'end_date' => '26/02/2026',
+        'status' => 'Ontvangen',
+        'event_name' => 'Mixed Event',
+        'organisation_name' => 'Test Org',
+        'expected_visitors' => '150',
+        'event_type' => 'Festival',
+    ];
+
+    $importer = createImporterWithData($data);
+
+    // Act
+    $importer->fillRecord();
+
+    // Assert
+    $record = getImporterRecord($importer);
+    $referenceData = $record->reference_data;
+    expect($referenceData->registratiedatum)->toBe('2026-02-19')
+        ->and($referenceData->start_evenement)->toBe('2026-02-25T14:30:00+01:00')
+        ->and($referenceData->eind_evenement)->toBe('2026-02-26');
 });
 
 test('fillRecord stores imported_data', function () {

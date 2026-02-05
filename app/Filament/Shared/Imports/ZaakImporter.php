@@ -35,8 +35,33 @@ class ZaakImporter extends Importer
     ];
 
     /**
+     * Supported date-time formats for import
+     */
+    protected static array $dateTimeFormats = [
+        'd/m/Y H:i',
+        'd-m-Y H:i',
+        'd/m/y H:i',
+        'd-m-y H:i',
+        'Y-m-d H:i',
+        'd/n/Y H:i',
+        'd-n-Y H:i',
+        'd/n/y H:i',
+        'd-n-y H:i',
+        'd/m/Y H:i:s',
+        'd-m-Y H:i:s',
+        'd/m/y H:i:s',
+        'd-m-y H:i:s',
+        'Y-m-d H:i:s',
+        'd/n/Y H:i:s',
+        'd-n-Y H:i:s',
+        'd/n/y H:i:s',
+        'd-n-y H:i:s',
+    ];
+
+    /**
      * Parse a date string using multiple supported formats
-     * Returns date string in Y-m-d format
+     * Returns date string in "Y-m-d" format if time is not present
+     * Returns date string in "Y-m-d\TH:i:sP" format if time is present
      */
     protected static function parseDate(?string $date): ?string
     {
@@ -44,6 +69,19 @@ class ZaakImporter extends Importer
             return null;
         }
 
+        // Try date-time formats first
+        foreach (self::$dateTimeFormats as $format) {
+            try {
+                $parsed = Carbon::createFromFormat($format, $date);
+                if ($parsed !== null && $parsed->year >= 1000) {
+                    return $parsed->format('Y-m-d\TH:i:sP');
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Try date-only formats
         foreach (self::$dateFormats as $format) {
             try {
                 $parsed = Carbon::createFromFormat($format, $date);
@@ -60,7 +98,8 @@ class ZaakImporter extends Importer
 
     public static function getColumns(): array
     {
-        $dateFormatsRule = 'date_format:'.implode(',', self::$dateFormats);
+        $allDateFormats = array_merge(self::$dateTimeFormats, self::$dateFormats);
+        $dateFormatsRule = 'date_format:'.implode(',', $allDateFormats);
 
         return [
             ImportColumn::make('submission_date')
