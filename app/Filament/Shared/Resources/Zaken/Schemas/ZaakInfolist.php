@@ -19,6 +19,7 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
@@ -117,7 +118,7 @@ class ZaakInfolist
                     ->date(config('app.date_format')),
             ])
             ->columnSpan(4)
-            ->visible(fn (Zaak $record) => $record->openzaak->resultaat ?? false);
+            ->visible(fn (Zaak $record) => ($record->openzaak && $record->openzaak->resultaat) ? true : false);
     }
 
     public static function configure(Schema $schema): Schema
@@ -140,7 +141,7 @@ class ZaakInfolist
                                     ->date(config('app.date_format'))
                                     ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),
                             ]))
-                            ->columnSpan(fn ($record) => $record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin]) ? 8 : 12),
+                            ->columnSpan(fn ($record) => ! $record->is_imported && ($record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])) ? 8 : 12),
                         Section::make(__('municipality/resources/zaak.infolist.sections.actions.label'))
                             ->description(__('municipality/resources/zaak.infolist.sections.actions.description'))
                             ->schema([
@@ -348,10 +349,11 @@ class ZaakInfolist
                                 // })
                             ])
                             ->columnSpan(4)
-                            ->hidden(fn (Zaak $record) => $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
+                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
                         self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
+                            ->hidden(fn (Zaak $record) => $record->is_imported)
                             ->tabs([
                                 Tab::make('besluiten')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.decisions.label'))
@@ -398,6 +400,16 @@ class ZaakInfolist
                                 LocationsTab::make(),
                             ])
                             ->columnSpanFull(),
+                        Section::make(__('Geimporteerde gegevens'))
+                            ->hidden(fn (Zaak $record) => ! $record->is_imported)
+                            ->schema([
+                                KeyValueEntry::make('imported_data')
+                                    ->hiddenLabel()
+                                    ->keyLabel(__('Sleutel'))
+                                    ->valueLabel(__('Waarde'))
+                                    ->columns(1),
+                            ])->columnSpanFull(),
+
                     ]),
             ]));
     }

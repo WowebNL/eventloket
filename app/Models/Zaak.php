@@ -135,6 +135,14 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /** @return Attribute<bool, void> */
+    protected function isImported(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value, $attributes) => ! $attributes['zgw_zaak_url'] && $attributes['imported_data'] !== null,
+        );
+    }
+
     /** @return Attribute<\App\ValueObjects\OzZaak, void> */
     protected function openzaak(): Attribute
     {
