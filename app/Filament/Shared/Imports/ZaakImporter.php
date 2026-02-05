@@ -60,10 +60,10 @@ class ZaakImporter extends Importer
 
     /**
      * Parse a date string using multiple supported formats
-     * Returns date string in "Y-m-d" format if time is not present
-     * Returns date string in "Y-m-d\TH:i:sP" format if time is present
+     * Always returns ISO 8601 format with timezone offset (Y-m-d\TH:i:sP)
+     * For date-only inputs, sets time to 00:00:00 with timezone
      */
-    protected static function parseDate(?string $date): ?string
+    protected static function parseDate(?string $date, bool $isEndOfDay = false): ?string
     {
         if (empty($date)) {
             return null;
@@ -86,7 +86,13 @@ class ZaakImporter extends Importer
             try {
                 $parsed = Carbon::createFromFormat($format, $date);
                 if ($parsed !== null && $parsed->year >= 1000) {
-                    return $parsed->format('Y-m-d');
+                    if ($isEndOfDay) {
+                        $parsed->endOfDay();
+                    } else {
+                        $parsed->startOfDay();
+                    }
+
+                    return $parsed->format('Y-m-d\TH:i:sP');
                 }
             } catch (\Exception $e) {
                 continue;
@@ -220,7 +226,7 @@ class ZaakImporter extends Importer
             'zaaktype_id' => $zaaktype->id,
             'reference_data' => new ZaakReferenceData(
                 start_evenement: self::parseDate($this->data['start_date']),
-                eind_evenement: self::parseDate($this->data['end_date']),
+                eind_evenement: self::parseDate($this->data['end_date'], true),
                 registratiedatum: self::parseDate($this->data['submission_date']),
                 status_name: $this->data['status'],
                 statustype_url: '',

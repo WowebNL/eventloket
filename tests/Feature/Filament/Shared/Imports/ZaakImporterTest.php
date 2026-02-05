@@ -52,15 +52,15 @@ function getImporterRecord(ZaakImporter $importer): ?Zaak
 
 test('parseDate handles all supported date formats correctly', function () {
     $testCases = [
-        ['19/02/2026', '2026-02-19'], // d/m/Y
-        ['19-02-2026', '2026-02-19'], // d-m-Y
-        ['19/02/26', '2026-02-19'],   // d/m/y
-        ['19-02-26', '2026-02-19'],   // d-m-y
-        ['2026-02-19', '2026-02-19'], // Y-m-d
-        ['19/2/2026', '2026-02-19'],  // d/n/Y (single digit month)
-        ['19-2-2026', '2026-02-19'],  // d-n-Y
-        ['19/2/26', '2026-02-19'],    // d/n/y
-        ['19-2-26', '2026-02-19'],    // d-n-y
+        ['19/02/2026', '2026-02-19T00:00:00+01:00'], // d/m/Y
+        ['19-02-2026', '2026-02-19T00:00:00+01:00'], // d-m-Y
+        ['19/02/26', '2026-02-19T00:00:00+01:00'],   // d/m/y
+        ['19-02-26', '2026-02-19T00:00:00+01:00'],   // d-m-y
+        ['2026-02-19', '2026-02-19T00:00:00+01:00'], // Y-m-d
+        ['19/2/2026', '2026-02-19T00:00:00+01:00'],  // d/n/Y (single digit month)
+        ['19-2-2026', '2026-02-19T00:00:00+01:00'],  // d-n-Y
+        ['19/2/26', '2026-02-19T00:00:00+01:00'],    // d/n/y
+        ['19-2-26', '2026-02-19T00:00:00+01:00'],    // d-n-y
     ];
 
     foreach ($testCases as [$input, $expected]) {
@@ -110,12 +110,13 @@ test('parseDate uses Amsterdam timezone for datetime formats', function () {
         ->and($carbon->format('Y-m-d\TH:i:sP'))->toBe('2026-06-15T14:30:00+02:00');
 });
 
-test('parseDate returns date-only format when no time is provided', function () {
+test('parseDate returns ISO 8601 format with timezone when no time is provided', function () {
     $input = '19/02/2026';
     $parsed = invokeZaakImporterMethod('parseDate', [$input]);
 
-    expect($parsed)->toBe('2026-02-19')
-        ->and($parsed)->not->toContain('T');
+    expect($parsed)->toBe('2026-02-19T00:00:00+01:00')
+        ->and($parsed)->toContain('T')
+        ->and($parsed)->toContain('+01:00');
 });
 
 test('parseDate returns null for empty string', function () {
@@ -229,9 +230,9 @@ test('fillRecord parses date-only formats correctly in reference_data', function
     // Assert
     $record = getImporterRecord($importer);
     $referenceData = $record->reference_data;
-    expect($referenceData->registratiedatum)->toBe('2026-02-19')
-        ->and($referenceData->start_evenement)->toBe('2026-02-25')
-        ->and($referenceData->eind_evenement)->toBe('2026-02-26');
+    expect($referenceData->registratiedatum)->toBe('2026-02-19T00:00:00+01:00')
+        ->and($referenceData->start_evenement)->toBe('2026-02-25T00:00:00+01:00')
+        ->and($referenceData->eind_evenement)->toBe('2026-02-26T23:59:59+01:00');
 });
 
 test('fillRecord parses datetime formats correctly in reference_data', function () {
@@ -297,9 +298,9 @@ test('fillRecord handles mixed date and datetime formats', function () {
     // Assert
     $record = getImporterRecord($importer);
     $referenceData = $record->reference_data;
-    expect($referenceData->registratiedatum)->toBe('2026-02-19')
+    expect($referenceData->registratiedatum)->toBe('2026-02-19T00:00:00+01:00')
         ->and($referenceData->start_evenement)->toBe('2026-02-25T14:30:00+01:00')
-        ->and($referenceData->eind_evenement)->toBe('2026-02-26');
+        ->and($referenceData->eind_evenement)->toBe('2026-02-26T23:59:59+01:00');
 });
 
 test('fillRecord stores imported_data', function () {
