@@ -29,7 +29,7 @@ class ZaakInfolist
                         Section::make(__('organiser/resources/zaak.infolist.sections.information.label'))
                             ->description(__('organiser/resources/zaak.infolist.sections.information.description'))
                             ->columns(2)
-                            ->columnSpan(fn (Zaak $record) => $record->openzaak->resultaat ? 8 : 12)
+                            ->columnSpan(fn (Zaak $record) => $record->openzaak && $record->openzaak->resultaat ? 8 : 12)
                             ->schema(SchemasZaakInfolist::informationschema()),
                         SchemasZaakInfolist::resultaatSection(),
                         Tabs::make('Tabs')

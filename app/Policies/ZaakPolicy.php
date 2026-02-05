@@ -105,4 +105,12 @@ class ZaakPolicy
     {
         return false;
     }
+
+    /**
+     * Determine whether the user can delete an imported zaak.
+     */
+    public function deleteImported(User $user, Zaak $zaak): bool
+    {
+        return $zaak->is_imported && $user->role === Role::Admin;
+    }
 }
