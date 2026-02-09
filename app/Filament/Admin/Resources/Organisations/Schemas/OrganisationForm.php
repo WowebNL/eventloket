@@ -30,6 +30,7 @@ class OrganisationForm
                 TextInput::make('email')
                     ->label(__('admin/resources/organisation.form.email.label'))
                     ->email()
+                    ->rules(['email:rfc,dns'])
                     ->maxLength(255),
                 TextInput::make('phone')
                     ->label(__('admin/resources/organisation.form.phone.label'))

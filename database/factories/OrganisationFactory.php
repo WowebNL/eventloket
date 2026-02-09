@@ -22,7 +22,7 @@ class OrganisationFactory extends Factory
             'name' => fake()->company,
             'coc_number' => fake()->numerify('########'),
             'address' => fake()->address,
-            'email' => fake()->companyEmail,
+            'email' => 'test@domain.com',
             'phone' => fake()->phoneNumber,
         ];
     }
