@@ -27,9 +27,14 @@ class OpenFormsNormalizer
 
         // Protect apostrophes that are part of words:
 
+        // 0. Double quotes at start (e.g., ''t schip' becomes "'t schip")
+        //    Match: two apostrophes followed by a word character
+        //    Keep the second apostrophe as it's part of the word
+        $protected = preg_replace("/\'\'(\w)/u", "'{$placeholder}$1", $value);
+
         // 1. Standalone contractions after a space (e.g., 'n, 't, 's)
         //    Match: space + apostrophe + 1-2 word-chars + word boundary
-        $protected = preg_replace("/(\s)\'(\w{1,2})\b/u", "$1{$placeholder}$2", $value);
+        $protected = preg_replace("/(\s)\'(\w{1,2})\b/u", "$1{$placeholder}$2", $protected);
 
         // 2. Apostrophe within or at start of compound words (e.g., d'n, O'Brien, 's-Hertogenbosch)
         //    Match: word-chars (optional) + apostrophe + word-chars, within word boundaries
