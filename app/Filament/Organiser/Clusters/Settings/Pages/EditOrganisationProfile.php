@@ -114,6 +114,7 @@ class EditOrganisationProfile extends EditTenantProfile
                 TextInput::make('email')
                     ->label(__('organiser/pages/tenancy/register.form.email.label'))
                     ->email()
+                    ->rules(['email:rfc,dns'])
                     ->maxLength(255),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/tenancy/register.form.phone.label'))
