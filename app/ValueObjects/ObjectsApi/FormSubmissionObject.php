@@ -4,6 +4,7 @@ namespace App\ValueObjects\ObjectsApi;
 
 use App\Normalizers\OpenFormsNormalizer;
 use App\Services\LocatieserverService;
+use App\Support\Helpers\ArrayHelper;
 use Brick\Geo\Geometry;
 use Brick\Geo\GeometryCollection;
 use Brick\Geo\Io\GeoJson\Feature;
@@ -63,11 +64,11 @@ class FormSubmissionObject implements Arrayable
             if (is_array($this->event_location['line'])) {
                 $json = json_encode($this->event_location['line']);
             } else {
-                $json = OpenFormsNormalizer::normalizeGeoJson(OpenFormsNormalizer::normalizeJson($this->event_location['line']));
+                $json = OpenFormsNormalizer::normalizeGeoJson($this->event_location['line']);
             }
 
             $array = json_decode($json, true);
-            $array = collect($array)->first(fn ($element) => isset($element['coordinates']));
+            $array = ArrayHelper::findElementWithKey($array, 'coordinates');
 
             if ($array) {
                 $geometry = (new GeoJsonReader)->read(json_encode($array));
@@ -89,7 +90,7 @@ class FormSubmissionObject implements Arrayable
             }
 
             foreach (json_decode($json, true) as $array) {
-                $array = collect($array)->first(fn ($element) => isset($element['coordinates']));
+                $array = ArrayHelper::findElementWithKey($array, 'coordinates');
 
                 if (! $array) {
                     continue;
@@ -113,7 +114,7 @@ class FormSubmissionObject implements Arrayable
 
             $locationService = new LocatieserverService;
             foreach (json_decode($json, true) as $array) {
-                $array = collect($array)->first(fn ($element) => isset($element['postcode']));
+                $array = ArrayHelper::findElementWithKey($array, 'postcode');
 
                 if (! $array) {
                     continue;
