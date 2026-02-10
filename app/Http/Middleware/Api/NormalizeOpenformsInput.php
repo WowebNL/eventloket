@@ -31,8 +31,7 @@ class NormalizeOpenformsInput
                     }
 
                     $value = OpenFormsNormalizer::normalizeJson($value);
-
-                    if (str_contains($value, '"coordinates"')) {
+                    if (str_contains($value, 'coordinates')) {
                         $value = OpenFormsNormalizer::normalizeGeoJson($value);
                     } elseif (preg_match('(postcode|houseNumber|houseLetter|city|streetName)', $value) === 1) {
                         $value = OpenFormsNormalizer::normalizeAddress($value);

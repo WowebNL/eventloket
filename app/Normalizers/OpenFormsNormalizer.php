@@ -8,7 +8,6 @@ class OpenFormsNormalizer
 {
     public static function normalizeJson(string $value): ?string
     {
-        // incomming json is not valid so make it valid
         $value = self::normalizeSingleQuotes($value);
 
         return json_validate($value) ? $value : null;
@@ -20,35 +19,86 @@ class OpenFormsNormalizer
      */
     public static function normalizeSingleQuotes(string $value): string
     {
-        // If the JSON uses single quotes instead of double quotes for strings,
-        // we need to handle apostrophes within those strings
-        // Replace single quotes with a temporary placeholder
-        $placeholder = '___APOSTROPHE___';
+        // Convert single-quoted JSON strings to double-quoted JSON strings,
+        // while keeping apostrophes that are part of words.
+        $result = '';
+        $inSingleString = false;
+        $inDoubleString = false;
+        $length = strlen($value);
 
-        // Protect apostrophes that are part of words:
+        for ($i = 0; $i < $length; $i++) {
+            $char = $value[$i];
 
-        // 0. Double quotes at start (e.g., ''t schip' becomes "'t schip")
-        //    Match: two apostrophes followed by a word character
-        //    Keep the second apostrophe as it's part of the word
-        $protected = preg_replace("/\'\'(\w)/u", "'{$placeholder}$1", $value);
+            if ($inDoubleString) {
+                if ($char === '\\' && $i + 1 < $length) {
+                    $result .= $char.$value[$i + 1];
+                    $i++;
 
-        // 1. Standalone contractions after a space (e.g., 'n, 't, 's)
-        //    Match: space + apostrophe + 1-2 word-chars + word boundary
-        $protected = preg_replace("/(\s)\'(\w{1,2})\b/u", "$1{$placeholder}$2", $protected);
+                    continue;
+                }
 
-        // 2. Apostrophe within or at start of compound words (e.g., d'n, O'Brien, 's-Hertogenbosch)
-        //    Match: word-chars (optional) + apostrophe + word-chars, within word boundaries
-        $protected = preg_replace("/\b(\w*)\'(\w+)\b/u", "$1{$placeholder}$2", $protected);
+                if ($char === '"') {
+                    $inDoubleString = false;
+                }
 
-        // 3. Apostrophe at the end of a word (e.g., boys', James')
-        //    Match: word-chars + apostrophe + word boundary
-        $protected = preg_replace("/\b(\w+)\'\b/u", "$1{$placeholder}", $protected);
+                $result .= $char;
 
-        // Now replace ALL remaining single quotes with double quotes (these are JSON delimiters)
-        $normalized = str_replace("'", '"', $protected);
+                continue;
+            }
 
-        // Restore the apostrophes within words
-        return str_replace($placeholder, "'", $normalized);
+            if (! $inSingleString) {
+                if ($char === "'") {
+                    $inSingleString = true;
+                    $result .= '"';
+
+                    continue;
+                }
+
+                if ($char === '"') {
+                    $inDoubleString = true;
+                    $result .= $char;
+
+                    continue;
+                }
+
+                $result .= $char;
+
+                continue;
+            }
+
+            if ($char === "'") {
+                $prev = $i > 0 ? $value[$i - 1] : '';
+                $next = $i + 1 < $length ? $value[$i + 1] : '';
+                $prevIsWord = $prev !== '' && preg_match('/[A-Za-z0-9]/', $prev);
+                $nextIsWord = $next !== '' && preg_match('/[A-Za-z0-9]/', $next);
+
+                // Treat as apostrophe if it looks like part of a word (e.g., d'n, O'Brien, ''t).
+                if ($nextIsWord && ($prevIsWord || $prev === "'" || $prev === '')) {
+                    $result .= "'";
+
+                    continue;
+                }
+
+                $inSingleString = false;
+                $result .= '"';
+
+                continue;
+            }
+
+            if ($char === '"') {
+                $result .= '\\"';
+
+                continue;
+            }
+
+            $result .= $char;
+        }
+
+        if ($inSingleString) {
+            $result .= '"';
+        }
+
+        return $result;
     }
 
     public static function normalizeCoordinates(stdClass $object): stdClass
