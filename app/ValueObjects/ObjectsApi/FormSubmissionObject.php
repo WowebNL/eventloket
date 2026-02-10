@@ -60,7 +60,11 @@ class FormSubmissionObject implements Arrayable
         $geometries = [];
 
         if (isset($this->event_location['line']) && ! empty($this->event_location['line']) && $this->event_location['line'] != 'None') {
-            $json = OpenFormsNormalizer::normalizeGeoJson(OpenFormsNormalizer::normalizeJson($this->event_location['line']));
+            if (is_array($this->event_location['line'])) {
+                $json = json_encode($this->event_location['line']);
+            } else {
+                $json = OpenFormsNormalizer::normalizeGeoJson(OpenFormsNormalizer::normalizeJson($this->event_location['line']));
+            }
 
             $array = json_decode($json, true);
             $array = collect($array)->first(fn ($element) => isset($element['coordinates']));
@@ -78,7 +82,12 @@ class FormSubmissionObject implements Arrayable
         }
 
         if (isset($this->event_location['multipolygons']) && ! empty($this->event_location['multipolygons']) && $this->event_location['multipolygons'] != 'None') {
-            $json = OpenFormsNormalizer::normalizeJson($this->event_location['multipolygons']);
+            if (is_array($this->event_location['multipolygons'])) {
+                $json = json_encode($this->event_location['multipolygons']);
+            } else {
+                $json = OpenFormsNormalizer::normalizeJson($this->event_location['multipolygons']);
+            }
+
             foreach (json_decode($json, true) as $array) {
                 $array = collect($array)->first(fn ($element) => isset($element['coordinates']));
 
@@ -96,7 +105,12 @@ class FormSubmissionObject implements Arrayable
         }
 
         if (isset($this->event_location['bag_addresses']) && ! empty($this->event_location['bag_addresses'])) {
-            $json = OpenFormsNormalizer::normalizeJson($this->event_location['bag_addresses']);
+            if (is_array($this->event_location['bag_addresses'])) {
+                $json = json_encode($this->event_location['bag_addresses']);
+            } else {
+                $json = OpenFormsNormalizer::normalizeJson($this->event_location['bag_addresses']);
+            }
+
             $locationService = new LocatieserverService;
             foreach (json_decode($json, true) as $array) {
                 $array = collect($array)->first(fn ($element) => isset($element['postcode']));
@@ -113,7 +127,11 @@ class FormSubmissionObject implements Arrayable
         }
 
         if (isset($this->event_location['bag_address']) && ! empty($this->event_location['bag_address'])) {
-            $json = OpenFormsNormalizer::normalizeJson($this->event_location['bag_address']);
+            if (is_array($this->event_location['bag_address'])) {
+                $json = json_encode($this->event_location['bag_address']);
+            } else {
+                $json = OpenFormsNormalizer::normalizeJson($this->event_location['bag_address']);
+            }
             $locationService = new LocatieserverService;
             $array = json_decode($json, true);
             $geometry = $this->getGeometryFromAddress($array, $locationService, $asFeatures);
