@@ -299,6 +299,7 @@ class Zaak extends Model implements Eventable
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logUnguarded();
+            ->logFillable()
+            ->logOnlyDirty();
     }
 }
