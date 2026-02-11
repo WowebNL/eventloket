@@ -11,6 +11,7 @@ use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
+use App\Notifications\ZaakStatusChanged;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\StatusType;
@@ -288,8 +289,9 @@ class ZaakInfolist
                                                         return (new Openzaak)->catalogi()->statustypen()->getAll(['zaaktype' => $zaak->openzaak->zaaktype])->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
                                                     })->required(),
                                             ])
-                                            ->action(function ($data, $record) {
+                                            ->action(function (array $data, Zaak $record) {
                                                 if ($data['status'] != $record->openzaak->status['statustype']) {
+                                                    $oldStatus = $record->reference_data->status_name;
                                                     $openzaak = new Openzaak;
                                                     $statusType = new StatusType(...$openzaak->get($data['status'])->toArray());
 
@@ -306,10 +308,18 @@ class ZaakInfolist
                                                         $record->handled_status_set_by_user_id = auth()->id();
                                                     }
 
-                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['status_name' => $statusType->omschrijving]));
+                                                    /** @disregard */
+                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['status_name' => $statusType->omschrijving])); // @phpstan-ignore assign.propertyReadOnly
                                                     $record->save();
 
                                                     $record->clearZgwCache();
+
+                                                    if ($oldStatus != $record->reference_data->status_name) {
+                                                        foreach ($record->organisation->users as $user) {
+                                                            /** @var \App\Models\Users\OrganiserUser $user */
+                                                            $user->notify(new ZaakStatusChanged($record, $oldStatus));
+                                                        }
+                                                    }
 
                                                     Notification::make()
                                                         ->success()
