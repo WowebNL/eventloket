@@ -12,7 +12,6 @@ use Filament\Facades\Filament;
 use Filament\Pages\Tenancy\RegisterTenant;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Arr;
-use Livewire\Attributes\Locked;
 
 class RegisterOrganisation extends RegisterTenant
 {

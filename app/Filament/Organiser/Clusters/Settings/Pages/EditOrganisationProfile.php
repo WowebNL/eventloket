@@ -7,7 +7,6 @@ use App\Models\Organisation;
 use Filament\Pages\Tenancy\EditTenantProfile;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Arr;
-use Livewire\Attributes\Locked;
 
 class EditOrganisationProfile extends EditTenantProfile
 {
