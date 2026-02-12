@@ -142,6 +142,7 @@
     "Payment Required": "Betaling vereist",
     "Permanent Redirect": "Definitieve omleiding",
     "Please click the button below to verify your email address.": "Klik op de knop hieronder om je e-mailadres te verifiëren.",
+    "This verification link is valid for :time (until :date). After this time, the link will expire and you will need to request a new verification.": "Deze verificatielink is :time geldig (tot :date). Na deze tijd verloopt de link en dient u een nieuwe verificatie aan te vragen.",
     "Precondition Failed": "Niet voldaan aan de vooraf gestelde voorwaarde",
     "Precondition Required": "Voorwaarde nodig",
     "Preview": "Voorvertoning",
