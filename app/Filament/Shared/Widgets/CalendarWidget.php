@@ -82,6 +82,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     public string $viewMode = 'calendar'; // 'calendar' or 'table'
 
+    protected bool $useFilamentTimezone = true;
+
     public function mount()
     {
         if (in_array($this->viewtype, ['calendar', 'table'])) {

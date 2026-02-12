@@ -11,6 +11,7 @@ use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
+use App\Notifications\ZaakStatusChanged;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\StatusType;
@@ -19,6 +20,7 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
@@ -117,7 +119,7 @@ class ZaakInfolist
                     ->date(config('app.date_format')),
             ])
             ->columnSpan(4)
-            ->visible(fn (Zaak $record) => $record->openzaak->resultaat ?? false);
+            ->visible(fn (Zaak $record) => ($record->openzaak && $record->openzaak->resultaat) ? true : false);
     }
 
     public static function configure(Schema $schema): Schema
@@ -140,7 +142,7 @@ class ZaakInfolist
                                     ->date(config('app.date_format'))
                                     ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),
                             ]))
-                            ->columnSpan(fn ($record) => $record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin]) ? 8 : 12),
+                            ->columnSpan(fn ($record) => ! $record->is_imported && ($record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])) ? 8 : 12),
                         Section::make(__('municipality/resources/zaak.infolist.sections.actions.label'))
                             ->description(__('municipality/resources/zaak.infolist.sections.actions.description'))
                             ->schema([
@@ -287,8 +289,9 @@ class ZaakInfolist
                                                         return (new Openzaak)->catalogi()->statustypen()->getAll(['zaaktype' => $zaak->openzaak->zaaktype])->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
                                                     })->required(),
                                             ])
-                                            ->action(function ($data, $record) {
+                                            ->action(function (array $data, Zaak $record) {
                                                 if ($data['status'] != $record->openzaak->status['statustype']) {
+                                                    $oldStatus = $record->reference_data->status_name;
                                                     $openzaak = new Openzaak;
                                                     $statusType = new StatusType(...$openzaak->get($data['status'])->toArray());
 
@@ -305,10 +308,18 @@ class ZaakInfolist
                                                         $record->handled_status_set_by_user_id = auth()->id();
                                                     }
 
-                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['status_name' => $statusType->omschrijving]));
+                                                    /** @disregard */
+                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['status_name' => $statusType->omschrijving])); // @phpstan-ignore assign.propertyReadOnly
                                                     $record->save();
 
                                                     $record->clearZgwCache();
+
+                                                    if ($oldStatus != $record->reference_data->status_name) {
+                                                        foreach ($record->organisation->users as $user) {
+                                                            /** @var \App\Models\Users\OrganiserUser $user */
+                                                            $user->notify(new ZaakStatusChanged($record, $oldStatus));
+                                                        }
+                                                    }
 
                                                     Notification::make()
                                                         ->success()
@@ -348,10 +359,11 @@ class ZaakInfolist
                                 // })
                             ])
                             ->columnSpan(4)
-                            ->hidden(fn (Zaak $record) => $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
+                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
                         self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
+                            ->hidden(fn (Zaak $record) => $record->is_imported)
                             ->tabs([
                                 Tab::make('besluiten')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.decisions.label'))
@@ -398,6 +410,16 @@ class ZaakInfolist
                                 LocationsTab::make(),
                             ])
                             ->columnSpanFull(),
+                        Section::make(__('Geimporteerde gegevens'))
+                            ->hidden(fn (Zaak $record) => ! $record->is_imported)
+                            ->schema([
+                                KeyValueEntry::make('imported_data')
+                                    ->hiddenLabel()
+                                    ->keyLabel(__('Sleutel'))
+                                    ->valueLabel(__('Waarde'))
+                                    ->columns(1),
+                            ])->columnSpanFull(),
+
                     ]),
             ]));
     }

@@ -35,19 +35,64 @@ class ZaakImporter extends Importer
     ];
 
     /**
-     * Parse a date string using multiple supported formats
+     * Supported date-time formats for import
      */
-    protected static function parseDate(?string $date): ?Carbon
+    protected static array $dateTimeFormats = [
+        'd/m/Y H:i',
+        'd-m-Y H:i',
+        'd/m/y H:i',
+        'd-m-y H:i',
+        'Y-m-d H:i',
+        'd/n/Y H:i',
+        'd-n-Y H:i',
+        'd/n/y H:i',
+        'd-n-y H:i',
+        'd/m/Y H:i:s',
+        'd-m-Y H:i:s',
+        'd/m/y H:i:s',
+        'd-m-y H:i:s',
+        'Y-m-d H:i:s',
+        'd/n/Y H:i:s',
+        'd-n-Y H:i:s',
+        'd/n/y H:i:s',
+        'd-n-y H:i:s',
+    ];
+
+    /**
+     * Parse a date string using multiple supported formats
+     * Always returns ISO 8601 format with timezone offset (Y-m-d\TH:i:sP)
+     * For date-only inputs, sets time to 00:00:00 with timezone
+     */
+    protected static function parseDate(?string $date, bool $isEndOfDay = false): ?string
     {
         if (empty($date)) {
             return null;
         }
 
+        // Try date-time formats first
+        foreach (self::$dateTimeFormats as $format) {
+            try {
+                $parsed = Carbon::createFromFormat($format, $date);
+                if ($parsed !== null && $parsed->year >= 1000) {
+                    return $parsed->format('Y-m-d\TH:i:sP');
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        // Try date-only formats
         foreach (self::$dateFormats as $format) {
             try {
                 $parsed = Carbon::createFromFormat($format, $date);
                 if ($parsed !== null && $parsed->year >= 1000) {
-                    return $parsed->startOfDay();
+                    if ($isEndOfDay) {
+                        $parsed->endOfDay();
+                    } else {
+                        $parsed->startOfDay();
+                    }
+
+                    return $parsed->format('Y-m-d\TH:i:sP');
                 }
             } catch (\Exception $e) {
                 continue;
@@ -59,7 +104,8 @@ class ZaakImporter extends Importer
 
     public static function getColumns(): array
     {
-        $dateFormatsRule = 'date_format:'.implode(',', self::$dateFormats);
+        $allDateFormats = array_merge(self::$dateTimeFormats, self::$dateFormats);
+        $dateFormatsRule = 'date_format:'.implode(',', $allDateFormats);
 
         return [
             ImportColumn::make('submission_date')
@@ -180,7 +226,7 @@ class ZaakImporter extends Importer
             'zaaktype_id' => $zaaktype->id,
             'reference_data' => new ZaakReferenceData(
                 start_evenement: self::parseDate($this->data['start_date']),
-                eind_evenement: self::parseDate($this->data['end_date']),
+                eind_evenement: self::parseDate($this->data['end_date'], true),
                 registratiedatum: self::parseDate($this->data['submission_date']),
                 status_name: $this->data['status'],
                 statustype_url: '',

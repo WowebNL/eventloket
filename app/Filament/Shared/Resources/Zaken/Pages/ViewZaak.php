@@ -88,6 +88,31 @@ class ViewZaak extends ViewRecord
                     'widget' => ActivityLogWidget::class,
                     'record' => $this->record,
                 ])),
+            Action::make('delete_imported_zaak')
+                ->label('Verwijder zaak')
+                ->color('danger')
+                ->visible(fn (Zaak $record) => $record->is_imported && auth()->user()->role == Role::Admin)
+                ->requiresConfirmation()
+                ->action(function (Zaak $record) {
+                    // Verify authorization via policy
+                    if (! auth()->user()->can('deleteImported', $record)) {
+                        Notification::make()
+                            ->danger()
+                            ->title('U bent niet geautoriseerd om deze zaak te verwijderen.')
+                            ->send();
+
+                        return;
+                    }
+
+                    $record->delete();
+
+                    Notification::make()
+                        ->success()
+                        ->title('De geïmporteerde zaak is verwijderd.')
+                        ->send();
+
+                    $this->redirect($this->getResource()::getUrl('index'));
+                }),
             Action::make('finish_zaak')
                 ->label(__('municipality/resources/zaak.header_actions.finish_zaak.label'))
                 ->schema([
@@ -338,7 +363,7 @@ class ViewZaak extends ViewRecord
                 ->closeModalByClickingAway(false)
                 ->modalSubmitAction(false)
                 ->modalCancelAction(false)
-                ->visible(fn (Zaak $record) => ! $record->reference_data->resultaat && in_array(auth()->user()->role, [Role::Reviewer, Role::ReviewerMunicipalityAdmin])),
+                ->visible(fn (Zaak $record) => ! $record->reference_data->resultaat && ! $record->is_imported && in_array(auth()->user()->role, [Role::Reviewer, Role::ReviewerMunicipalityAdmin])),
         ];
     }
 

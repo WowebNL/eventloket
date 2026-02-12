@@ -34,7 +34,7 @@ test('organiser can register organisation with postbus address', function () {
                 'straatnaam' => 'Postbus',
                 'woonplaatsnaam' => 'Rotterdam',
             ],
-            'email' => 'postbus@example.com',
+            'email' => 'postbus@domain.com',
             'phone' => '0698765432',
         ])
         ->call('register')
