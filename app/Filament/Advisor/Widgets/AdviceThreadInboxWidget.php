@@ -12,6 +12,7 @@ use App\Filament\Shared\Resources\Threads\Tables\Components\LatestMessageColumn;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdviceStatusFilter;
+use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdvisoryFilter;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Tables\AdviceThreadsTable;
 use App\Models\Threads\AdviceThread;
 use Filament\Actions\ViewAction;
@@ -79,6 +80,7 @@ class AdviceThreadInboxWidget extends TableWidget
             ->defaultSort('unread_messages_count', 'desc')
             ->filters([
                 AdviceStatusFilter::make(),
+                AdvisoryFilter::make(),
                 AssignedFilter::make(),
                 UnreadMessagesFilter::make(),
             ])
