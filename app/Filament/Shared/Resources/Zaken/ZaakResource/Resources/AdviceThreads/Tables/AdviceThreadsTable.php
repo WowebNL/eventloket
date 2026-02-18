@@ -26,7 +26,8 @@ class AdviceThreadsTable
                     ->searchable(),
                 TextColumn::make('advisory.name')
                     ->label(__('resources/advice_thread.columns.advisory.label'))
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('advice_status')
                     ->label(__('resources/advice_thread.columns.advice_status.label'))
                     ->badge()
@@ -37,11 +38,13 @@ class AdviceThreadsTable
                     ->sortable(),
                 TextColumn::make('createdBy.name')
                     ->label(__('resources/advice_thread.columns.created_by.label'))
-                    ->sortable(),
+                    ->sortable()
+                    ->searchable(),
                 UnreadMessagesColumn::make(),
                 TextColumn::make('assignedUsers.name')
                     ->label(__('resources/advice_thread.columns.assigned_users.label'))
-                    ->badge(),
+                    ->badge()
+                    ->searchable(),
             ])
             ->defaultSort('created_at', direction: 'desc')
             ->filters([
