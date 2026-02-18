@@ -21,10 +21,10 @@
                                             />
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <p class="text-sm font-medium text-gray-900">
+                                            <p class="text-sm font-medium ">
                                                 {{ $message->user->name }}
                                             </p>
-                                            <p class="text-sm text-gray-500">
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">
                                                 @switch($message->user->role)
                                                     @case(\App\Enums\Role::Admin)
                                                         Platformbeheerder
@@ -60,7 +60,7 @@
                                     </div>
                                 @endif
                             </div>
-                            <div @class(['prose prose-sm max-w-none', 'mt-4' => $message->user])>
+                            <div @class(['prose dark:prose-invert prose-sm max-w-none', 'mt-4' => $message->user])>
                                 {!! str($message->body)->sanitizeHtml() !!}
                             </div>
                             @if(!empty($message->documents))
