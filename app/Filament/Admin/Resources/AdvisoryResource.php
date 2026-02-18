@@ -9,12 +9,14 @@ use App\Filament\Admin\Resources\AdvisoryResource\RelationManagers\Municipalitie
 use App\Filament\Admin\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
 use App\Models\Advisory;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class AdvisoryResource extends Resource
@@ -73,9 +75,10 @@ class AdvisoryResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([
