@@ -6,6 +6,7 @@ use App\Enums\AdviceStatus;
 use App\Filament\Shared\Resources\Threads\Actions\RequestAdviceAction;
 use App\Filament\Shared\Resources\Threads\Tables\Components\UnreadMessagesColumn;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdviceStatusFilter;
+use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\Filters\AdvisoryFilter;
 use Filament\Actions\BulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
@@ -49,6 +50,7 @@ class AdviceThreadsTable
             ->defaultSort('created_at', direction: 'desc')
             ->filters([
                 AdviceStatusFilter::make(),
+                AdvisoryFilter::make(),
             ])
             ->recordActions([
                 RequestAdviceAction::make(),
