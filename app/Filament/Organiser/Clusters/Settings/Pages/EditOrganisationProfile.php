@@ -4,6 +4,7 @@ namespace App\Filament\Organiser\Clusters\Settings\Pages;
 
 use App\Filament\Organiser\Concerns\HasOrganisationAddressForm;
 use App\Models\Organisation;
+use App\ValueObjects\PostbusAddress;
 use Filament\Pages\Tenancy\EditTenantProfile;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Arr;
@@ -17,21 +18,19 @@ class EditOrganisationProfile extends EditTenantProfile
         parent::mount();
         /** @var Organisation $tenant */
         $tenant = $this->tenant;
-        $this->bagAddress = $tenant->bag_address?->toArray() ?? [];
 
-        // Check if the organisation uses a postbus address
-        if (str_contains($tenant->address, 'Postbus')) {
+        if ($tenant->isPostbus()) {
+            /** @var PostbusAddress $postbusAddress */
+            $postbusAddress = $tenant->postbus_address;
             $this->data['use_postbus'] = true;
-
-            // Parse the postbus address format: "Postbus 1234, 5555AA Eindhoven"
-            if (preg_match('/Postbus\s+(\d+),\s+([A-Z0-9]+)\s+(.+)$/i', $tenant->address, $matches)) {
-                $this->data['bag_address'] = [
-                    'huisnummer' => $matches[1],
-                    'postcode' => $matches[2],
-                    'woonplaatsnaam' => $matches[3],
-                ];
-            }
-
+            $this->data['bag_address'] = [
+                'huisnummer' => $postbusAddress->postbusnummer,
+                'postcode' => $postbusAddress->postcode,
+                'woonplaatsnaam' => $postbusAddress->woonplaatsnaam,
+                'straatnaam' => 'Postbus',
+            ];
+        } else {
+            $this->bagAddress = $tenant->bag_address?->toArray() ?? [];
         }
     }
 
@@ -42,17 +41,22 @@ class EditOrganisationProfile extends EditTenantProfile
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if ($this->bagAddress) {
-            $data['bag_id'] = Arr::get($this->bagAddress, 'id');
-        }
-
         if ($data['use_postbus'] === true) {
-            $postcode = $data['bag_address']['postcode'];
-            $huisnummer = $data['bag_address']['huisnummer'];
-            $straatnaam = 'Postbus';
-            $woonplaatsnaam = $data['bag_address']['woonplaatsnaam'];
+            $postbusAddress = PostbusAddress::fromArray([
+                'postbusnummer' => $data['bag_address']['huisnummer'],
+                'postcode' => $data['bag_address']['postcode'],
+                'woonplaatsnaam' => $data['bag_address']['woonplaatsnaam'],
+            ]);
 
-            $data['address'] = "$straatnaam $huisnummer, $postcode $woonplaatsnaam";
+            $data['postbus_address'] = $postbusAddress;
+            $data['bag_id'] = null;
+            $data['address'] = $postbusAddress->weergavenaam();
+        } else {
+            $data['postbus_address'] = null;
+
+            if ($this->bagAddress) {
+                $data['bag_id'] = Arr::get($this->bagAddress, 'id');
+            }
         }
 
         return $data;

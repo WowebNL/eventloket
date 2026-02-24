@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Casts\PostbusAddressCast;
 use App\Enums\OrganisationType;
 use App\Models\Traits\HasUuid;
 use App\Models\Users\OrganiserUser;
 use App\Services\LocatieserverService;
+use App\ValueObjects\PostbusAddress;
 use Database\Factories\OrganisationFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,6 +17,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @property PostbusAddress|null $postbus_address
+ */
 class Organisation extends Model
 {
     /** @use HasFactory<OrganisationFactory> */
@@ -26,6 +31,7 @@ class Organisation extends Model
         'coc_number',
         'address',
         'bag_id',
+        'postbus_address',
         'email',
         'phone',
     ];
@@ -33,6 +39,11 @@ class Organisation extends Model
     protected $appends = [
         'bag_address',
     ];
+
+    public function isPostbus(): bool
+    {
+        return $this->postbus_address !== null;
+    }
 
     /** @return Attribute<\App\ValueObjects\Pdok\BagObject|null, void> */
     protected function bagAddress(): Attribute
@@ -64,6 +75,7 @@ class Organisation extends Model
     {
         return [
             'type' => OrganisationType::class,
+            'postbus_address' => PostbusAddressCast::class,
         ];
     }
 }

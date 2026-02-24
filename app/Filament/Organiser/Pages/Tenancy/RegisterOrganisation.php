@@ -7,6 +7,7 @@ use App\Enums\OrganisationType;
 use App\Filament\Organiser\Concerns\HasOrganisationAddressForm;
 use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
+use App\ValueObjects\PostbusAddress;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Pages\Tenancy\RegisterTenant;
@@ -62,17 +63,22 @@ class RegisterOrganisation extends RegisterTenant
 
     protected function handleRegistration(array $data): Organisation
     {
-        if ($this->bagAddress) {
-            $data['bag_id'] = Arr::get($this->bagAddress, 'id');
-        }
-
         if ($data['use_postbus'] === true) {
-            $postcode = $data['bag_address']['postcode'];
-            $huisnummer = $data['bag_address']['huisnummer'];
-            $straatnaam = 'Postbus';
-            $woonplaatsnaam = $data['bag_address']['woonplaatsnaam'];
+            $postbusAddress = PostbusAddress::fromArray([
+                'postbusnummer' => $data['bag_address']['huisnummer'],
+                'postcode' => $data['bag_address']['postcode'],
+                'woonplaatsnaam' => $data['bag_address']['woonplaatsnaam'],
+            ]);
 
-            $data['address'] = "$straatnaam $huisnummer, $postcode $woonplaatsnaam";
+            $data['postbus_address'] = $postbusAddress;
+            $data['bag_id'] = null;
+            $data['address'] = $postbusAddress->weergavenaam();
+        } else {
+            $data['postbus_address'] = null;
+
+            if ($this->bagAddress) {
+                $data['bag_id'] = Arr::get($this->bagAddress, 'id');
+            }
         }
 
         $organisation = Organisation::create([
