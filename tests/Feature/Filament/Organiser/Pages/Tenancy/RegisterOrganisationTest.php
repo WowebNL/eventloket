@@ -46,7 +46,11 @@ test('organiser can register organisation with postbus address', function () {
         ->and($organisation->type)->toBe(OrganisationType::Business)
         ->and($organisation->coc_number)->toBe('87654321')
         ->and($organisation->bag_id)->toBeNull()
-        ->and($organisation->address)->toBe('Postbus 123, 5678CD Rotterdam');
+        ->and($organisation->address)->toBe('Postbus 123, 5678CD Rotterdam')
+        ->and($organisation->postbus_address)->not->toBeNull()
+        ->and($organisation->postbus_address->postbusnummer)->toBe('123')
+        ->and($organisation->postbus_address->postcode)->toBe('5678CD')
+        ->and($organisation->postbus_address->woonplaatsnaam)->toBe('Rotterdam');
 
     expect(auth()->user()->organisations()->wherePivot('role', OrganisationRole::Admin->value)->exists())->toBeTrue();
 });
