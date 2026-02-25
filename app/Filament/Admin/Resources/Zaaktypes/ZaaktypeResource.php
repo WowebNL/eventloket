@@ -2,7 +2,6 @@
 
 namespace App\Filament\Admin\Resources\Zaaktypes;
 
-use App\Filament\Admin\Resources\Zaaktypes\Pages\CreateZaaktype;
 use App\Filament\Admin\Resources\Zaaktypes\Pages\EditZaaktype;
 use App\Filament\Admin\Resources\Zaaktypes\Pages\ListZaaktypes;
 use App\Filament\Admin\Resources\Zaaktypes\Schemas\ZaaktypeForm;
@@ -51,7 +50,6 @@ class ZaaktypeResource extends Resource
     {
         return [
             'index' => ListZaaktypes::route('/'),
-            'create' => CreateZaaktype::route('/create'),
             'edit' => EditZaaktype::route('/{record}/edit'),
         ];
     }
