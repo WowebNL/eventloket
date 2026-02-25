@@ -8,7 +8,6 @@ use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserPendingInvites
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
-use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\AttachAction;
@@ -91,7 +90,6 @@ class UsersRelationManager extends RelationManager
                             ->label(__('admin/resources/advisory.actions.invite.form.email.label'))
                             ->email()
                             ->required()
-                            ->unique(table: User::class)
                             ->rules([
                                 fn () => function (string $attribute, $value, Closure $fail) {
                                     /** @var Advisory $advisory */

@@ -7,7 +7,6 @@ use App\Filament\Shared\Actions\InviteAction;
 use App\Mail\OrganisationInviteMail;
 use App\Models\Organisation;
 use App\Models\OrganisationInvite;
-use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -31,14 +30,13 @@ class OrganiserUserInviteAction
                     ->label(__('organiser/resources/user.actions.invite.form.email.label'))
                     ->email()
                     ->required()
-                    ->unique(table: User::class)
                     ->rules([
                         function () use ($organisation) {
                             return function (string $attribute, $value, Closure $fail) use ($organisation) {
                                 $org = $organisation ?? static::getOrganisation();
 
                                 if (OrganisationInvite::where('organisation_id', $org->id)->where('email', $value)->exists()) {
-                                    $fail(__('admin/resources/advisory.actions.invite.form.email.validation.already_invited'));
+                                    $fail(__('organiser/resources/user.actions.invite.form.email.validation.already_invited'));
                                 }
                             };
                         },

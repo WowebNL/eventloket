@@ -7,7 +7,6 @@ use App\Filament\Shared\Actions\InviteAction;
 use App\Mail\MunicipalityInviteMail;
 use App\Models\Municipality;
 use App\Models\MunicipalityInvite;
-use App\Models\User;
 use App\Models\Users\AdminUser;
 use Closure;
 use Filament\Actions\Action;
@@ -32,7 +31,6 @@ class MunicipalityAdminUserInviteAction
                     ->label(__('municipality/resources/municipality_admin.actions.invite.form.email.label'))
                     ->email()
                     ->required()
-                    ->unique(table: User::class)
                     ->rules([
                         fn () => function (string $attribute, $value, Closure $fail) {
                             if (MunicipalityInvite::where('email', $value)->exists()) {
