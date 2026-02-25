@@ -10,6 +10,7 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserT
 use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Users\MunicipalityUser;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -98,6 +99,33 @@ class ZaakInfolist
                 ->bulleted()
                 ->formatStateUsing(fn ($state) => Str::ucfirst(Str::lower(Str::headline($state))))
                 ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.status_name')
+                ->label(__('resources/zaak.columns.status.label'))
+                ->visible(function (Zaak $record) {
+                    $user = auth()->user();
+                    // Only show for municipality users, reviewers, and advisors
+                    // For organisers, only show for their own cases
+                    if ($user instanceof OrganiserUser) {
+                        return $user->canAccessOrganisation($record->organisation_id);
+                    }
+
+                    return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Advisor, Role::Admin]);
+                }),
+            TextEntry::make('reference_data.resultaat')
+                ->label(__('resources/zaak.columns.resultaat.label'))
+                ->visible(function (Zaak $record) {
+                    if (empty($record->reference_data->resultaat)) {
+                        return false;
+                    }
+                    $user = auth()->user();
+                    // Only show for municipality users, reviewers, and advisors
+                    // For organisers, only show for their own cases
+                    if ($user instanceof OrganiserUser) {
+                        return $user->canAccessOrganisation($record->organisation_id);
+                    }
+
+                    return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Advisor, Role::Admin]);
+                }),
         ];
     }
 

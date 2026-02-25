@@ -23,7 +23,15 @@ class Zaaktype extends Model
         'name',
         'zgw_zaaktype_url',
         'is_active',
+        'hidden_resultaat_types',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'hidden_resultaat_types' => 'array',
+        ];
+    }
 
     public function zaken(): HasMany
     {
@@ -73,7 +81,7 @@ class Zaaktype extends Model
         });
     }
 
-    private function getResultaatTypen()
+    public function getResultaatTypen()
     {
         return Cache::rememberForever('zaaktype_'.$this->id.'_resultaat_typen', function () {
             return (new Openzaak)->catalogi()->resultaattypen()->getAll(['zaaktype' => $this->zgw_zaaktype_url]);
