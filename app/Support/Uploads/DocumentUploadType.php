@@ -158,28 +158,36 @@ final class DocumentUploadType
     }
 
     /**
-     * Laravel closure validation rule suitable for Filament FileUpload.
+     * Validation rule suitable for Filament FileUpload and plain Laravel validators.
+     *
+     * Returns a ValidationRule object instead of a raw closure so that Filament does
+     * not try to resolve its parameters through its own dependency-injection system
+     * (which would fail with "[$attribute] was unresolvable").
      */
-    public static function fileUploadRule(): \Closure
+    public static function fileUploadRule(): \Illuminate\Contracts\Validation\ValidationRule
     {
-        return static function (string $attribute, mixed $value, \Closure $fail): void {
-            $allowedMimeTypes = array_values((array) config('app.document_file_types', []));
+        return new class implements \Illuminate\Contracts\Validation\ValidationRule
+        {
+            public function validate(string $attribute, mixed $value, \Closure $fail): void
+            {
+                $allowedMimeTypes = array_values((array) config('app.document_file_types', []));
 
-            // Ensure a misconfiguration fails fast.
-            self::assertConfigurationIsSafe($allowedMimeTypes);
+                // Ensure a misconfiguration fails fast.
+                DocumentUploadType::assertConfigurationIsSafe($allowedMimeTypes);
 
-            $files = is_array($value) ? $value : [$value];
+                $files = is_array($value) ? $value : [$value];
 
-            foreach ($files as $file) {
-                if (! $file instanceof UploadedFile) {
-                    continue;
+                foreach ($files as $file) {
+                    if (! $file instanceof UploadedFile) {
+                        continue;
+                    }
+
+                    if (DocumentUploadType::isAllowed($file, $allowedMimeTypes)) {
+                        continue;
+                    }
+
+                    $fail(__('Bestandstype niet toegestaan.'));
                 }
-
-                if (self::isAllowed($file, $allowedMimeTypes)) {
-                    continue;
-                }
-
-                $fail(__('Bestandstype niet toegestaan.'));
             }
         };
     }
