@@ -33,7 +33,7 @@ services:
     mysql:
         image: 'mysql/mysql-server:8.0'
         ports:
-            - '${FORWARD_DB_PORT:-3306}:3306'
+            - '${FORWARD_MYSQL_PORT:-3306}:3306'
         environment:
             MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
             MYSQL_ROOT_HOST: '%'
@@ -83,7 +83,7 @@ services:
         image: 'postgis/postgis:17-3.5'
         platform: linux/amd64
         ports:
-            - '${FORWARD_DB_PORT:-5432}:5432'
+            - '${FORWARD_PGSQL_PORT:-5432}:5432'
         environment:
             PGPASSWORD: '${DB_PASSWORD:-secret}'
             POSTGRES_DB: '${DB_DATABASE}'
@@ -142,6 +142,7 @@ services:
         volumes:
             - 'openzaak-media:/app/media'
             - 'openzaak-private-media:/app/private-media'
+            - './docker/local-data/open-zaak-catalogus:/app/catalogus-import:ro'
         networks:
             - sail
         depends_on:
@@ -150,10 +151,12 @@ services:
             redis:
                 condition: service_healthy
         healthcheck:
-            test: ['CMD', 'python', '/app/src/manage.py', 'check', '--deploy']
+            # NOTE: --deploy check fails intentionally with DEBUG=1; use HTTP liveness check instead
+            test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/login/')"]
             interval: 30s
             timeout: 10s
             retries: 5
+            start_period: 30s
 
     # Open Zaak Celery Worker
     open-zaak-worker:
@@ -179,6 +182,39 @@ services:
         volumes:
             - 'openzaak-media:/app/media'
             - 'openzaak-private-media:/app/private-media'
+        networks:
+            - sail
+        depends_on:
+            pgsql:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+
+    # Open Notificaties Celery Worker
+    open-notificaties-worker:
+        image: 'openzaak/open-notificaties:1.14.0'
+        platform: linux/amd64
+        environment:
+            - DB_HOST=pgsql
+            - DB_PORT=5432
+            - DB_NAME=notificaties
+            - DB_USER=${DB_USERNAME}
+            - DB_PASSWORD=${DB_PASSWORD:-secret}
+            - CACHE_DEFAULT=redis:6379/2
+            - CACHE_AXES=redis:6379/2
+            - SECRET_KEY=very-secret-key-change-in-production-notificaties
+            - ALLOWED_HOSTS=localhost,open-notificaties,127.0.0.1,host.docker.internal
+            - CELERY_BROKER_URL=redis://redis:6379/2
+            - CELERY_RESULT_BACKEND=redis://redis:6379/2
+            - IS_HTTPS=no
+            - SUBPATH=
+            - DJANGO_SETTINGS_MODULE=nrc.conf.docker
+            - OTEL_SDK_DISABLED=true
+            - DISABLE_2FA=True
+        command: /celery_worker.sh
+        volumes:
+            - 'notificaties-media:/app/media'
+            - 'notificaties-private-media:/app/private-media'
         networks:
             - sail
         depends_on:
@@ -225,9 +261,9 @@ services:
             redis:
                 condition: service_healthy
 
-    # Open Forms - Form builder and management (latest stable: 3.3.8)
+    # Open Forms - Form builder and management (latest stable: 3.3.9)
     open-forms:
-        image: 'openformulieren/open-forms:3.3.8'
+        image: 'openformulieren/open-forms:3.3.9'
         platform: linux/amd64
         ports:
             - '8003:8000'
@@ -241,6 +277,8 @@ services:
             - CACHE_AXES=redis:6379/3
             - SECRET_KEY=very-secret-key-change-in-production-openforms
             - ALLOWED_HOSTS=localhost,open-forms,127.0.0.1,host.docker.internal
+            - CORS_ALLOW_ALL_ORIGINS=True
+            - CSRF_TRUSTED_ORIGINS=http://localhost
             - CELERY_BROKER_URL=redis://redis:6379/3
             - CELERY_RESULT_BACKEND=redis://redis:6379/3
             - IS_HTTPS=no
@@ -253,13 +291,13 @@ services:
             - EMAIL_HOST=mailpit
             - EMAIL_PORT=1025
             - DEFAULT_FROM_EMAIL=open-forms@localhost
-        command: >
-            sh -c "python src/manage.py migrate &&
-                   echo \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('admin', 'admin@localhost', 'admin') if not User.objects.filter(username='admin').exists() else None\" | python src/manage.py shell &&
-                   python src/manage.py runserver 0.0.0.0:8000"
+            - OPEN_FORMS_SUPERUSER_USERNAME=admin
+            - OPEN_FORMS_SUPERUSER_EMAIL=admin@localhost
+            - DJANGO_SUPERUSER_PASSWORD=admin
         volumes:
             - 'openforms-media:/app/media'
             - 'openforms-private-media:/app/private-media'
+            - './docker/local-data/open-formulier:/app/formulier-import:ro'
         networks:
             - sail
         depends_on:
@@ -267,10 +305,17 @@ services:
                 condition: service_healthy
             redis:
                 condition: service_healthy
+        healthcheck:
+            # Root / returns 403 in Open Forms; use /api/v2/ which returns 200 without auth
+            test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/')"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 60s
 
     # Open Forms Celery Worker
     open-forms-worker:
-        image: 'openformulieren/open-forms:3.3.8'
+        image: 'openformulieren/open-forms:3.3.9'
         platform: linux/amd64
         environment:
             - DB_HOST=pgsql
@@ -297,6 +342,8 @@ services:
             pgsql:
                 condition: service_healthy
             redis:
+                condition: service_healthy
+            open-forms:
                 condition: service_healthy
 
     # Objecttypes API - Object type definitions (latest: 3.4.0)
