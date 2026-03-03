@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.2 - 2026-03-03
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix: support max 20mb file upload (#300) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.3.1...v0.3.2
+
 ## v0.3.1 - 2026-02-26
 
 ### What's Changed
@@ -57,6 +67,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
