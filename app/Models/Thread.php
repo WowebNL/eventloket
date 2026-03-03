@@ -121,7 +121,35 @@ class Thread extends Model
             default => collect(),
         };
 
-        $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers;
+        // Get municipality users who are participating in this thread:
+        // - The user who created the thread (if any)
+        // - The user who moved the thread to a handled status
+        // - Users who have sent messages in the thread
+        $municipalityUserIds = collect();
+
+        if ($this->created_by) {
+            $municipalityUserIds->push($this->created_by);
+        }
+
+        if ($this->zaak->handled_status_set_by_user_id) {
+            $municipalityUserIds->push($this->zaak->handled_status_set_by_user_id);
+        }
+
+        $messageUserIds = $this->messages()->pluck('user_id');
+        $municipalityUserIds = $municipalityUserIds->merge($messageUserIds)->unique();
+
+        $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers()
+            ->whereIn('users.id', $municipalityUserIds)
+            ->get();
+
+        // If no municipality reviewers are found and the zaak status
+        // has just been received or has been finalized, include all municipality reviewers
+        if (
+            $municipalityReviewerUsers->isEmpty() &&
+            ($this->zaak->statustype->isReceived() || $this->zaak->statustype->isFinalised())
+        ) {
+            $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers()->get();
+        }
 
         return $threadParticipants->merge($municipalityReviewerUsers);
     }
@@ -159,6 +187,7 @@ class Thread extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logUnguarded();
+            ->logFillable()
+            ->logOnlyDirty();
     }
 }

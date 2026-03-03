@@ -37,7 +37,13 @@ beforeEach(function () {
             'role' => Role::Reviewer,
         ]);
 
+    $this->municipalityAdmin = User::factory()
+        ->create([
+            'role' => Role::MunicipalityAdmin,
+        ]);
+
     $this->municipality->users()->attach($this->reviewer);
+    $this->municipality->users()->attach($this->municipalityAdmin);
 
     $this->zaaktype = Zaaktype::factory()->create([
         'municipality_id' => $this->municipality->id,
@@ -49,6 +55,7 @@ beforeEach(function () {
     ]);
 
     $this->advisory = Advisory::factory()->create([
+        'id' => 456,
         'name' => 'Brandweer',
     ]);
 
@@ -95,7 +102,7 @@ test('Notification markdown mail rendered correctly', function () {
     $viewDataForReviewer = $mailMessageForReviewer->viewData;
 
     $this->assertStringContainsString(
-        route('filament.organiser.resources.zaken.view', [
+        route('filament.municipality.resources.zaken.view', [
             'tenant' => $this->municipality->id,
             'record' => $this->zaak->id,
         ]),
@@ -106,8 +113,8 @@ test('Notification markdown mail rendered correctly', function () {
     $viewDataForAdvisor = $mailMessageForAdvisor->viewData;
 
     $this->assertStringContainsString(
-        route('filament.organiser.resources.zaken.view', [
-            'tenant' => $this->zaak->adviceThreads->map(fn ($thread) => in_array($thread->advisory_id, $this->advisor->advisories->pluck('id')->toArray()))->first(),
+        route('filament.advisor.resources.zaken.view', [
+            'tenant' => 456,
             'record' => $this->zaak->id,
         ]),
         $viewDataForAdvisor['viewUrl']
@@ -115,7 +122,7 @@ test('Notification markdown mail rendered correctly', function () {
 
 });
 
-test('Organisation user receives notification for new zaak document', function () {
+test('Organisation user receives notification for new zaak document and activity log is created', function () {
     Notification::fake();
 
     $this->zaak->organisation->users()->each(function (User $user) {
@@ -129,12 +136,16 @@ test('Organisation user receives notification for new zaak document', function (
             return in_array('mail', $channels) && in_array('database', $channels);
         }
     );
+
+    // Verify activity log was created for the zaak
+    $this->zaak->refresh();
+    expect($this->zaak->activities()->count())->toBeGreaterThan(0);
 });
 
-test('Municipality user receives notification for new zaak document', function () {
+test('Municipality user receives notification for new zaak document and activity log is created', function () {
     Notification::fake();
 
-    $this->zaak->municipality->users()->each(function (User $user) {
+    $this->zaak->municipality->reviewerUsers()->each(function (User $user) {
         $user->notify(new NewZaakDocument($this->zaak, 'document.pdf', 'new'));
     });
 
@@ -145,9 +156,19 @@ test('Municipality user receives notification for new zaak document', function (
             return in_array('mail', $channels) && in_array('database', $channels);
         }
     );
+
+    // MunicipalityAdmin should NOT be notified
+    Notification::assertNotSentTo(
+        [$this->municipalityAdmin],
+        NewZaakDocument::class
+    );
+
+    // Verify activity log was created for the zaak
+    $this->zaak->refresh();
+    expect($this->zaak->activities()->count())->toBeGreaterThan(0);
 });
 
-test('Advisory user receives notification for new zaak document', function () {
+test('Advisory user receives notification for new zaak document and activity log is created', function () {
     Notification::fake();
 
     $this->zaak->adviceThreads->first()->advisory->users()->each(function (User $user) {
@@ -161,4 +182,71 @@ test('Advisory user receives notification for new zaak document', function () {
             return in_array('mail', $channels) && in_array('database', $channels);
         }
     );
+
+    // Verify activity log was created for the zaak
+    $this->zaak->refresh();
+    expect($this->zaak->activities()->count())->toBeGreaterThan(0);
+});
+
+test('getViewUrl generates correct URL with tenant and record for organiser', function () {
+    $notification = new NewZaakDocument($this->zaak, 'document.pdf', true);
+
+    $mailMessage = $notification->toMail($this->organiser);
+    $viewUrl = $mailMessage->viewData['viewUrl'];
+
+    // Verify URL contains correct tenant (organisation UUID) and record (zaak ID)
+    $expectedUrl = route('filament.organiser.resources.zaken.view', [
+        'tenant' => $this->organisation->uuid,
+        'record' => $this->zaak->id,
+    ]);
+
+    expect($viewUrl)->toBe($expectedUrl);
+
+    // Also verify database notification action URL
+    $databaseMessage = $notification->toDatabase($this->organiser);
+    $actionUrl = $databaseMessage['actions'][0]['url'];
+
+    expect($actionUrl)->toBe($expectedUrl);
+});
+
+test('getViewUrl generates correct URL with tenant and record for advisor', function () {
+    $notification = new NewZaakDocument($this->zaak, 'document.pdf', true);
+
+    $mailMessage = $notification->toMail($this->advisor);
+    $viewUrl = $mailMessage->viewData['viewUrl'];
+
+    // Verify URL contains correct tenant (advisory ID) and record (zaak ID)
+    $expectedUrl = route('filament.advisor.resources.zaken.view', [
+        'tenant' => $this->advisory->id,
+        'record' => $this->zaak->id,
+    ]);
+
+    expect($viewUrl)->toBe($expectedUrl);
+
+    // Also verify database notification action URL
+    $databaseMessage = $notification->toDatabase($this->advisor);
+    $actionUrl = $databaseMessage['actions'][0]['url'];
+
+    expect($actionUrl)->toBe($expectedUrl);
+});
+
+test('getViewUrl generates correct URL with tenant and record for reviewer', function () {
+    $notification = new NewZaakDocument($this->zaak, 'document.pdf', true);
+
+    $mailMessage = $notification->toMail($this->reviewer);
+    $viewUrl = $mailMessage->viewData['viewUrl'];
+
+    // Verify URL contains correct tenant (municipality ID) and record (zaak ID)
+    $expectedUrl = route('filament.municipality.resources.zaken.view', [
+        'tenant' => $this->municipality->id,
+        'record' => $this->zaak->id,
+    ]);
+
+    expect($viewUrl)->toBe($expectedUrl);
+
+    // Also verify database notification action URL
+    $databaseMessage = $notification->toDatabase($this->reviewer);
+    $actionUrl = $databaseMessage['actions'][0]['url'];
+
+    expect($actionUrl)->toBe($expectedUrl);
 });

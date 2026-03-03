@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('organisation_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('organiser_user_id')->nullable()->constrained('users', 'id')->cascadeOnDelete();
             $table->string('data_object_url')->nullable();
-            $table->json('reference_data')->nullable();
+            $table->jsonb('reference_data')->nullable();
             $table->timestamps();
         });
     }

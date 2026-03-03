@@ -18,6 +18,7 @@ class LocationsTab
             ->label(__('municipality/resources/zaak.infolist.tabs.locations.label'))
             ->icon('heroicon-o-map-pin')
             ->columns(12)
+            ->visible(fn (Zaak $record) => $record->openzaak)
             ->schema([
                 Fieldset::make(__('municipality/resources/zaak.infolist.tabs.locations.information.label'))
                     ->schema([
@@ -33,7 +34,7 @@ class LocationsTab
                     ->columnSpan(4),
                 Fieldset::make(__('municipality/resources/zaak.infolist.tabs.locations.map.label'))
                     ->schema([
-                        Livewire::make(Map::class, fn (Zaak $record) => ['geojson' => $record->openzaak->zaakgeometrie])->key('map-'.Str::uuid()),
+                        Livewire::make(Map::class, fn (Zaak $record) => ['geojson' => $record->openzaak->zaakgeometrie])->key('map-locations'),
                     ])
                     ->columns(1)
                     ->columnSpan(8),

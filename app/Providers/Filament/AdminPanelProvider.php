@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Admin\Pages\Dashboard;
 use App\Filament\Shared\Pages\EditProfile;
+use App\Filament\Shared\Pages\Login;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -41,8 +42,9 @@ class AdminPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
             ])
+            ->globalSearch(false)
             ->databaseNotifications()
-            ->login()
+            ->login(Login::class)
             ->passwordReset()
             ->profile(EditProfile::class)
             ->multiFactorAuthentication([

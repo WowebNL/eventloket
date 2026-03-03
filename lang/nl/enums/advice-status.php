@@ -25,4 +25,7 @@ return [
     'rejected' => [
         'label' => 'Advies niet Akkoord',
     ],
+    'no_reaction' => [
+        'label' => 'Geen reactie ontvangen',
+    ],
 ];

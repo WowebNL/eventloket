@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\Role;
 use App\Models\User;
+use App\Models\Users\AdminUser;
 
 class UserPolicy
 {
@@ -62,6 +63,10 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 

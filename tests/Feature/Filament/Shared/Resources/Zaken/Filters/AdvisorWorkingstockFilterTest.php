@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use Filament\Facades\Filament;
 use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -88,6 +89,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Zaak'
         ),
     ]);
@@ -109,6 +111,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Zaak 2'
         ),
     ]);
@@ -126,7 +129,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
     // Apply filter with 'new' option
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'new']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'new']);
 
     $results = $filteredQuery->get();
 
@@ -146,6 +149,7 @@ test('filter with me option shows zaken assigned to current user', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'My Zaak'
         ),
     ]);
@@ -169,6 +173,7 @@ test('filter with me option shows zaken assigned to current user', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Other Zaak'
         ),
     ]);
@@ -192,6 +197,7 @@ test('filter with me option shows zaken assigned to current user', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Unassigned Zaak'
         ),
     ]);
@@ -207,7 +213,7 @@ test('filter with me option shows zaken assigned to current user', function () {
     // Apply filter with 'me' option
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'me']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'me']);
 
     $results = $filteredQuery->get();
 
@@ -217,6 +223,7 @@ test('filter with me option shows zaken assigned to current user', function () {
 
 test('filter with all option shows all zaken', function () {
     $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
 
     // Create various zaken
     $zaak1 = Zaak::factory()->create([
@@ -227,6 +234,7 @@ test('filter with all option shows all zaken', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Zaak 1'
         ),
     ]);
@@ -239,6 +247,7 @@ test('filter with all option shows all zaken', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Zaak 2'
         ),
     ]);
@@ -265,7 +274,7 @@ test('filter with all option shows all zaken', function () {
     // Apply filter with 'all' option
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'all']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'all']);
 
     $results = $filteredQuery->get();
 
@@ -284,6 +293,7 @@ test('filter query function works correctly with builder', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Test Zaak'
         ),
     ]);
@@ -300,7 +310,7 @@ test('filter query function works correctly with builder', function () {
     $query = Zaak::query();
 
     // Test that the query method returns a Builder instance
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'new']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'new']);
 
     expect($filteredQuery)->toBeInstanceOf(Builder::class);
 });
@@ -322,7 +332,7 @@ test('filter handles invalid workingstock value gracefully', function () {
     $query = Zaak::query();
 
     // Apply filter with invalid workingstock value
-    $filteredQuery = $filter->apply($query, ['workingstock' => 'invalid']);
+    $filteredQuery = $filter->apply($query, ['workingstock-adv' => 'invalid']);
 
     expect($filteredQuery)->toBeInstanceOf(Builder::class);
 
@@ -344,6 +354,7 @@ test('filter works with multiple advice threads on same zaak', function () {
             eind_evenement: '2025-01-02',
             registratiedatum: '2025-01-01',
             status_name: 'Ontvangen',
+            statustype_url: '',
             naam_evenement: 'Multi-thread Zaak'
         ),
     ]);
@@ -371,14 +382,14 @@ test('filter works with multiple advice threads on same zaak', function () {
     // Test 'new' filter - should NOT show zaak if ANY thread is assigned
     $query = Zaak::query();
     $filter = AdvisorWorkingstockFilter::make();
-    $newFilterQuery = $filter->apply($query, ['workingstock' => 'new']);
+    $newFilterQuery = $filter->apply($query, ['workingstock-adv' => 'new']);
 
     // Should not return the zaak since it has at least one unassigned thread
     // But also has an assigned thread, so behavior depends on implementation
 
     // Test 'me' filter - should show zaak since user is assigned to one thread
     $query = Zaak::query();
-    $meFilterQuery = $filter->apply($query, ['workingstock' => 'me']);
+    $meFilterQuery = $filter->apply($query, ['workingstock-adv' => 'me']);
     $meResults = $meFilterQuery->get();
 
     expect($meResults)->toHaveCount(1)

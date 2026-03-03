@@ -45,6 +45,22 @@ class NewRequest extends Page
         $this->formId = config('services.open_forms.main_form_uuid');
     }
 
+    public function checkInitialLoad()
+    {
+        /** @var Organisation $tenant */
+        $tenant = Filament::getTenant();
+        /** @var OrganiserUser $user */
+        $user = Filament::auth()->user();
+        /** @var FormsubmissionSession $submissionSession */
+        $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
+
+        if ($submissionSession) {
+            $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
+        } else {
+            $this->js('listenLocalStorage(); loadForm();');
+        }
+    }
+
     public function getTitle(): string
     {
         return '';
@@ -68,7 +84,7 @@ class NewRequest extends Page
     public function updateFormsubmissionSession(string $submissionUUid)
     {
         $submissionUUid = trim($submissionUUid, '"');
-        if ($submissionUUid && $user = Filament::auth()->user()) {
+        if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
             /** @var Organisation $tenant */
             $tenant = Filament::getTenant();
             /** @var OrganiserUser $user */
@@ -79,25 +95,23 @@ class NewRequest extends Page
     public function checkSubmissionSession(string $submissionUUid)
     {
         $submissionUUid = trim($submissionUUid, '"');
-        if ($submissionUUid && $user = Filament::auth()->user()) {
+        if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
             /** @var Organisation $tenant */
             $tenant = Filament::getTenant();
             /** @var OrganiserUser $user */
             if (! $user->formsubmissionSessions()->where(['uuid' => $submissionUUid, 'organisation_id' => $tenant->id])->exists()) {
-                $this->js('deleteStorageRef');
+                $this->js('deleteStorageRef()');
                 if ($submission = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first()) {
                     /** @var FormsubmissionSession $submission */
                     $this->js('loadFormWithRef', '"'.$submission->uuid.'"');
                 } else {
-                    $this->js('listenLocalStorage');
-                    $this->js('loadForm');
+                    $this->js('listenLocalStorage(); loadForm();');
                 }
 
                 return;
             }
         }
-        $this->js('loadForm');
-        $this->js('checkIfSubmissionChanges', '"'.$submissionUUid.'"');
+        $this->js('loadForm(); checkIfSubmissionChanges("'.$submissionUUid.'");');
     }
 
     public function checkLoadExistingSubmissionSession()
@@ -112,8 +126,7 @@ class NewRequest extends Page
         if ($submissionSession) {
             $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
         } else {
-            $this->js('listenLocalStorage');
-            $this->js('loadForm');
+            $this->js('listenLocalStorage(); loadForm();');
         }
     }
 }

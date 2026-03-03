@@ -31,6 +31,7 @@ class ClearZaakCache implements ShouldQueue
             $zaak->clearZgwCache();
             $zaak_reference = array_merge([
                 'status_name' => $zaak->openzaak->status_name,
+                'statustype_url' => $zaak->openzaak->statustype_url,
                 'resultaat' => $zaak->openzaak->resultaattype ? $zaak->openzaak->resultaattype['omschrijving'] : null,
             ], $zaak->openzaak->eigenschappen_key_value);
 

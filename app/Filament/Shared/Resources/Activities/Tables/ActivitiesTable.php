@@ -5,10 +5,13 @@ namespace App\Filament\Shared\Resources\Activities\Tables;
 use App\Models\Message;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
+use App\Models\User;
 use App\Models\Zaak;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
 class ActivitiesTable
@@ -32,8 +35,32 @@ class ActivitiesTable
                     ->searchable(),
                 TextColumn::make('causer.name')
                     ->label(__('resources/activity.columns.causer.label'))
-                    ->description(fn ($record) => $record->causer->role->getLabel())
-                    ->searchable(),
+                    ->description(fn ($record) => $record->causer?->role?->getLabel())
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        // Pre-fetch matching user IDs with case-insensitive search
+                        $searchLower = Str::lower($search);
+
+                        $matchingUserIds = User::query()
+                            ->where(function (Builder $q) use ($search, $searchLower) {
+                                // Try multiple case variations to improve matching
+                                $q->where('name', 'like', "%{$search}%")
+                                    ->orWhere('name', 'like', "%{$searchLower}%")
+                                    ->orWhere('name', 'like', '%'.Str::ucfirst($searchLower).'%')
+                                    ->orWhere('name', 'like', '%'.Str::upper($search).'%');
+                            })
+                            ->toBase()
+                            ->pluck('id')
+                            ->unique()
+                            ->toArray();
+
+                        return $query->unless(
+                            empty($matchingUserIds),
+                            fn (Builder $q) => $q->where(function (Builder $q) use ($matchingUserIds) {
+                                $q->where('causer_type', User::class)
+                                    ->whereIn('causer_id', $matchingUserIds);
+                            })
+                        );
+                    }),
                 TextColumn::make('subject_type')
                     ->label(__('resources/activity.columns.subject.label'))
                     ->formatStateUsing(function ($state, Activity $record) {

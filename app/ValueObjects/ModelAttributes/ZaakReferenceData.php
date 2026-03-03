@@ -27,6 +27,7 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public string $eind_evenement,
         public string $registratiedatum,
         public string $status_name,
+        public string $statustype_url,
         public ?string $risico_classificatie = null,
         public ?string $naam_locatie_eveneme = null, // due to limit char restriction in OZ
         public ?string $naam_evenement = null,
@@ -34,11 +35,16 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public ?string $resultaat = null,
         public ?string $aanwezigen = null,
         public string|array|null $types_evenement = null,
+        public ?string $risico_toelichting = null,
+        public ?string $start_opbouw = null,
+        public ?string $eind_opbouw = null,
+        public ?string $start_afbouw = null,
+        public ?string $eind_afbouw = null,
         ...$otherParams
     ) {
-        $this->start_evenement_datetime = Carbon::parse($this->start_evenement);
-        $this->eind_evenement_datetime = Carbon::parse($this->eind_evenement);
-        $this->registratiedatum_datetime = Carbon::parse($this->registratiedatum);
+        $this->start_evenement_datetime = $this->parseDateTime($this->start_evenement);
+        $this->eind_evenement_datetime = $this->parseDateTime($this->eind_evenement);
+        $this->registratiedatum_datetime = $this->parseDateTime($this->registratiedatum);
         if ($this->naam_locatie_eveneme) {
             $this->naam_locatie_evenement = $this->naam_locatie_eveneme;
         } else {
@@ -54,20 +60,42 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         $this->otherParams = $otherParams;
     }
 
+    private function parseDateTime(string $dateTime): Carbon
+    {
+        // Try ISO 8601 format first (2025-09-26T12:00:00+02:00)
+        if (str_contains($dateTime, 'T')) {
+            return Carbon::parse($dateTime, 'Europe/Amsterdam');
+        }
+
+        // Try Dutch format (1 januari 2026 21:00)
+        try {
+            return Carbon::createFromLocaleFormat('j F Y H:i', 'nl', $dateTime, 'Europe/Amsterdam');
+        } catch (\Exception $e) {
+            // Fallback to standard parsing
+            return Carbon::parse($dateTime, 'Europe/Amsterdam');
+        }
+    }
+
     public function toArray(): array
     {
         return [
             'risico_classificatie' => $this->risico_classificatie,
+            'risico_toelichting' => $this->risico_toelichting,
             'start_evenement' => $this->start_evenement,
             'eind_evenement' => $this->eind_evenement,
             'registratiedatum' => $this->registratiedatum,
             'status_name' => $this->status_name,
+            'statustype_url' => $this->statustype_url,
             'naam_evenement' => $this->naam_evenement,
             'naam_locatie_evenement' => $this->naam_locatie_evenement,
             'organisator' => $this->organisator,
             'resultaat' => $this->resultaat,
             'aanwezigen' => $this->aanwezigen,
             'types_evenement' => is_array($this->types_evenement) ? $this->types_evenement : $this->types_evenement_array,
+            'start_opbouw' => $this->start_opbouw,
+            'eind_opbouw' => $this->eind_opbouw,
+            'start_afbouw' => $this->start_afbouw,
+            'eind_afbouw' => $this->eind_afbouw,
         ];
     }
 

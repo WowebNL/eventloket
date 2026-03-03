@@ -10,6 +10,7 @@ use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ObjectsApi\FormSubmissionObject;
+use App\ValueObjects\OzStatustype;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Besluit;
 use App\ValueObjects\ZGW\BesluitType;
@@ -32,9 +33,9 @@ use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
 
 /**
- * @property-read ZaakReferenceData $reference_data
- * @property-read ?Organisation $organisation
- * @property-read Municipality $municipality
+ * @property-read ZaakReferenceData            $reference_data
+ * @property-read ?Organisation                $organisation
+ * @property-read Municipality                 $municipality
  * @property-read Collection<Informatieobject> $documenten
  */
 #[ObservedBy(ZaakObserver::class)]
@@ -52,6 +53,7 @@ class Zaak extends Model implements Eventable
         'organisation_id',
         'organiser_user_id',
         'reference_data',
+        'imported_data',
         'handled_status_set_by_user_id',
     ];
 
@@ -59,6 +61,7 @@ class Zaak extends Model implements Eventable
     {
         return [
             'reference_data' => ZaakReferenceData::class,
+            'imported_data' => 'array',
         ];
     }
 
@@ -73,6 +76,7 @@ class Zaak extends Model implements Eventable
         return $this->belongsTo(Organisation::class);
     }
 
+    /** @return BelongsTo<\App\Models\Users\OrganiserUser, $this> */
     public function organiserUser(): BelongsTo
     {
         return $this->belongsTo(OrganiserUser::class, 'organiser_user_id', 'id');
@@ -85,12 +89,12 @@ class Zaak extends Model implements Eventable
 
     public function organiserThreads()
     {
-        return $this->hasMany(OrganiserThread::class)->organiser();
+        return $this->hasMany(OrganiserThread::class, 'zaak_id')->organiser();
     }
 
     public function adviceThreads(): HasMany
     {
-        return $this->hasMany(AdviceThread::class)->advice();
+        return $this->hasMany(AdviceThread::class, 'zaak_id')->advice();
     }
 
     public function municipality(): HasOneThrough
@@ -112,13 +116,15 @@ class Zaak extends Model implements Eventable
      */
     public function relatedUsers(): array
     {
+        $handlers = $this->handled_status_set_by_user_id ? [$this->handledStatusSetByUser] : $this->municipality->allReviewerUsers->all();
+
         return array_merge(
             $this->organisation?->users->all() ?? [],
             $this->adviceThreads->map(function ($thread) {
                 /** @var \App\Models\Threads\AdviceThread $thread */
                 return $thread->advisory->users->all();
             })->flatten(1)->all(),
-            $this->municipality->allReviewerUsers->all()
+            $handlers ? $handlers : []
         );
     }
 
@@ -129,11 +135,23 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /** @return Attribute<bool, void> */
+    protected function isImported(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value, $attributes) => ! $attributes['zgw_zaak_url'] && $attributes['imported_data'] !== null,
+        );
+    }
+
     /** @return Attribute<\App\ValueObjects\OzZaak, void> */
     protected function openzaak(): Attribute
     {
         return Attribute::make(
             get: function ($value, $attributes) {
+                if (! $attributes['zgw_zaak_url']) {
+                    return null;
+                }
+
                 return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
                     return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype')->all());
                 });
@@ -152,7 +170,6 @@ class Zaak extends Model implements Eventable
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
                     return $this->getDocuments();
                 } else {
-                    /** @phpstan-ignore-next-line */
                     return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
                 }
             },
@@ -180,7 +197,6 @@ class Zaak extends Model implements Eventable
             get: function ($value, $attributes) {
                 return $this->getBesluiten()->each(function (Besluit $besluit) {
                     $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                        /** @phpstan-ignore-next-line */
                         'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))),
                     ]));
                 });
@@ -190,6 +206,10 @@ class Zaak extends Model implements Eventable
 
     private function getBesluiten(): Collection
     {
+        if (! $this->zgw_zaak_url) {
+            return collect();
+        }
+
         return Cache::rememberForever("zaak.{$this->id}.besluiten", function () {
             $openzaak = new Openzaak;
             $besluiten = $openzaak->besluiten()->besluiten()->getAll(['zaak' => $this->zgw_zaak_url]);
@@ -212,6 +232,10 @@ class Zaak extends Model implements Eventable
 
     private function getDocuments()
     {
+        if (! $this->zgw_zaak_url) {
+            return collect();
+        }
+
         return Cache::rememberForever("zaak.{$this->id}.documenten", function () {
             $openzaak = new Openzaak;
             $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);
@@ -237,6 +261,24 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /** @return Attribute<\App\ValueObjects\OzStatustype, void> */
+    protected function statustype(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $statustypen = Cache::remember('statustypen', 60 * 60 * 24, function () {
+                    return (new Openzaak)->catalogi()->statustypen()->getAll(['pageSize' => 999999999])
+                        ->map(function ($statustype) {
+                            return new OzStatustype(...$statustype);
+                        });
+                });
+
+                // TODO: Eventueel nog cachen
+                return $statustypen->firstWhere('url', $this->reference_data->statustype_url);
+            },
+        );
+    }
+
     public function toCalendarEvent(): CalendarEvent
     {
         // Status tekstueel toevoegen
@@ -257,6 +299,7 @@ class Zaak extends Model implements Eventable
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logUnguarded();
+            ->logFillable()
+            ->logOnlyDirty();
     }
 }

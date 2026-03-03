@@ -22,7 +22,7 @@ beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
     $admin = User::factory()->create([
-        'email' => 'admin@example.com',
+        'email' => 'admin@domain.com',
         'role' => Role::Admin,
     ]);
 
@@ -44,7 +44,7 @@ test('admin can create organisation', function () {
             'name' => fake()->company,
             'coc_number' => fake()->numerify('########'),
             'address' => fake()->address,
-            'email' => fake()->companyEmail,
+            'email' => 'test@domain.com',
             'phone' => fake()->phoneNumber,
         ])
         ->call('create')
@@ -57,7 +57,7 @@ test('admin can edit organisation', function () {
         'name' => fake()->company,
         'coc_number' => fake()->numerify('########'),
         'address' => fake()->address,
-        'email' => fake()->companyEmail,
+        'email' => 'test@domain.com',
         'phone' => fake()->phoneNumber,
     ];
 

@@ -5,6 +5,7 @@ namespace App\Filament\Shared\Resources\Zaken\Actions;
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Models\Zaak;
+use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -22,9 +23,11 @@ class UploadDocumentAction
         return Action::make('upload')
             ->label(__('Nieuw bestand toevoegen'))
             ->icon('heroicon-o-arrow-up-tray')
+            ->tooltip(__('Wanneer je voor de eerste keer een bestand toevoegt, kies dan voor "Nieuw bestand". Indien je eerder een bestand toegevoegd hebt en je wilt dit nogmaals toevoegen als een nieuwe versie, kies dan voor "Nieuwe versie"'))
             ->modalSubmitAction(fn (Action $action) => $action->label(__('Bestand toevoegen')))
             ->schema(self::schema($zaak))
             ->modalAutofocus(false)
+            ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
             ->action(function (array $data, Action $action) use ($zaak): void {
                 self::uploadDocument($data, $zaak);
 
@@ -51,7 +54,6 @@ class UploadDocumentAction
             Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
                 ->options(function () {
-                    /** @phpstan-ignore-next-line */
                     $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
                     $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
                     $options = [];
@@ -68,6 +70,8 @@ class UploadDocumentAction
                 ->label(__('Bestand'))
                 ->required()
                 ->maxSize(20480) // 20MB
+                ->mimeTypeMap(config('app.document_mime_type_mappings'))
+                ->rule(DocumentUploadType::fileUploadRule())
                 ->directory('documents')
                 ->visibility('private')
                 ->storeFileNamesIn('file_name'),
@@ -86,7 +90,7 @@ class UploadDocumentAction
             'taal' => 'dut',
             'bestandsnaam' => $data['file_name'],
             'bestandsomvang' => Storage::size($data['file']),
-            'formaat' => Storage::mimeType($data['file']),
+            'formaat' => DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null),
             'inhoud' => base64_encode(Storage::get($data['file'])),
             'informatieobjecttype' => $data['informatieobjecttype'],
             'indicatieGebruiksrecht' => false,

@@ -5,6 +5,7 @@ namespace App\Filament\Shared\Resources\Zaken\Widgets;
 use App\Filament\Shared\Resources\Activities\Schemas\ActivityInfolist;
 use App\Filament\Shared\Resources\Activities\Tables\ActivitiesTable;
 use App\Models\Message;
+use App\Models\Thread;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Zaak;
@@ -22,8 +23,35 @@ class ActivityLogWidget extends TableWidget
     {
         return ActivitiesTable::configure($table)
             ->query(function (): Builder {
+                // Get all thread IDs for this zaak using query builder to avoid model instantiation issues
+                $adviceThreadIds = Thread::query()
+                    ->where('zaak_id', $this->record->id)
+                    ->where('type', 'advice')
+                    ->toBase()
+                    ->pluck('id')
+                    ->toArray();
+
+                $organiserThreadIds = Thread::query()
+                    ->where('zaak_id', $this->record->id)
+                    ->where('type', 'organiser')
+                    ->toBase()
+                    ->pluck('id')
+                    ->toArray();
+
+                $threadIds = array_merge($adviceThreadIds, $organiserThreadIds);
+
+                // Get all message IDs for threads of this zaak
+                $messageIds = [];
+                if (! empty($threadIds)) {
+                    $messageIds = Message::query()
+                        ->whereIn('thread_id', $threadIds)
+                        ->toBase()
+                        ->pluck('id')
+                        ->toArray();
+                }
+
                 return Activity::query()
-                    ->where(function (Builder $query) {
+                    ->where(function (Builder $query) use ($threadIds, $messageIds) {
                         $query
                             // Activities whose subject IS the Zaak
                             ->where(function (Builder $q) {
@@ -32,22 +60,16 @@ class ActivityLogWidget extends TableWidget
                             })
 
                             // OR activities whose subject is a thread with this zaak_id
-                            ->orWhereHasMorph(
-                                'subject',
-                                [AdviceThread::class, OrganiserThread::class],
-                                function (Builder $q) {
-                                    $q->where('zaak_id', $this->record->id);
-                                }
-                            )
+                            ->orWhere(function (Builder $q) use ($threadIds) {
+                                $q->whereIn('subject_type', [AdviceThread::class, OrganiserThread::class])
+                                    ->whereIn('subject_id', $threadIds);
+                            })
 
                             // OR activities whose subject is a message belonging to a thread with this zaak_id
-                            ->orWhereHasMorph(
-                                'subject',
-                                [Message::class],
-                                function (Builder $q) {
-                                    $q->whereHas('thread', fn ($q) => $q->where('zaak_id', $this->record->id));
-                                }
-                            );
+                            ->orWhere(function (Builder $q) use ($messageIds) {
+                                $q->where('subject_type', Message::class)
+                                    ->whereIn('subject_id', $messageIds);
+                            });
                     });
             })
             ->recordActions([

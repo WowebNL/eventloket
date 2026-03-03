@@ -9,16 +9,18 @@ use App\Filament\Shared\Pages\EditProfile;
 use App\Models\User;
 use App\Models\Users\AdminUser;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class AdminUserResource extends Resource
 {
     protected static ?string $model = AdminUser::class;
 
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
     protected static ?int $navigationSort = 0;
 
@@ -54,9 +56,10 @@ class AdminUserResource extends Resource
                     ->label(__('admin/resources/admin.columns.role.label')),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

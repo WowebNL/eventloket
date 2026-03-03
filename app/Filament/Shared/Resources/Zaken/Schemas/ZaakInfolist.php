@@ -11,12 +11,16 @@ use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
+use App\Notifications\ZaakStatusChanged;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\StatusType;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Grid;
@@ -64,12 +68,28 @@ class ZaakInfolist
             TextEntry::make('organiserUser.email')
                 ->label(__('resources/zaak.columns.email-organiser.label'))
                 ->visible(fn (?string $state) => ! empty($state)),
-            TextEntry::make('reference_data.start_evenement')
+            TextEntry::make('reference_data.start_evenement_datetime')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.start_evenement.label')),
-            TextEntry::make('reference_data.eind_evenement')
+            TextEntry::make('reference_data.eind_evenement_datetime')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_evenement.label')),
+            TextEntry::make('reference_data.start_opbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_opbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.eind_opbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_opbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.start_afbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_afbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.eind_afbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_afbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('reference_data.aanwezigen')
                 ->label(__('resources/zaak.columns.aanwezigen.label'))
                 ->visible(fn ($state) => ! empty($state)),
@@ -99,7 +119,7 @@ class ZaakInfolist
                     ->date(config('app.date_format')),
             ])
             ->columnSpan(4)
-            ->visible(fn (Zaak $record) => $record->openzaak->resultaat);
+            ->visible(fn (Zaak $record) => ($record->openzaak && $record->openzaak->resultaat) ? true : false);
     }
 
     public static function configure(Schema $schema): Schema
@@ -122,12 +142,26 @@ class ZaakInfolist
                                     ->date(config('app.date_format'))
                                     ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),
                             ]))
-                            ->columnSpan(fn ($record) => $record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin]) ? 8 : 12),
+                            ->columnSpan(fn ($record) => ! $record->is_imported && ($record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])) ? 8 : 12),
                         Section::make(__('municipality/resources/zaak.infolist.sections.actions.label'))
                             ->description(__('municipality/resources/zaak.infolist.sections.actions.description'))
                             ->schema([
                                 TextEntry::make('reference_data.risico_classificatie')
                                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                                    ->suffix(function (Zaak $record) {
+                                        if (! empty($record->reference_data->risico_toelichting)) {
+                                            return new HtmlString(
+                                                Blade::render(
+                                                    '<span class="ms-2" x-data="{}" x-tooltip="{ content: @js($toelichting), theme: $store.theme }">
+                                                        <x-filament::icon icon="heroicon-o-information-circle" class="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                    </span>',
+                                                    ['toelichting' => $record->reference_data->risico_toelichting]
+                                                )
+                                            );
+                                        }
+
+                                        return null;
+                                    })
                                     ->afterLabel(Schema::end([
                                         Icon::make('heroicon-o-pencil-square'),
                                         Action::make('editRisicoClassificatie')
@@ -142,35 +176,92 @@ class ZaakInfolist
                                             })
                                             ->schema([
                                                 Select::make('risico_classificatie')
-                                                    ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                                                    ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.fields.risico_classificatie.label'))
                                                     ->options([
                                                         '0' => '0',
                                                         'A' => 'A',
                                                         'B' => 'B',
                                                         'C' => 'C',
                                                     ])->required(),
+                                                Textarea::make('risico_toelichting')
+                                                    ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.fields.risico_classificatie_toelichting.label'))
+                                                    ->rows(3)
+                                                    ->maxLength(255)
+                                                    ->helperText(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.fields.risico_classificatie_toelichting.helper_text'))
+                                                    ->required(),
                                             ])
                                             ->action(function ($data, $record) {
-                                                $eigenschap = null;
+                                                $openzaak = new Openzaak;
+                                                $success = true;
+                                                $eigenschappen = ['risico_classificatie' => null, 'risico_toelichting' => null];
+
+                                                // Find existing eigenschappen
                                                 foreach ($record->openzaak->eigenschappen as $item) {
                                                     if ($item->naam === 'risico_classificatie') {
-                                                        $eigenschap = $item;
+                                                        $eigenschappen['risico_classificatie'] = $item;
+                                                    } elseif ($item->naam === 'risico_toelichting') {
+                                                        $eigenschappen['risico_toelichting'] = $item;
+                                                    }
+
+                                                    if ($eigenschappen['risico_classificatie'] && $eigenschappen['risico_toelichting']) {
                                                         break;
                                                     }
                                                 }
-                                                if ($eigenschap) {
-                                                    $openzaak = new Openzaak;
-                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschap->uuid, [
+
+                                                // Load catalogi eigenschappen if needed
+                                                $catalogiEigenschappen = null;
+                                                if (! $eigenschappen['risico_classificatie'] || ! $eigenschappen['risico_toelichting']) {
+                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
+                                                }
+
+                                                // Handle risico_classificatie
+                                                if ($eigenschappen['risico_classificatie']) {
+                                                    // Eigenschap exists, update it
+                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschappen['risico_classificatie']->uuid, [
                                                         'waarde' => $data['risico_classificatie'],
                                                     ]);
+                                                } else {
+                                                    // Eigenschap doesn't exist, create it
+                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_classificatie');
+                                                    if ($catalogiEigenschap) {
+                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
+                                                            'zaak' => $record->openzaak->url,
+                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                            'waarde' => $data['risico_classificatie'],
+                                                        ]);
+                                                    } else {
+                                                        $success = false;
+                                                    }
+                                                }
 
+                                                // Handle risico_toelichting
+                                                if ($eigenschappen['risico_toelichting']) {
+                                                    // Eigenschap exists, update it
+                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschappen['risico_toelichting']->uuid, [
+                                                        'waarde' => $data['risico_toelichting'],
+                                                    ]);
+                                                } else {
+                                                    // Eigenschap doesn't exist, create it
+                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_toelichting');
+                                                    if ($catalogiEigenschap) {
+                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
+                                                            'zaak' => $record->openzaak->url,
+                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                            'waarde' => $data['risico_toelichting'],
+                                                        ]);
+                                                    } else {
+                                                        $success = false;
+                                                    }
+                                                }
+
+                                                if ($success) {
                                                     // update local reference for dispaying the new value immidiately
-                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['risico_classificatie' => $data['risico_classificatie']]));
+                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['risico_classificatie' => $data['risico_classificatie'], 'risico_toelichting' => $data['risico_toelichting']]));
                                                     $record->save();
 
                                                     Notification::make()
                                                         ->success()
-                                                        ->title(__('Risico classificatie is gewijzigd'))
+                                                        ->title(__('Risico classificatie en toelichting zijn gewijzigd'))
                                                         ->send();
                                                 } else {
                                                     Notification::make()
@@ -198,8 +289,9 @@ class ZaakInfolist
                                                         return (new Openzaak)->catalogi()->statustypen()->getAll(['zaaktype' => $zaak->openzaak->zaaktype])->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
                                                     })->required(),
                                             ])
-                                            ->action(function ($data, $record) {
+                                            ->action(function (array $data, Zaak $record) {
                                                 if ($data['status'] != $record->openzaak->status['statustype']) {
+                                                    $oldStatus = $record->reference_data->status_name;
                                                     $openzaak = new Openzaak;
                                                     $statusType = new StatusType(...$openzaak->get($data['status'])->toArray());
 
@@ -216,10 +308,18 @@ class ZaakInfolist
                                                         $record->handled_status_set_by_user_id = auth()->id();
                                                     }
 
-                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['status_name' => $statusType->omschrijving]));
+                                                    /** @disregard */
+                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['status_name' => $statusType->omschrijving])); // @phpstan-ignore assign.propertyReadOnly
                                                     $record->save();
 
                                                     $record->clearZgwCache();
+
+                                                    if ($oldStatus != $record->reference_data->status_name) {
+                                                        foreach ($record->organisation->users as $user) {
+                                                            /** @var \App\Models\Users\OrganiserUser $user */
+                                                            $user->notify(new ZaakStatusChanged($record, $oldStatus));
+                                                        }
+                                                    }
 
                                                     Notification::make()
                                                         ->success()
@@ -259,10 +359,11 @@ class ZaakInfolist
                                 // })
                             ])
                             ->columnSpan(4)
-                            ->hidden(fn (Zaak $record) => $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
+                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
                         self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
+                            ->hidden(fn (Zaak $record) => $record->is_imported)
                             ->tabs([
                                 Tab::make('besluiten')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.decisions.label'))
@@ -290,7 +391,7 @@ class ZaakInfolist
                                         return $count > 0 ? $count : null;
                                     })
                                     ->schema([
-                                        Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
+                                        Livewire::make(OrganiserThreadsRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class])->key('organiser-threads-'.($schema->model->id ?? 'new')),
                                     ]),
                                 Tab::make('advice_requests')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
@@ -304,15 +405,21 @@ class ZaakInfolist
                                         return $count > 0 ? $count : null;
                                     })
                                     ->schema([
-                                        Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class]),
+                                        Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class])->key('advice-threads-'.($schema->model->id ?? 'new')),
                                     ]),
                                 LocationsTab::make(),
-                                Tab::make('log')
-                                    ->label(__('municipality/resources/zaak.infolist.tabs.log.label'))
-                                    ->icon('heroicon-o-clock')
-                                    ->schema([]),
                             ])
                             ->columnSpanFull(),
+                        Section::make(__('Geimporteerde gegevens'))
+                            ->hidden(fn (Zaak $record) => ! $record->is_imported)
+                            ->schema([
+                                KeyValueEntry::make('imported_data')
+                                    ->hiddenLabel()
+                                    ->keyLabel(__('Sleutel'))
+                                    ->valueLabel(__('Waarde'))
+                                    ->columns(1),
+                            ])->columnSpanFull(),
+
                     ]),
             ]));
     }

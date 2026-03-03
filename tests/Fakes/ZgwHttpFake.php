@@ -167,6 +167,41 @@ class ZgwHttpFake
         return $url;
     }
 
+    public static function fakeStatustypen()
+    {
+        $url = self::$baseUrl.'/catalogi/api/v1/statustypen';
+
+        $data = [
+            [
+                'url' => self::$baseUrl.'/catalogi/api/v1/statustypen/1',
+                'zaaktype' => self::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'omschrijving' => 'Ontvangen',
+                'volgnummer' => 1,
+                'isEindstatus' => false,
+            ],
+            [
+                'url' => self::$baseUrl.'/catalogi/api/v1/statustypen/2',
+                'zaaktype' => self::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'omschrijving' => 'In behandeling',
+                'volgnummer' => 2,
+                'isEindstatus' => false,
+            ],
+            [
+                'url' => self::$baseUrl.'/catalogi/api/v1/statustypen/3',
+                'zaaktype' => self::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'omschrijving' => 'Afgehandeld',
+                'volgnummer' => 3,
+                'isEindstatus' => true,
+            ],
+        ];
+
+        Http::fake([
+            $url.'*' => Http::response($data, 200),
+        ]);
+
+        return $url;
+    }
+
     public static function wildcardFake()
     {
         Http::fake([

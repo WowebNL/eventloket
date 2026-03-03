@@ -129,6 +129,23 @@ test('municipality admin can edit location', function () {
         'street_name' => 'Updated Street',
         'city_name' => 'Rotterdam',
         'active' => false,
+        'geometry' => [
+            'lat' => 51.41319724,
+            'lng' => 5.43674043,
+            'geojson' => [
+                'features' => [
+                    [
+                        'properties' => [],
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'coordinates' => [5.43674043, 51.41319724],
+                            'type' => 'Point',
+                        ],
+                    ],
+                ],
+                'type' => 'FeatureCollection',
+            ],
+        ],
     ];
 
     livewire(EditLocation::class, [
@@ -177,9 +194,7 @@ test('location form validates required fields', function () {
         ->call('create')
         ->assertHasFormErrors([
             'name' => 'required',
-            'postal_code' => 'required',
-            'house_number' => 'required',
-            'street_name' => 'required',
+            'geometry' => 'required',
         ]);
 });
 
@@ -279,6 +294,23 @@ test('reviewer municipality admin can also manage locations', function () {
 
     $location = Location::factory()->create([
         'municipality_id' => $this->municipality->id,
+        'geometry' => [
+            'lat' => 51.41319724,
+            'lng' => 5.43674043,
+            'geojson' => [
+                'features' => [
+                    [
+                        'properties' => [],
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'coordinates' => [5.43674043, 51.41319724],
+                            'type' => 'Point',
+                        ],
+                    ],
+                ],
+                'type' => 'FeatureCollection',
+            ],
+        ],
     ]);
 
     livewire(ListLocations::class)

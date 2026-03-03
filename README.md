@@ -18,10 +18,10 @@ This platform streamlines the entire permit application process for events in th
 ## Technical Stack
 
 - **Framework**: Laravel 12.x
-- **PHP Version**: PHP 8.2+
+- **PHP Version**: PHP 8.4+
 - **Frontend**: Tailwind CSS, Vite
-- **Admin Panel**: Filament 3.x
-- **Database**: MySQL
+- **Admin Panel**: Filament 4.x
+- **Database**: PostgreSQL 17+ or MySQL 8+
 - **Queue System**: Redis
 - **Docker Support**: Laravel Sail
 
@@ -29,7 +29,7 @@ This platform streamlines the entire permit application process for events in th
 
 ### Requirements (Local or Docker)
 
-- PHP 8.2+, Composer, Node.js/NPM, MySQL, Redis (for local setup)
+- PHP 8.4+, Composer, Node.js/NPM, MySQL, Redis (for local setup)
 - Or: [Laravel Sail](https://laravel.com/docs/sail) with Docker for easy environment setup
 
 ### Quick Start (Docker using Sail)

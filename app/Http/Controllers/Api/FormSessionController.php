@@ -39,6 +39,15 @@ class FormSessionController extends Controller
                 'houseNumberAddition' => $organisation->bag_address->huisnummertoevoeging,
                 'houseLetter' => $organisation->bag_address->huisletter,
             ];
+        } elseif ($organisation->postbus_address) {
+            $data['organisation_address'] = [
+                'city' => $organisation->postbus_address->woonplaatsnaam,
+                'postcode' => $organisation->postbus_address->postcode,
+                'streetName' => 'Postbus',
+                'houseNumber' => $organisation->postbus_address->postbusnummer,
+                'houseNumberAddition' => '',
+                'houseLetter' => '',
+            ];
         }
 
         return response()->json(['message' => 'Valid session', 'data' => $data]);

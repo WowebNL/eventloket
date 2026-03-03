@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\Role;
 use App\Models\AdvisoryInvite;
 use App\Models\User;
 use App\Models\Users\AdminUser;
@@ -47,6 +48,14 @@ class AdvisoryInvitePolicy
     {
         if ($user instanceof AdminUser) {
             return true;
+        }
+
+        if (in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin])) {
+            // Check if the user has access to one of the municipalities of the advisory
+            /** @var \App\Models\Users\MunicipalityUser $user */
+            return $user->municipalities->pluck('id')
+                ->intersect($advisoryInvite->advisory->municipalities->pluck('id'))
+                ->isNotEmpty();
         }
 
         return false;

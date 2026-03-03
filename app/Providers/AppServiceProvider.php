@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\OpenNotification\GetIncommingNotificationType;
+use App\Auth\CaseInsensitiveUserProvider;
 use App\Console\Commands\SyncZaaktypen;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
@@ -12,11 +13,13 @@ use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Support\CarbonBusinessDaysMixin;
+use App\Support\Uploads\DocumentUploadType;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
@@ -37,6 +40,16 @@ class AppServiceProvider extends ServiceProvider
                 ListApplications::class,
             ]
         );
+
+        // Use custom Export and Import models to fix user relationship caching issues
+        $this->app->bind(
+            \Filament\Actions\Exports\Models\Export::class,
+            \App\Models\Export::class
+        );
+        $this->app->bind(
+            \Filament\Actions\Imports\Models\Import::class,
+            \App\Models\Import::class
+        );
     }
 
     /**
@@ -44,6 +57,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        DocumentUploadType::assertConfigurationIsSafe(array_values((array) config('app.document_file_types', [])));
+
+        // Register custom case-insensitive user provider
+        Auth::provider('case-insensitive-eloquent', function ($app, array $config) {
+            return new CaseInsensitiveUserProvider($app['hash'], $config['model']);
+        });
+
         if (app()->isProduction()) {
             Password::defaults(fn () => Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised());
         }

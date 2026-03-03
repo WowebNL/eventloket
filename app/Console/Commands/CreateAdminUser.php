@@ -70,16 +70,19 @@ class CreateAdminUser extends Command
 
         try {
             // Create the user
-            $user = User::create([
+            $user = new User([
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'name' => "{$firstName} {$lastName}",
                 'email' => $email,
                 'phone' => $phone,
                 'password' => Hash::make($password),
-                'role' => Role::Admin,
                 'email_verified_at' => now(), // Auto-verify admin users
             ]);
+
+            $user->role = Role::Admin;
+
+            $user->save();
 
             $this->newLine();
             $this->info('✅ Admin user created successfully!');

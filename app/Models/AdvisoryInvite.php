@@ -25,6 +25,9 @@ class AdvisoryInvite extends Model
         'token',
     ];
 
+    /**
+     * @return BelongsTo<Advisory, $this>
+     */
     public function advisory(): BelongsTo
     {
         return $this->belongsTo(Advisory::class);

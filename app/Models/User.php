@@ -22,6 +22,7 @@ use Illuminate\Notifications\Notifiable;
 
 /**
  * @property array<string>|null $app_authentication_recovery_codes
+ * @property Role $role
  */
 class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
@@ -62,10 +63,13 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
      * @var list<string>
      */
     protected $hidden = [
+        'role',
         'password',
         'remember_token',
         'app_authentication_secret',
         'app_authentication_recovery_codes',
+        'openzaak_jwt',
+        'openzaak_jwt_valid_till',
     ];
 
     /**
@@ -97,6 +101,16 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
     public function municipalities()
     {
         return $this->belongsToMany(Municipality::class, 'municipality_user');
+    }
+
+    /**
+     * Always store email in lowercase for consistency
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: fn (string $value) => strtolower($value),
+        );
     }
 
     /**

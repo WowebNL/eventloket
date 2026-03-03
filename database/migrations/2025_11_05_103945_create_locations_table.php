@@ -26,8 +26,7 @@ return new class extends Migration
 
             $table->boolean('active');
 
-            $table->json('geometry')->nullable();
-
+            $table->jsonb('geometry')->nullable();
             $table->timestamps();
         });
     }

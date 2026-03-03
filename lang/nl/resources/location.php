@@ -85,12 +85,15 @@ return [
         ],
 
         'active' => [
-            'label' => 'Actief',
-            'helper_text' => 'Geeft aan of de locatie open staat voor nieuwe aanvragen.',
+            'label' => 'Kiesbaar',
+            'helper_text' => 'Geeft aan of de locatie kiesbaar is voor een organisator in het formulier van een nieuwe aanvraag.',
         ],
 
         'geometry' => [
             'label' => 'Locatie',
+            'validation' => [
+                'geojson_required' => 'Plaats minimaal één geometrie op de kaart.',
+            ],
         ],
 
         'bagid' => [

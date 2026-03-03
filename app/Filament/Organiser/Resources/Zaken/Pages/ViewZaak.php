@@ -25,6 +25,7 @@ class ViewZaak extends ViewRecord
     {
         return [
             Action::make('prefil_new_request')
+                ->hidden()
                 ->label('Nieuwe aanvraag')
                 ->tooltip('Start een nieuwe aanvraag waarbij de gegevens uit het aanvraagformulier van deze zaak vooraf ingevuld zijn.')
                 ->action(function (Zaak $record) {
@@ -82,7 +83,7 @@ class ViewZaak extends ViewRecord
                 ->label('Aanvraag intrekken')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->visible(fn (Zaak $record): bool => ! $record->openzaak->resultaat && $record->zaaktype->intrekkenResultaatType !== null)
+                ->visible(fn (Zaak $record): bool => ($record->openzaak && ! $record->openzaak->resultaat) && $record->zaaktype->intrekkenResultaatType !== null)
                 ->action(function (Zaak $record) {
                     /** @var \App\Models\Users\OrganiserUser $user */
                     $user = auth()->user();
@@ -113,15 +114,25 @@ class ViewZaak extends ViewRecord
                                 ));
                             }
 
-                            // also notify municipality users
-                            foreach ($record->municipality->users as $recipient) {
+                            if ($record->handled_status_set_by_user_id) {
                                 /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                $recipient = $record->handledStatusSetByUser;
                                 $recipient->notify(new Result(
                                     zaak: $record,
                                     tenant: $record->municipality,
                                     title: $finishZaakObject->message_title,
                                     message: $finishZaakObject->message_content,
                                 ));
+                            } else {
+                                foreach ($record->municipality->allReviewerUsers as $recipient) {
+                                    /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                    $recipient->notify(new Result(
+                                        zaak: $record,
+                                        tenant: $record->municipality,
+                                        title: $finishZaakObject->message_title,
+                                        message: $finishZaakObject->message_content,
+                                    ));
+                                }
                             }
                         },
                     ])->dispatch();

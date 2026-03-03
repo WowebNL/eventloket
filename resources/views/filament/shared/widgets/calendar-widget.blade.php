@@ -6,8 +6,8 @@
 @endphp
 
 <x-filament-widgets::widget>
+    {{-- Table View --}}
     @if ($this->viewMode === 'table')
-        {{-- Table View --}}
         <x-filament::section
             :after-header="$this->getCachedHeaderActionsComponent()"
         >
@@ -21,29 +21,31 @@
                 {{ $this->table }}
             </div>
         </x-filament::section>
-    @else
-        {{-- Calendar View --}}
-        <x-filament::section
-            :after-header="$this->getCachedHeaderActionsComponent()"
-        >
-            <style>
-                .ec-event.ec-preview,
-                .ec-now-indicator {
-                    z-index: 30;
-                }
-            </style>
+    @endif
 
-            @if($heading = $this->getHeading())
-                <x-slot name="heading">
-                    {{ $this->getHeading() }}
-                </x-slot>
-            @endif
+    {{-- Calendar View --}}
+    <x-filament::section
+        :after-header="$this->getCachedHeaderActionsComponent()"
+        :class="$this->viewMode === 'table' ? 'hidden' : ''"
+    >
+        <style>
+            .ec-event.ec-preview,
+            .ec-now-indicator {
+                z-index: 30;
+            }
+        </style>
 
-            <div
-                wire:ignore
-                x-load
-                x-load-src="{{ FilamentAsset::getAlpineComponentSrc('calendar', 'guava/calendar') }}"
-                x-data="calendar({
+        @if($heading = $this->getHeading())
+            <x-slot name="heading">
+                {{ $this->getHeading() }}
+            </x-slot>
+        @endif
+
+        <div
+            wire:ignore
+            x-load
+            x-load-src="{{ FilamentAsset::getAlpineComponentSrc('calendar', 'guava/calendar') }}"
+            x-data="calendar({
                     view: @js($this->getCalendarView()),
                     locale: @js($this->getLocale()),
                     firstDay: @js($this->getFirstDay()),
@@ -68,14 +70,14 @@
                     options: @js($this->getOptions()),
                     eventAssetUrl: @js(FilamentAsset::getAlpineComponentSrc('calendar-event', 'guava/calendar')),
                 })"
-                @class(FilamentColor::getComponentClasses(ButtonComponent::class, 'primary'))
-            >
-                <div data-calendar></div>
-                @if($this->hasContextMenu())
-                    <x-guava-calendar::context-menu/>
-                @endif
-            </div>
-        </x-filament::section>
-    @endif
+            @class(FilamentColor::getComponentClasses(ButtonComponent::class, 'primary'))
+        >
+            <div data-calendar></div>
+            @if($this->hasContextMenu())
+                <x-guava-calendar::context-menu/>
+            @endif
+        </div>
+    </x-filament::section>
+
     <x-filament-actions::modals/>
 </x-filament-widgets::widget>

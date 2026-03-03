@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\OrganisationType;
+use App\ValueObjects\PostbusAddress;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -22,8 +23,26 @@ class OrganisationFactory extends Factory
             'name' => fake()->company,
             'coc_number' => fake()->numerify('########'),
             'address' => fake()->address,
-            'email' => fake()->companyEmail,
+            'email' => 'test@domain.com',
             'phone' => fake()->phoneNumber,
         ];
+    }
+
+    /**
+     * State for an organisation with a postbus address.
+     */
+    public function postbus(string $postbusnummer = '123', string $postcode = '5678CD', string $woonplaatsnaam = 'Rotterdam'): static
+    {
+        $postbusAddress = new PostbusAddress(
+            postbusnummer: $postbusnummer,
+            postcode: $postcode,
+            woonplaatsnaam: $woonplaatsnaam,
+        );
+
+        return $this->state(fn (array $attributes) => [
+            'postbus_address' => $postbusAddress,
+            'bag_id' => null,
+            'address' => $postbusAddress->weergavenaam(),
+        ]);
     }
 }

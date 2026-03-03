@@ -10,6 +10,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Support\Facades\Notification;
+use Tests\Fakes\ZgwHttpFake;
 
 beforeEach(function () {
     Notification::fake();
@@ -21,6 +22,8 @@ beforeEach(function () {
     $this->zaaktype = Zaaktype::factory()->create([
         'municipality_id' => $this->municipality->id,
     ]);
+
+    ZgwHttpFake::fakeStatustypen();
 });
 
 test('creates concept advice threads when risico classificatie matches', function () {
@@ -40,6 +43,7 @@ test('creates concept advice threads when risico classificatie matches', functio
             eind_evenement: now()->addDay()->toDateTimeString(),
             registratiedatum: now()->toDateTimeString(),
             status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
             risico_classificatie: 'B',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test event'
@@ -90,6 +94,7 @@ test('creates multiple concept threads for multiple default questions', function
             eind_evenement: now()->addDay()->toDateTimeString(),
             registratiedatum: now()->toDateTimeString(),
             status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
             risico_classificatie: 'A',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test event'
@@ -118,6 +123,7 @@ test('does not create threads when no matching risico classificatie', function (
             eind_evenement: now()->addDay()->toDateTimeString(),
             registratiedatum: now()->toDateTimeString(),
             status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
             risico_classificatie: 'A',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test event'
@@ -147,6 +153,7 @@ test('does not create threads when zaak has no risico classificatie', function (
             eind_evenement: now()->addDay()->toDateTimeString(),
             registratiedatum: now()->toDateTimeString(),
             status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test event'
         ),
@@ -185,6 +192,7 @@ test('only creates threads for matching municipality', function () {
             eind_evenement: now()->addDay()->toDateTimeString(),
             registratiedatum: now()->toDateTimeString(),
             status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
             risico_classificatie: 'A',
             naam_locatie_eveneme: 'Test locatie',
             naam_evenement: 'Test event'

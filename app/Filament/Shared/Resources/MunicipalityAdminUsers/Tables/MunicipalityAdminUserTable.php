@@ -6,9 +6,11 @@ use App\Enums\Role;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class MunicipalityAdminUserTable
@@ -40,9 +42,10 @@ class MunicipalityAdminUserTable
                     }),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
             ])

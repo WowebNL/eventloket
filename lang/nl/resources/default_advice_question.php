@@ -18,9 +18,9 @@ return [
             'label' => 'Omschrijving',
         ],
         'response_deadline_days' => [
-            'label' => 'Reactietermijn (werkdagen)',
-            'helper' => 'Aantal werkdagen waarbinnen de adviesdienst moet reageren',
-            'suffix' => 'werkdagen',
+            'label' => 'Reactietermijn (dagen)',
+            'helper' => 'Aantal dagen waarbinnen de adviesdienst moet reageren',
+            'suffix' => 'dagen',
         ],
     ],
 
@@ -36,7 +36,7 @@ return [
         ],
         'response_deadline_days' => [
             'label' => 'Reactietermijn',
-            'suffix' => ' werkdagen',
+            'suffix' => ' dagen',
         ],
         'created_at' => [
             'label' => 'Aangemaakt op',

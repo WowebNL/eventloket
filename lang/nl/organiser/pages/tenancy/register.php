@@ -34,6 +34,12 @@ return [
         'huisnummer' => [
             'label' => 'Huisnummer',
         ],
+        'use_postbus' => [
+            'label' => 'Ik gebruik een postbus',
+        ],
+        'postbusnummer' => [
+            'label' => 'Postbusnummer',
+        ],
         'huisletter' => [
             'label' => 'Huisletter',
         ],

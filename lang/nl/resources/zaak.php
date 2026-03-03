@@ -47,11 +47,32 @@ return [
         'aanwezigen' => [
             'label' => 'Aanwezigen',
         ],
+        'advisors' => [
+            'label' => 'Adviseurs',
+        ],
         'types_evenement' => [
             'label' => 'Type(n) evenement',
         ],
         'handled_status_set_by_user' => [
             'label' => 'In behandeling door',
+        ],
+        'resultaat' => [
+            'label' => 'Resultaat',
+        ],
+        'naam_locatie_evenement' => [
+            'label' => 'Naam locatie evenement',
+        ],
+        'start_opbouw' => [
+            'label' => 'Start opbouw',
+        ],
+        'eind_opbouw' => [
+            'label' => 'Eind opbouw',
+        ],
+        'start_afbouw' => [
+            'label' => 'Start afbouw',
+        ],
+        'eind_afbouw' => [
+            'label' => 'Eind afbouw',
         ],
     ],
     'filters' => [
@@ -61,7 +82,12 @@ return [
                 'me' => 'Mijn werkvoorraad',
                 'new' => 'Nieuw',
                 'all' => 'Alle zaken',
+                'all_eventloket' => 'Alle zaken binnen Eventloket',
             ],
         ],
+    ],
+    'navigation_groups' => [
+        'with_advice_thread' => 'Zaken met adviesvraag',
+        'all' => 'Eventloket zaken',
     ],
 ];

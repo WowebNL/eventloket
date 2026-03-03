@@ -10,9 +10,12 @@ use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Resources\Zaken\Schemas\ZaakInfolist;
 use App\Filament\Shared\Resources\Zaken\Tables\ZakenTable;
+use App\Models\Advisory;
 use App\Models\Event;
 use App\Models\Municipality;
 use App\Models\Organisation;
+use App\Models\Users\AdvisorUser;
+use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\CarbonImmutable;
@@ -22,6 +25,7 @@ use Filament\Facades\Filament;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Pages\Dashboard\Actions\FilterAction;
 use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
@@ -31,6 +35,7 @@ use Filament\Tables;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Guava\Calendar\Concerns\CanRefreshCalendar;
 use Guava\Calendar\Filament\Actions\ViewAction;
 use Guava\Calendar\ValueObjects\DatesSetInfo;
 use Guava\Calendar\ValueObjects\FetchInfo;
@@ -38,7 +43,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -46,6 +50,7 @@ use LogicException;
 
 class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements Tables\Contracts\HasTable
 {
+    use CanRefreshCalendar;
     use HasFilters;
     use Tables\Concerns\InteractsWithTable {
         Tables\Concerns\InteractsWithTable::normalizeTableFilterValuesFromQueryString insteadof HasFilters;
@@ -77,10 +82,17 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     public string $viewMode = 'calendar'; // 'calendar' or 'table'
 
+    protected bool $useFilamentTimezone = true;
+
     public function mount()
     {
         if (in_array($this->viewtype, ['calendar', 'table'])) {
             $this->viewMode = $this->viewtype;
+
+            if ($this->viewMode === 'table') {
+                $this->start = CarbonImmutable::parse(now()->startOfDay());
+                $this->end = null;
+            }
         }
     }
 
@@ -116,10 +128,33 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return Action::make('view')
             ->label(__('shared/widgets/calendar.view_case'))
             ->icon('heroicon-o-arrow-top-right-on-square')
-            ->url(fn (Zaak $record): string => route('filament.municipality.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]))
+            ->url(function (Zaak $record): string {
+                $currentPanelId = Filament::getCurrentPanel()?->getId();
+
+                if ($currentPanelId === 'advisor') {
+                    return route('filament.advisor.resources.zaken.view', ['tenant' => Filament::getTenant(), 'record' => $record]);
+                }
+
+                return route('filament.municipality.resources.zaken.view', ['tenant' => $record->municipality, 'record' => $record]);
+            })
             ->color('primary')
             ->button()
-            ->visible(fn () => in_array(auth()->user()->role, [Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Reviewer]));
+            ->visible(function (Zaak $record) {
+                $user = auth()->user();
+
+                if ($user instanceof MunicipalityUser) {
+                    return $user->canAccessMunicipality($record->zaaktype->municipality_id);
+                }
+
+                if ($user instanceof AdvisorUser) {
+                    /** @var Advisory $tenant */
+                    $tenant = Filament::getTenant();
+
+                    return $tenant->can_view_any_zaak;
+                }
+
+                return false;
+            });
     }
 
     public function defaultSchema(Schema $schema): Schema
@@ -132,12 +167,18 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->schema(ZaakInfolist::informationschema())
                         ->columns(2),
                     LocationsTab::make(),
+                    Tabs\Tab::make('imported')
+                        ->label(__('Geïmporteerde informatie'))
+                        ->visible(fn (Zaak $record) => ! empty($record->imported_data))
+                        ->schema([
+                            KeyValueEntry::make('imported_data')
+                                ->hiddenLabel()
+                                ->keyLabel(__('Sleutel'))
+                                ->valueLabel(__('Waarde'))
+                                ->columns(1),
+                        ]),
                 ])
                 ->columnSpanFull(),
-            // Section::make()
-            //     ->columns(2)
-            //     ->schema(ZaakInfolist::informationschema())
-            //     ->columnSpan(8),
         ]);
     }
 
@@ -165,7 +206,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 ->badge(fn () => count(array_filter($this->filters ?? [])))
                 ->after(function () {
                     if ($this->viewMode === 'calendar') {
-                        $this->dispatch('calendar--refresh');
+                        $this->refreshRecords();
                     } else {
                         // Reset table to refresh with new filters
                         $this->resetTable();
@@ -173,8 +214,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 }),
             ExportAction::make()
                 ->exporter($exporter)
-                ->label('Evenementen exporteren')
-                ->modalHeading('Evenementen exporteren')
+                ->label(__('shared/widgets/calendar.actions.export.label'))
+                ->modalHeading(__('shared/widgets/calendar.actions.export.label'))
                 ->columnMapping(false)
                 ->fillForm(function (Component $livewire) {
                     if (! property_exists($livewire, 'filters')) {
@@ -277,7 +318,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     {
         return ZakenTable::configure($table)
             ->query($this->getEvents())
-            ->defaultSort('reference_data->start_evenement')
+            ->defaultSort('reference_data->start_evenement_datetime')
             ->recordActions([
                 \Filament\Actions\ViewAction::make()
                     ->schema(fn (Schema $schema) => $this->defaultSchema($schema))
@@ -300,7 +341,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->closeOnDateSelection()
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
-                            ->default(now()->startOfDay())
+                            ->default(fn () => $this->start)
                             ->afterStateUpdated(fn ($state) => $this->start = $state ? CarbonImmutable::parse($state) : null),
                         DatePicker::make('to')
                             ->label(__('shared/widgets/calendar.filters.range.to.label'))
@@ -309,6 +350,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->closeOnDateSelection()
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
+                            ->default(fn () => $this->end)
                             ->afterStateUpdated(fn ($state) => $this->end = $state ? CarbonImmutable::parse($state) : null),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
@@ -327,11 +369,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected function getEvents(?FetchInfo $info = null): Collection|array|Builder
     {
-        if (in_array(auth()->user()->role, [Role::Organiser, Role::Advisor])) {
-            $query = Event::query();
-        } else {
-            $query = Zaak::query();
-        }
+        $query = Event::query();
 
         return $this->applyContextFilters($query, $info);
     }
@@ -401,9 +439,10 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->label('Status')
             ->options(function () {
                 return Cache::remember('zaak_status_name_options', 60 * 60 * 24, function () {
-                    return Zaak::query()
-                        ->select(DB::raw("DISTINCT JSON_UNQUOTE(JSON_EXTRACT(reference_data, '$.status_name')) as status_name"))
-                        ->pluck('status_name')
+                    return Zaak::all()
+                        ->pluck('reference_data.status_name')
+                        ->unique()
+                        ->sort()
                         ->mapWithKeys(fn ($status_name) => [$status_name => $status_name]);
                 });
             })

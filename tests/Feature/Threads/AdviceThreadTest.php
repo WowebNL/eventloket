@@ -21,7 +21,6 @@ use App\Models\Zaaktype;
 use App\Notifications\AssignedToAdviceThread;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
-use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
@@ -56,9 +55,11 @@ beforeEach(function () {
 
     $this->reviewer = User::factory()->create(['role' => Role::Reviewer]);
     $this->reviewer2 = User::factory()->create(['role' => Role::Reviewer]);
+    $this->municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
 
     $this->municipality->users()->attach($this->reviewer);
     $this->municipality->users()->attach($this->reviewer2);
+    $this->municipality->users()->attach($this->municipalityAdmin);
 
     $this->organisation = Organisation::factory()->create();
 
@@ -69,15 +70,6 @@ beforeEach(function () {
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new ZaakReferenceData(
-            'A',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Test locatie',
-            'Test event'
-        ),
     ]);
 
     $this->adviceThread = AdviceThread::forceCreate([
@@ -85,7 +77,7 @@ beforeEach(function () {
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -158,7 +150,7 @@ test('advisor can send text messages and this changes advice status to replied',
         'zaak_id' => $this->zaak->id,
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
-        'advice_status' => AdviceStatus::Asked,
+        'advice_status' => AdviceStatus::InProgress,
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -184,28 +176,29 @@ test('advisor can send text messages and this changes advice status to replied',
     expect($adviceThread->messages()->count())->toBe(1);
     expect($adviceThread->advice_status)->toBe(AdviceStatus::AdvisoryReplied);
 
-    // Everybody except for the advisor who sent the message received an email
-    // Also advisor 2 shouldn't have received an email because that advisor was not assigned
-    // to the advice thread
+    // Only the municipality user who created the thread should receive a notification
+    // The advisor who sent the message should not receive a notification
+    // reviewer2 should not receive a notification because they did not create the thread or send any messages
+    // MunicipalityAdmin should not receive a notification
     Notification::assertSentTo(
-        [$this->reviewer, $this->reviewer2],
+        [$this->reviewer],
         NewAdviceThreadMessage::class
     );
 
     Notification::assertNotSentTo(
-        [$this->advisor, $this->advisor2],
+        [$this->advisor, $this->advisor2, $this->reviewer2, $this->municipalityAdmin],
         NewAdviceThreadMessage::class
     );
 
     $message = $adviceThread->messages()->first();
 
-    // Unread message entries should have been created
+    // Unread message entry should have been created only for the thread creator
     $this->assertDatabaseHas('unread_messages', [
         'user_id' => $this->reviewer->id,
         'message_id' => $message->id,
     ]);
 
-    $this->assertDatabaseHas('unread_messages', [
+    $this->assertDatabaseMissing('unread_messages', [
         'user_id' => $this->reviewer2->id,
         'message_id' => $message->id,
     ]);
@@ -548,31 +541,31 @@ test('AssignAction only visible to advisory admins', function () {
         ->assertActionVisible('assign');
 });
 
-// test('advisor can assign themselves to advice thread using AssignToSelfAction', function () {
-//    Filament::setCurrentPanel(Filament::getPanel('advisor'));
-//    $this->actingAs($this->advisor);
-//    Filament::setTenant($this->advisory);
-//
-//    expect($this->adviceThread->assignedUsers)->toHaveCount(0);
-//    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::Asked);
-//
-//    livewire(MessageForm::class, [
-//        'thread' => $this->adviceThread,
-//    ])
-//        ->callAction('assign_to_self');
-//
-//    $this->adviceThread->refresh();
-//
-//    expect($this->adviceThread->assignedUsers)->toHaveCount(1);
-//    expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
-//    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
-//
-//     // Assert advisor didn't received AssignedToAdviceThread notification
-//     Notification::assertNotSentTo(
-//         [$this->advisor],
-//         AssignedToAdviceThread::class,
-//     );
-// });
+test('advisor can assign themselves to advice thread using AssignToSelfAction', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(0);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::Asked);
+
+    livewire(MessageForm::class, [
+        'thread' => $this->adviceThread,
+    ])
+        ->callAction('assign_to_self');
+
+    $this->adviceThread->refresh();
+
+    expect($this->adviceThread->assignedUsers)->toHaveCount(1);
+    expect($this->adviceThread->assignedUsers->first()->id)->toBe($this->advisor->id);
+    expect($this->adviceThread->advice_status)->toBe(AdviceStatus::InProgress);
+
+    // Assert advisor didn't received AssignedToAdviceThread notification
+    Notification::assertNotSentTo(
+        [$this->advisor],
+        AssignedToAdviceThread::class,
+    );
+});
 
 test('AssignToSelfAction is not visible when advisor is already assigned', function () {
     Filament::setCurrentPanel(Filament::getPanel('advisor'));
@@ -665,7 +658,7 @@ test('sends new advice thread notifications to all advisory admins who have it e
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -694,7 +687,7 @@ test('sends new advice thread notifications to all advisory admins who have it e
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);
@@ -712,7 +705,7 @@ test('sends new advice thread message notifications to all advisory admins of un
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisory->id,
         'advice_status' => AdviceStatus::Asked,
-        'advice_due_at' => now()->addDays(7),
+        'advice_due_at' => now()->addDays(14),
         'created_by' => $this->reviewer->id,
         'title' => 'Test advice thread',
     ]);

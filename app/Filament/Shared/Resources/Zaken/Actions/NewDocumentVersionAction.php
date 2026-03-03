@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\Actions;
 
 use App\Models\Zaak;
+use App\Support\Uploads\DocumentUploadType;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -16,11 +17,12 @@ class NewDocumentVersionAction
     public static function make(Zaak $zaak): Action
     {
         return Action::make('new-version')
-            ->label(__('Nieuwe versie toevoegen'))
+            ->label(__('Nieuwe versie'))
             ->icon('heroicon-o-plus-circle')
             ->modalSubmitAction(fn (Action $action) => $action->label(__('Nieuwe versie toevoegen')))
             ->schema(fn (array $record) => self::schema($record['titel']))
             ->modalAutofocus(false)
+            ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
             ->action(function (array $record, array $data, Action $action) use ($zaak): void {
 
                 self::createNewDocumentVersion($record['uuid'], $data, $zaak);
@@ -46,6 +48,8 @@ class NewDocumentVersionAction
                 ->label(__('Bestand'))
                 ->required()
                 ->maxSize(20480) // 20MB
+                ->mimeTypeMap(config('app.document_mime_type_mappings'))
+                ->rule(DocumentUploadType::fileUploadRule())
                 ->directory('documents')
                 ->visibility('private')
                 ->storeFileNamesIn('file_name'),
@@ -63,7 +67,7 @@ class NewDocumentVersionAction
                 'auteur' => auth()->user()->name,
                 'bestandsnaam' => $data['file_name'],
                 'bestandsomvang' => Storage::size($data['file']),
-                'formaat' => Storage::mimeType($data['file']),
+                'formaat' => DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null),
                 'lock' => $lockString,
                 'indicatieGebruiksrecht' => false,
             ]

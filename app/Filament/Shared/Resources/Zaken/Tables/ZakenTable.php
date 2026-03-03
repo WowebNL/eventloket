@@ -5,11 +5,15 @@ namespace App\Filament\Shared\Resources\Zaken\Tables;
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
+use App\Models\Advisory;
+use App\Models\Zaak;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Cache;
 
 class ZakenTable
 {
@@ -21,41 +25,107 @@ class ZakenTable
                     ->label(__('resources/zaak.columns.naam_evenement.label'))
                     ->sortable()
                     ->searchable()
-                    ->forceSearchCaseInsensitive(),
+                    ->forceSearchCaseInsensitive()
+                    ->toggleable(),
                 TextColumn::make('reference_data.organisator')
                     ->label(__('municipality/resources/zaak.columns.organisator.label'))
                     ->sortable()
                     ->searchable()
                     ->forceSearchCaseInsensitive()
-                    ->hidden(fn () => auth()->user()->role == Role::Organiser),
+                    ->hidden(fn () => auth()->user()->role == Role::Organiser)
+                    ->toggleable(),
                 TextColumn::make('public_id')
                     ->label(__('resources/zaak.columns.public_id.label'))
                     ->sortable()
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(),
                 TextColumn::make('zaaktype.name')
                     ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->sortable()
-                    ->searchable(),
-                TextColumn::make('reference_data.registratiedatum')
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('created_at')
                     ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('handledStatusSetByUser.name')
                     ->label(__('resources/zaak.columns.handled_status_set_by_user.label'))
                     ->sortable()
+                    ->toggleable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
                     ->sortable()
+                    ->toggleable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
                     ->sortable()
+                    ->toggleable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.start_evenement')
+                    ->label(__('resources/zaak.columns.start_evenement.label'))
+                    ->dateTime(config('app.datetime_format'))
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable()
+                    ->sortable()
+                    ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.eind_evenement')
+                    ->label(__('resources/zaak.columns.eind_evenement.label'))
+                    ->dateTime(config('app.datetime_format'))
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable()
+                    ->sortable()
+                    ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.naam_locatie_evenement')
+                    ->label(__('resources/zaak.columns.naam_locatie_evenement.label'))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.types_evenement')
+                    ->label(__('resources/zaak.columns.types_evenement.label'))
+                    ->badge()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.resultaat')
+                    ->label(__('resources/zaak.columns.resultaat.label'))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.aanwezigen')
+                    ->label(__('resources/zaak.columns.aanwezigen.label'))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
+                TextColumn::make('advisors')
+                    ->label(__('resources/zaak.columns.advisors.label'))
+                    ->visible(fn () => Filament::getCurrentPanel()->getId() === 'advisor')
+                    ->badge()
+                    ->getStateUsing(function (Zaak $record) {
+                        /** @var Advisory $tenant */
+                        $tenant = Filament::getTenant();
+
+                        return $record->adviceThreads()
+                            ->where('advisory_id', $tenant->id)
+                            ->get()
+                            ->pluck('assignedUsers')
+                            ->flatten()
+                            ->pluck('name')
+                            ->unique()
+                            ->values()
+                            ->toArray();
+                    }),
             ])
+            ->reorderableColumns()
             ->filters([
                 WorkingstockFilter::make()
                     ->columnSpan(2)
@@ -65,9 +135,15 @@ class ZakenTable
                     ->visible(fn () => auth()->user()->role === Role::Advisor),
                 SelectFilter::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
-                    ->options([
-                        'Ontvangen' => 'Ontvangen',
-                    ])
+                    ->options(function () {
+                        return Cache::remember('zaak_status_name_options', 60 * 60 * 24, function () {
+                            return Zaak::all()
+                                ->pluck('reference_data.status_name')
+                                ->unique()
+                                ->sort()
+                                ->mapWithKeys(fn ($status_name) => [$status_name => $status_name]);
+                        });
+                    })
                     ->multiple()
                     ->attribute('reference_data->status_name'),
                 SelectFilter::make('reference_data.risico_classificatie')

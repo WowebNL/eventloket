@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\Role;
 use App\Models\User;
+use App\Models\Users\AdminUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 
 class ReviewerMunicipalityAdminUserPolicy
@@ -21,6 +22,10 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function view(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
         return false;
     }
 

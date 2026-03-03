@@ -12,9 +12,9 @@ return [
 
         'advice_due_at' => [
             'label' => 'Deadline',
-            'helper_text' => 'Moet minimaal 10 werkdagen in de toekomst liggen.',
+            'helper_text' => 'Moet minimaal 14 dagen in de toekomst liggen.',
             'rules' => [
-                '10_business_days_in_future' => 'De datum moet minimaal 10 werkdagen vanaf nu zijn (minimaal: :date).',
+                '14_days_in_future' => 'De datum moet minimaal 14 dagen vanaf nu zijn (minimaal: :date).',
             ],
         ],
 

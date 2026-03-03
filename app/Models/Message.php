@@ -64,6 +64,7 @@ class Message extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logUnguarded();
+            ->logFillable()
+            ->logOnlyDirty();
     }
 }
