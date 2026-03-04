@@ -316,7 +316,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     // Table configuration for list view
     public function table(Table $table): Table
     {
-        return ZakenTable::configure($table)
+        return ZakenTable::configure($table, isCalendarView: true)
             ->query($this->getEvents())
             ->defaultSort('reference_data->start_evenement_datetime')
             ->recordActions([
