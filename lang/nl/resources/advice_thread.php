@@ -94,4 +94,9 @@ return [
             'heading' => 'Recente adviesvragen',
         ],
     ],
+
+    'tabs' => [
+        'mine' => 'Mijn adviesaanvragen',
+        'all' => 'Alle adviesaanvragen',
+    ],
 ];
