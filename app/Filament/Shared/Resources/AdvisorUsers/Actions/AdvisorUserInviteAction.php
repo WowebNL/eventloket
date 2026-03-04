@@ -7,7 +7,6 @@ use App\Filament\Shared\Actions\InviteAction;
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
-use App\Models\User;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -31,7 +30,6 @@ class AdvisorUserInviteAction
                     ->label(__('admin/resources/advisory.actions.invite.form.email.label'))
                     ->email()
                     ->required()
-                    ->unique(table: User::class)
                     ->rules([
                         fn () => function (string $attribute, $value, Closure $fail) use ($advisory) {
                             $advisory = $advisory ?? static::getAdvisory();
