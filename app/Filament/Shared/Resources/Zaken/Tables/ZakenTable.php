@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Cache;
 
 class ZakenTable
 {
-    public static function configure(Table $table): Table
+    public static function configure(Table $table, bool $isCalendarView = false): Table
     {
         return $table
             ->columns([
@@ -87,6 +87,7 @@ class ZakenTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
+
                 TextColumn::make('reference_data.types_evenement')
                     ->label(__('resources/zaak.columns.types_evenement.label'))
                     ->badge()
@@ -106,6 +107,12 @@ class ZakenTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
+                TextColumn::make('municipality.name')
+                    ->label(__('resources/zaak.columns.municipality.label'))
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable()
+                    ->visible($isCalendarView),
                 TextColumn::make('advisors')
                     ->label(__('resources/zaak.columns.advisors.label'))
                     ->visible(fn () => Filament::getCurrentPanel()->getId() === 'advisor')

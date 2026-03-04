@@ -59,6 +59,9 @@ return [
         'resultaat' => [
             'label' => 'Resultaat',
         ],
+        'municipality' => [
+            'label' => 'Gemeente',
+        ],
         'naam_locatie_evenement' => [
             'label' => 'Naam locatie evenement',
         ],
