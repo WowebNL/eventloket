@@ -3,6 +3,7 @@
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\Filament\Organiser\Resources\Zaken\Pages\ViewZaak;
+use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -19,7 +20,11 @@ beforeEach(function () {
     Filament::setCurrentPanel(Filament::getPanel('organiser'));
     Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
 
-    $this->zaaktype = Zaaktype::factory()->create();
+    $municipality = Municipality::factory()->create();
+
+    $this->zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+    ]);
 
     $this->organisation = Organisation::factory()->create([
         'type' => 'business',
@@ -151,4 +156,66 @@ test('non-imported zaak does not display imported data section in infolist', fun
     expect($zaak->is_imported)->toBeFalse();
     expect($zaak->imported_data)->toBeNull();
     $component->assertOk();
+});
+
+test('organiser can see status and resultaat for their own zaak', function () {
+    ZgwHttpFake::wildcardFake();
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'organiser_user_id' => $this->organiserUser->id,
+        'zgw_zaak_url' => null,
+        'imported_data' => ['some' => 'data'],
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: Carbon::now()->toString(),
+            eind_evenement: Carbon::now()->addDay()->toString(),
+            registratiedatum: Carbon::now()->toString(),
+            status_name: 'Afgehandeld',
+            statustype_url: 'https://example.com/statustype/1',
+            naam_evenement: 'Test Event',
+            resultaat: 'Toegekend',
+            resultaattype_url: 'https://example.com/resultaattype/toegekend',
+        ),
+    ]);
+
+    $this->actingAs($this->organiserUser);
+    Filament::setTenant($this->organisation);
+
+    $component = livewire(ViewZaak::class, ['record' => $zaak->id]);
+
+    $component->assertOk()
+        ->assertSee('Afgehandeld')
+        ->assertSee('Toegekend');
+});
+
+test('status and resultaat are not shown when resultaat is null', function () {
+    ZgwHttpFake::wildcardFake();
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'organiser_user_id' => $this->organiserUser->id,
+        'zgw_zaak_url' => null,
+        'imported_data' => ['some' => 'data'],
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: Carbon::now()->toString(),
+            eind_evenement: Carbon::now()->addDay()->toString(),
+            registratiedatum: Carbon::now()->toString(),
+            status_name: 'In behandeling',
+            statustype_url: 'https://example.com/statustype/1',
+            naam_evenement: 'Test Event',
+            resultaat: null,
+            resultaattype_url: null,
+        ),
+    ]);
+
+    $this->actingAs($this->organiserUser);
+    Filament::setTenant($this->organisation);
+
+    $component = livewire(ViewZaak::class, ['record' => $zaak->id]);
+
+    $component->assertOk()
+        ->assertSee('In behandeling')
+        ->assertDontSee('Resultaat');
 });

@@ -395,7 +395,31 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
         $this->applyZaaktypesFilter($query, $filters);
 
+        $this->applyHiddenResultaatTypesFilter($query);
+
         return $query;
+    }
+
+    protected function applyHiddenResultaatTypesFilter(Builder $query)
+    {
+        $query->where(function (Builder $q) {
+            // Include cases where zaaktype has no hidden_resultaat_types configured
+            $q->whereHas('zaaktype', function (Builder $subQ) {
+                $subQ->where(function (Builder $innerQ) {
+                    $innerQ->whereNull('hidden_resultaat_types')
+                        ->orWhereRaw('JSON_LENGTH(IFNULL(hidden_resultaat_types, "[]")) = 0');
+                });
+            })
+            // Or include cases where the resultaattype_url is not in the hidden list
+                ->orWhere(function (Builder $subQ) {
+                    $subQ->whereNull('reference_data->resultaattype_url')
+                        ->orWhereHas('zaaktype', function (Builder $innerQ) {
+                            $innerQ->whereNotNull('hidden_resultaat_types')
+                                ->whereRaw('JSON_LENGTH(hidden_resultaat_types) > 0')
+                                ->whereRaw('NOT JSON_CONTAINS(zaaktypen.hidden_resultaat_types, JSON_QUOTE(IFNULL(JSON_UNQUOTE(JSON_EXTRACT(zaken.reference_data, "$.resultaattype_url")), "")))');
+                        });
+                });
+        });
     }
 
     protected function municipalitiesFilter()

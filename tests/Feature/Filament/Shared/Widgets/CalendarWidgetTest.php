@@ -208,3 +208,146 @@ test('calendar view remains mounted when switching to table view', function () {
         ->assertSet('viewMode', 'table')
         ->assertSee('data-calendar'); // Calendar should still be in DOM (just hidden)
 });
+
+test('calendar widget hides cases with hidden resultaat types', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+
+    // Create zaaktype with hidden resultaat type
+    $hiddenResultaatTypeUrl = 'https://example.com/resultaattype/ingetrokken';
+    $zaaktypeWithHiddenResults = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'hidden_resultaat_types' => [$hiddenResultaatTypeUrl],
+    ]);
+
+    // Create a zaak with the hidden resultaat type
+    $hiddenZaak = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktypeWithHiddenResults->id,
+        'organisation_id' => $this->organisation->id,
+        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+            start_evenement: now()->toString(),
+            eind_evenement: now()->addDay()->toString(),
+            registratiedatum: now()->toString(),
+            status_name: 'Afgehandeld',
+            statustype_url: 'https://example.com/statustype/1',
+            resultaat: 'Ingetrokken',
+            resultaattype_url: $hiddenResultaatTypeUrl,
+            naam_evenement: 'Hidden Event',
+        ),
+    ]);
+
+    // Create a zaak with a different resultaat type (not hidden)
+    $visibleZaak = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktypeWithHiddenResults->id,
+        'organisation_id' => $this->organisation->id,
+        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+            start_evenement: now()->toString(),
+            eind_evenement: now()->addDay()->toString(),
+            registratiedatum: now()->toString(),
+            status_name: 'Afgehandeld',
+            statustype_url: 'https://example.com/statustype/1',
+            resultaat: 'Toegekend',
+            resultaattype_url: 'https://example.com/resultaattype/toegekend',
+            naam_evenement: 'Visible Event',
+        ),
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    // Check calendar view - should not see hidden zaak
+    $component = livewire(MunicipalityCalendarWidget::class);
+
+    // Switch to table view to check data
+    $component->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$visibleZaak])
+        ->assertCanNotSeeTableRecords([$hiddenZaak]);
+});
+
+test('calendar widget shows cases when zaaktype has no hidden resultaat types configured', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+
+    // Create zaaktype without hidden resultaat types
+    $zaaktypeWithoutHiddenResults = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'hidden_resultaat_types' => null,
+    ]);
+
+    // Create a zaak with any resultaat type
+    $zaakWithResultaat = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktypeWithoutHiddenResults->id,
+        'organisation_id' => $this->organisation->id,
+        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+            start_evenement: now()->toString(),
+            eind_evenement: now()->addDay()->toString(),
+            registratiedatum: now()->toString(),
+            status_name: 'Afgehandeld',
+            statustype_url: 'https://example.com/statustype/1',
+            resultaat: 'Ingetrokken',
+            resultaattype_url: 'https://example.com/resultaattype/ingetrokken',
+            naam_evenement: 'Visible Event',
+        ),
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    // Switch to table view to check data
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$zaakWithResultaat]);
+});
+
+test('calendar widget shows cases without resultaat even when zaaktype has hidden resultaat types', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+
+    // Create zaaktype with hidden resultaat type
+    $zaaktypeWithHiddenResults = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'hidden_resultaat_types' => ['https://example.com/resultaattype/ingetrokken'],
+    ]);
+
+    // Create a zaak without a resultaat (still in progress)
+    $zaakWithoutResultaat = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktypeWithHiddenResults->id,
+        'organisation_id' => $this->organisation->id,
+        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+            start_evenement: now()->toString(),
+            eind_evenement: now()->addDay()->toString(),
+            registratiedatum: now()->toString(),
+            status_name: 'In behandeling',
+            statustype_url: 'https://example.com/statustype/1',
+            resultaat: null,
+            resultaattype_url: null,
+            naam_evenement: 'In Progress Event',
+        ),
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    // Switch to table view to check data
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$zaakWithoutResultaat]);
+});

@@ -33,6 +33,7 @@ class ClearZaakCache implements ShouldQueue
                 'status_name' => $zaak->openzaak->status_name,
                 'statustype_url' => $zaak->openzaak->statustype_url,
                 'resultaat' => $zaak->openzaak->resultaattype ? $zaak->openzaak->resultaattype['omschrijving'] : null,
+                'resultaattype_url' => $zaak->openzaak->resultaat ? $zaak->openzaak->resultaat['resultaattype'] : null,
             ], $zaak->openzaak->eigenschappen_key_value);
 
             /** @disregard */
