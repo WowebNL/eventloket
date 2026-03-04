@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.3.3 - 2026-03-04
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix: make custom document upload rule in config cachable (#301) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.3.2...v0.3.3
+
 ## v0.3.2 - 2026-03-03
 
 ### What's Changed
@@ -67,6 +77,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
