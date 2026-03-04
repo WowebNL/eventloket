@@ -158,30 +158,14 @@ final class DocumentUploadType
     }
 
     /**
-     * Laravel closure validation rule suitable for Filament FileUpload.
+     * Validation rule suitable for Filament FileUpload and plain Laravel validators.
+     *
+     * Returns a named ValidationRule instance so that var_export() can reconstruct
+     * it via __set_state(), making it compatible with `php artisan config:cache`.
      */
-    public static function fileUploadRule(): \Closure
+    public static function fileUploadRule(): DocumentUploadRule
     {
-        return static function (string $attribute, mixed $value, \Closure $fail): void {
-            $allowedMimeTypes = array_values((array) config('app.document_file_types', []));
-
-            // Ensure a misconfiguration fails fast.
-            self::assertConfigurationIsSafe($allowedMimeTypes);
-
-            $files = is_array($value) ? $value : [$value];
-
-            foreach ($files as $file) {
-                if (! $file instanceof UploadedFile) {
-                    continue;
-                }
-
-                if (self::isAllowed($file, $allowedMimeTypes)) {
-                    continue;
-                }
-
-                $fail(__('Bestandstype niet toegestaan.'));
-            }
-        };
+        return new DocumentUploadRule;
     }
 
     /**

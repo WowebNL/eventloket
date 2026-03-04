@@ -219,7 +219,7 @@ test('notification uses different texts and links based on user type', function 
 
     // Test reviewer mail
     $reviewerMail = $notification->toMail($this->reviewer);
-    expect($reviewerMail->subject)->toBe('Nieuw zaak "Test Event" beschikbaar');
+    expect($reviewerMail->subject)->toBe('Nieuwe zaak "Test Event" beschikbaar');
     expect($reviewerMail->markdown)->toBe('mail.new-zaak');
     expect($reviewerMail->viewData['type'])->toBe('reviewer');
     expect($reviewerMail->viewData['event'])->toBe('Test Event');
@@ -233,6 +233,6 @@ test('notification uses different texts and links based on user type', function 
 
     // Test reviewer database notification
     $reviewerDatabase = $notification->toDatabase($this->reviewer);
-    expect($reviewerDatabase['title'])->toBe('Nieuw zaak voor "Test Event"');
-    expect($reviewerDatabase['body'])->toBe('Er is een nieuw zaak ontvangen voor "Test Event" bij Test Municipality.');
+    expect($reviewerDatabase['title'])->toBe('Nieuwe zaak voor "Test Event"');
+    expect($reviewerDatabase['body'])->toBe('Er is een nieuwe zaak ontvangen voor "Test Event" bij Test Municipality.');
 });

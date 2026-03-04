@@ -8,15 +8,15 @@ return [
 
     'mail' => [
         'subject' => [
-            'reviewer' => 'Nieuw zaak ":event" beschikbaar',
+            'reviewer' => 'Nieuwe zaak ":event" beschikbaar',
             'organiser' => 'Nieuwe aanvraag voor ":event" ontvangen',
         ],
         'greeting' => [
-            'reviewer' => 'Nieuw zaak beschikbaar',
+            'reviewer' => 'Nieuwe zaak beschikbaar',
             'organiser' => 'Nieuwe aanvraag ontvangen',
         ],
         'body' => [
-            'reviewer' => 'Er is een nieuw zaak ontvangen voor ":event" bij :municipality.',
+            'reviewer' => 'Er is een nieuwe zaak ontvangen voor ":event" bij :municipality.',
             'organiser' => 'Je nieuwe aanvraag voor ":event" bij :municipality is succesvol ontvangen.',
         ],
         'button' => [
@@ -27,11 +27,11 @@ return [
 
     'database' => [
         'title' => [
-            'reviewer' => 'Nieuw zaak voor ":event"',
+            'reviewer' => 'Nieuwe zaak voor ":event"',
             'organiser' => 'Nieuwe aanvraag voor ":event" ontvangen',
         ],
         'body' => [
-            'reviewer' => 'Er is een nieuw zaak ontvangen voor ":event" bij :municipality.',
+            'reviewer' => 'Er is een nieuwe zaak ontvangen voor ":event" bij :municipality.',
             'organiser' => 'Je nieuwe aanvraag voor ":event" bij :municipality is succesvol ontvangen.',
         ],
     ],
