@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "required": [],
+  "properties": {
+    "risicoClassificatie": {
+      "type": "string",
+      "title": "risico_classificatie"
+    }
+  },
+  "additionalProperties": true
+}
