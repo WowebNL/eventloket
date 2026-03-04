@@ -23,8 +23,8 @@ class OpenNotificationRequest extends FormRequest
     {
         return [
             'actie' => 'required|string|in:create,update,delete,partial_update',
-            'kanaal' => 'required|string|in:zaken,objecten,documenten',
-            'resource' => 'required|string|in:zaak,status,zaakobject,zaakeigenschap,enkelvoudiginformatieobject',
+            'kanaal' => 'required|string|in:zaken,objecten,documenten,besluiten,autorisaties',
+            'resource' => 'required|string',
             'hoofdObject' => 'required|url',
             'resourceUrl' => 'required|url',
             'aanmaakdatum' => 'required|date',

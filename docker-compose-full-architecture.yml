@@ -211,6 +211,9 @@ services:
             - DJANGO_SETTINGS_MODULE=nrc.conf.docker
             - OTEL_SDK_DISABLED=true
             - DISABLE_2FA=True
+            # Redirect the wait_for_rabbitmq.sh health check to Redis (actual broker is Redis, not RabbitMQ)
+            - RABBITMQ_HOST=redis
+            - RABBITMQ_PORT=6379
         command: /celery_worker.sh
         volumes:
             - 'notificaties-media:/app/media'

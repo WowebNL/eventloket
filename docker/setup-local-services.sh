@@ -49,7 +49,8 @@ OF_TO_OZ_SECRET="local-secret-of-to-oz"
 
 # Eventloket (Laravel) → Open Zaak
 EL_CLIENT_ID="eventloket"
-EL_TO_OZ_SECRET="local-secret-eventloket"
+# Must meet ReallySimpleJWT requirements: ≥12 chars, uppercase, lowercase, digit, special char from *&!@%^#$
+EL_TO_OZ_SECRET="L0c@l!Eventloket2026"
 
 # Objects API → Open Zaak (for notifications)
 OBJ_CLIENT_ID="objects-api"
@@ -267,6 +268,22 @@ else:
 # because Django's URLValidator rejects them; this matches what Open Forms sends.
 from zgw_consumers.models import Service
 from zgw_consumers.constants import APITypes, AuthTypes
+# ── 1f-0. Self-referencing Catalogi service (needed for roltype URL validation in Open Zaak) ──
+ztc_self, created = Service.objects.update_or_create(
+    slug='open-zaak-catalogi-self',
+    defaults={
+        'label': 'Open Zaak (Catalogi API — self)',
+        'api_type': APITypes.ztc,
+        'api_root': 'http://host.docker.internal:8001/catalogi/api/v1/',
+        'auth_type': AuthTypes.zgw,
+        'client_id': '${EL_CLIENT_ID}',
+        'secret': '${EL_TO_OZ_SECRET}',
+        'user_id': '${EL_CLIENT_ID}',
+        'user_representation': 'Open Zaak self',
+    }
+)
+print(f'Catalogi self-service in Open Zaak: {"created" if created else "updated"} -> {ztc_self.api_root}')
+
 obj_svc, created = Service.objects.update_or_create(
     slug='objects-api',
     defaults={
@@ -1118,6 +1135,46 @@ except Exception as e:
 fi
 
 # =============================================================================
+# 8b. Sync zaaktypen into Eventloket and link to municipalities
+# =============================================================================
+echo ""
+info "Step 8b: Syncing zaaktypen into Eventloket..."
+
+if [ -z "${CATALOGUS_URL:-}" ] || echo "${CATALOGUS_URL}" | grep -q "<uuid>"; then
+    warn "Skipping zaaktypen sync — OPENZAAK_CATALOGI_URL is not available (step 8 may have failed)."
+else
+    # Write OPENZAAK_CATALOGI_URL into .env if not already set correctly
+    ENV_FILE="$(pwd)/.env"
+    if [ -f "${ENV_FILE}" ]; then
+        if grep -q "^OPENZAAK_CATALOGI_URL=" "${ENV_FILE}"; then
+            sed -i '' "s|^OPENZAAK_CATALOGI_URL=.*|OPENZAAK_CATALOGI_URL=${CATALOGUS_URL}|" "${ENV_FILE}"
+        else
+            echo "OPENZAAK_CATALOGI_URL=${CATALOGUS_URL}" >> "${ENV_FILE}"
+        fi
+        success "OPENZAAK_CATALOGI_URL set in .env: ${CATALOGUS_URL}"
+    else
+        warn ".env file not found at ${ENV_FILE} — skipping automatic OPENZAAK_CATALOGI_URL write."
+        warn "Add manually: OPENZAAK_CATALOGI_URL=${CATALOGUS_URL}"
+    fi
+
+    # Sync zaaktypen from Open Zaak into the Eventloket database
+    info "Running app:sync-zaaktypen..."
+    if docker compose -f "${COMPOSE_FILE}" exec -T laravel.test php artisan app:sync-zaaktypen; then
+        success "Zaaktypen synced successfully."
+    else
+        warn "app:sync-zaaktypen failed — check Laravel logs."
+    fi
+
+    # Link each zaaktype to its municipality using the name pattern "gemeente {Name}"
+    info "Running app:link-zaaktypen-municipalities..."
+    if docker compose -f "${COMPOSE_FILE}" exec -T laravel.test php artisan app:link-zaaktypen-municipalities; then
+        success "Zaaktypen linked to municipalities."
+    else
+        warn "app:link-zaaktypen-municipalities failed — check Laravel logs."
+    fi
+fi
+
+# =============================================================================
 # 9. Import Open Forms formulier
 # =============================================================================
 echo ""
@@ -1423,7 +1480,7 @@ echo "  DB_PORT=5432"
 echo "  OPENZAAK_URL=http://open-zaak:8000/"
 echo "  OPENZAAK_CLIENT_ID=${EL_CLIENT_ID}"
 echo "  OPENZAAK_CLIENT_SECRET=${EL_TO_OZ_SECRET}"
-echo "  OBJECTSAPI_URL=http://objects-api:8000"
+echo "  OBJECTSAPI_URL=http://host.docker.internal:8005/"
 echo "  OBJECTSAPI_TOKEN=${TOKEN_EL_TO_OBJ}"
 echo "  OBJECTSAPI_OBJECTSTYPE_TAAK_URL=${TAAK_OBJECTTYPE_URL}"
 echo "  OBJECTSAPI_OBJECTSTYPE_AANVRAAG_URL=${AANVRAAG_OBJECTTYPE_URL}"
@@ -1459,8 +1516,6 @@ if [ -n "${OPEN_FORMS_MAIN_FORM_UUID:-}" ]; then
 fi
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
-echo "  1. Set OPENZAAK_CATALOGI_URL in .env (printed above)"
-echo "  2. Run: php artisan openzaak:sync-zaaktypen"
-echo "  3. Verify the notification chain: submit a test form in Open Forms →"
+echo "  1. Verify the notification chain: submit a test form in Open Forms →"
 echo "     check Open Zaak for a new Zaak → check Laravel logs for notification processing"
 echo ""

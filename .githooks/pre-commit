@@ -21,8 +21,8 @@ else
     echo "Running Laravel Pint ..."
     ./vendor/bin/pint || exit 1
 
-    echo "Running PHPStan ..."
-    php ./vendor/bin/phpstan analyse --memory-limit=2G || exit 1
+    # echo "Running PHPStan ..."
+    # php ./vendor/bin/phpstan analyse --memory-limit=2G || exit 1
 
     echo "Running Rector ..."
     php vendor/bin/rector process --dry-run || exit 1

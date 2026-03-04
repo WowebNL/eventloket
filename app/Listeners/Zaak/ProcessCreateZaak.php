@@ -35,7 +35,6 @@ class ProcessCreateZaak implements ShouldQueue
             new UpdateInitiatorZGW($event->notification->hoofdObject),
             new AddGeometryZGW($event->notification->hoofdObject),
             new CreateZaak($event->notification->hoofdObject),
-            // TODO send notificaties
         ])->dispatch();
     }
 }
