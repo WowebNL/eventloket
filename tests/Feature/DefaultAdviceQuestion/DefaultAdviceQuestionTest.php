@@ -86,12 +86,12 @@ test('deletes when municipality is deleted', function () {
     expect(DefaultAdviceQuestion::find($question->id))->toBeNull();
 });
 
-test('deletes when advisory is deleted', function () {
+test('deletes when advisory is force deleted', function () {
     $question = DefaultAdviceQuestion::factory()->create([
         'advisory_id' => $this->advisory->id,
     ]);
 
-    $this->advisory->delete();
+    $this->advisory->forceDelete();
 
     expect(DefaultAdviceQuestion::find($question->id))->toBeNull();
 });
