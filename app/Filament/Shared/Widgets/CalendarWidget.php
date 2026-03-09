@@ -43,6 +43,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -402,24 +403,23 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected function applyHiddenResultaatTypesFilter(Builder $query)
     {
-        $query->where(function (Builder $q) {
-            // Include cases where zaaktype has no hidden_resultaat_types configured
-            $q->whereHas('zaaktype', function (Builder $subQ) {
-                $subQ->where(function (Builder $innerQ) {
-                    $innerQ->whereNull('hidden_resultaat_types')
-                        ->orWhereRaw('JSON_LENGTH(IFNULL(hidden_resultaat_types, "[]")) = 0');
-                });
-            })
-            // Or include cases where the resultaattype_url is not in the hidden list
-                ->orWhere(function (Builder $subQ) {
-                    $subQ->whereNull('reference_data->resultaattype_url')
-                        ->orWhereHas('zaaktype', function (Builder $innerQ) {
-                            $innerQ->whereNotNull('hidden_resultaat_types')
-                                ->whereRaw('JSON_LENGTH(hidden_resultaat_types) > 0')
-                                ->whereRaw('NOT JSON_CONTAINS(zaaktypen.hidden_resultaat_types, JSON_QUOTE(IFNULL(JSON_UNQUOTE(JSON_EXTRACT(zaken.reference_data, "$.resultaattype_url")), "")))');
-                        });
-                });
-        });
+        // Preload all zaaktypes that have a non-empty hidden_resultaat_types list.
+        // For each one, exclude zaken that both belong to that zaaktype AND have
+        // their resultaattype_url in the hidden list. Uses only Laravel abstractions
+        // so it works on both MySQL and PostgreSQL.
+        $zaaktypesWithHidden = Zaaktype::whereNotNull('hidden_resultaat_types')
+            ->whereJsonLength('hidden_resultaat_types', '>', 0)
+            ->get(['id', 'hidden_resultaat_types']);
+
+        foreach ($zaaktypesWithHidden as $zaaktype) {
+            $hiddenUrls = $zaaktype->hidden_resultaat_types;
+
+            $query->whereNot(function (Builder $q) use ($zaaktype, $hiddenUrls) {
+                $q->where('zaaktype_id', $zaaktype->id)
+                    ->whereNotNull('reference_data->resultaattype_url')
+                    ->whereIn('reference_data->resultaattype_url', $hiddenUrls);
+            });
+        }
     }
 
     protected function municipalitiesFilter()
@@ -500,17 +500,18 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     {
         if (! empty($filters['search'])) {
             $term = trim($filters['search']);
+            $like = DB::getDriverName() === 'pgsql' ? 'ilike' : 'like';
 
-            $query->where(function (Builder $q) use ($term) {
-                $q->where('reference_data->naam_evenement', 'like', "%{$term}%")
-                    ->orWhere('public_id', 'like', "%{$term}%");
+            $query->where(function (Builder $q) use ($term, $like) {
+                $q->where('reference_data->naam_evenement', $like, "%{$term}%")
+                    ->orWhere('public_id', $like, "%{$term}%");
+
+                if (auth()->user()->role !== Role::Organiser) {
+                    $q->orWhere('reference_data->organisator', $like, "%{$term}%")
+                        ->orWhereHas('organisation', fn (Builder $oq) => $oq->where('name', $like, "%{$term}%")->orWhere('email', $like, "%{$term}%"))
+                        ->orWhereHas('organiserUser', fn (Builder $ouq) => $ouq->where('name', $like, "%{$term}%")->orWhere('email', $like, "%{$term}%"));
+                }
             });
-            if (auth()->user()->role !== Role::Organiser) {
-                $query
-                    ->orWhere('reference_data->organisator', 'like', "%{$term}%")
-                    ->orWhereHas('organisation', fn (Builder $oq) => $oq->where('name', 'like', "%{$term}%")->orWhere('email', 'like', "%{$term}%"))
-                    ->orWhereHas('organiserUser', fn (Builder $ouq) => $ouq->where('name', 'like', "%{$term}%")->orWhere('email', 'like', "%{$term}%"));
-            }
         }
     }
 

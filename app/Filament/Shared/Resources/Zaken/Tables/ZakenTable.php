@@ -13,6 +13,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 
 class ZakenTable
@@ -110,7 +111,10 @@ class ZakenTable
                 TextColumn::make('municipality.name')
                     ->label(__('resources/zaak.columns.municipality.label'))
                     ->sortable()
-                    ->searchable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas(
+                        'zaaktype.municipality',
+                        fn (Builder $q) => $q->where('municipalities.name', 'like', "%{$search}%")
+                    ))
                     ->toggleable()
                     ->visible($isCalendarView),
                 TextColumn::make('advisors')
