@@ -49,8 +49,12 @@ This platform streamlines the entire permit application process for events in th
    ```bash
    ./vendor/bin/sail up -d
    ```
+   or
+   ```bash
+   ./vendor/bin/sail -f docker-compose-full-architecture.yml up -d
+   ```
 
-4. Generate an app key, run migrations and install dependencies:
+5. Generate an app key, run migrations and install dependencies:
    ```bash
    ./vendor/bin/sail artisan key:generate
    ./vendor/bin/sail artisan migrate
