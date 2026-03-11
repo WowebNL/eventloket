@@ -64,6 +64,29 @@ class Map extends MapWidget
             }
 
         }
+
+        // Add intersection observer via Alpine to fix modal/tab rendering
+        $this->extraAlpineAttributes([
+            'x-init' => <<<'JS'
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            setTimeout(() => {
+                                if (map) {
+                                    map.invalidateSize();
+                                    if (fitBounds) {
+                                        map.fitBounds(fitBounds);
+                                    }
+                                }
+                            }, 150);
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                setTimeout(() => observer.observe($el), 0);
+            JS,
+        ]);
+
         parent::mount();
     }
 
