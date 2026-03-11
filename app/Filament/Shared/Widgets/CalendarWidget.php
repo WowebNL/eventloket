@@ -199,7 +199,24 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 }),
             FilterAction::make()
                 ->schema($this->getFilterSchema())
-                ->badge(fn () => count(array_filter($this->filters ?? [])))
+                ->badge(function () {
+                    $count = 0;
+                    $filters = $this->filters ?? [];
+                    foreach ($filters as $key => $value) {
+                        if (is_array($value)) {
+                            // For nested arrays (like reference_data.status_name), check if any sub-value is non-empty
+                            $hasNonEmptyValue = collect($value)->filter(fn ($v) => ! empty($v))->isNotEmpty();
+                            if ($hasNonEmptyValue) {
+                                $count++;
+                            }
+                        } elseif (! empty($value)) {
+                            // For simple values (like search string)
+                            $count++;
+                        }
+                    }
+
+                    return $count;
+                })
                 ->after(function () {
                     if ($this->viewMode === 'calendar') {
                         $this->refreshRecords();
