@@ -142,7 +142,6 @@ test('upload action successfully stores a document via OpenZaak and dispatches r
     $result = UploadDocumentAction::uploadDocument([
         'titel' => 'Testbestand',
         'informatieobjecttype' => $documentTypeUrl,
-        'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
         'file' => $filePath,
         'file_name' => 'test-document.pdf',
     ], $zaak);
@@ -151,6 +150,7 @@ test('upload action successfully stores a document via OpenZaak and dispatches r
     Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
         && $request->method() === 'POST'
         && $request->data()['titel'] === 'Testbestand'
+        && $request->data()['vertrouwelijkheidaanduiding'] === DocumentVertrouwelijkheden::Zaakvertrouwelijk->value
     );
 
     // Assert the POST to link the document to the zaak was made
@@ -218,10 +218,193 @@ test('upload action clears the documenten cache after storing a document', funct
     UploadDocumentAction::uploadDocument([
         'titel' => 'Cachetest bestand',
         'informatieobjecttype' => $documentTypeUrl,
-        'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
         'file' => $filePath,
         'file_name' => 'test-document.pdf',
     ], $zaak);
 
     expect(Cache::has("zaak.{$zaak->id}.documenten"))->toBeFalse();
+});
+
+test('organiser uploads set confidentiality to zaakvertrouwelijk automatically', function () {
+    Storage::fake('local');
+
+    $filePath = 'documents/test-document.pdf';
+    Storage::put($filePath, '%PDF-1.4 fake pdf content');
+
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
+    $documentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/new-doc-3';
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
+            'url' => $documentUrl,
+            'uuid' => 'new-doc-3',
+            'identificatie' => 'DOC-003',
+            'titel' => 'Organiser document',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'auteur' => $this->organiser->name,
+            'versie' => 1,
+            'bestandsnaam' => 'test-document.pdf',
+            'inhoud' => '',
+            'beschrijving' => '',
+            'formaat' => 'application/pdf',
+            'locked' => false,
+            'bestandsgrootte' => 0,
+            'creatiedatum' => now()->format('Y-m-d'),
+            'wijzigingsdatum' => now()->toIso8601String(),
+            'informatieobjecttype' => $documentTypeUrl,
+            'indicatieGebruiksrecht' => false,
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/3',
+            'zaak' => $zgwZaakUrl,
+            'informatieobject' => $documentUrl,
+        ], 201),
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+    ]);
+
+    $this->actingAs($this->organiser);
+
+    UploadDocumentAction::uploadDocument([
+        'titel' => 'Organiser document',
+        'informatieobjecttype' => $documentTypeUrl,
+        'file' => $filePath,
+        'file_name' => 'test-document.pdf',
+    ], $zaak);
+
+    // Assert vertrouwelijkheidaanduiding is set to zaakvertrouwelijk for organiser
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && $request->method() === 'POST'
+        && $request->data()['vertrouwelijkheidaanduiding'] === DocumentVertrouwelijkheden::Zaakvertrouwelijk->value
+    );
+});
+
+test('advisor uploads set confidentiality to vertrouwelijk automatically', function () {
+    Storage::fake('local');
+
+    $filePath = 'documents/test-document.pdf';
+    Storage::put($filePath, '%PDF-1.4 fake pdf content');
+
+    $advisor = User::factory()->create(['role' => Role::Advisor]);
+    $this->organisation->users()->attach($advisor, ['role' => OrganisationRole::Admin]);
+
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
+    $documentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/new-doc-4';
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
+            'url' => $documentUrl,
+            'uuid' => 'new-doc-4',
+            'identificatie' => 'DOC-004',
+            'titel' => 'Advisor document',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Vertrouwelijk->value,
+            'auteur' => $advisor->name,
+            'versie' => 1,
+            'bestandsnaam' => 'test-document.pdf',
+            'inhoud' => '',
+            'beschrijving' => '',
+            'formaat' => 'application/pdf',
+            'locked' => false,
+            'bestandsgrootte' => 0,
+            'creatiedatum' => now()->format('Y-m-d'),
+            'wijzigingsdatum' => now()->toIso8601String(),
+            'informatieobjecttype' => $documentTypeUrl,
+            'indicatieGebruiksrecht' => false,
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/4',
+            'zaak' => $zgwZaakUrl,
+            'informatieobject' => $documentUrl,
+        ], 201),
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+    ]);
+
+    $this->actingAs($advisor);
+
+    UploadDocumentAction::uploadDocument([
+        'titel' => 'Advisor document',
+        'informatieobjecttype' => $documentTypeUrl,
+        'file' => $filePath,
+        'file_name' => 'test-document.pdf',
+    ], $zaak);
+
+    // Assert vertrouwelijkheidaanduiding is set to vertrouwelijk for advisor
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && $request->method() === 'POST'
+        && $request->data()['vertrouwelijkheidaanduiding'] === DocumentVertrouwelijkheden::Vertrouwelijk->value
+    );
+});
+
+test('reviewer can manually choose confidentiality level', function () {
+    Storage::fake('local');
+
+    $filePath = 'documents/test-document.pdf';
+    Storage::put($filePath, '%PDF-1.4 fake pdf content');
+
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $this->organisation->users()->attach($reviewer, ['role' => OrganisationRole::Admin]);
+
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
+    $documentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/new-doc-5';
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
+            'url' => $documentUrl,
+            'uuid' => 'new-doc-5',
+            'identificatie' => 'DOC-005',
+            'titel' => 'Reviewer document',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Confidentieel->value,
+            'auteur' => $reviewer->name,
+            'versie' => 1,
+            'bestandsnaam' => 'test-document.pdf',
+            'inhoud' => '',
+            'beschrijving' => '',
+            'formaat' => 'application/pdf',
+            'locked' => false,
+            'bestandsgrootte' => 0,
+            'creatiedatum' => now()->format('Y-m-d'),
+            'wijzigingsdatum' => now()->toIso8601String(),
+            'informatieobjecttype' => $documentTypeUrl,
+            'indicatieGebruiksrecht' => false,
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/5',
+            'zaak' => $zgwZaakUrl,
+            'informatieobject' => $documentUrl,
+        ], 201),
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+    ]);
+
+    $this->actingAs($reviewer);
+
+    UploadDocumentAction::uploadDocument([
+        'titel' => 'Reviewer document',
+        'informatieobjecttype' => $documentTypeUrl,
+        'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Confidentieel->value,
+        'file' => $filePath,
+        'file_name' => 'test-document.pdf',
+    ], $zaak);
+
+    // Assert vertrouwelijkheidaanduiding is set to the manually chosen level
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && $request->method() === 'POST'
+        && $request->data()['vertrouwelijkheidaanduiding'] === DocumentVertrouwelijkheden::Confidentieel->value
+    );
 });
