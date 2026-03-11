@@ -17,6 +17,7 @@ use App\Support\Uploads\DocumentUploadType;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Filament\Support\Facades\FilamentView;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\View\View;
@@ -77,6 +78,15 @@ class AppServiceProvider extends ServiceProvider
         });
 
         DocumentUploadType::assertConfigurationIsSafe(array_values((array) config('app.document_file_types', [])));
+
+        Table::configureUsing(function (Table $table) {
+            $table
+                ->persistFiltersInSession()
+                ->persistSortInSession()
+                ->persistSearchInSession()
+                ->persistColumnSearchesInSession()
+                ->persistColumnsInSession();
+        });
 
         // Register custom case-insensitive user provider
         Auth::provider('case-insensitive-eloquent', function ($app, array $config) {
