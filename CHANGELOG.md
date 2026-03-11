@@ -1,5 +1,33 @@
 # Changelog
 
+## v0.4.0 - 2026-03-11
+
+### What's Changed
+
+#### ✨ New feautures
+
+* Feat/full architecture docker compose (#302) @Michel-Verhoeven
+* Globally configure Filament Table to persist in session (#307) @LorensoD
+* Add tabs with badges and smart defaults to advisor advice thread list (#293) @LorensoD
+* Makes Advisories soft deleteable (#289) @LorensoD
+
+#### 🐛 Bug Fixes
+
+* Fix filter action badge active calculation (#310) @LorensoD
+* Chore: use fixed pint v1.25.0 in GH action (#308) @Michel-Verhoeven
+* Fixed calendar search + raw query usage and added release notes (#304) @Michel-Verhoeven
+* Fix: reference update + gemeente on calendar table view (#303) @Michel-Verhoeven
+* Fix: verberg zaken met ingetrokken/gesloten resultaten uit kalender e… (#296) @LorensoD
+* Fix dark mode colors for thread message entry (#292) @LorensoD
+* Remove unique check from invite actions (#297) @LorensoD
+* Customize email verification message with expiration details (#291) @LorensoD
+
+#### Other changes
+
+* Added v0.3.0 user releasen notes (#298) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.3.3...v0.4.0
+
 ## v0.3.3 - 2026-03-04
 
 ### What's Changed
@@ -77,6 +105,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
