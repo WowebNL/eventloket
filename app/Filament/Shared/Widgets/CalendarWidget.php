@@ -27,11 +27,11 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Pages\Dashboard\Actions\FilterAction;
-use Filament\Pages\Dashboard\Concerns\HasFilters;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Schema;
-use Filament\Tables;
+use Filament\Tables\Concerns\InteractsWithTable;
+use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -45,17 +45,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Livewire\Attributes\Session;
 use Livewire\Attributes\Url;
 use Livewire\Component;
-use LogicException;
 
-class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements Tables\Contracts\HasTable
+class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements HasTable
 {
     use CanRefreshCalendar;
-    use HasFilters;
-    use Tables\Concerns\InteractsWithTable {
-        Tables\Concerns\InteractsWithTable::normalizeTableFilterValuesFromQueryString insteadof HasFilters;
-    }
+    use InteractsWithTable;
 
     #[Url]
     public ?string $viewtype = null;
@@ -78,6 +75,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     public string $viewMode = 'calendar'; // 'calendar' or 'table'
 
+    #[Session]
+    public array $filters = [];
+
     protected bool $useFilamentTimezone = true;
 
     public function mount()
@@ -90,6 +90,45 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 $this->end = null;
             }
         }
+    }
+
+    public function applyFilters(array $data): void
+    {
+        $this->filters = $data;
+
+        if ($this->viewMode === 'calendar') {
+            $this->refreshRecords();
+        } else {
+            $this->resetTable();
+        }
+    }
+
+    public function clearFilters(): void
+    {
+        $this->filters = [];
+
+        if ($this->viewMode === 'calendar') {
+            $this->refreshRecords();
+        } else {
+            $this->resetTable();
+        }
+    }
+
+    protected function getActiveFiltersCount(): int
+    {
+        $count = 0;
+        foreach ($this->filters as $value) {
+            if (is_array($value)) {
+                $hasNonEmptyValue = collect($value)->filter(fn ($v) => ! empty($v))->isNotEmpty();
+                if ($hasNonEmptyValue) {
+                    $count++;
+                }
+            } elseif (! empty($value)) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     protected function onDatesSet(DatesSetInfo $info): void
@@ -198,32 +237,32 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                     }
                 }),
             FilterAction::make()
+                ->label(__('filament-panels::pages/dashboard.actions.filter.modal.heading'))
+                ->color('gray')
+                ->icon('heroicon-o-funnel')
+                ->badge(fn () => $this->getActiveFiltersCount() ?: null)
                 ->schema($this->getFilterSchema())
-                ->badge(fn () => count(array_filter($this->filters ?? [])))
-                ->after(function () {
-                    if ($this->viewMode === 'calendar') {
-                        $this->refreshRecords();
-                    } else {
-                        // Reset table to refresh with new filters
-                        $this->resetTable();
-                    }
-                }),
+                ->fillForm(fn () => $this->filters)
+                ->action(fn (array $data) => $this->applyFilters($data))
+                ->extraModalFooterActions([
+                    Action::make('clearFilters')
+                        ->label('Filters resetten')
+                        ->color('danger')
+                        ->action(function (Component $livewire) {
+                            $this->clearFilters();
+                            $this->dispatch('close-modal', id: "fi-{$livewire->getId()}-action-0");
+                        }),
+                ]),
             ExportAction::make()
                 ->exporter($exporter)
                 ->label(__('shared/widgets/calendar.actions.export.label'))
                 ->modalHeading(__('shared/widgets/calendar.actions.export.label'))
                 ->columnMapping(false)
-                ->fillForm(function (Component $livewire) {
-                    if (! property_exists($livewire, 'filters')) {
-                        throw new LogicException('The ['.$livewire::class.'] page must implement the ['.HasFilters::class.'] trait.');
-                    }
-
-                    return [
-                        ...($livewire->filters ?? []),
-                        'start_date' => $this->start?->format('Y-m-d'),
-                        'end_date' => $this->end?->format('Y-m-d'),
-                    ];
-                })
+                ->fillForm(fn () => [
+                    ...$this->filters,
+                    'start_date' => $this->start?->format('Y-m-d'),
+                    'end_date' => $this->end?->format('Y-m-d'),
+                ])
                 ->schema([
                     Section::make('Filters')
                         ->schema([
