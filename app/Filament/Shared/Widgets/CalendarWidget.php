@@ -64,11 +64,6 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected static bool $isDiscovered = false;
 
-    public function persistsFiltersInSession(): bool
-    {
-        return false;
-    }
-
     protected string|HtmlString|bool|null $heading = '';
 
     protected bool $eventClickEnabled = true;
