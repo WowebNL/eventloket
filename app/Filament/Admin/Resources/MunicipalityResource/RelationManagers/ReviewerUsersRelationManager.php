@@ -6,6 +6,7 @@ use App\Filament\Shared\Resources\ReviewerUsers\Actions\ReviewerUserInviteAction
 use App\Filament\Shared\Resources\ReviewerUsers\Actions\ReviewerUserPendingInvitesAction;
 use App\Filament\Shared\Resources\ReviewerUsers\Schemas\ReviewerUserForm;
 use App\Filament\Shared\Resources\ReviewerUsers\Tables\ReviewerUsersTable;
+use App\Models\Municipality;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -27,7 +28,7 @@ class ReviewerUsersRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        /** @var \App\Models\Municipality $municipality */
+        /** @var Municipality $municipality */
         $municipality = $this->ownerRecord;
 
         return ReviewerUsersTable::configure($table)

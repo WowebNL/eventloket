@@ -12,6 +12,8 @@ use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
+use App\Models\Export;
+use App\Models\Import;
 use App\Support\CarbonBusinessDaysMixin;
 use App\Support\Uploads\DocumentUploadType;
 use Carbon\Carbon;
@@ -49,11 +51,11 @@ class AppServiceProvider extends ServiceProvider
         // Use custom Export and Import models to fix user relationship caching issues
         $this->app->bind(
             \Filament\Actions\Exports\Models\Export::class,
-            \App\Models\Export::class
+            Export::class
         );
         $this->app->bind(
             \Filament\Actions\Imports\Models\Import::class,
-            \App\Models\Import::class
+            Import::class
         );
     }
 

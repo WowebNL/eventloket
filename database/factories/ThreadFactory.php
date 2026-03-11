@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Thread;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Thread>
+ * @extends Factory<Thread>
  */
 class ThreadFactory extends Factory
 {

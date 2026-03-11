@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\OrganisationType;
+use App\Models\Organisation;
 use App\ValueObjects\PostbusAddress;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Organisation>
+ * @extends Factory<Organisation>
  */
 class OrganisationFactory extends Factory
 {

@@ -7,6 +7,7 @@ use App\Enums\OrganisationType;
 use App\Models\Traits\HasUuid;
 use App\Models\Users\OrganiserUser;
 use App\Services\LocatieserverService;
+use App\ValueObjects\Pdok\BagObject;
 use App\ValueObjects\PostbusAddress;
 use Database\Factories\OrganisationFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -45,7 +46,7 @@ class Organisation extends Model
         return $this->postbus_address !== null;
     }
 
-    /** @return Attribute<\App\ValueObjects\Pdok\BagObject|null, void> */
+    /** @return Attribute<BagObject|null, void> */
     protected function bagAddress(): Attribute
     {
         return Attribute::make(

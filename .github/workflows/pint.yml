@@ -11,4 +11,4 @@ jobs:
           with:
             preset: laravel
             testMode: true
-            pintVersion: 1.25.0
+            pintVersion: 1.28.0

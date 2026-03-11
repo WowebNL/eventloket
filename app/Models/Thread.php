@@ -12,6 +12,7 @@ use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
+use Database\Factories\ThreadFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -29,7 +30,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  */
 class Thread extends Model
 {
-    /** @use HasFactory<\Database\Factories\ThreadFactory> */
+    /** @use HasFactory<ThreadFactory> */
     use HasFactory, LogsActivity;
 
     protected $table = 'threads';

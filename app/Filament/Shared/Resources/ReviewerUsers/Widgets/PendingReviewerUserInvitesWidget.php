@@ -23,7 +23,7 @@ class PendingReviewerUserInvitesWidget extends TableWidget
     {
         return $table
             ->query(function (): Builder {
-                /** @var \App\Models\Municipality $tenant */
+                /** @var Municipality $tenant */
                 $tenant = Filament::getTenant();
 
                 return MunicipalityInvite::query()

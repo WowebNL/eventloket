@@ -4,6 +4,8 @@ namespace App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers;
 
 use App\Enums\AdviceStatus;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
+use App\Models\Advisory;
+use App\Models\Zaak;
 use Filament\Actions\CreateAction;
 use Filament\Facades\Filament;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -22,7 +24,7 @@ class AdviceThreadRelationManager extends RelationManager
         $query = parent::filterTableQuery($query);
 
         if (Filament::getCurrentPanel()->getId() === 'advisor') {
-            /** @var \App\Models\Advisory $tenant */
+            /** @var Advisory $tenant */
             $tenant = Filament::getTenant();
 
             //            $query->where('advisory_id', $tenant->id);
@@ -68,7 +70,7 @@ class AdviceThreadRelationManager extends RelationManager
             return null;
         }
 
-        /** @var \App\Models\Zaak $zaak */
+        /** @var Zaak $zaak */
         $zaak = $this->getOwnerRecord();
 
         $mineCount = $zaak->adviceThreads()

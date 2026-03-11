@@ -2,10 +2,13 @@
 
 namespace Database\Factories;
 
+use App\Models\Advisory;
+use App\Models\DefaultAdviceQuestion;
+use App\Models\Municipality;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\DefaultAdviceQuestion>
+ * @extends Factory<DefaultAdviceQuestion>
  */
 class DefaultAdviceQuestionFactory extends Factory
 {
@@ -17,8 +20,8 @@ class DefaultAdviceQuestionFactory extends Factory
     public function definition(): array
     {
         return [
-            'municipality_id' => \App\Models\Municipality::factory(),
-            'advisory_id' => \App\Models\Advisory::factory(),
+            'municipality_id' => Municipality::factory(),
+            'advisory_id' => Advisory::factory(),
             'risico_classificatie' => fake()->randomElement(['A', 'B', 'C']),
             'title' => fake()->sentence(),
             'description' => fake()->paragraph(),

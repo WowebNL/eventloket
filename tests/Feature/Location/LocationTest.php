@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Models\Location;
 use App\Models\Municipality;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 
 test('allows admins to manage locations across all municipalities', function () {
     // arrange: admin user, two municipalities, a location
@@ -188,7 +189,7 @@ test('location validates required fields', function () {
             'municipality_id' => $municipality->id,
             // Missing name, postal_code, house_number, street_name
         ]);
-    })->toThrow(\Illuminate\Database\QueryException::class);
+    })->toThrow(QueryException::class);
 });
 
 test('location allows optional fields to be null', function () {

@@ -4,13 +4,14 @@ namespace App\Auth;
 
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 
 class CaseInsensitiveUserProvider extends EloquentUserProvider
 {
     /**
      * Retrieve a user by the given credentials.
      *
-     * @return ($credentials is non-empty-array ? (Authenticatable&\Illuminate\Database\Eloquent\Model)|null : null)
+     * @return ($credentials is non-empty-array ? (Authenticatable&Model)|null : null)
      */
     public function retrieveByCredentials(array $credentials): ?Authenticatable
     {
@@ -28,7 +29,7 @@ class CaseInsensitiveUserProvider extends EloquentUserProvider
             $credentials['email'] = strtolower($credentials['email']);
         }
 
-        /** @var (Authenticatable&\Illuminate\Database\Eloquent\Model)|null */
+        /** @var (Authenticatable&Model)|null */
         return $this->newModelQuery()->where($credentials)->first();
     }
 }

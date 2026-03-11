@@ -2,6 +2,8 @@
 
 use App\Enums\AdvisoryRole;
 use App\Enums\Role;
+use App\Filament\Municipality\Clusters\Settings;
+use App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource;
 use App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\Pages\CreateAdvisory;
 use App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\Pages\EditAdvisory;
 use App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\Pages\ListAdvisories;
@@ -259,22 +261,22 @@ test('advisory resource respects tenant ownership', function () {
     // expect($component->instance()->getTableRecords()->contains($advisory))->toBeFalse();
 
     // For now, just verify the resource has the correct tenant relationship configured
-    expect(\App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource::getTenantOwnershipRelationshipName())
+    expect(AdvisoryResource::getTenantOwnershipRelationshipName())
         ->toBe('municipalities');
 });
 
 test('advisory resource navigation is correctly configured', function () {
-    expect(class_exists(\App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource::class))
+    expect(class_exists(AdvisoryResource::class))
         ->toBeTrue()
-        ->and(\App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource::getNavigationIcon())
+        ->and(AdvisoryResource::getNavigationIcon())
         ->toBe('heroicon-o-lifebuoy')
-        ->and(\App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource::getNavigationSort())
+        ->and(AdvisoryResource::getNavigationSort())
         ->toBe(1);
 });
 
 test('advisory resource has correct model and cluster', function () {
-    expect(\App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource::getModel())
+    expect(AdvisoryResource::getModel())
         ->toBe(Advisory::class)
-        ->and(\App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource::getCluster())
-        ->toBe(\App\Filament\Municipality\Clusters\Settings::class);
+        ->and(AdvisoryResource::getCluster())
+        ->toBe(Settings::class);
 });

@@ -34,7 +34,7 @@ use Livewire\Component;
 use Woweb\Openzaak\Openzaak;
 
 /**
- * @property \Filament\Schemas\Schema|mixed $form
+ * @property Schema|mixed $form
  */
 class MessageForm extends Component implements HasActions, HasSchemas
 {

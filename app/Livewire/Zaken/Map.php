@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Zaken;
 
+use Brick\Geo\GeometryCollection;
 use Brick\Geo\Io\GeoJsonReader;
 use Brick\Geo\LineString;
 use Brick\Geo\Point;
@@ -38,7 +39,7 @@ class Map extends MapWidget
         $this->geojson = $geojson;
 
         if (! empty($this->geojson)) {
-            /** @var \Brick\Geo\GeometryCollection $geometryCollection */
+            /** @var GeometryCollection $geometryCollection */
             $geometryCollection = (new GeoJsonReader)->read(json_encode($this->geojson));
             $bbox = $geometryCollection->getBoundingBox();
 

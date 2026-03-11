@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\FormSessionRequest;
 use App\Models\FormsubmissionSession;
+use App\Models\Organisation;
+use App\Models\User;
 
 class FormSessionController extends Controller
 {
@@ -12,10 +14,10 @@ class FormSessionController extends Controller
     {
         $data = $request->validated();
         $formSubmission = FormsubmissionSession::where('uuid', $data['submission_uuid'])->first();
-        /** @var \App\Models\Organisation $organisation */
+        /** @var Organisation $organisation */
         $organisation = $formSubmission->organisation;
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $formSubmission->user;
         $data = [
             'user_uuid' => $user->uuid,

@@ -14,6 +14,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 
 use function Pest\Livewire\livewire;
@@ -228,7 +229,7 @@ test('calendar widget hides cases with hidden resultaat types', function () {
     $hiddenZaak = Zaak::factory()->create([
         'zaaktype_id' => $zaaktypeWithHiddenResults->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+        'reference_data' => new ZaakReferenceData(
             start_evenement: now()->toString(),
             eind_evenement: now()->addDay()->toString(),
             registratiedatum: now()->toString(),
@@ -244,7 +245,7 @@ test('calendar widget hides cases with hidden resultaat types', function () {
     $visibleZaak = Zaak::factory()->create([
         'zaaktype_id' => $zaaktypeWithHiddenResults->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+        'reference_data' => new ZaakReferenceData(
             start_evenement: now()->toString(),
             eind_evenement: now()->addDay()->toString(),
             registratiedatum: now()->toString(),
@@ -288,7 +289,7 @@ test('calendar widget shows cases when zaaktype has no hidden resultaat types co
     $zaakWithResultaat = Zaak::factory()->create([
         'zaaktype_id' => $zaaktypeWithoutHiddenResults->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+        'reference_data' => new ZaakReferenceData(
             start_evenement: now()->toString(),
             eind_evenement: now()->addDay()->toString(),
             registratiedatum: now()->toString(),
@@ -329,7 +330,7 @@ test('calendar widget shows cases without resultaat even when zaaktype has hidde
     $zaakWithoutResultaat = Zaak::factory()->create([
         'zaaktype_id' => $zaaktypeWithHiddenResults->id,
         'organisation_id' => $this->organisation->id,
-        'reference_data' => new \App\ValueObjects\ModelAttributes\ZaakReferenceData(
+        'reference_data' => new ZaakReferenceData(
             start_evenement: now()->toString(),
             eind_evenement: now()->addDay()->toString(),
             registratiedatum: now()->toString(),

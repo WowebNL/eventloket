@@ -10,6 +10,8 @@ use App\Models\MunicipalityVariable;
 use App\Models\User;
 use App\Models\Users\MunicipalityAdminUser;
 use Filament\Facades\Filament;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Laravel\Passport\Client;
 
 use function Pest\Livewire\livewire;
@@ -364,7 +366,7 @@ test('enforces unique keys per municipality', function () {
             'value' => '2025-2026',
             'is_default' => false,
         ]);
-    } catch (\Illuminate\Database\QueryException $e) {
+    } catch (QueryException $e) {
         $exceptionThrown = true;
 
         // Check for unique constraint violation based on database type
@@ -380,7 +382,7 @@ test('enforces unique keys per municipality', function () {
 
     // Refresh the database connection to clear any aborted transaction state (mainly for PostgreSQL)
     if (config('database.default') === 'pgsql') {
-        \Illuminate\Support\Facades\DB::reconnect();
+        DB::reconnect();
     }
 
     // But different municipalities should allow same key

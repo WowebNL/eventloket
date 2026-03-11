@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AdviceStatus;
 use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Enums\ThreadType;
@@ -61,7 +62,7 @@ beforeEach(function () {
         'zaak_id' => $this->zaakWithAdvice->id,
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisoryWithoutAccess->id,
-        'advice_status' => \App\Enums\AdviceStatus::Asked,
+        'advice_status' => AdviceStatus::Asked,
         'advice_due_at' => now()->addDays(7),
         'created_by' => null,
         'title' => 'Test Advice',
@@ -191,7 +192,7 @@ test('advisory with can_view_any_zaak can upload documents only to zaak with adv
         'zaak_id' => $zaakWithAdviceForFullAccess->id,
         'type' => ThreadType::Advice,
         'advisory_id' => $this->advisoryWithAccess->id,
-        'advice_status' => \App\Enums\AdviceStatus::Asked,
+        'advice_status' => AdviceStatus::Asked,
         'advice_due_at' => now()->addDays(7),
         'created_by' => null,
         'title' => 'Test Advice for Full Access',

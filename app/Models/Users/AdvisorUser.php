@@ -52,7 +52,7 @@ class AdvisorUser extends User implements FilamentUser, HasTenants
     }
 
     /**
-     * @phpstan-param \App\Models\Advisory $tenant
+     * @phpstan-param Advisory $tenant
      */
     public function canAccessTenant(Model $tenant): bool
     {

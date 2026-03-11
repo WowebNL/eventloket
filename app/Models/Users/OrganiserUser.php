@@ -48,7 +48,7 @@ class OrganiserUser extends User implements FilamentUser, HasTenants
     }
 
     /**
-     * @phpstan-param \App\Models\Organisation $tenant
+     * @phpstan-param Organisation $tenant
      */
     public function canAccessTenant(Model $tenant): bool
     {

@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use Filament\Tables\Table;
+use Illuminate\Support\Collection;
 use Spatie\Activitylog\Models\Activity;
 use Tests\Fakes\ZgwHttpFake;
 
@@ -48,12 +50,12 @@ beforeEach(function (): void {
 /**
  * Helper function to get activities from the widget
  */
-function getWidgetActivities(Zaak $zaak): \Illuminate\Support\Collection
+function getWidgetActivities(Zaak $zaak): Collection
 {
     $widget = new ActivityLogWidget;
     $widget->record = $zaak;
 
-    $table = new \Filament\Tables\Table($widget);
+    $table = new Table($widget);
     $configuredTable = $widget->table($table);
 
     return $configuredTable->getQuery()->get();

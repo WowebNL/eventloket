@@ -5,6 +5,8 @@ namespace App\Filament\Organiser\Resources\Zaken\Pages;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Jobs\Zaak\AddFinalStatusZGW;
 use App\Jobs\Zaak\AddResultaatZGW;
+use App\Models\Users\MunicipalityUser;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\Result;
 use App\ValueObjects\FinishZaakObject;
@@ -85,7 +87,7 @@ class ViewZaak extends ViewRecord
                 ->requiresConfirmation()
                 ->visible(fn (Zaak $record): bool => ($record->openzaak && ! $record->openzaak->resultaat) && $record->zaaktype->intrekkenResultaatType !== null)
                 ->action(function (Zaak $record) {
-                    /** @var \App\Models\Users\OrganiserUser $user */
+                    /** @var OrganiserUser $user */
                     $user = auth()->user();
                     $finishZaakObject = new FinishZaakObject(
                         zaak: $record,
@@ -105,7 +107,7 @@ class ViewZaak extends ViewRecord
                         new AddFinalStatusZGW($finishZaakObject),
                         function () use ($record, $finishZaakObject) {
                             foreach ($record->organisation->users as $recipient) {
-                                /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                /** @var MunicipalityUser $recipient */
                                 $recipient->notify(new Result(
                                     zaak: $record,
                                     tenant: $record->organisation,
@@ -115,7 +117,7 @@ class ViewZaak extends ViewRecord
                             }
 
                             if ($record->handled_status_set_by_user_id) {
-                                /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                /** @var MunicipalityUser $recipient */
                                 $recipient = $record->handledStatusSetByUser;
                                 $recipient->notify(new Result(
                                     zaak: $record,
@@ -125,7 +127,7 @@ class ViewZaak extends ViewRecord
                                 ));
                             } else {
                                 foreach ($record->municipality->allReviewerUsers as $recipient) {
-                                    /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                    /** @var MunicipalityUser $recipient */
                                     $recipient->notify(new Result(
                                         zaak: $record,
                                         tenant: $record->municipality,

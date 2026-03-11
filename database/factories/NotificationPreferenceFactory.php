@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\NotificationPreference;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\NotificationPreference>
+ * @extends Factory<NotificationPreference>
  */
 class NotificationPreferenceFactory extends Factory
 {

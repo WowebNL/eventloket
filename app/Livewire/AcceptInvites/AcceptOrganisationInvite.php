@@ -3,6 +3,7 @@
 namespace App\Livewire\AcceptInvites;
 
 use App\Enums\Role;
+use App\Models\Organisation;
 use App\Models\OrganisationInvite;
 use App\Models\User;
 use Illuminate\Contracts\Support\Htmlable;
@@ -26,7 +27,7 @@ class AcceptOrganisationInvite extends AbstractAcceptInvite
 
     protected function getTenantId(): string
     {
-        /** @var \App\Models\Organisation|null $organisation */
+        /** @var Organisation|null $organisation */
         $organisation = $this->invite->organisation;
 
         if (! $organisation) {

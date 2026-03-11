@@ -2,6 +2,7 @@
 
 use App\Enums\AdvisoryRole;
 use App\Enums\Role;
+use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Models\Advisory;
 use App\Models\Municipality;
@@ -97,7 +98,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
     $unassignedThread = AdviceThread::forceCreate([
         'zaak_id' => $zaakWithUnassigned->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Test Advice Thread',
         'created_by' => $this->advisor->id,
     ]);
@@ -119,7 +120,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
     $assignedThread = AdviceThread::forceCreate([
         'zaak_id' => $zaakWithAssigned->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Test Advice Thread Assigned',
         'created_by' => $this->advisor->id,
     ]);
@@ -157,7 +158,7 @@ test('filter with me option shows zaken assigned to current user', function () {
     $myThread = AdviceThread::forceCreate([
         'zaak_id' => $myZaak->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'My Advice Thread',
         'created_by' => $this->advisor->id,
     ]);
@@ -181,7 +182,7 @@ test('filter with me option shows zaken assigned to current user', function () {
     $otherThread = AdviceThread::forceCreate([
         'zaak_id' => $otherZaak->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Other Advice Thread',
         'created_by' => $this->advisor2->id,
     ]);
@@ -205,7 +206,7 @@ test('filter with me option shows zaken assigned to current user', function () {
     AdviceThread::forceCreate([
         'zaak_id' => $unassignedZaak->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Unassigned Thread',
         'created_by' => $this->advisor->id,
     ]);
@@ -255,7 +256,7 @@ test('filter with all option shows all zaken', function () {
     $thread1 = AdviceThread::forceCreate([
         'zaak_id' => $zaak1->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Thread 1',
         'created_by' => $this->advisor->id,
     ]);
@@ -263,7 +264,7 @@ test('filter with all option shows all zaken', function () {
     $thread2 = AdviceThread::forceCreate([
         'zaak_id' => $zaak2->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Thread 2',
         'created_by' => $this->advisor->id,
     ]);
@@ -301,7 +302,7 @@ test('filter query function works correctly with builder', function () {
     $thread = AdviceThread::forceCreate([
         'zaak_id' => $zaak->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Test Thread',
         'created_by' => $this->advisor->id,
     ]);
@@ -363,7 +364,7 @@ test('filter works with multiple advice threads on same zaak', function () {
     $unassignedThread = AdviceThread::forceCreate([
         'zaak_id' => $zaak->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Multi-thread Unassigned',
         'created_by' => $this->advisor->id,
     ]);
@@ -372,7 +373,7 @@ test('filter works with multiple advice threads on same zaak', function () {
     $assignedThread = AdviceThread::forceCreate([
         'zaak_id' => $zaak->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
         'title' => 'Multi-thread Assigned',
         'created_by' => $this->advisor->id,
     ]);

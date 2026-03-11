@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Enums\Role;
 use App\Models\MunicipalityInvite;
 use App\Models\User;
+use App\Models\Users\MunicipalityUser;
 
 class MunicipalityInvitePolicy
 {
@@ -51,7 +52,7 @@ class MunicipalityInvitePolicy
 
         if (in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin])) {
             // Check if the user has access to one of the municipalities of the municipality invite
-            /** @var \App\Models\Users\MunicipalityUser $user */
+            /** @var MunicipalityUser $user */
             return $user->municipalities->pluck('id')
                 ->intersect($municipalityInvite->municipalities->pluck('id'))
                 ->isNotEmpty();

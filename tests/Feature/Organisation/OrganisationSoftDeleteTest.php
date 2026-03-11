@@ -5,11 +5,18 @@ use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Enums\Role;
 use App\Enums\ThreadType;
+use App\Livewire\AcceptInvites\AcceptOrganisationInvite;
+use App\Mail\OrganisationInviteMail;
+use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\Organisation;
+use App\Models\OrganisationInvite;
 use App\Models\Thread;
 use App\Models\User;
 use App\Models\Zaak;
+use App\Models\Zaaktype;
+use App\Policies\ZaakPolicy;
+use Livewire\Livewire;
 
 beforeEach(function () {
     $this->organisation = Organisation::factory()->create([
@@ -23,7 +30,7 @@ beforeEach(function () {
         'name' => 'Test Municipality',
     ]);
 
-    $this->zaaktype = \App\Models\Zaaktype::factory()->create([
+    $this->zaaktype = Zaaktype::factory()->create([
         'municipality_id' => $this->municipality->id,
     ]);
 });
@@ -62,7 +69,7 @@ test('zaak relatedUsers method handles soft-deleted organisation', function () {
     ]);
 
     // Create an advice thread with advisory
-    $advisory = \App\Models\Advisory::factory()->create();
+    $advisory = Advisory::factory()->create();
     $advisoryUser = User::factory()->create(['role' => Role::Advisor]);
     $advisory->users()->attach($advisoryUser, ['role' => AdvisoryRole::Admin]);
 
@@ -82,7 +89,7 @@ test('zaak relatedUsers method handles soft-deleted organisation', function () {
 
     // After soft delete - should not throw error
     $zaak = $zaak->fresh();
-    expect(fn () => $zaak->relatedUsers())->not->toThrow(\Exception::class);
+    expect(fn () => $zaak->relatedUsers())->not->toThrow(Exception::class);
 
     // relatedUsers should still work but without organisation users
     $relatedUsersAfter = $zaak->relatedUsers();
@@ -106,12 +113,12 @@ test('zaak policy canAccessOrganisation handles soft-deleted organisation', func
     expect($this->organiser->canAccessOrganisation($this->organisation->id))->toBeFalse();
 
     // Verify zaak policy respects this
-    $policy = new \App\Policies\ZaakPolicy;
+    $policy = new ZaakPolicy;
     expect($policy->view($this->organiser, $zaak))->toBeFalse();
 });
 
 test('organisation invite handles soft-deleted organisation', function () {
-    $invite = \App\Models\OrganisationInvite::factory()->create([
+    $invite = OrganisationInvite::factory()->create([
         'organisation_id' => $this->organisation->id,
         'email' => 'test@example.com',
     ]);
@@ -131,7 +138,7 @@ test('organisation invite handles soft-deleted organisation', function () {
 });
 
 test('organisation invite mail handles soft-deleted organisation', function () {
-    $invite = \App\Models\OrganisationInvite::factory()->create([
+    $invite = OrganisationInvite::factory()->create([
         'organisation_id' => $this->organisation->id,
         'email' => 'test@example.com',
     ]);
@@ -143,12 +150,12 @@ test('organisation invite mail handles soft-deleted organisation', function () {
     $invite = $invite->fresh();
 
     // Verify that creating mail with soft-deleted organisation doesn't throw error
-    expect(fn () => new \App\Mail\OrganisationInviteMail($invite))
-        ->not->toThrow(\Exception::class);
+    expect(fn () => new OrganisationInviteMail($invite))
+        ->not->toThrow(Exception::class);
 });
 
 test('accept organisation invite handles soft-deleted organisation gracefully', function () {
-    $invite = \App\Models\OrganisationInvite::factory()->create([
+    $invite = OrganisationInvite::factory()->create([
         'organisation_id' => $this->organisation->id,
         'email' => 'newuser@example.com',
     ]);
@@ -165,13 +172,13 @@ test('accept organisation invite handles soft-deleted organisation gracefully', 
     $this->actingAs($newUser);
 
     // Try to access the accept invite livewire component
-    $component = \Livewire\Livewire::test(\App\Livewire\AcceptInvites\AcceptOrganisationInvite::class, [
+    $component = Livewire::test(AcceptOrganisationInvite::class, [
         'token' => $invite->token,
     ]);
 
     // Should handle soft-deleted organisation gracefully (show error or redirect)
     // The exact behavior depends on your implementation
-    expect($component)->not->toThrow(\Exception::class);
+    expect($component)->not->toThrow(Exception::class);
 });
 
 test('organisation users relationship excludes soft-deleted organisations', function () {
@@ -229,7 +236,7 @@ test('zaak with soft-deleted organisation can still be viewed by municipality us
     $this->organisation->delete();
 
     // Municipality user should still be able to view zaak
-    $policy = new \App\Policies\ZaakPolicy;
+    $policy = new ZaakPolicy;
     expect($policy->view($municipalityUser, $zaak))->toBeTrue();
 });
 

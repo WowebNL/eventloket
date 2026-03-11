@@ -65,7 +65,7 @@ class Zaak extends Model implements Eventable
         ];
     }
 
-    /** @return BelongsTo<\App\Models\Zaaktype, $this> */
+    /** @return BelongsTo<Zaaktype, $this> */
     public function zaaktype(): BelongsTo
     {
         return $this->belongsTo(Zaaktype::class);
@@ -76,7 +76,7 @@ class Zaak extends Model implements Eventable
         return $this->belongsTo(Organisation::class);
     }
 
-    /** @return BelongsTo<\App\Models\Users\OrganiserUser, $this> */
+    /** @return BelongsTo<OrganiserUser, $this> */
     public function organiserUser(): BelongsTo
     {
         return $this->belongsTo(OrganiserUser::class, 'organiser_user_id', 'id');
@@ -121,7 +121,7 @@ class Zaak extends Model implements Eventable
         return array_merge(
             $this->organisation?->users->all() ?? [],
             $this->adviceThreads->map(function ($thread) {
-                /** @var \App\Models\Threads\AdviceThread $thread */
+                /** @var AdviceThread $thread */
                 return $thread->advisory->users->all();
             })->flatten(1)->all(),
             $handlers ? $handlers : []
@@ -143,7 +143,7 @@ class Zaak extends Model implements Eventable
         );
     }
 
-    /** @return Attribute<\App\ValueObjects\OzZaak, void> */
+    /** @return Attribute<OzZaak, void> */
     protected function openzaak(): Attribute
     {
         return Attribute::make(
@@ -261,7 +261,7 @@ class Zaak extends Model implements Eventable
         );
     }
 
-    /** @return Attribute<\App\ValueObjects\OzStatustype, void> */
+    /** @return Attribute<OzStatustype, void> */
     protected function statustype(): Attribute
     {
         return Attribute::make(

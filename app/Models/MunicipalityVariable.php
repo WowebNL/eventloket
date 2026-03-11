@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\MunicipalityVariableType;
 use App\Observers\MunicipalityVariableObserver;
+use Database\Factories\MunicipalityVariableFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[ObservedBy(MunicipalityVariableObserver::class)]
 class MunicipalityVariable extends Model
 {
-    /** @use HasFactory<\Database\Factories\MunicipalityVariableFactory> */
+    /** @use HasFactory<MunicipalityVariableFactory> */
     use HasFactory, SoftDeletes;
 
     protected $appends = ['order'];
