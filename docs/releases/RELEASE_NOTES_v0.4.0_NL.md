@@ -1,6 +1,6 @@
-# Versie 0.4.0-beta.1 — Wat is er nieuw?
+# Versie 0.4.0 — Wat is er nieuw?
 
-**Releasedatum:** 4 maart 2026
+**Releasedatum:** 11 maart 2026
 
 ---
 
@@ -22,11 +22,18 @@ In de adviesdossierlijst en de inbox-widget is het nu mogelijk om met een multi-
 
 ---
 
-### Verwijderde adviesdiensten kunnen worden hersteld
-
+### Verwijderen en herstellen adviesdiensten 
 **Voor wie:** Platform-beheerders (Admin)
 
-Adviesdiensten die per ongeluk zijn verwijderd, kunnen nu worden hersteld door platform-beheerders. In het beheeroverzicht is een filter toegevoegd voor verwijderde adviesdiensten en een herstelactie beschikbaar, zodat gegevens niet definitief verloren gaan bij een foutieve verwijdering.
+Adviesdiensten kunnen worden verwijderd en worden hersteld door platform-beheerders (soft-deletes). In het beheeroverzicht is een filter toegevoegd voor verwijderde adviesdiensten en een herstelactie beschikbaar, zodat gegevens niet definitief verloren gaan bij een foutieve verwijdering.
+
+---
+
+### Instellingen van overzichtslijsten en kalender worden onthouden
+
+**Voor wie:** Alle gebruikers
+
+Filters, sortering, zoekterm en kolominstellingen in overzichtslijsten worden nu automatisch onthouden per sessie. Bij het terugkeren naar een pagina staan de instellingen dus nog zoals ze achtergelaten zijn. Ook de kalenderwidget onthoudt de actieve filters en de geselecteerde maand. Daarnaast is er een knop toegevoegd waarmee alle kalenderfilters in één klik hersteld kunnen worden naar de standaardwaarden.
 
 ---
 
@@ -54,6 +61,8 @@ De zoekfunctie in de adviesdossierlijst ondersteunt nu meer kolommen. Het is daa
 
 Zaken met een gesloten of ingetrokken resultaat werden nog getoond in de kalenderweergave en de lijstweergave. Dit is gecorrigeerd: deze zaken worden nu correct verborgen zodat alleen actieve zaken zichtbaar zijn.
 
+Voor platformbeheerders is onder het kopje zaaktypen per zaaktype in te stellen welke resultaten verborgen dienen te worden in de kalender.
+
 ---
 
 ### Bestaande gebruikers uitnodigen voor een organisatie werkt nu correct
@@ -71,5 +80,11 @@ In de donkere modus waren sommige tekstelementen bij het invoeren van berichten 
 ### Gemeente-naam en referentie in kalendertabelweergave gecorrigeerd
 
 De gemeente-naam en de zaakverwijzing werden niet correct getoond in de kalendertabelweergave. Beide velden worden nu op de juiste manier weergegeven.
+
+---
+
+### Zoekfunctie in kalenderoverzicht gecorrigeerd
+
+De zoekfunctie in de kalenderweergave werkte niet altijd correct en gaf soms geen of onjuiste resultaten terug. Dit is opgelost zodat zoekopdrachten in het kalenderoverzicht betrouwbaar werken.
 
 ---
