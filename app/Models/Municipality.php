@@ -92,7 +92,7 @@ class Municipality extends Model implements HasGeometry
         return $this->hasMany(DefaultAdviceQuestion::class);
     }
 
-    /** @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Models\MunicipalityVariable, $this> */
+    /** @return HasMany<MunicipalityVariable, $this> */
     public function reportQuestions(): HasMany
     {
         return $this->variables()->where('type', MunicipalityVariableType::ReportQuestion);

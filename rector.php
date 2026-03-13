@@ -21,4 +21,4 @@ return RectorConfig::configure()
         LaravelSetList::LARAVEL_CODE_QUALITY,
         LaravelSetList::LARAVEL_COLLECTION,
     ])
-    ->withPhpVersion(PHPVersion::PHP_84);
+    ->withPhpVersion(PhpVersion::PHP_84);

@@ -6,6 +6,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\Carbon;
 use Filament\Actions\Imports\Exceptions\RowImportFailedException;
+use Filament\Actions\Imports\Models\Import;
 
 covers(ZaakImporter::class);
 
@@ -14,7 +15,7 @@ covers(ZaakImporter::class);
  */
 function invokeZaakImporterMethod($methodName, array $parameters = [])
 {
-    $reflection = new \ReflectionClass(ZaakImporter::class);
+    $reflection = new ReflectionClass(ZaakImporter::class);
     $method = $reflection->getMethod($methodName);
 
     // For static methods, pass null as the first argument
@@ -27,12 +28,12 @@ function invokeZaakImporterMethod($methodName, array $parameters = [])
 function createImporterWithData(array $data = []): ZaakImporter
 {
     // Create a mock Import model
-    $import = \Mockery::mock(\Filament\Actions\Imports\Models\Import::class);
+    $import = Mockery::mock(Import::class);
 
     $importer = new ZaakImporter($import, [], []);
 
     // Set the protected $data property
-    $reflection = new \ReflectionClass($importer);
+    $reflection = new ReflectionClass($importer);
     $property = $reflection->getProperty('data');
     $property->setValue($importer, $data);
 
@@ -44,7 +45,7 @@ function createImporterWithData(array $data = []): ZaakImporter
  */
 function getImporterRecord(ZaakImporter $importer): ?Zaak
 {
-    $reflection = new \ReflectionClass($importer);
+    $reflection = new ReflectionClass($importer);
     $property = $reflection->getProperty('record');
 
     return $property->getValue($importer);

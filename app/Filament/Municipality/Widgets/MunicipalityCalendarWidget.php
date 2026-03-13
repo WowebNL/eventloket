@@ -4,6 +4,7 @@ namespace App\Filament\Municipality\Widgets;
 
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\RisicoClassificatiesSelect;
 use App\Filament\Shared\Widgets\CalendarWidget;
+use App\Models\Municipality;
 use Filament\Facades\Filament;
 
 class MunicipalityCalendarWidget extends CalendarWidget
@@ -12,7 +13,7 @@ class MunicipalityCalendarWidget extends CalendarWidget
     {
         parent::mount();
 
-        /** @var \App\Models\Municipality $municipality */
+        /** @var Municipality $municipality */
         $municipality = Filament::getTenant();
 
         $this->filters = [

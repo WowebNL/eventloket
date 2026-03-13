@@ -4,6 +4,8 @@ namespace App\Policies;
 
 use App\Enums\Role;
 use App\Models\User;
+use App\Models\Users\AdvisorUser;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 
 class ZaakPolicy
@@ -25,7 +27,7 @@ class ZaakPolicy
      */
     public function view(User $user, Zaak $zaak): bool
     {
-        if ($user instanceof \App\Models\Users\OrganiserUser) {
+        if ($user instanceof OrganiserUser) {
             return $user->canAccessOrganisation($zaak->organisation_id);
         }
 
@@ -49,7 +51,7 @@ class ZaakPolicy
 
     public function uploadDocument(User $user, Zaak $zaak)
     {
-        if ($user instanceof \App\Models\Users\AdvisorUser) {
+        if ($user instanceof AdvisorUser) {
             $advisoryIds = $zaak->adviceThreads->pluck('advisory_id');
             $userAdvisoryIds = $user->advisories->pluck('id');
 

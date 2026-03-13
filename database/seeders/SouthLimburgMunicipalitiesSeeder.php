@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\Role;
+use App\Jobs\ProcessSyncGeometryOnMunicipality;
 use App\Models\Municipality;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -35,7 +36,7 @@ class SouthLimburgMunicipalitiesSeeder extends Seeder
 
         foreach ($municipalities as $brk_id => $name) {
             $model = Municipality::updateOrCreate(['name' => $name], ['brk_identification' => $brk_id]);
-            dispatch(new \App\Jobs\ProcessSyncGeometryOnMunicipality($model));
+            dispatch(new ProcessSyncGeometryOnMunicipality($model));
         }
 
         if (config('app.env') == 'production') {

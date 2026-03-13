@@ -1,5 +1,7 @@
 <?php
 
+use App\Actions\Geospatial\SyncGeometry;
+use App\Models\Municipality;
 use Brick\Geo\Geometry;
 use Illuminate\Support\Facades\Http;
 
@@ -28,17 +30,17 @@ beforeEach(function () {
             ]],
         ]),
     ]);
-    $this->municipality = \App\Models\Municipality::factory()->create([
+    $this->municipality = Municipality::factory()->create([
         'brk_identification' => 'GM123',
         'geometry' => null,
     ]);
 });
 
 test('Muncipality geometry can be synced', function () {
-    $model = \App\Models\Municipality::find($this->municipality->id);
+    $model = Municipality::find($this->municipality->id);
     expect($model->geometry)->toBeNull();
 
-    (new \App\Actions\Geospatial\SyncGeometry($this->municipality))->execute();
+    (new SyncGeometry($this->municipality))->execute();
 
     $model->refresh();
     expect($model->geometry)->toBeInstanceOf(Geometry::class);

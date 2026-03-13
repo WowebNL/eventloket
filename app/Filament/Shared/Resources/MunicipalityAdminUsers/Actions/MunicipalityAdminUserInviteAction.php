@@ -8,6 +8,8 @@ use App\Mail\MunicipalityInviteMail;
 use App\Models\Municipality;
 use App\Models\MunicipalityInvite;
 use App\Models\Users\AdminUser;
+use App\Models\Users\MunicipalityAdminUser;
+use App\Models\Users\ReviewerMunicipalityAdminUser;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
@@ -42,7 +44,7 @@ class MunicipalityAdminUserInviteAction
                 Select::make('municipalities')
                     ->multiple()
                     ->options(function () {
-                        /** @var \App\Models\Users\AdminUser|\App\Models\Users\MunicipalityAdminUser|\App\Models\Users\ReviewerMunicipalityAdminUser $user */
+                        /** @var AdminUser|MunicipalityAdminUser|ReviewerMunicipalityAdminUser $user */
                         $user = auth()->user();
 
                         if ($user instanceof AdminUser) {

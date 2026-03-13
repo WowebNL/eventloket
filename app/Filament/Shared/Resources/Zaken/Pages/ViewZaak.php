@@ -9,6 +9,7 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource;
 use App\Jobs\Zaak\AddBesluitZGW;
 use App\Jobs\Zaak\AddFinalStatusZGW;
 use App\Jobs\Zaak\AddResultaatZGW;
+use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Notifications\Result;
 use App\ValueObjects\FinishZaakObject;
@@ -301,7 +302,7 @@ class ViewZaak extends ViewRecord
                         BLADE))),
                 ])
                 ->action(function (Zaak $record, array $data) {
-                    /** @var \App\Models\Users\MunicipalityUser $user */
+                    /** @var MunicipalityUser $user */
                     $user = auth()->user();
                     $finishZaakObject = new FinishZaakObject(
                         zaak: $record,
@@ -326,7 +327,7 @@ class ViewZaak extends ViewRecord
                         function () use ($record, $finishZaakObject) {
                             if ($record->organisation?->users) {
                                 foreach ($record->organisation->users as $recipient) {
-                                    /** @var \App\Models\Users\MunicipalityUser $recipient */
+                                    /** @var MunicipalityUser $recipient */
                                     $recipient->notify(new Result(
                                         zaak: $record,
                                         tenant: $record->organisation,

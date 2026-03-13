@@ -57,7 +57,7 @@ class MunicipalityResource extends Resource
                     ->multiple()
                     ->relationship(name: 'zaaktypen', titleAttribute: 'name', modifyQueryUsing: fn ($query) => $query->where(['is_active' => true])->where(function ($q) use ($schema) {
                         if ($schema->getRecord()) {
-                            /** @var \App\Models\Municipality $record */
+                            /** @var Municipality $record */
                             $record = $schema->getRecord();
                             $q->whereNull('municipality_id')->orWhere('municipality_id', $record->id);
                         }

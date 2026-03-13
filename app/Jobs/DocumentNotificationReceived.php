@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\DocumentVertrouwelijkheden;
+use App\Enums\Role;
 use App\Models\Zaak;
 use App\Notifications\NewZaakDocument;
 use App\ValueObjects\OpenNotification;
@@ -17,14 +18,14 @@ class DocumentNotificationReceived implements ShouldQueue
 {
     use Queueable;
 
-    private OpenZaak $openzaak;
+    private Openzaak $openzaak;
 
     /**
      * Create a new job instance.
      */
     public function __construct(private OpenNotification $notification, private bool $isNew)
     {
-        $this->openzaak = new OpenZaak;
+        $this->openzaak = new Openzaak;
     }
 
     /**
@@ -58,7 +59,7 @@ class DocumentNotificationReceived implements ShouldQueue
             if ($zaak) {
                 $users = $zaak->relatedUsers();
                 foreach ($users as $user) {
-                    /** @var \App\Enums\Role $role */
+                    /** @var Role $role */
                     $role = $user->role;
                     if (
                         in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole($role)) // user has acces to document

@@ -37,7 +37,7 @@ class MunicipalityUser extends User implements FilamentUser, HasTenants
     }
 
     /**
-     * @phpstan-param \App\Models\Municipality $tenant
+     * @phpstan-param Municipality $tenant
      */
     public function canAccessTenant(Model $tenant): bool
     {

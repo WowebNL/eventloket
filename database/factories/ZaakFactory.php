@@ -2,12 +2,13 @@
 
 namespace Database\Factories;
 
+use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Tests\Fakes\ZgwHttpFake;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Zaak>
+ * @extends Factory<Zaak>
  */
 class ZaakFactory extends Factory
 {

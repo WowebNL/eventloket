@@ -3,11 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\AdvisoryRole;
+use App\Models\AdvisoryInvite;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\AdvisoryInvite>
+ * @extends Factory<AdvisoryInvite>
  */
 class AdvisoryInviteFactory extends Factory
 {

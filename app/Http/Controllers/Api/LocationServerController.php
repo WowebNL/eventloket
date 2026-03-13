@@ -10,6 +10,7 @@ use App\Models\Municipality;
 use App\Services\LocatieserverService;
 use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Io\GeoJsonReader;
+use Brick\Geo\LineString;
 use Brick\Geo\Polygon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -60,7 +61,7 @@ class LocationServerController extends Controller
                 /** @var Polygon $polygon */
                 $polygon = (new GeoJsonReader)->read(json_encode($object));
 
-                /** @var Collection<\App\Models\Municipality> $items */
+                /** @var Collection<Municipality> $items */
                 $items = $checkIntersects->checkIntersectsWithModels($polygon);
 
                 $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items', 'polygons.items']);
@@ -69,13 +70,13 @@ class LocationServerController extends Controller
         }
 
         if (isset($data['line'])) {
-            /** @var \Brick\Geo\LineString $line */
+            /** @var LineString $line */
             $line = (new GeoJsonReader)->read($data['line']);
             $geometryEngine = $geometryEngine ?? new PdoEngine(DB::connection()->getPdo());
             $checkIntersects = $checkIntersects ?? new CheckIntersects($geometryEngine);
             $checkWithin = $checkWithin ?? new CheckWithin($geometryEngine);
 
-            /** @var Collection<\App\Models\Municipality> $items */
+            /** @var Collection<Municipality> $items */
             $items = $checkIntersects->checkIntersectsWithModels($line);
             $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
             $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());
@@ -107,10 +108,10 @@ class LocationServerController extends Controller
             $checkWithin = $checkWithin ?? new CheckWithin($geometryEngine);
 
             foreach ($lines as $lineObject) {
-                /** @var \Brick\Geo\LineString $line */
+                /** @var LineString $line */
                 $line = (new GeoJsonReader)->read(json_encode($lineObject));
 
-                /** @var Collection<\App\Models\Municipality> $items */
+                /** @var Collection<Municipality> $items */
                 $items = $checkIntersects->checkIntersectsWithModels($line);
                 $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
                 $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());

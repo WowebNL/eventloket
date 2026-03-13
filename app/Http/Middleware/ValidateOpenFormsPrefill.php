@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Organisation;
 use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
@@ -16,13 +17,13 @@ class ValidateOpenFormsPrefill
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         if ($objectId = $request->query('initial_data_reference')) {
             $object = $this->objectsApi->get($objectId)->toArray();
-            /** @var \App\Models\Organisation $tenant */
+            /** @var Organisation $tenant */
             $tenant = Filament::getTenant();
             if (Arr::has($object, ['record.data', 'record.data.user_uuid', 'record.data.organiser_uuid'])) {
                 if (Arr::get($object, 'record.data.user_uuid') == auth()->user()->uuid

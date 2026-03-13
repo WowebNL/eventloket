@@ -6,6 +6,7 @@ use App\Enums\AdviceStatus;
 use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\AdviceThreads\AdviceThreadResource;
 use App\Models\Message;
+use App\Models\Thread;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateAdviceThread extends CreateRecord
@@ -26,7 +27,7 @@ class CreateAdviceThread extends CreateRecord
     {
         $formState = $this->form->getState();
 
-        /** @var \App\Models\Thread $thread */
+        /** @var Thread $thread */
         $thread = $this->record;
 
         if ($formState['body'] != '<p></p>' && $formState['body'] != null) {

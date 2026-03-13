@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Jobs\Zaak\ClearZaakCache;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
 use App\ValueObjects\OpenNotification;
@@ -38,7 +39,7 @@ class ZaakStatusNotificationReceived implements ShouldQueue
             }
 
             foreach ($zaak->organisation->users as $user) {
-                /** @var \App\Models\Users\OrganiserUser $user */
+                /** @var OrganiserUser $user */
                 $user->notify(new ZaakStatusChanged($zaak, $oldStatus));
             }
         }

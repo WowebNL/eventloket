@@ -2,6 +2,7 @@
 
 namespace App\Filament\Organiser\Clusters\Settings\Resources\OrganiserUserResource\Widgets;
 
+use App\Models\Organisation;
 use App\Models\OrganisationInvite;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -17,7 +18,7 @@ class PendingOrganisationInvitesWidget extends TableWidget
     {
         return $table
             ->query(function (): Builder {
-                /** @var \App\Models\Organisation $tenant */
+                /** @var Organisation $tenant */
                 $tenant = Filament::getTenant();
 
                 return OrganisationInvite::query()->where('organisation_id', $tenant->id);

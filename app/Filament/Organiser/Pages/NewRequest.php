@@ -9,6 +9,7 @@ use App\Models\Users\OrganiserUser;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Pages\PageConfiguration;
 use Filament\Panel;
 use Illuminate\Support\Facades\Route;
 use Livewire\Attributes\Locked;
@@ -31,7 +32,7 @@ class NewRequest extends Page
     protected string $view = 'filament.organiser.pages.new-request';
 
     // allow openform to do subrouting
-    public static function routes(Panel $panel): void
+    public static function routes(Panel $panel, ?PageConfiguration $configuration = null): void
     {
         Route::get(static::getRoutePath($panel), static::class)
             ->middleware(static::getRouteMiddleware($panel))

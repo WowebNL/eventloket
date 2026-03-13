@@ -82,7 +82,7 @@ test('user with existing organisations cannot create a personal organisation', f
     try {
         $livewire->callAction('noOrganisation');
         $actionExecuted = true;
-    } catch (\Exception $e) {
+    } catch (Exception $e) {
         $actionExecuted = false;
     }
 

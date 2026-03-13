@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Policies\AdvisoryPolicy;
+use App\Policies\MunicipalityPolicy;
 use App\Policies\ZaakPolicy;
 use App\Settings\OrganiserPanelSettings;
 use App\Settings\WelcomeSettings;
@@ -94,13 +95,13 @@ test('reviewer cannot access admin settings', function () {
 test('admin can edit municipalities', function () {
     $this->actingAs($this->admin);
 
-    $this->assertTrue(app()->make(\App\Policies\MunicipalityPolicy::class)->update($this->admin, $this->municipality1));
+    $this->assertTrue(app()->make(MunicipalityPolicy::class)->update($this->admin, $this->municipality1));
 });
 
 test('municipality admin cannot edit municipalities', function () {
     $this->actingAs($this->municipalityAdmin);
 
-    $this->assertFalse(app()->make(\App\Policies\MunicipalityPolicy::class)->update($this->municipalityAdmin, $this->municipality1));
+    $this->assertFalse(app()->make(MunicipalityPolicy::class)->update($this->municipalityAdmin, $this->municipality1));
 });
 
 test('admin can edit any advisory', function () {

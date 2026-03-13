@@ -1,9 +1,15 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\Filament\AdminPanelProvider;
+use App\Providers\Filament\AdvisorPanelProvider;
+use App\Providers\Filament\MunicipalityPanelProvider;
+use App\Providers\Filament\OrganiserPanelProvider;
+
 return [
-    App\Providers\AppServiceProvider::class,
-    App\Providers\Filament\AdminPanelProvider::class,
-    App\Providers\Filament\AdvisorPanelProvider::class,
-    App\Providers\Filament\MunicipalityPanelProvider::class,
-    App\Providers\Filament\OrganiserPanelProvider::class,
+    AppServiceProvider::class,
+    AdminPanelProvider::class,
+    AdvisorPanelProvider::class,
+    MunicipalityPanelProvider::class,
+    OrganiserPanelProvider::class,
 ];

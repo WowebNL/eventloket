@@ -5,6 +5,7 @@ namespace App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserTh
 use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\Resources\OrganiserThreads\OrganiserThreadResource;
 use App\Models\Message;
+use App\Models\Thread;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateOrganiserThread extends CreateRecord
@@ -23,7 +24,7 @@ class CreateOrganiserThread extends CreateRecord
     {
         $formState = $this->form->getState();
 
-        /** @var \App\Models\Thread $thread */
+        /** @var Thread $thread */
         $thread = $this->record;
 
         if ($formState['body'] != '<p></p>' && $formState['body'] != null) {

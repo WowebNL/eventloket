@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\AdvisoryInvite;
 use App\Models\User;
 use App\Models\Users\AdminUser;
+use App\Models\Users\MunicipalityUser;
 
 class AdvisoryInvitePolicy
 {
@@ -52,7 +53,7 @@ class AdvisoryInvitePolicy
 
         if (in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin])) {
             // Check if the user has access to one of the municipalities of the advisory
-            /** @var \App\Models\Users\MunicipalityUser $user */
+            /** @var MunicipalityUser $user */
             return $user->municipalities->pluck('id')
                 ->intersect($advisoryInvite->advisory->municipalities->pluck('id'))
                 ->isNotEmpty();

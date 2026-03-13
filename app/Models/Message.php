@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Observers\MessageObserver;
 use App\ValueObjects\MessageDocument;
+use Database\Factories\MessageFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\AsCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +21,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 #[ObservedBy(MessageObserver::class)]
 class Message extends Model
 {
-    /** @use HasFactory<\Database\Factories\MessageFactory> */
+    /** @use HasFactory<MessageFactory> */
     use HasFactory, LogsActivity;
 
     protected $fillable = [

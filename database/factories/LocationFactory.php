@@ -2,10 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Location;
+use App\Models\Municipality;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Location>
+ * @extends Factory<Location>
  */
 class LocationFactory extends Factory
 {
@@ -17,7 +19,7 @@ class LocationFactory extends Factory
     public function definition(): array
     {
         return [
-            'municipality_id' => \App\Models\Municipality::factory(),
+            'municipality_id' => Municipality::factory(),
             'name' => fake()->company().' '.fake()->randomElement(['Hall', 'Center', 'Building', 'Complex']),
             'postal_code' => fake()->postcode(),
             'house_number' => (string) fake()->numberBetween(1, 999),

@@ -2,11 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\AdminInvite;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\AdminInvite>
+ * @extends Factory<AdminInvite>
  */
 class AdminInviteFactory extends Factory
 {

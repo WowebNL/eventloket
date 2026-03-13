@@ -4,10 +4,11 @@ namespace Database\Factories;
 
 use App\Enums\MunicipalityVariableType;
 use App\Models\Municipality;
+use App\Models\MunicipalityVariable;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\MunicipalityVariable>
+ * @extends Factory<MunicipalityVariable>
  */
 class MunicipalityVariableFactory extends Factory
 {

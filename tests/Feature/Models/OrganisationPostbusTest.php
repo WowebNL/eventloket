@@ -1,11 +1,12 @@
 <?php
 
+use App\Enums\OrganisationType;
 use App\Models\Organisation;
 use App\ValueObjects\PostbusAddress;
 
 test('PostbusAddressCast persists and retrieves postbus address', function () {
     $organisation = Organisation::factory()->postbus('321', '2222BB', 'Eindhoven')->create([
-        'type' => \App\Enums\OrganisationType::Business,
+        'type' => OrganisationType::Business,
     ]);
 
     $fresh = $organisation->fresh();

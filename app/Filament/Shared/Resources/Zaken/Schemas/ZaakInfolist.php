@@ -344,7 +344,7 @@ class ZaakInfolist
 
                                                     if ($oldStatus != $record->reference_data->status_name) {
                                                         foreach ($record->organisation->users as $user) {
-                                                            /** @var \App\Models\Users\OrganiserUser $user */
+                                                            /** @var OrganiserUser $user */
                                                             $user->notify(new ZaakStatusChanged($record, $oldStatus));
                                                         }
                                                     }

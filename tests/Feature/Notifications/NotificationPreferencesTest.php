@@ -2,6 +2,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Filament\Shared\Pages\EditProfile;
 use App\Models\Advisory;
 use App\Models\NotificationPreference;
 use App\Models\Organisation;
@@ -142,7 +143,7 @@ describe('Notification Preferences Management', function () {
         Filament::setCurrentPanel(Filament::getPanel('advisor'));
 
         // Test updating via Livewire component
-        $this->livewire(\App\Filament\Shared\Pages\EditProfile::class)
+        $this->livewire(EditProfile::class)
             ->fillForm([
                 'first_name' => 'John',
                 'last_name' => 'Doe',
@@ -177,7 +178,7 @@ describe('Notification Preferences Management', function () {
         Filament::setCurrentPanel(Filament::getPanel('organiser'));
         Filament::setTenant($organisation);
 
-        $this->livewire(\App\Filament\Organiser\Pages\EditProfile::class)
+        $this->livewire(App\Filament\Organiser\Pages\EditProfile::class)
             ->fillForm([
                 'first_name' => 'Jane',
                 'last_name' => 'Doe',
@@ -231,7 +232,7 @@ describe('Notification Preferences Management', function () {
 
         Filament::setCurrentPanel(Filament::getPanel('advisor'));
 
-        $this->livewire(\App\Filament\Shared\Pages\EditProfile::class)
+        $this->livewire(EditProfile::class)
             ->assertFormSet([
                 'App\Notifications\AdviceReminder_channels' => ['mail'],
                 'App\Notifications\NewAdviceThreadMessage_channels' => ['database'],

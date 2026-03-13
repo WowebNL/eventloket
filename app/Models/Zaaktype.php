@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Woweb\Openzaak\Openzaak;
 
@@ -38,13 +39,13 @@ class Zaaktype extends Model
         return $this->hasMany(Zaak::class);
     }
 
-    /** @return BelongsTo<\App\Models\Municipality, $this> */
+    /** @return BelongsTo<Municipality, $this> */
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
     }
 
-    /** @return Attribute<\Illuminate\Support\Collection<\App\ValueObjects\ZGW\InformatieobjectType>|null, void> */
+    /** @return Attribute<Collection<InformatieobjectType>|null, void> */
     protected function documentTypes(): Attribute
     {
         // TODO: user need to see type in zaakdocumentstable and besluiteninfolist, only need type name there
@@ -53,7 +54,7 @@ class Zaaktype extends Model
         );
     }
 
-    /** @return Attribute<\Illuminate\Support\Collection<array>|null, void> */
+    /** @return Attribute<Collection<array>|null, void> */
     protected function intrekkenResultaatType(): Attribute
     {
         return Attribute::make(
