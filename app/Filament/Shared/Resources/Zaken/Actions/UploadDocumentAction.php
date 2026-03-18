@@ -42,7 +42,7 @@ class UploadDocumentAction
 
     public static function schema(Zaak $zaak): array
     {
-        return [
+        $fields = [
             TextInput::make('titel')
                 ->label(__('Titel'))
                 ->required()
@@ -51,7 +51,12 @@ class UploadDocumentAction
                 ->label(__('Type document'))
                 ->options(fn () => $zaak->zaaktype->document_types->pluck('omschrijving', 'url')->toArray())
                 ->required(),
-            Select::make('vertrouwelijkheidaanduiding')
+        ];
+
+        // Only Reviewer roles get to choose confidentiality level
+        $userRole = auth()->user()->role;
+        if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Admin])) {
+            $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
                 ->options(function () {
                     $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
@@ -65,26 +70,37 @@ class UploadDocumentAction
 
                     return $options;
                 })
-                ->required(),
-            FileUpload::make('file')
-                ->label(__('Bestand'))
-                ->required()
-                ->maxSize(20480) // 20MB
-                ->mimeTypeMap(config('app.document_mime_type_mappings'))
-                ->rule(DocumentUploadType::fileUploadRule())
-                ->directory('documents')
-                ->visibility('private')
-                ->storeFileNamesIn('file_name'),
-        ];
+                ->required();
+        }
+
+        $fields[] = FileUpload::make('file')
+            ->label(__('Bestand'))
+            ->required()
+            ->maxSize(20480) // 20MB
+            ->mimeTypeMap(config('app.document_mime_type_mappings'))
+            ->rule(DocumentUploadType::fileUploadRule())
+            ->directory('documents')
+            ->visibility('private')
+            ->storeFileNamesIn('file_name');
+
+        return $fields;
     }
 
     public static function uploadDocument(array $data, Zaak $zaak): Informatieobject
     {
         $oz = new Openzaak;
+
+        // Use manual selection if provided, otherwise set automatically based on user role
+        $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding'] ?? match (auth()->user()->role) {
+            Role::Organiser => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            Role::Advisor => DocumentVertrouwelijkheden::Vertrouwelijk->value,
+            default => DocumentVertrouwelijkheden::Vertrouwelijk->value,
+        };
+
         $informatieobject = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
-            'vertrouwelijkheidaanduiding' => $data['vertrouwelijkheidaanduiding'],
+            'vertrouwelijkheidaanduiding' => $vertrouwelijkheidaanduiding,
             'titel' => $data['titel'],
             'auteur' => auth()->user()->name,
             'taal' => 'dut',
