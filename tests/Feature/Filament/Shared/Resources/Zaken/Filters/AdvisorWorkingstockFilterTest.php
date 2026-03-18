@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\AdviceStatus;
 use App\Enums\AdvisoryRole;
 use App\Enums\Role;
+use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Models\Advisory;
 use App\Models\Municipality;
@@ -257,13 +259,15 @@ test('filter with all option shows all zaken', function () {
         'advisory_id' => $this->advisory->id,
         'type' => \App\Enums\ThreadType::Advice,
         'title' => 'Thread 1',
+        'advice_status' => AdviceStatus::Asked,
         'created_by' => $this->advisor->id,
     ]);
 
     $thread2 = AdviceThread::forceCreate([
         'zaak_id' => $zaak2->id,
         'advisory_id' => $this->advisory->id,
-        'type' => \App\Enums\ThreadType::Advice,
+        'type' => ThreadType::Advice,
+        'advice_status' => AdviceStatus::Asked,
         'title' => 'Thread 2',
         'created_by' => $this->advisor->id,
     ]);

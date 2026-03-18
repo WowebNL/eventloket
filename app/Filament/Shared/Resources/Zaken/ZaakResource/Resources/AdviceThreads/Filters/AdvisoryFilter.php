@@ -10,7 +10,6 @@ class AdvisoryFilter
     {
         return SelectFilter::make('advisory_id')
             ->label(__('resources/advice_thread.columns.advisory.label'))
-            ->relationship('advisory', 'name')
             ->multiple();
     }
 }
