@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Enums\AdviceStatus;
 use App\Filament\Advisor\Pages\Dashboard;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
 use App\Filament\Shared\Pages\EditProfile;
@@ -84,7 +85,17 @@ class AdvisorPanelProvider extends PanelProvider
                 NavigationItem::make('newzaken')
                     ->label(__('resources/zaak.filters.workingstock.options.new'))
                     ->group(__('resources/zaak.navigation_groups.with_advice_thread'))
-                    ->badge(fn (): int => Zaak::whereHas('adviceThreads', fn (Builder $query) => $query->whereDoesntHave('assignedUsers'))->count())
+                    ->badge(function () {
+                        /** @var Advisory $tenant */
+                        $tenant = Filament::getTenant();
+
+                        return Zaak::whereHas(
+                            'adviceThreads',
+                            fn (Builder $query) => $query->where('advisory_id', $tenant->id)
+                                ->whereDoesntHave('assignedUsers')
+                                ->where('advice_status', '!=', AdviceStatus::Concept)
+                        )->count();
+                    })
                     ->icon(Heroicon::InboxArrowDown)
                     ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'new']]]))
                     ->isActiveWhen(fn (NavigationBuilder $builder): bool => original_request()->routeIs(ListZaken::getRouteName()) && original_request()->input('filters.workingstock-advisor.workingstock-adv') == 'new'),

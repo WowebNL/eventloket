@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Filters;
 
+use App\Enums\AdviceStatus;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\ToggleButtons;
 use Filament\Tables\Filters\Filter;
@@ -28,7 +29,7 @@ class AdvisorWorkingstockFilter
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'new',
                         fn (Builder $query, $date): Builder => $query
-                            ->whereHas('adviceThreads', fn (Builder $query) => $query->whereDoesntHave('assignedUsers')),
+                            ->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', Filament::getTenant()->id)->whereDoesntHave('assignedUsers')->where('advice_status', '!=', AdviceStatus::Concept)), // @phpstan-ignore-line
                     )
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'me',
@@ -38,7 +39,7 @@ class AdvisorWorkingstockFilter
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'all',
                         fn (Builder $query, $date): Builder => $query
-                            ->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', Filament::getTenant()->id)), // @phpstan-ignore-line
+                            ->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', Filament::getTenant()->id)->where('advice_status', '!=', AdviceStatus::Concept)), // @phpstan-ignore-line
                     );
             });
     }
