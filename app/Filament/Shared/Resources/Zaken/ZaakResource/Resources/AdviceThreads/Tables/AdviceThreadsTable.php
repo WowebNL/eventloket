@@ -50,7 +50,13 @@ class AdviceThreadsTable
             ->defaultSort('created_at', direction: 'desc')
             ->filters([
                 AdviceStatusFilter::make(),
-                AdvisoryFilter::make(),
+                AdvisoryFilter::make()
+                    ->options(fn (Table $table) => $table->getQuery()
+                        ->join('advisories', 'advisories.id', '=', 'threads.advisory_id')
+                        ->distinct()
+                        ->pluck('advisories.name', 'advisories.id')
+                        ->toArray()
+                    ),
             ])
             ->recordActions([
                 RequestAdviceAction::make(),

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Advisor\Resources\Zaken;
 
+use App\Enums\AdviceStatus;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
 use App\Filament\Shared\Resources\Zaken\ZaakResource as BaseZaakResource;
 use App\Models\Advisory;
@@ -23,7 +24,7 @@ class ZaakResource extends BaseZaakResource
             return $query;
         }
 
-        return $query->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', $tenant->id));
+        return $query->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', $tenant->id)->where('advice_status', '!=', AdviceStatus::Concept));
     }
 
     public static function getPages(): array
