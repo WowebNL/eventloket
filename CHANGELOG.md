@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.2 - 2026-03-18
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix: concept status advisory questions are now not shown to the advisory by @Michel-Verhoeven in https://github.com/WowebNL/eventloket/pull/320
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.4.1...v0.4.2
+
 ## v0.4.1 - 2026-03-18
 
 ### What's Changed
@@ -115,6 +125,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
