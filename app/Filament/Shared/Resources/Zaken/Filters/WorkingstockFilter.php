@@ -26,11 +26,11 @@ class WorkingstockFilter
                 return $query
                     ->when(
                         $data['workingstock'] === 'new',
-                        fn (Builder $query, $date): Builder => $query->whereNull(['handled_status_set_by_user_id', 'reference_data->resultaat']),
+                        fn (Builder $query, $date): Builder => $query->whereNull(['handled_status_set_by_user_id', 'reference_data->resultaat', 'imported_data']),
                     )
                     ->when(
                         $data['workingstock'] === 'me',
-                        fn (Builder $query, $date): Builder => $query->where('handled_status_set_by_user_id', auth()->id())->whereNull('reference_data->resultaat'),
+                        fn (Builder $query, $date): Builder => $query->where('handled_status_set_by_user_id', auth()->id())->whereNull(['reference_data->resultaat', 'imported_data']),
                     );
             });
     }
