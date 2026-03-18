@@ -93,4 +93,23 @@ return [
         'with_advice_thread' => 'Zaken met adviesvraag',
         'all' => 'Eventloket zaken',
     ],
+    'actions' => [
+        'delete_zaak' => [
+            'label' => 'Verwijder zaak',
+            'confirmation' => [
+                'title' => 'Weet je zeker dat je deze zaak wilt verwijderen?',
+                'description' => 'De zaak wordt soft-deleted en is alleen nog zichtbaar voor platformbeheerders. Je kunt de zaak later herstellen via het verwijderd filter. LET OP: Als je de zaak ook in OpenZaak verwijdert, kan deze NIET meer hersteld worden!',
+            ],
+            'checkbox' => [
+                'delete_in_openzaak' => 'Ook verwijderen in OpenZaak (PERMANENTE ACTIE - kan niet ongedaan gemaakt worden)',
+            ],
+            'success' => 'Zaak succesvol verwijderd',
+            'unauthorized' => 'U bent niet geautoriseerd om deze zaak te verwijderen.',
+            'error_open_zaak' => 'Zaak is soft-deleted in Eventloket, maar kon niet verwijderd worden in OpenZaak.',
+        ],
+        'restore_zaak' => [
+            'label' => 'Herstel zaak',
+            'success' => 'Zaak succesvol hersteld',
+        ],
+    ],
 ];
