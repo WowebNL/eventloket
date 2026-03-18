@@ -29,7 +29,7 @@ class AdvisorWorkingstockFilter
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'new',
                         fn (Builder $query, $date): Builder => $query
-                            ->whereHas('adviceThreads', fn (Builder $query) => $query->whereDoesntHave('assignedUsers')),
+                            ->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', Filament::getTenant()->id)->whereDoesntHave('assignedUsers')->where('advice_status', '!=', AdviceStatus::Concept)), // @phpstan-ignore-line
                     )
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'me',

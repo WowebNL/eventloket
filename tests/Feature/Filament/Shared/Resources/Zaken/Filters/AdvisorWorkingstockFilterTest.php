@@ -79,8 +79,9 @@ test('filter has correct options', function () {
         ->and($options['all'])->toBe(__('resources/zaak.filters.workingstock.options.all'));
 });
 
-test('filter with new option shows zaken with unassigned advice threads', function () {
+test('filter with new option shows zaken with unassigned advice threads for the current tenant', function () {
     $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
 
     // Create zaak with unassigned advice thread
     $zaakWithUnassigned = Zaak::factory()->create([
@@ -100,6 +101,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
         'zaak_id' => $zaakWithUnassigned->id,
         'advisory_id' => $this->advisory->id,
         'type' => ThreadType::Advice,
+        'advice_status' => AdviceStatus::Asked,
         'title' => 'Test Advice Thread',
         'created_by' => $this->advisor->id,
     ]);
@@ -122,6 +124,7 @@ test('filter with new option shows zaken with unassigned advice threads', functi
         'zaak_id' => $zaakWithAssigned->id,
         'advisory_id' => $this->advisory->id,
         'type' => ThreadType::Advice,
+        'advice_status' => AdviceStatus::Asked,
         'title' => 'Test Advice Thread Assigned',
         'created_by' => $this->advisor->id,
     ]);
@@ -258,8 +261,8 @@ test('filter with all option shows all zaken', function () {
         'zaak_id' => $zaak1->id,
         'advisory_id' => $this->advisory->id,
         'type' => ThreadType::Advice,
-        'title' => 'Thread 1',
         'advice_status' => AdviceStatus::Asked,
+        'title' => 'Thread 1',
         'created_by' => $this->advisor->id,
     ]);
 
@@ -288,6 +291,7 @@ test('filter with all option shows all zaken', function () {
 
 test('filter query function works correctly with builder', function () {
     $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
 
     $zaak = Zaak::factory()->create([
         'organisation_id' => $this->organisation->id,
@@ -349,6 +353,7 @@ test('filter handles invalid workingstock value gracefully', function () {
 
 test('filter works with multiple advice threads on same zaak', function () {
     $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
 
     $zaak = Zaak::factory()->create([
         'organisation_id' => $this->organisation->id,
