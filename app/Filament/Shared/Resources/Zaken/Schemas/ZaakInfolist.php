@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Schemas;
 
+use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
@@ -427,7 +428,7 @@ class ZaakInfolist
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()
-                                            ->whereHas('thread', fn ($query) => $query->advice()->where('zaak_id', $record->id))
+                                            ->whereHas('thread', fn ($query) => $query->advice()->where('zaak_id', $record->id)->where('advice_status', '!=', AdviceStatus::Concept))
                                             ->count();
 
                                         return $count > 0 ? $count : null;
