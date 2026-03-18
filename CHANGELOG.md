@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.1 - 2026-03-18
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix: dont show imported zaken in municipality workingstock by @github-actions[bot] in https://github.com/WowebNL/eventloket/pull/317
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.4.0...v0.4.1
+
 ## v0.4.0 - 2026-03-11
 
 ### What's Changed
@@ -105,6 +115,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
