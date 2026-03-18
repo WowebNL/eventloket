@@ -80,7 +80,13 @@ class AdviceThreadInboxWidget extends TableWidget
             ->defaultSort('unread_messages_count', 'desc')
             ->filters([
                 AdviceStatusFilter::make(),
-                AdvisoryFilter::make(),
+                AdvisoryFilter::make()
+                    ->options(fn (Table $table) => $table->getQuery()
+                        ->join('advisories', 'advisories.id', '=', 'threads.advisory_id')
+                        ->distinct()
+                        ->pluck('advisories.name', 'advisories.id')
+                        ->toArray()
+                    ),
                 AssignedFilter::make(),
                 UnreadMessagesFilter::make(),
             ])

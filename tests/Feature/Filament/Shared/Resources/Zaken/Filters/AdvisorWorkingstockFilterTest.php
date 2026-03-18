@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AdviceStatus;
 use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Enums\ThreadType;
@@ -258,6 +259,7 @@ test('filter with all option shows all zaken', function () {
         'advisory_id' => $this->advisory->id,
         'type' => ThreadType::Advice,
         'title' => 'Thread 1',
+        'advice_status' => AdviceStatus::Asked,
         'created_by' => $this->advisor->id,
     ]);
 
@@ -265,6 +267,7 @@ test('filter with all option shows all zaken', function () {
         'zaak_id' => $zaak2->id,
         'advisory_id' => $this->advisory->id,
         'type' => ThreadType::Advice,
+        'advice_status' => AdviceStatus::Asked,
         'title' => 'Thread 2',
         'created_by' => $this->advisor->id,
     ]);
