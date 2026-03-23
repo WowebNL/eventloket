@@ -14,7 +14,7 @@
         "guava/calendar": "^2.0",
         "laravel/framework": "^12.0",
         "laravel/passport": "^13.0",
-        "laravel/tinker": "^2.10.1",
+        "laravel/tinker": "^3.0.0",
         "phiki/phiki": "^2.0",
         "spatie/laravel-activitylog": "^4.10",
         "webbingbrasil/filament-maps": "4.x-dev",
