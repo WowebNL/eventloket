@@ -21,6 +21,7 @@ class ZaaktypeFactory extends Factory
             'name' => fake()->sentence,
             'zgw_zaaktype_url' => fake()->url,
             'is_active' => fake()->boolean,
+            'triggers_route_check' => false,
         ];
     }
 }

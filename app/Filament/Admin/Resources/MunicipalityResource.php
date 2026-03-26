@@ -63,6 +63,19 @@ class MunicipalityResource extends Resource
                         }
                     }))
                     ->preload(),
+                Select::make('doorkomst_zaaktype_id')
+                    ->label(__('admin/resources/municipality.columns.doorkomst_zaaktype_id.label'))
+                    ->helperText(__('admin/resources/municipality.columns.doorkomst_zaaktype_id.helper_text'))
+                    ->relationship(name: 'doorkomstZaaktype', titleAttribute: 'name', modifyQueryUsing: fn ($query) => $query->where('is_active', true)->where(function ($q) use ($schema) {
+                        if ($schema->getRecord()) {
+                            /** @var Municipality $record */
+                            $record = $schema->getRecord();
+                            $q->where('municipality_id', $record->id);
+                        }
+                    }))
+                    ->searchable()
+                    ->nullable()
+                    ->preload(),
             ]);
     }
 
