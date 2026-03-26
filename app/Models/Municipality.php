@@ -29,6 +29,7 @@ class Municipality extends Model implements HasGeometry
         'brk_identification',
         'brk_uuid',
         'geometry',
+        'use_new_report_questions',
     ];
 
     protected $hidden = [
@@ -44,6 +45,7 @@ class Municipality extends Model implements HasGeometry
     {
         return [
             'geometry' => AsGeoJson::class,
+            'use_new_report_questions' => 'boolean',
         ];
     }
 
@@ -93,9 +95,15 @@ class Municipality extends Model implements HasGeometry
     }
 
     /** @return HasMany<MunicipalityVariable, $this> */
-    public function reportQuestions(): HasMany
+    public function oldReportQuestions(): HasMany
     {
         return $this->variables()->where('type', MunicipalityVariableType::ReportQuestion);
+    }
+
+    /** @return HasMany<ReportQuestion, $this> */
+    public function reportQuestions(): HasMany
+    {
+        return $this->hasMany(ReportQuestion::class);
     }
 
     public function users(): BelongsToMany
