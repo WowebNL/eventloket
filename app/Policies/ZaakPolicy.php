@@ -89,7 +89,7 @@ class ZaakPolicy
      */
     public function delete(User $user, Zaak $zaak): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 
     /**
@@ -97,7 +97,7 @@ class ZaakPolicy
      */
     public function restore(User $user, Zaak $zaak): bool
     {
-        return false;
+        return $user->role === Role::Admin;
     }
 
     /**
@@ -106,13 +106,5 @@ class ZaakPolicy
     public function forceDelete(User $user, Zaak $zaak): bool
     {
         return false;
-    }
-
-    /**
-     * Determine whether the user can delete an imported zaak.
-     */
-    public function deleteImported(User $user, Zaak $zaak): bool
-    {
-        return $zaak->is_imported && $user->role === Role::Admin;
     }
 }

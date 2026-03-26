@@ -7,11 +7,13 @@ use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use App\Models\Advisory;
 use App\Models\Zaak;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
@@ -138,6 +140,8 @@ class ZakenTable
             ])
             ->reorderableColumns()
             ->filters([
+                TrashedFilter::make()
+                    ->visible(fn () => auth()->user()->role === Role::Admin),
                 WorkingstockFilter::make()
                     ->columnSpan(2)
                     ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])),
@@ -176,6 +180,11 @@ class ZakenTable
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
+                RestoreAction::make()
+                    ->visible(fn (Zaak $record) => $record->trashed() && auth()->user()->role === Role::Admin && $record->zgw_zaak_url !== null)
+                    ->after(function (Zaak $record) {
+                        $record->clearZgwCache();
+                    }),
                 ViewAction::make(),
             ])
             ->toolbarActions([
