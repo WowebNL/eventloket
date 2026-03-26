@@ -6,6 +6,7 @@ use App\Events\OpenNotification\CreateZaakNotificationReceived;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
+use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -35,6 +36,8 @@ class ProcessCreateZaak implements ShouldQueue
             new UpdateInitiatorZGW($event->notification->hoofdObject),
             new AddGeometryZGW($event->notification->hoofdObject),
             new CreateZaak($event->notification->hoofdObject),
+            new CreateDoorkomstZaken($event->notification->hoofdObject),
+
         ])->dispatch();
     }
 }

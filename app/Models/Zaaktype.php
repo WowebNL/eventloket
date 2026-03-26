@@ -25,12 +25,14 @@ class Zaaktype extends Model
         'zgw_zaaktype_url',
         'is_active',
         'hidden_resultaat_types',
+        'triggers_route_check',
     ];
 
     protected function casts(): array
     {
         return [
             'hidden_resultaat_types' => 'array',
+            'triggers_route_check' => 'boolean',
         ];
     }
 

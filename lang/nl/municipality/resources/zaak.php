@@ -32,6 +32,12 @@ return [
         'uiterlijkeEinddatumAfdoening' => [
             'label' => 'Uiterlijke einddatum afdoening',
         ],
+        'resultaat' => [
+            'label' => 'Resultaat',
+        ],
+        'besluit' => [
+            'label' => 'Besluit',
+        ],
     ],
     'header_actions' => [
         'finish_zaak' => [
@@ -150,6 +156,9 @@ return [
             ],
             'log' => [
                 'label' => 'Log',
+            ],
+            'related_cases' => [
+                'label' => 'Gerelateerde zaken',
             ],
         ],
     ],

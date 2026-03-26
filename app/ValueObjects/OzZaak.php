@@ -32,6 +32,9 @@ class OzZaak implements Arrayable
 
     public readonly ?Rol $initiator;
 
+    /* @var array[] $deelzaken */
+    public readonly array $deelzaken;
+
     public ?array $zaakAddresses;
 
     public readonly ?array $resultaat;
@@ -82,6 +85,8 @@ class OzZaak implements Arrayable
         $this->eigenschappen_key_value = $this->eigenschappen
             ? Arr::mapWithKeys($this->eigenschappen, fn ($item) => [$item->naam => $item->waarde])
             : [];
+
+        $this->deelzaken = $this->_expand['deelzaken'] ?? [];
 
         $this->resultaat = Arr::has($this->_expand, 'resultaat')
             ? Arr::get($this->_expand, 'resultaat')

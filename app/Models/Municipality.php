@@ -15,6 +15,7 @@ use Database\Factories\MunicipalityFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -106,6 +107,11 @@ class Municipality extends Model implements HasGeometry
     public function zaaktypen(): HasMany
     {
         return $this->hasMany(Zaaktype::class);
+    }
+
+    public function doorkomstZaaktype(): BelongsTo
+    {
+        return $this->belongsTo(Zaaktype::class, 'doorkomst_zaaktype_id');
     }
 
     public function advisories()
