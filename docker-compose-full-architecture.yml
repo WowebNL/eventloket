@@ -296,7 +296,7 @@ services:
             - SECRET_KEY=very-secret-key-change-in-production-openforms
             - ALLOWED_HOSTS=localhost,open-forms,127.0.0.1,host.docker.internal
             - CORS_ALLOW_ALL_ORIGINS=True
-            - CSRF_TRUSTED_ORIGINS=http://localhost,http://localhost:8003
+            - CSRF_TRUSTED_ORIGINS=http://localhost,http://localhost:8003,http://localhost:8009
             - CELERY_BROKER_URL=redis://redis:6379/3
             - CELERY_RESULT_BACKEND=redis://redis:6379/3
             - IS_HTTPS=no

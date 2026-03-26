@@ -22,17 +22,13 @@ class ReportQuestionController extends Controller
         }
 
         // Get active questions ordered by order field
+        // Return all configured municipality questions ordered by order.
         $questions = $municipality->reportQuestions()
-            ->where('is_active', true)
             ->orderBy('order')
             ->get()
-            ->map(function (ReportQuestion $question) {
-                return [
-                    'question' => $question->placeholder_value ? str_replace('XX', $question->placeholder_value, $question->question) : $question->question,
-                    'order' => $question->order,
-                ];
-            })
-            ->pluck('question', 'order');
+            ->mapWithKeys(fn (ReportQuestion $question) => [
+                $question->order => $question->is_active ? $question->question : null,
+            ]);
 
         return response()->json([
             'data' => $questions,

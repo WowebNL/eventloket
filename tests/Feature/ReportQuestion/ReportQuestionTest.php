@@ -11,12 +11,14 @@ use Laravel\Passport\Client;
 
 test('report questions are automatically seeded when municipality is created', function () {
     $municipality = Municipality::factory()->create();
+    $defaultQuestions = config('report-questions.defaults', []);
 
-    expect($municipality->reportQuestions()->count())->toBe(10);
+    expect($municipality->reportQuestions()->count())->toBe(count($defaultQuestions));
     $questions = $municipality->reportQuestions()->orderBy('order')->get();
     expect($questions->first()->order)->toBe(1);
-    expect($questions->last()->order)->toBe(10);
+    expect($questions->last()->order)->toBe(array_key_last($defaultQuestions));
     expect($questions->every(fn ($q) => $q->is_active))->toBeTrue();
+    expect($questions->pluck('question', 'order')->all())->toBe($defaultQuestions);
 });
 
 test('report questions API returns questions for municipalities with new system', function () {
@@ -60,10 +62,11 @@ test('report questions API returns questions for municipalities with new system'
 
     $response->assertStatus(200);
     $data = $response->json('data');
-    expect($data)->toHaveCount(2);
-    expect($data)->toHaveKeys(['1', '2']);
+    expect($data)->toHaveCount(3);
+    expect($data)->toHaveKeys(['1', '2', '3']);
     expect($data['1'])->toBe('Question 1?');
     expect($data['2'])->toBe('Question 2?');
+    expect($data['3'])->toBeNull();
 });
 
 test('report questions API returns empty for municipalities with old system', function () {

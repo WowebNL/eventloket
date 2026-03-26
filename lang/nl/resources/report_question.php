@@ -18,10 +18,6 @@ return [
             'label' => 'Actief',
         ],
 
-        'placeholder_value' => [
-            'label' => 'Placeholder waarde',
-        ],
-
         'created_at' => [
             'label' => 'Aangemaakt op',
         ],
@@ -44,17 +40,12 @@ return [
 
         'question' => [
             'label' => 'Vraag',
-            'helper_text' => 'De meldingvraag tekst. Gebruikt XX als placeholder voor dynamische waardes.',
+            'helper_text' => 'De meldingvraag tekst zoals deze in de API en beheerschermen gebruikt wordt.',
         ],
 
         'is_active' => [
             'label' => 'Actief',
-            'helper_text' => 'Als uitgeschakeld wordt deze vraag niet getoond in de API',
-        ],
-
-        'placeholder_value' => [
-            'label' => 'Placeholder waarde',
-            'helper_text' => 'Waarde voor XX placeholder in de vraag (optioneel)',
+            'helper_text' => 'Als uitgeschakeld blijft de key beschikbaar in de API, maar met een lege waarde.',
         ],
     ],
 ];

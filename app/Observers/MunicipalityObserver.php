@@ -26,6 +26,7 @@ class MunicipalityObserver
         }
 
         // Seed 10 default ReportQuestions
+        // Seed default ReportQuestions
         $defaultQuestions = ReportQuestion::defaultQuestions();
 
         foreach ($defaultQuestions as $order => $question) {

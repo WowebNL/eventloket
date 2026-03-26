@@ -68,7 +68,7 @@ class MunicipalityResource extends Resource
                     ->preload(),
                 Toggle::make('use_new_report_questions')
                     ->label('Gebruik nieuwe meldingvragen systeem')
-                    ->helperText('Schakel dit in om over te stappen naar het nieuwe meldingvragen systeem. Let op: na het inschakelen moeten de 10 standaard vragen via de seeder worden aangemaakt.')
+                    ->helperText('Schakel dit in om over te stappen naar het nieuwe meldingvragen systeem.')
                     ->default(false)
                     ->columnSpanFull(),
             ]);

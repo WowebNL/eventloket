@@ -26,11 +26,6 @@ class ReportQuestionsTable
                 IconColumn::make('is_active')
                     ->label(__('resources/report_question.columns.is_active.label'))
                     ->boolean(),
-                TextColumn::make('placeholder_value')
-                    ->label(__('resources/report_question.columns.placeholder_value.label'))
-                    ->searchable()
-                    ->default('-')
-                    ->toggleable(),
                 TextColumn::make('updated_at')
                     ->label(__('resources/report_question.columns.updated_at.label'))
                     ->dateTime()

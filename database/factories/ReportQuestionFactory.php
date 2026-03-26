@@ -23,7 +23,6 @@ class ReportQuestionFactory extends Factory
             'order' => fake()->numberBetween(1, 10),
             'question' => fake()->sentence().'?',
             'is_active' => true,
-            'placeholder_value' => null,
         ];
     }
 }

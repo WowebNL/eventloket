@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $defaultQuestions = ReportQuestion::defaultQuestions();
+        $defaultQuestions = config('report-questions.defaults', []);
 
         // Seed report questions for all existing municipalities
         Municipality::all()->each(function ($municipality) use ($defaultQuestions) {
