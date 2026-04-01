@@ -18,6 +18,7 @@ class OrganisationForm
                 TextInput::make('coc_number')
                     ->label(__('admin/resources/organisation.form.coc_number.label'))
                     ->unique()
+                    ->numeric()
                     ->validationMessages([
                         'unique' => __('admin/resources/organisation.form.coc_number.validation.unique'),
                     ])

@@ -24,6 +24,7 @@ trait HasOrganisationAddressForm
             TextInput::make('coc_number')
                 ->label(__('organiser/pages/tenancy/register.form.coc_number.label'))
                 ->unique()
+                ->numeric()
                 ->validationMessages([
                     'unique' => __('organiser/pages/tenancy/register.form.coc_number.validation.unique'),
                 ])
