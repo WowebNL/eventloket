@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.5.0 - 2026-04-01
+
+### What's Changed
+
+#### ✨ New feautures
+
+* Zaken can be soft deleted (#318) @LorensoD
+* Feat: auto creation of cases for route passing through municipalities (#329) @Michel-Verhoeven
+
+#### 🐛 Bug Fixes
+
+* Fix: Automatisch vertrouwelijkheid instellen bij document upload (#311) @LorensoD
+* Fix map widget bounds rendering in modals (#312) @LorensoD
+
+#### Other changes
+
+* Chore: added v0.5.0 release notes (#333) @Michel-Verhoeven
+* Added v0.4.3 release notes (#323) @Michel-Verhoeven
+* Bumped composer and npm deps (#328) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.4.3...v0.5.0
+
 ## v0.4.0 - 2026-03-11
 
 ### What's Changed
@@ -105,6 +127,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
