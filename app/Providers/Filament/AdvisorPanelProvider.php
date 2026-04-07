@@ -2,7 +2,6 @@
 
 namespace App\Providers\Filament;
 
-use App\Enums\AdviceStatus;
 use App\Filament\Advisor\Pages\Dashboard;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
 use App\Filament\Shared\Pages\EditProfile;
@@ -93,7 +92,7 @@ class AdvisorPanelProvider extends PanelProvider
                             'adviceThreads',
                             fn (Builder $query) => $query->where('advisory_id', $tenant->id)
                                 ->whereDoesntHave('assignedUsers')
-                                ->where('advice_status', '!=', AdviceStatus::Concept)
+                                ->active()
                         )->count();
                     })
                     ->icon(Heroicon::InboxArrowDown)
@@ -103,7 +102,10 @@ class AdvisorPanelProvider extends PanelProvider
                     ->label(__('resources/zaak.filters.workingstock.options.me'))
                     ->group(__('resources/zaak.plural_label'))
                     ->badge(function () {
-                        $zakenAssignedToUser = Zaak::whereHas('adviceThreads.assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->get();
+                        $zakenAssignedToUser = Zaak::whereHas(
+                            'adviceThreads',
+                            fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active()
+                        )->get();
 
                         return $zakenAssignedToUser->filter(fn ($zaak) => $zaak->statustype->isReceived() || $zaak->statustype->isInProgress())->count();
                     })
