@@ -16,6 +16,22 @@ enum AdviceStatus: string implements HasLabel
     case Rejected = 'rejected';
     case NoReaction = 'no_reaction';
 
+    /** @return self[] */
+    public static function activeStatuses(): array
+    {
+        return [
+            self::Asked,
+            self::InProgress,
+            self::AdvisoryReplied,
+            self::NeedsMoreInfo,
+        ];
+    }
+
+    public function isActive(): bool
+    {
+        return in_array($this, self::activeStatuses(), true);
+    }
+
     public function getLabel(): string
     {
         return __("enums/advice-status.{$this->value}.label");

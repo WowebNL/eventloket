@@ -9,6 +9,8 @@ use App\Models\Thread;
 use App\Models\Zaak;
 use App\Observers\AdviceThreadObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
@@ -39,5 +41,11 @@ class AdviceThread extends Thread
     public function advisory(): BelongsTo
     {
         return $this->belongsTo(Advisory::class);
+    }
+
+    #[Scope]
+    protected function active(Builder $query): void
+    {
+        $query->whereIn('advice_status', AdviceStatus::activeStatuses());
     }
 }
