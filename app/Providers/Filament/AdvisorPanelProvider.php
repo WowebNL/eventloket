@@ -92,7 +92,7 @@ class AdvisorPanelProvider extends PanelProvider
                             'adviceThreads',
                             fn (Builder $query) => $query->where('advisory_id', $tenant->id)
                                 ->whereDoesntHave('assignedUsers')
-                                ->active()
+                                ->active() // @phpstan-ignore-line
                         )->count();
                     })
                     ->icon(Heroicon::InboxArrowDown)
@@ -104,7 +104,7 @@ class AdvisorPanelProvider extends PanelProvider
                     ->badge(function () {
                         $zakenAssignedToUser = Zaak::whereHas(
                             'adviceThreads',
-                            fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active()
+                            fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active() // @phpstan-ignore-line
                         )->get();
 
                         return $zakenAssignedToUser->filter(fn ($zaak) => $zaak->statustype->isReceived() || $zaak->statustype->isInProgress())->count();

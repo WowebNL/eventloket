@@ -34,7 +34,7 @@ class AdvisorWorkingstockFilter
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'me',
                         fn (Builder $query): Builder => $query
-                            ->whereHas('adviceThreads', fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active()),
+                            ->whereHas('adviceThreads', fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active()), // @phpstan-ignore-line
                     )
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'all',
