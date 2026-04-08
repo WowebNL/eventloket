@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.5.1 - 2026-04-08
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix: Advisory workingstock should only contain advicetrheads in an active status (#337) @Michel-Verhoeven
+* Fix: Make coc_number input numeric (#332) @LorensoD
+* Fix: max 1000 characters for result / besluit toelichting (#339) @Michel-Verhoeven
+
+#### Other changes
+
+* Chore: update npm deps (#338) @Michel-Verhoeven
+* Chore: release notes v0.5.1 (#341) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.5.0...v0.5.1
+
 ## v0.5.0 - 2026-04-01
 
 ### What's Changed
@@ -127,6 +144,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
