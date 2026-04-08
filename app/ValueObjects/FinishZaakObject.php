@@ -11,6 +11,10 @@ final readonly class FinishZaakObject
 {
     public ?array $otherParams;
 
+    public ?string $besluit_toelichting;
+
+    public ?string $result_toelichting;
+
     public function __construct(
         public Zaak $zaak,
         public MunicipalityUser|OrganiserUser $user,
@@ -21,13 +25,15 @@ final readonly class FinishZaakObject
         public ?string $datum_besluit,
         public ?string $ingangsdatum = null,
         public ?string $vervaldatum = null,
-        public ?string $besluit_toelichting = null,
+        ?string $besluit_toelichting = null,
         public ?array $besluit_documenten = null,
-        public ?string $result_toelichting = null,
+        ?string $result_toelichting = null,
         public ?array $message_documenten = null,
         ...$otherParams,
     ) {
         $this->otherParams = $otherParams;
+        $this->besluit_toelichting = $besluit_toelichting !== null ? mb_substr($besluit_toelichting, 0, 1000) : null;
+        $this->result_toelichting = $result_toelichting !== null ? mb_substr($result_toelichting, 0, 1000) : null;
     }
 
     public function getBesluitData(): ?array
