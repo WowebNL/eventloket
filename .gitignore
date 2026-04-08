@@ -26,3 +26,4 @@ Thumbs.db
 /public/fonts/filament
 /public/js/filament
 /tests/coverage
+/database/openforms_migrations

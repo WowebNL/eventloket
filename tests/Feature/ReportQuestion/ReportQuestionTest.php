@@ -62,11 +62,11 @@ test('report questions API returns questions for municipalities with new system'
 
     $response->assertStatus(200);
     $data = $response->json('data');
-    expect($data)->toHaveCount(3);
-    expect($data)->toHaveKeys(['1', '2', '3']);
+    expect($data)->toHaveCount(2);
+    expect($data)->toHaveKeys(['1', '2']);
     expect($data['1'])->toBe('Question 1?');
     expect($data['2'])->toBe('Question 2?');
-    expect($data['3'])->toBeNull();
+    expect(array_key_exists('3', $data))->toBeFalse();
 });
 
 test('report questions API returns empty for municipalities with old system', function () {
