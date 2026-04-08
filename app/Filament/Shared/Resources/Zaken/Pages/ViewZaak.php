@@ -202,6 +202,7 @@ class ViewZaak extends ViewRecord
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.result_toelichting.label'))
                                     ->helperText(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.result_toelichting.helper_text'))
                                     ->rows(3)
+                                    ->maxLength(1000)
                                     ->default(fn (Field $component) => $this->getDefaultValue($component))
                                     ->columnSpan(12)
                                     ->hidden(fn (Get $get) => ! $get('result_type') || count($this->formBesluittypen) > 0),
@@ -253,6 +254,7 @@ class ViewZaak extends ViewRecord
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.besluit_toelichting.label'))
                                     ->helperText(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.besluit_toelichting.helper_text'))
                                     ->rows(3)
+                                    ->maxLength(1000)
                                     ->default(fn (Field $component) => $this->getDefaultValue($component))
                                     ->columnSpan(12),
                                 DatePicker::make('ingangsdatum')
