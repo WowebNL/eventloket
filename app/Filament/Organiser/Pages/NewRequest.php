@@ -2,10 +2,9 @@
 
 namespace App\Filament\Organiser\Pages;
 
-use App\Http\Middleware\ValidateOpenFormsPrefill;
-use App\Models\FormsubmissionSession;
 use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
+use App\Services\EventloketTokenService;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -19,19 +18,17 @@ class NewRequest extends Page
     #[Locked]
     public $formId;
 
-    public $loadForm = false;
+    #[Locked]
+    public $eventloketToken;
 
-    protected static ?string $slug = 'new-request/{openform?}';
+    protected static ?string $slug = 'new-request/{eventloketToken?}/{openform?}';
 
     protected static ?int $navigationSort = 1;
-
-    protected static string|array $routeMiddleware = ValidateOpenFormsPrefill::class; // prefill causes issues with openform submission, workaround for now is to save the of submission id from localstorage to the db
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
     protected string $view = 'filament.organiser.pages.new-request';
 
-    // allow openform to do subrouting
     public static function routes(Panel $panel, ?PageConfiguration $configuration = null): void
     {
         Route::get(static::getRoutePath($panel), static::class)
@@ -41,25 +38,21 @@ class NewRequest extends Page
             ->where('openform', '.*');
     }
 
-    public function mount(): void
+    public function mount(?string $eventloketToken = null): void
     {
         $this->formId = config('services.open_forms.main_form_uuid');
+
+        if ($eventloketToken) {
+            $this->eventloketToken = $eventloketToken;
+        } else {
+            $this->eventloketToken = $this->generateToken();
+            $this->redirect($this->getUrlWithToken());
+        }
     }
 
     public function checkInitialLoad()
     {
-        /** @var Organisation $tenant */
-        $tenant = Filament::getTenant();
-        /** @var OrganiserUser $user */
-        $user = Filament::auth()->user();
-        /** @var FormsubmissionSession $submissionSession */
-        $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
-
-        if ($submissionSession) {
-            $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
-        } else {
-            $this->js('listenLocalStorage(); loadForm();');
-        }
+        $this->js('loadForm();');
     }
 
     public function getTitle(): string
@@ -82,52 +75,29 @@ class NewRequest extends Page
         return __('organiser/pages/new-request.navigation_label');
     }
 
-    public function updateFormsubmissionSession(string $submissionUUid)
+    public static function getNavigationUrl(): string
     {
-        $submissionUUid = trim($submissionUUid, '"');
-        if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
-            /** @var Organisation $tenant */
-            $tenant = Filament::getTenant();
-            /** @var OrganiserUser $user */
-            $resp = $user->formsubmissionSessions()->firstOrCreate(['uuid' => $submissionUUid], ['user_id' => $user->id, 'organisation_id' => $tenant->id]);
-        }
+        // Navigate without token — mount() will generate one and redirect
+        return route('filament.organiser.pages.new-request.{eventloketToken?}.{openform?}', [
+            'tenant' => Filament::getTenant(),
+        ]);
     }
 
-    public function checkSubmissionSession(string $submissionUUid)
+    private function generateToken(): string
     {
-        $submissionUUid = trim($submissionUUid, '"');
-        if ($submissionUUid && $submissionUUid != 'null' && $user = Filament::auth()->user()) {
-            /** @var Organisation $tenant */
-            $tenant = Filament::getTenant();
-            /** @var OrganiserUser $user */
-            if (! $user->formsubmissionSessions()->where(['uuid' => $submissionUUid, 'organisation_id' => $tenant->id])->exists()) {
-                $this->js('deleteStorageRef()');
-                if ($submission = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first()) {
-                    /** @var FormsubmissionSession $submission */
-                    $this->js('loadFormWithRef', '"'.$submission->uuid.'"');
-                } else {
-                    $this->js('listenLocalStorage(); loadForm();');
-                }
-
-                return;
-            }
-        }
-        $this->js('loadForm(); checkIfSubmissionChanges("'.$submissionUUid.'");');
-    }
-
-    public function checkLoadExistingSubmissionSession()
-    {
-        /** @var Organisation $tenant */
-        $tenant = Filament::getTenant();
         /** @var OrganiserUser $user */
         $user = Filament::auth()->user();
-        /** @var FormsubmissionSession $submissionSession */
-        $submissionSession = $user->formsubmissionSessions()->where('organisation_id', $tenant->id)->latest()->first();
+        /** @var Organisation $tenant */
+        $tenant = Filament::getTenant();
 
-        if ($submissionSession) {
-            $this->js('loadFormWithRef', '"'.$submissionSession->uuid.'"');
-        } else {
-            $this->js('listenLocalStorage(); loadForm();');
-        }
+        return app(EventloketTokenService::class)->generate($user->uuid, $tenant->uuid);
+    }
+
+    private function getUrlWithToken(): string
+    {
+        return route('filament.organiser.pages.new-request.{eventloketToken?}.{openform?}', [
+            'tenant' => Filament::getTenant(),
+            'eventloketToken' => $this->eventloketToken,
+        ]);
     }
 }

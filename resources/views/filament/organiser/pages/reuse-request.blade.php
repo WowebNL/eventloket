@@ -12,18 +12,41 @@
                 const isPostAuth = urlParams.has('_of_auth_done');
 
                 if (!isPostAuth) {
+                    // First visit: redirect to Open Forms auth before SDK loads
                     const returnUrl = new URL(window.location.href);
                     returnUrl.searchParams.set('_of_auth_done', '1');
 
                     const authStartUrl = new URL(`${openFormsBaseUrl}/auth/${formSlug}/${authPluginId}/start`);
                     authStartUrl.searchParams.set('next', returnUrl.toString());
 
-                    if (isDebug) console.log('Redirecting to Open Forms auth');
+                    if (isDebug) console.log('Redirecting to Open Forms auth:', authStartUrl.toString());
                     window.location.href = authStartUrl.toString();
                     return;
                 }
 
-                if (isDebug) console.log('Post-auth: loading form');
+                if (isDebug) console.log('Post-auth: loading reuse form');
+
+                // Hide login options — auth is already done
+                const style = document.createElement('style');
+                style.textContent = '[class*="login-options"] { display: none !important; }';
+                document.head.appendChild(style);
+
+                // Auto-click "Formulier starten" when it appears
+                document.addEventListener('DOMContentLoaded', function() {
+                    const autoStartObserver = new MutationObserver(function() {
+                        const buttons = document.querySelectorAll('#openforms-root button[type="submit"]');
+                        for (const btn of buttons) {
+                            if (isDebug) console.log('Found button:', btn.textContent.trim());
+                            autoStartObserver.disconnect();
+                            setTimeout(() => {
+                                if (isDebug) console.log('Auto-clicking start button');
+                                btn.click();
+                            }, 1000);
+                            return;
+                        }
+                    });
+                    autoStartObserver.observe(document.body, { childList: true, subtree: true });
+                });
             })();
 
             document.addEventListener('DOMContentLoaded', function() {
@@ -42,6 +65,7 @@
                                         findSaveButton();
                                     }
 
+                                    // Hide JSON data from display
                                     if(addedNode.classList && addedNode.classList.contains('utrecht-data-list__item-value')) {
                                         if(addedNode.textContent && addedNode.textContent.includes('{"type":')) {
                                             addedNode.style.display = 'none';
@@ -98,9 +122,6 @@
     @endpush
     @push('styles')
         <link rel="stylesheet" href="{{ config('services.open_forms.base_url') }}/static/sdk/open-forms-sdk.css" />
-        <style>
-            .openforms-login-options .openforms-login-button:has(a) { display: none !important; }
-        </style>
     @endpush
 
     <div wire:ignore>
@@ -108,6 +129,9 @@
             id="openforms-root"
             data-base-url="{{ config('services.open_forms.base_url') }}/api/v2/"
             data-form-id="{{ $formId }}"
+            @if($initialDataReference)
+                data-initial-data-reference="{{ $initialDataReference }}"
+            @endif
             data-lang="nl"
         ></div>
     </div>
@@ -119,7 +143,7 @@
         const isDebug = {{ config('app.debug') ? 'true' : 'false' }};
 
         $js('loadForm', function() {
-            if (isDebug) console.log('Loading form');
+            if (isDebug) console.log('Loading reuse form');
             const targetNode = document.getElementById('openforms-root');
             if (targetNode && window.OpenForms) {
                 const form = new window.OpenForms.OpenForm(targetNode, targetNode.dataset);

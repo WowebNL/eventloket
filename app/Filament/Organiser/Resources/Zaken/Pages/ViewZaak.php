@@ -9,6 +9,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\Result;
+use App\Services\EventloketTokenService;
 use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Actions\Action;
@@ -27,11 +28,11 @@ class ViewZaak extends ViewRecord
     {
         return [
             Action::make('prefil_new_request')
-                ->hidden()
                 ->label('Nieuwe aanvraag')
                 ->tooltip('Start een nieuwe aanvraag waarbij de gegevens uit het aanvraagformulier van deze zaak vooraf ingevuld zijn.')
                 ->action(function (Zaak $record) {
                     $failed = false;
+
                     if (isset($record->zaakdata->record['data']['data']) && $data = $record->zaakdata->record['data']['data']) {
                         $withOutSections = [];
                         foreach ($data as $item) {
@@ -42,21 +43,34 @@ class ViewZaak extends ViewRecord
                         $withOutSections['organiser_uuid'] = $record->organisation->uuid;
 
                         if ($objectTypeUrl = config('services.open_forms.prefill_object_type_url')) {
-                            $record = array_filter($withOutSections);
+                            $filteredData = array_filter($withOutSections);
 
                             $resp = (new ObjectsApi)->create([
                                 'type' => $objectTypeUrl,
                                 'record' => [
                                     'typeVersion' => config('services.open_forms.prefill_object_type_version'),
-                                    'data' => $record,
+                                    'data' => $filteredData,
                                     'startAt' => now()->format('Y-m-d'),
                                 ],
                             ])->toArray();
 
-                            // dd($resp);
-
                             if (Arr::has($resp, 'uuid')) {
-                                $this->redirect(route('filament.organiser.pages.new-request.{openform?}', ['tenant' => Filament::getTenant(), 'initial_data_reference' => Arr::get($resp, 'uuid')]));
+                                /** @var OrganiserUser $user */
+                                $user = auth()->user();
+                                $token = app(EventloketTokenService::class)->generate(
+                                    $user->uuid,
+                                    $record->organisation->uuid,
+                                );
+
+                                $this->redirect(route(
+                                    'filament.organiser.pages.reuse-request.{eventloketToken}.{openform?}',
+                                    [
+                                        'tenant' => Filament::getTenant(),
+                                        'eventloketToken' => $token,
+                                        'initial_data_reference' => Arr::get($resp, 'uuid'),
+                                    ],
+                                ));
+
                                 Notification::make()
                                     ->success()
                                     ->title('Het aanvraag formulier is vooraf ingevuld')
