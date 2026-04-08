@@ -281,7 +281,9 @@ services:
 
     # Open Forms - Form builder and management (latest stable: 3.3.9)
     open-forms:
-        image: 'openformulieren/open-forms:3.3.9'
+        build:
+            context: ..
+            dockerfile: eventloket/docker/open-forms/Dockerfile
         platform: linux/amd64
         ports:
             - '8009:8000'
@@ -295,7 +297,9 @@ services:
             - CACHE_AXES=redis:6379/3
             - SECRET_KEY=very-secret-key-change-in-production-openforms
             - ALLOWED_HOSTS=localhost,open-forms,127.0.0.1,host.docker.internal
-            - CORS_ALLOW_ALL_ORIGINS=True
+            - CORS_ALLOW_ALL_ORIGINS=False
+            - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:8003
+            - CORS_ALLOW_CREDENTIALS=True
             - CSRF_TRUSTED_ORIGINS=http://localhost,http://localhost:8003
             - CELERY_BROKER_URL=redis://redis:6379/3
             - CELERY_RESULT_BACKEND=redis://redis:6379/3
@@ -312,6 +316,11 @@ services:
             - OPEN_FORMS_SUPERUSER_USERNAME=admin
             - OPEN_FORMS_SUPERUSER_EMAIL=admin@localhost
             - DJANGO_SUPERUSER_PASSWORD=admin
+            - OPEN_FORMS_EXTENSIONS=openforms_eventloket_auth
+            - EVENTLOKET_AUTH_VALIDATE_URL=http://laravel.test/api/validate-eventloket-token
+            - EVENTLOKET_AUTH_TOKEN_URL=http://laravel.test/oauth/token
+            - EVENTLOKET_AUTH_CLIENT_ID=019d6c87-7ffe-73af-a783-7d26fc0d8827
+            - EVENTLOKET_AUTH_CLIENT_SECRET=eRTtPL50mAdaJbiGFrtcpTURAHebtrRfQxdcUoBd
         volumes:
             - 'openforms-media:/app/media'
             - 'openforms-private-media:/app/private-media'
@@ -333,7 +342,9 @@ services:
 
     # Open Forms Celery Worker
     open-forms-worker:
-        image: 'openformulieren/open-forms:3.3.9'
+        build:
+            context: ..
+            dockerfile: eventloket/docker/open-forms/Dockerfile
         platform: linux/amd64
         environment:
             - DB_HOST=pgsql
@@ -350,6 +361,11 @@ services:
             - IS_HTTPS=no
             - OTEL_SDK_DISABLED=true
             - DISABLE_2FA=True
+            - OPEN_FORMS_EXTENSIONS=openforms_eventloket_auth
+            - EVENTLOKET_AUTH_VALIDATE_URL=http://laravel.test/api/validate-eventloket-token
+            - EVENTLOKET_AUTH_TOKEN_URL=http://laravel.test/oauth/token
+            - EVENTLOKET_AUTH_CLIENT_ID=019d6c87-7ffe-73af-a783-7d26fc0d8827
+            - EVENTLOKET_AUTH_CLIENT_SECRET=eRTtPL50mAdaJbiGFrtcpTURAHebtrRfQxdcUoBd
         command: /celery_worker.sh
         volumes:
             - 'openforms-media:/app/media'
