@@ -22,7 +22,7 @@ class OrganisationFactory extends Factory
         return [
             'type' => fake()->randomElement(OrganisationType::cases()),
             'name' => fake()->company,
-            'coc_number' => fake()->numerify('########'),
+            'coc_number' => (string) fake()->numberBetween(10000000, 99999999),
             'address' => fake()->address,
             'email' => 'test@domain.com',
             'phone' => fake()->phoneNumber,
