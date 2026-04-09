@@ -158,6 +158,23 @@ class FormSubmissionObject implements Arrayable
         return '';
     }
 
+    public function getLineGeoJsonArray(): ?array
+    {
+        if (! isset($this->event_location['line']) || empty($this->event_location['line']) || $this->event_location['line'] === 'None') {
+            return null;
+        }
+
+        if (is_array($this->event_location['line'])) {
+            $json = json_encode($this->event_location['line']);
+        } else {
+            $json = OpenFormsNormalizer::normalizeGeoJson($this->event_location['line']);
+        }
+
+        $array = json_decode($json, true);
+
+        return ArrayHelper::findElementWithKey($array, 'coordinates');
+    }
+
     private function getGeometryFromAddress(array $address, LocatieserverService $locationService, bool $asFeatures = false): Point|Feature|null
     {
         $bagObject = $locationService->getBagObjectByPostcodeHuisnummer(

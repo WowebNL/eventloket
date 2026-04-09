@@ -31,6 +31,9 @@ class ZaaktypeForm
                     ->label(__('admin/resources/zaaktype.form.is_active.label'))
                     ->disabled()
                     ->required(),
+                Checkbox::make('triggers_route_check')
+                    ->label(__('admin/resources/zaaktype.form.triggers_route_check.label'))
+                    ->helperText(__('admin/resources/zaaktype.form.triggers_route_check.helper_text')),
                 CheckboxList::make('hidden_resultaat_types')
                     ->label(__('admin/resources/zaaktype.form.hidden_resultaat_types.label'))
                     ->helperText(__('admin/resources/zaaktype.form.hidden_resultaat_types.helper_text'))

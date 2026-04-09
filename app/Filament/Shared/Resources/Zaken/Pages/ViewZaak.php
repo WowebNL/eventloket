@@ -16,6 +16,7 @@ use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\BesluitType;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\RichEditor;
@@ -89,27 +90,64 @@ class ViewZaak extends ViewRecord
                     'widget' => ActivityLogWidget::class,
                     'record' => $this->record,
                 ])),
-            Action::make('delete_imported_zaak')
-                ->label('Verwijder zaak')
+            Action::make('delete_zaak')
+                ->label(__('resources/zaak.actions.delete_zaak.label'))
                 ->color('danger')
-                ->visible(fn (Zaak $record) => $record->is_imported && auth()->user()->role == Role::Admin)
+                ->visible(fn (Zaak $record) => ! $record->trashed() && auth()->user()->role === Role::Admin)
+                ->schema([
+                    Checkbox::make('delete_in_openzaak')
+                        ->label(__('resources/zaak.actions.delete_zaak.checkbox.delete_in_openzaak'))
+                        ->visible(fn (Zaak $record) => (bool) $record->zgw_zaak_url)
+                        ->default(false),
+                ])
+                ->modalHeading(__('resources/zaak.actions.delete_zaak.confirmation.title'))
+                ->modalDescription(__('resources/zaak.actions.delete_zaak.confirmation.description'))
                 ->requiresConfirmation()
-                ->action(function (Zaak $record) {
+                ->action(function (Zaak $record, array $data) {
                     // Verify authorization via policy
-                    if (! auth()->user()->can('deleteImported', $record)) {
+                    if (! auth()->user()->can('delete', $record)) {
                         Notification::make()
                             ->danger()
-                            ->title('U bent niet geautoriseerd om deze zaak te verwijderen.')
+                            ->title(__('resources/zaak.actions.delete_zaak.unauthorized'))
                             ->send();
 
                         return;
                     }
 
+                    // Optionally delete in OpenZaak
+                    if (($data['delete_in_openzaak'] ?? false) && $record->zgw_zaak_url) {
+                        try {
+                            $uuid = basename($record->zgw_zaak_url);
+                            $deleted = (new Openzaak)->zaken()->zaken()->delete($uuid);
+
+                            if ($deleted) {
+                                // Clear zgw_zaak_url so the zaak cannot be restored
+                                $record->zgw_zaak_url = null;
+                                $record->save();
+                            } else {
+                                Notification::make()
+                                    ->warning()
+                                    ->title(__('resources/zaak.actions.delete_zaak.error_open_zaak'))
+                                    ->send();
+                            }
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->warning()
+                                ->title(__('resources/zaak.actions.delete_zaak.error_open_zaak'))
+                                ->body($e->getMessage())
+                                ->send();
+                        }
+                    }
+
+                    // Soft delete the zaak
                     $record->delete();
+
+                    // Clear cache
+                    $record->clearZgwCache();
 
                     Notification::make()
                         ->success()
-                        ->title('De geïmporteerde zaak is verwijderd.')
+                        ->title(__('resources/zaak.actions.delete_zaak.success'))
                         ->send();
 
                     $this->redirect($this->getResource()::getUrl('index'));
@@ -164,6 +202,7 @@ class ViewZaak extends ViewRecord
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.result_toelichting.label'))
                                     ->helperText(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.result_toelichting.helper_text'))
                                     ->rows(3)
+                                    ->maxLength(1000)
                                     ->default(fn (Field $component) => $this->getDefaultValue($component))
                                     ->columnSpan(12)
                                     ->hidden(fn (Get $get) => ! $get('result_type') || count($this->formBesluittypen) > 0),
@@ -215,6 +254,7 @@ class ViewZaak extends ViewRecord
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.besluit_toelichting.label'))
                                     ->helperText(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.besluit_toelichting.helper_text'))
                                     ->rows(3)
+                                    ->maxLength(1000)
                                     ->default(fn (Field $component) => $this->getDefaultValue($component))
                                     ->columnSpan(12),
                                 DatePicker::make('ingangsdatum')

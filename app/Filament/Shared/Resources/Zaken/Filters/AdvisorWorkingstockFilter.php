@@ -28,17 +28,17 @@ class AdvisorWorkingstockFilter
                 return $query
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'new',
-                        fn (Builder $query, $date): Builder => $query
-                            ->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', Filament::getTenant()->id)->whereDoesntHave('assignedUsers')->where('advice_status', '!=', AdviceStatus::Concept)), // @phpstan-ignore-line
+                        fn (Builder $query): Builder => $query
+                            ->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', Filament::getTenant()->id)->whereDoesntHave('assignedUsers')->active()), // @phpstan-ignore-line
                     )
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'me',
-                        fn (Builder $query, $date): Builder => $query
-                            ->whereHas('adviceThreads.assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id())),
+                        fn (Builder $query): Builder => $query
+                            ->whereHas('adviceThreads', fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active()), // @phpstan-ignore-line
                     )
                     ->when(
                         isset($data['workingstock-adv']) && $data['workingstock-adv'] === 'all',
-                        fn (Builder $query, $date): Builder => $query
+                        fn (Builder $query): Builder => $query
                             ->whereHas('adviceThreads', fn (Builder $query) => $query->where('advisory_id', Filament::getTenant()->id)->where('advice_status', '!=', AdviceStatus::Concept)), // @phpstan-ignore-line
                     );
             });

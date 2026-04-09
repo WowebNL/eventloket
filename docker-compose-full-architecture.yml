@@ -281,7 +281,7 @@ services:
 
     # Open Forms - Form builder and management (latest stable: 3.3.9)
     open-forms:
-        image: 'openformulieren/open-forms:3.3.9'
+        image: 'openformulieren/open-forms:3.3.13'
         platform: linux/amd64
         ports:
             - '8009:8000'

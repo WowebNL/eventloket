@@ -38,6 +38,7 @@ class LocationServerController extends Controller
                 'start' => null,
                 'end' => null,
                 'start_end_equal' => null,
+                'passing' => collect(),
             ],
             'lines' => [],
             'addresses' => [
@@ -81,6 +82,16 @@ class LocationServerController extends Controller
             $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
             $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());
 
+            $excludedBrkIds = $startModel->pluck('brk_identification')
+                ->merge($endModel->pluck('brk_identification'))
+                ->unique()
+                ->toArray();
+
+            $responseData['line']['passing'] = $items
+                ->reject(fn ($item) => in_array($item->brk_identification, $excludedBrkIds))
+                ->select(['brk_identification', 'name'])
+                ->values();
+
             $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items', 'line.items']);
 
             if ($start = $startModel->first()) {
@@ -116,12 +127,21 @@ class LocationServerController extends Controller
                 $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
                 $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());
 
+                $excludedBrkIdsForLine = $startModel->pluck('brk_identification')
+                    ->merge($endModel->pluck('brk_identification'))
+                    ->unique()
+                    ->toArray();
+
                 $lineData = [
                     'items' => array_values($items->select(['brk_identification', 'name'])->toArray()),
                     'within' => null,
                     'start' => null,
                     'end' => null,
                     'start_end_equal' => null,
+                    'passing' => array_values($items
+                        ->reject(fn ($item) => in_array($item->brk_identification, $excludedBrkIdsForLine))
+                        ->select(['brk_identification', 'name'])
+                        ->toArray()),
                 ];
 
                 if ($start = $startModel->first()) {
@@ -158,6 +178,7 @@ class LocationServerController extends Controller
                     'start' => $responseData['lines'][0]['start'],
                     'end' => $responseData['lines'][0]['end'],
                     'start_end_equal' => $responseData['lines'][0]['start_end_equal'],
+                    'passing' => collect($responseData['lines'][0]['passing']),
                 ];
             }
         }

@@ -6,6 +6,7 @@ use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\ClearZaakCache;
+use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\CreateZaak;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Jobs\ZaakStatusNotificationReceived;
@@ -128,6 +129,7 @@ test('Create zaak notifications dispatches correct jobs in bus chain', function 
         UpdateInitiatorZGW::class,
         AddGeometryZGW::class,
         CreateZaak::class,
+        CreateDoorkomstZaken::class,
     ]);
 });
 

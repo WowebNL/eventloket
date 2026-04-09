@@ -21,6 +21,7 @@ class MunicipalityFactory extends Factory
             'name' => fake()->city,
             'brk_identification' => fake()->unique()->bothify('GM###'),
             'geometry' => '{"type":"MultiPolygon","coordinates":[[[[0.5,0.5],[1.5,1.5],[1.5,1.5],[0.5,0.5]]]]}',
+            'doorkomst_zaaktype_id' => null,
         ];
     }
 }

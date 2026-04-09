@@ -9,6 +9,7 @@ use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserThreadsRelationManager;
 use App\Livewire\Zaken\BesluitenInfolist;
+use App\Livewire\Zaken\DeelzakenTable;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
@@ -437,6 +438,13 @@ class ZaakInfolist
                                         Livewire::make(AdviceThreadRelationManager::class, fn (Zaak $record) => ['ownerRecord' => $record, 'pageClass' => ViewZaak::class])->key('advice-threads-'.($schema->model->id ?? 'new')),
                                     ]),
                                 LocationsTab::make(),
+                                Tab::make('related_cases')
+                                    ->label(__('municipality/resources/zaak.infolist.tabs.related_cases.label'))
+                                    ->icon('heroicon-o-share')
+                                    ->visible(fn (Zaak $record) => $record->data_object_url && Zaak::where('data_object_url', $record->data_object_url)->where('id', '!=', $record->id)->exists())
+                                    ->schema([
+                                        Livewire::make(DeelzakenTable::class, ['zaak' => $schema->model])->key('deelzaken-table-'.($schema->model->id ?? 'new')),
+                                    ]),
                             ])
                             ->columnSpanFull(),
                         Section::make(__('Geimporteerde gegevens'))
