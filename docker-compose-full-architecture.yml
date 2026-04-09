@@ -361,6 +361,9 @@ services:
             - IS_HTTPS=no
             - OTEL_SDK_DISABLED=true
             - DISABLE_2FA=True
+            - EMAIL_HOST=mailpit
+            - EMAIL_PORT=1025
+            - DEFAULT_FROM_EMAIL=open-forms@localhost
             - OPEN_FORMS_EXTENSIONS=openforms_eventloket_auth
             - EVENTLOKET_AUTH_VALIDATE_URL=http://laravel.test/api/validate-eventloket-token
             - EVENTLOKET_AUTH_TOKEN_URL=http://laravel.test/oauth/token

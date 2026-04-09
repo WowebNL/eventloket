@@ -1,7 +1,6 @@
 <x-filament-panels::page>
     @push('scripts')
         <script src="{{ config('services.open_forms.base_url') }}/static/sdk/open-forms-sdk.js"></script>
-        @include('filament.organiser.partials.openforms-auth-redirect', ['autoStart' => 'false'])
         @include('filament.organiser.partials.openforms-form-helpers')
     @endpush
     @push('styles')
