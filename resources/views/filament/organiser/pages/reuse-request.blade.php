@@ -1,12 +1,32 @@
 <x-filament-panels::page>
     @push('scripts')
         <script src="{{ config('services.open_forms.base_url') }}/static/sdk/open-forms-sdk.js"></script>
+        <script>
+            const isDebug = {{ config('app.debug') ? 'true' : 'false' }};
+
+            // Auto-click "Formulier starten" when it appears
+            document.addEventListener('DOMContentLoaded', function() {
+                const autoStartObserver = new MutationObserver(function() {
+                    const buttons = document.querySelectorAll('#openforms-root button[type="submit"]');
+                    for (const btn of buttons) {
+                        if (isDebug) console.log('Found button:', btn.textContent.trim());
+                        autoStartObserver.disconnect();
+                        setTimeout(() => {
+                            if (isDebug) console.log('Auto-clicking start button');
+                            btn.click();
+                        }, 1000);
+                        return;
+                    }
+                });
+                autoStartObserver.observe(document.body, { childList: true, subtree: true });
+            });
+        </script>
         @include('filament.organiser.partials.openforms-form-helpers')
     @endpush
     @push('styles')
         <link rel="stylesheet" href="{{ config('services.open_forms.base_url') }}/static/sdk/open-forms-sdk.css" />
         <style>
-            .openforms-login-options .openforms-login-button:has(a) { display: none !important; }
+            [class*="login-options"] { display: none !important; }
         </style>
     @endpush
 
