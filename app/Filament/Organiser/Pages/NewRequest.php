@@ -42,7 +42,11 @@ class NewRequest extends Page
     {
         $this->formId = config('services.open_forms.main_form_uuid');
 
-        if ($eventloketToken) {
+        // Always generate a fresh token. Resume links from emails may contain
+        // an expired token — we replace it with a fresh one and redirect.
+        // The _of_auth_done query param prevents infinite redirect loops:
+        // mount generates token → redirect → JS auth redirect → back with _of_auth_done → mount keeps token.
+        if (request()->has('_of_auth_done') && $eventloketToken) {
             $this->eventloketToken = $eventloketToken;
         } else {
             $this->eventloketToken = $this->generateToken();
@@ -95,9 +99,14 @@ class NewRequest extends Page
 
     private function getUrlWithToken(): string
     {
-        return route('filament.organiser.pages.new-request.{eventloketToken?}.{openform?}', [
+        $url = route('filament.organiser.pages.new-request.{eventloketToken?}.{openform?}', [
             'tenant' => Filament::getTenant(),
             'eventloketToken' => $this->eventloketToken,
         ]);
+
+        // Preserve query parameters (e.g. _of_action for resume links)
+        $queryString = request()->getQueryString();
+
+        return $queryString ? "{$url}?{$queryString}" : $url;
     }
 }
