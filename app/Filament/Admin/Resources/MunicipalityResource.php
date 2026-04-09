@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\MunicipalityResource\Pages\ListMunicipalities;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\DefaultAdviceQuestionsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\LocationsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityAdminUsersRelationManager;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReportQuestionsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerMunicipalityAdminUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\VariablesRelationManager;
@@ -15,8 +16,10 @@ use App\Models\Municipality;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -63,6 +66,11 @@ class MunicipalityResource extends Resource
                         }
                     }))
                     ->preload(),
+                Toggle::make('use_new_report_questions')
+                    ->label('Gebruik nieuwe meldingvragen systeem')
+                    ->helperText('Schakel dit in om over te stappen naar het nieuwe meldingvragen systeem.')
+                    ->default(false)
+                    ->columnSpanFull(),
                 Select::make('doorkomst_zaaktype_id')
                     ->label(__('admin/resources/municipality.columns.doorkomst_zaaktype_id.label'))
                     ->helperText(__('admin/resources/municipality.columns.doorkomst_zaaktype_id.helper_text'))
@@ -92,6 +100,11 @@ class MunicipalityResource extends Resource
                     ->searchable(),
                 TextColumn::make('zaaktypen.name')
                     ->sortable(),
+                IconColumn::make('use_new_report_questions')
+                    ->label('Nieuwe meldingvragen')
+                    ->boolean()
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -120,6 +133,7 @@ class MunicipalityResource extends Resource
             MunicipalityAdminUsersRelationManager::class,
             LocationsRelationManager::class,
             VariablesRelationManager::class,
+            ReportQuestionsRelationManager::class,
             DefaultAdviceQuestionsRelationManager::class,
         ];
     }

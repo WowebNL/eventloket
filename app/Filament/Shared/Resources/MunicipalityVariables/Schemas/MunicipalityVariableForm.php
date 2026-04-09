@@ -81,7 +81,7 @@ class MunicipalityVariableForm
                         if ($state === MunicipalityVariableType::ReportQuestion && ! $livewire instanceof CreateMunicipalityVariable) {
                             // if type is report question, auto generate unique report_question key which ends with a number between 1-5
                             // works when previous question is deleted as well
-                            $numbers = $municipality->reportQuestions->map(fn ($item) => (int) substr($item->key, -1))->toArray();
+                            $numbers = $municipality->oldReportQuestions->map(fn ($item) => (int) substr($item->key, -1))->toArray();
                             $options = array_diff(range(1, 5), $numbers);
                             $key = Arr::first($options);
                             $set('key', 'report_question_'.$key);
@@ -91,7 +91,7 @@ class MunicipalityVariableForm
                     ->in(function ($livewire) use ($municipality) {
                         // disable creating of report question type as default municipality variable by admin
                         // or when municipality already has 5 report Question variables
-                        if ($livewire instanceof CreateMunicipalityVariable || ($municipality instanceof Municipality && $municipality->reportQuestions->count() >= 5)) {
+                        if ($livewire instanceof CreateMunicipalityVariable || ($municipality instanceof Municipality && $municipality->oldReportQuestions->count() >= 5)) {
                             return [
                                 MunicipalityVariableType::Text,
                                 MunicipalityVariableType::Number,
@@ -109,14 +109,14 @@ class MunicipalityVariableForm
                     ->disableOptionWhen(function ($value, $livewire) use ($municipality) {
                         // disable creating of report question type as default municipality variable by admin
                         // or when municipality already has 5 report Question variables
-                        if ($livewire instanceof CreateMunicipalityVariable || ($municipality instanceof Municipality && $municipality->reportQuestions->count() >= 5)) {
+                        if ($livewire instanceof CreateMunicipalityVariable || ($municipality instanceof Municipality && $municipality->oldReportQuestions->count() >= 5)) {
                             return $value === MunicipalityVariableType::ReportQuestion->value;
                         }
 
                         return false;
                     })
                     ->belowContent(function ($value, $livewire, $operation) use ($municipality) {
-                        if ($municipality instanceof Municipality && $operation == 'create' && $municipality->reportQuestions->count() >= 5) {
+                        if ($municipality instanceof Municipality && $operation == 'create' && $municipality->oldReportQuestions->count() >= 5) {
                             return __('Voor de gemeente :name is het maximale aantal van 5 meldingsvragen bereikt, hierdoor is het niet mogelijk om nieuwe meldingsvragen aan te maken.', ['name' => $municipality->name]);
                         }
 
@@ -200,7 +200,7 @@ class MunicipalityVariableForm
                     ->required()
                     ->label(__('resources/municipality_variable.form.order.label'))
                     ->options(function () use ($municipality) {
-                        $count = $municipality->reportQuestions->count();
+                        $count = $municipality->oldReportQuestions->count();
                         $range = range(1, $count);
 
                         return array_combine($range, $range);
