@@ -2,12 +2,16 @@
 
 use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
+use App\Filament\Municipality\Clusters\Settings\Resources\ReportQuestions\Pages\ListReportQuestions;
 use App\Models\Municipality;
 use App\Models\MunicipalityVariable;
 use App\Models\ReportQuestion;
 use App\Models\User;
+use Filament\Facades\Filament;
 use Illuminate\Database\QueryException;
 use Laravel\Passport\Client;
+
+use function Pest\Livewire\livewire;
 
 test('report questions are automatically seeded when municipality is created', function () {
     $municipality = Municipality::factory()->create();
@@ -262,4 +266,238 @@ test('report questions are properly ordered in API response', function () {
     expect($data['1'])->toBe('First question?');
     expect($data['2'])->toBe('Second question?');
     expect($data['3'])->toBe('Third question?');
+});
+
+test('reordering report questions persists new order', function () {
+    $municipality = Municipality::factory()->create();
+    $municipality->reportQuestions()->delete();
+
+    $q1 = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 1, 'question' => 'First?']);
+    $q2 = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 2, 'question' => 'Second?']);
+    $q3 = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 3, 'question' => 'Third?']);
+
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    // New order: move q3 to position 1
+    livewire(ListReportQuestions::class)
+        ->call('reorderTable', [$q3->id, $q1->id, $q2->id]);
+
+    expect($q3->fresh()->order)->toBe(1);
+    expect($q1->fresh()->order)->toBe(2);
+    expect($q2->fresh()->order)->toBe(3);
+});
+
+test('reordering does not cause unique constraint violations', function () {
+    $municipality = Municipality::factory()->create();
+    $municipality->reportQuestions()->delete();
+
+    $questions = collect(range(1, 5))->map(fn ($i) => ReportQuestion::factory()->create([
+        'municipality_id' => $municipality->id,
+        'order' => $i,
+        'question' => "Question $i?",
+    ]));
+
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    // Reverse the entire order (worst case for constraint violations)
+    $reversed = $questions->reverse()->pluck('id')->all();
+
+    livewire(ListReportQuestions::class)
+        ->call('reorderTable', $reversed);
+
+    foreach ($questions->reverse()->values() as $newPosition => $question) {
+        expect($question->fresh()->order)->toBe($newPosition + 1);
+    }
+});
+
+test('reordering does not affect report questions of other municipalities', function () {
+    $municipality1 = Municipality::factory()->create();
+    $municipality2 = Municipality::factory()->create();
+
+    $municipality1->reportQuestions()->delete();
+    $municipality2->reportQuestions()->delete();
+
+    $q1 = ReportQuestion::factory()->create(['municipality_id' => $municipality1->id, 'order' => 1, 'question' => 'Q1?']);
+    $q2 = ReportQuestion::factory()->create(['municipality_id' => $municipality1->id, 'order' => 2, 'question' => 'Q2?']);
+    $other = ReportQuestion::factory()->create(['municipality_id' => $municipality2->id, 'order' => 1, 'question' => 'Other?']);
+
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality1);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality1);
+
+    livewire(ListReportQuestions::class)
+        ->call('reorderTable', [$q2->id, $q1->id]);
+
+    expect($q2->fresh()->order)->toBe(1);
+    expect($q1->fresh()->order)->toBe(2);
+    expect($other->fresh()->order)->toBe(1); // untouched
+});
+
+// ---------------------------------------------------------------------------
+// ReportQuestionsTable configuration
+// ---------------------------------------------------------------------------
+
+test('report questions table has required columns', function () {
+    $municipality = Municipality::factory()->create();
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->assertTableColumnExists('order')
+        ->assertTableColumnExists('question')
+        ->assertTableColumnExists('is_active')
+        ->assertTableColumnExists('updated_at');
+});
+
+test('report questions table is sorted by order ascending by default', function () {
+    $municipality = Municipality::factory()->create();
+    $municipality->reportQuestions()->delete();
+
+    $c = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 3, 'question' => 'C?']);
+    $a = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 1, 'question' => 'A?']);
+    $b = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 2, 'question' => 'B?']);
+
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->assertCanSeeTableRecords([$a, $b, $c], inOrder: true);
+});
+
+test('report questions table can be put into reorder mode', function () {
+    $municipality = Municipality::factory()->create();
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->call('toggleTableReordering')
+        ->assertSet('isTableReordering', true);
+});
+
+test('table reorder action updates record order in the database', function () {
+    $municipality = Municipality::factory()->create();
+    $municipality->reportQuestions()->delete();
+
+    $q1 = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 1, 'question' => 'First?']);
+    $q2 = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 2, 'question' => 'Second?']);
+    $q3 = ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 3, 'question' => 'Third?']);
+
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    // Move q3 to the top
+    livewire(ListReportQuestions::class)
+        ->call('reorderTable', [$q3->id, $q1->id, $q2->id]);
+
+    expect($q3->fresh()->order)->toBe(1);
+    expect($q1->fresh()->order)->toBe(2);
+    expect($q2->fresh()->order)->toBe(3);
+});
+
+test('report questions table question column is searchable', function () {
+    $municipality = Municipality::factory()->create();
+    $municipality->reportQuestions()->delete();
+
+    ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 1, 'question' => 'Unique searchable question?']);
+    ReportQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 2, 'question' => 'Other question?']);
+
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->searchTable('Unique searchable')
+        ->assertCountTableRecords(1);
+});
+
+test('report questions table edit record action exists', function () {
+    $municipality = Municipality::factory()->create();
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->assertTableActionExists('edit');
+});
+
+// ---------------------------------------------------------------------------
+// ListReportQuestions – use_new_report_questions toggle
+// ---------------------------------------------------------------------------
+
+test('list page shows use_new_report_questions toggle reflecting current state', function () {
+    $municipality = Municipality::factory()->create(['use_new_report_questions' => false]);
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->assertSet('municipalitySettings.use_new_report_questions', false);
+});
+
+test('toggling use_new_report_questions to true persists on municipality', function () {
+    $municipality = Municipality::factory()->create(['use_new_report_questions' => false]);
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->set('municipalitySettings.use_new_report_questions', true);
+
+    expect($municipality->fresh()->use_new_report_questions)->toBeTrue();
+});
+
+test('toggling use_new_report_questions to false persists on municipality', function () {
+    $municipality = Municipality::factory()->create(['use_new_report_questions' => true]);
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(ListReportQuestions::class)
+        ->set('municipalitySettings.use_new_report_questions', false);
+
+    expect($municipality->fresh()->use_new_report_questions)->toBeFalse();
 });

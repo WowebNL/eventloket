@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\ReportQuestions\Tables;
 
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -12,6 +13,8 @@ class ReportQuestionsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->heading(__('resources/report_question.plural_label'))
+            ->description(__('resources/report_question.table.description'))
             ->columns([
                 TextColumn::make('order')
                     ->label(__('resources/report_question.columns.order.label'))
@@ -34,6 +37,12 @@ class ReportQuestionsTable
             ])
             ->filters([])
             ->defaultSort('order', 'asc')
+            ->reorderable('order')
+            ->reorderRecordsTriggerAction(
+                fn (Action $action, bool $isReordering) => $action
+                    ->button()
+                    ->label($isReordering ? __('resources/report_question.actions.disable_reordering.label') : __('resources/report_question.actions.enable_reordering.label')),
+            )
             ->recordActions([
                 EditAction::make(),
             ]);
