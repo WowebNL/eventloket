@@ -42,7 +42,7 @@ test('admin can create organisation', function () {
     livewire(CreateOrganisation::class)
         ->fillForm([
             'name' => fake()->company,
-            'coc_number' => fake()->numerify('########'),
+            'coc_number' => (string) fake()->numberBetween(10000000, 99999999),
             'address' => fake()->address,
             'email' => 'test@domain.com',
             'phone' => fake()->phoneNumber,
@@ -55,7 +55,7 @@ test('admin can edit organisation', function () {
     $record = Organisation::factory(['type' => OrganisationType::Business])->create();
     $formData = [
         'name' => fake()->company,
-        'coc_number' => fake()->numerify('########'),
+        'coc_number' => (string) fake()->numberBetween(10000000, 99999999),
         'address' => fake()->address,
         'email' => 'test@domain.com',
         'phone' => fake()->phoneNumber,
