@@ -18,7 +18,7 @@ use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\DB;
 
 /**
- * @property \Filament\Schemas\Schema $municipalitySettingsForm
+ * @property Schema $municipalitySettingsForm
  */
 class ListReportQuestions extends ListRecords
 {
