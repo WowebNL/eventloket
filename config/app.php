@@ -196,4 +196,150 @@ return [
         'message/rfc822', // .eml .emlx
         'application/vnd.ms-outlook', // .msg
     ]),
+
+    'eigenschappen' => [
+        [
+            'naam' => 'start_evenement',
+            'definitie' => 'Start evenement datum tijd',
+            'specificatie' => [
+                'groep' => 'Datum tijd',
+                'formaat' => 'datum_tijd',
+                'lengte' => '14',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => []
+            ],
+        ],
+        [
+            'naam' => 'eind_evenement',
+            'definitie' => 'Eind evenement datum tijd',
+            'specificatie' => [
+                'groep' => 'Datum tijd',
+                'formaat' => 'datum_tijd',
+                'lengte' => '14',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => []
+            ],
+        ],
+        [
+            'naam' => 'risico_classificatie',
+            'definitie' => 'A,B of C behandelclassificatie',
+            'specificatie' => [
+                'groep' => 'Tekst 1x',
+                'formaat' => 'tekst',
+                'lengte' => '255',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'formsubmission_id',
+            'definitie' => 'Identificatie van submission in Open Forms',
+            'specificatie' => [
+                'groep' => 'Tekst 1x',
+                'formaat' => 'tekst',
+                'lengte' => '255',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'naam_evenement',
+            'definitie' => 'Naam van het evenement',
+            'specificatie' => [
+                'groep' => 'Tekst 1x',
+                'formaat' => 'tekst',
+                'lengte' => '255',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'naam_locatie_eveneme',
+            'definitie' => 'Naam van de locatie van het evenement',
+            'specificatie' => [
+                'groep' => 'Tekst 1x',
+                'formaat' => 'tekst',
+                'lengte' => '255',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'adressen_evenement',
+            'definitie' => 'Adressen van de locatie(s) van het evenement',
+            'specificatie' => [
+                'groep' => 'Tekst 1x',
+                'formaat' => 'tekst',
+                'lengte' => '255',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'start_opbouw',
+            'definitie' => 'Start opbouw evenement',
+            'specificatie' => [
+                'groep' => '',
+                'formaat' => 'datum_tijd',
+                'lengte' => '14',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'eind_opbouw',
+            'definitie' => 'Eind opbouw evenement',
+            'specificatie' => [
+                'groep' => '',
+                'formaat' => 'datum_tijd',
+                'lengte' => '14',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'start_afbouw',
+            'definitie' => 'Start afbouw evenement',
+            'specificatie' => [
+                'groep' => '',
+                'formaat' => 'datum_tijd',
+                'lengte' => '14',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'eind_afbouw',
+            'definitie' => 'Eind afbouw evenement',
+            'specificatie' => [
+                'groep' => '',
+                'formaat' => 'datum_tijd',
+                'lengte' => '14',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'types_evenement',
+            'definitie' => 'Type evenement',
+            'specificatie' => [
+                'groep' => '',
+                'formaat' => 'tekst',
+                'lengte' => '255',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+        [
+            'naam' => 'risico_toelichting',
+            'definitie' => 'Toelichting risico classificatie',
+            'specificatie' => [
+                'groep' => '',
+                'formaat' => 'tekst',
+                'lengte' => '255',
+                'kardinaliteit' => '1',
+                'waardenverzameling' => [],
+            ],
+        ],
+    ],
 ];
