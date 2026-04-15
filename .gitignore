@@ -26,3 +26,11 @@ Thumbs.db
 /public/fonts/filament
 /public/js/filament
 /tests/coverage
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
