@@ -316,7 +316,7 @@ services:
             - OPEN_FORMS_SUPERUSER_USERNAME=admin
             - OPEN_FORMS_SUPERUSER_EMAIL=admin@localhost
             - DJANGO_SUPERUSER_PASSWORD=admin
-            - OPEN_FORMS_EXTENSIONS=openforms_eventloket_auth
+            - OPEN_FORMS_EXTENSIONS=openforms_eventloket_auth,openforms_eventloket_prefill
             - EVENTLOKET_AUTH_VALIDATE_URL=http://laravel.test/api/validate-eventloket-token
             - EVENTLOKET_AUTH_TOKEN_URL=http://laravel.test/oauth/token
             - EVENTLOKET_AUTH_CLIENT_ID=019d6c87-7ffe-73af-a783-7d26fc0d8827
@@ -364,7 +364,7 @@ services:
             - EMAIL_HOST=mailpit
             - EMAIL_PORT=1025
             - DEFAULT_FROM_EMAIL=open-forms@localhost
-            - OPEN_FORMS_EXTENSIONS=openforms_eventloket_auth
+            - OPEN_FORMS_EXTENSIONS=openforms_eventloket_auth,openforms_eventloket_prefill
             - EVENTLOKET_AUTH_VALIDATE_URL=http://laravel.test/api/validate-eventloket-token
             - EVENTLOKET_AUTH_TOKEN_URL=http://laravel.test/oauth/token
             - EVENTLOKET_AUTH_CLIENT_ID=019d6c87-7ffe-73af-a783-7d26fc0d8827
