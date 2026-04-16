@@ -38,9 +38,11 @@ return [
     'open_forms' => [
         'base_url' => env('OPEN_FORMS_BASE_URL'),
         'main_form_uuid' => env('OPEN_FORMS_MAIN_FORM_UUID'),
+        'main_form_slug' => env('OPEN_FORMS_FORM_SLUG', 'evenementformulier-poc-kopie-a6efc0'),
         'prefill_object_type_url' => env('OPEN_FORMS_PREFILL_OBJECT_TYPE_URL'),
         'prefill_object_type_version' => env('OPEN_FORMS_PREFILL_OBJECT_TYPE_VERSION', '1'),
         'auteur_name' => env('OPEN_FORMS_AUTEUR_NAME', 'Aanvrager'),
+        'admin_token' => env('OPEN_FORMS_ADMIN_TOKEN'),
     ],
 
     'kadaster' => [
