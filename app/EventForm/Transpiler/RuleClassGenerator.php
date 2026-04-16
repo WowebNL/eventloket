@@ -56,7 +56,6 @@ class RuleClassGenerator
         );
     }
 
-    /** @param  mixed  $actions */
     private function compileActions(mixed $actions): string
     {
         if (! is_array($actions)) {

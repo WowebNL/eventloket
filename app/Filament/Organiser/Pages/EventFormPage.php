@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Organiser\Pages;
 
+use App\EventForm\Components\VerticalWizard;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\Persistence\PrefillLoader;
 use App\EventForm\Rules\RulesEngine;
@@ -17,7 +18,6 @@ use Filament\Facades\Filament;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
-use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Locked;
 
@@ -123,7 +123,8 @@ class EventFormPage extends Page implements HasForms
     {
         return $form
             ->schema([
-                Wizard::make(EventFormSchema::steps())
+                VerticalWizard::make(EventFormSchema::steps())
+                    ->stepApplicability(fn (string $stepKey): bool => $this->state->isStepApplicable($stepKey))
                     ->submitAction(
                         Action::make('submit')
                             ->label('Aanvraag indienen')
