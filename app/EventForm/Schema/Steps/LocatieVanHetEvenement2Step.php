@@ -148,6 +148,8 @@ return false || (false);
                             ->drawMarker(false)
                             ->drawCircle(false)
                             ->drawRectangle(false)
+                            ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
+                            ->columnSpanFull()
                             ->required()
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('buitenLocatieVanHetEvenement');
@@ -199,6 +201,8 @@ return false || (false);
                                     ->drawMarker(false)
                                     ->drawCircle(false)
                                     ->drawRectangle(false)
+                                    ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
+                                    ->columnSpanFull()
                                     ->required()
                                     ->hidden(function (Get $get, $livewire) {
                                         $rule = $livewire->state()->isFieldHidden('routeVanHetEvenement');

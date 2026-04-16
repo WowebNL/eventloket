@@ -368,6 +368,11 @@ class StepSchemaGenerator
         $chain .= "\n{$pad}    ->drawMarker(".($allowMarker ? 'true' : 'false').')';
         $chain .= "\n{$pad}    ->drawCircle(false)";
         $chain .= "\n{$pad}    ->drawRectangle(false)";
+        // Zonder min-height renderd Leaflet in een 0px container en blijft
+        // de kaart onzichtbaar. Ook columnSpanFull zodat de kaart de hele
+        // breedte benut in Repeater-rows en Fieldsets.
+        $chain .= "\n{$pad}    ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])";
+        $chain .= "\n{$pad}    ->columnSpanFull()";
         $chain .= $this->commonModifiers($component, $pad);
 
         return $chain;

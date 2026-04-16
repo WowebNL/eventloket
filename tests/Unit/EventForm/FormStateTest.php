@@ -30,13 +30,32 @@ describe('FormState', function () {
             ->and($state->get('gemeenteVariabelen.tijdstip_mogelijk_niet_vergunningsplichtig.start'))->toBe('09:00');
     });
 
-    test('selectboxes member access works like OF', function () {
+    test('selectboxes member access works like OF (object-shape)', function () {
         $state = FormState::empty();
         $state->setField('waarVindtHetEvenementPlaats', ['buiten' => true, 'gebouw' => false]);
 
         expect($state->get('waarVindtHetEvenementPlaats.buiten'))->toBeTrue()
             ->and($state->get('waarVindtHetEvenementPlaats.gebouw'))->toBeFalse()
             ->and($state->get('waarVindtHetEvenementPlaats.route'))->toBeNull();
+    });
+
+    test('selectboxes member access works on Filament CheckboxList-shape (list of values)', function () {
+        // Filament bewaart een CheckboxList-state als `[0 => 'buiten', 1 => 'route']`
+        // — een indexed list van geselecteerde values. OF verwacht `{buiten: true}`.
+        // FormState moet die list transparant kunnen lezen als object.
+        $state = FormState::empty();
+        $state->setField('waarVindtHetEvenementPlaats', ['buiten', 'route']);
+
+        expect($state->get('waarVindtHetEvenementPlaats.buiten'))->toBeTrue()
+            ->and($state->get('waarVindtHetEvenementPlaats.route'))->toBeTrue()
+            ->and($state->get('waarVindtHetEvenementPlaats.gebouw'))->toBeFalse();
+    });
+
+    test('empty Filament CheckboxList-state returns false for any member', function () {
+        $state = FormState::empty();
+        $state->setField('sel', []);
+
+        expect($state->get('sel.whatever'))->toBeFalse();
     });
 
     test('exact-match field with dots takes precedence over dot-descend', function () {

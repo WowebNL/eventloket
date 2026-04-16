@@ -76,6 +76,8 @@ return false || (false);
                                     ->drawMarker(true)
                                     ->drawCircle(false)
                                     ->drawRectangle(false)
+                                    ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
+                                    ->columnSpanFull()
                                     ->required()
                                     ->hidden(function (Get $get, $livewire) {
                                         $rule = $livewire->state()->isFieldHidden('positieVanHetVoorwerp');

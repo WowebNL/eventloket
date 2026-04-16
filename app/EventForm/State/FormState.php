@@ -205,11 +205,44 @@ class FormState implements Arrayable
             return $this->descend($value[$head], $next);
         }
 
+        // Filament's CheckboxList bewaart selectboxes als `['buiten', 'route']`
+        // (indexed list van strings). OF's rule-triggers gebruiken object-
+        // access (`X.buiten` → true/false). Normaliseer: als we bij een
+        // indexed-list-of-strings uitkomen, behandel de head als member-check.
+        if (is_array($value) && $this->isListOfStrings($value)) {
+            // Alleen zinvol als dit de laatste stap in het pad is — sub-paden
+            // op een bool teruggeven maakt geen sense.
+            $isMember = in_array($head, $value, true);
+            if ($next === '') {
+                return $isMember;
+            }
+
+            return null;
+        }
+
         if (is_object($value) && isset($value->{$head})) {
             return $this->descend($value->{$head}, $next);
         }
 
         return null;
+    }
+
+    /** @param array<int|string, mixed> $value */
+    private function isListOfStrings(array $value): bool
+    {
+        if ($value === []) {
+            return true;
+        }
+        if (array_keys($value) !== range(0, count($value) - 1)) {
+            return false;
+        }
+        foreach ($value as $item) {
+            if (! is_string($item)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
