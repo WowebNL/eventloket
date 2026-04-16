@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
@@ -20,12 +20,16 @@ use Illuminate\Support\HtmlString;
  */
 final class ContactgegevensStep
 {
+    public const UUID = '48e9408a-3455-4d3c-b9ce-5f6f08f8f2b5';
+
     public static function make(): Step
     {
         return Step::make('Contactgegevens')
+            ->key(self::UUID)
             ->schema([
-                Placeholder::make('loadUserInformation')
-                    ->content(new HtmlString('<p>Een ogenblik geduld, uw gegevens worden ingeladen…</p>')),
+                TextEntry::make('loadUserInformation')
+                    ->hiddenLabel()
+                    ->state(new HtmlString('<p>Een ogenblik geduld, uw gegevens worden ingeladen…</p>')),
                 TextInput::make('watIsUwVoornaam')
                     ->label('Wat is uw voornaam?')
                     ->required()
@@ -86,8 +90,9 @@ final class ContactgegevensStep
                             ->maxLength(1000),
                     ])
                     ->hidden(),
-                Placeholder::make('waarschuwingGeenKvk')
-                    ->content(new HtmlString('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>'))
+                TextEntry::make('waarschuwingGeenKvk')
+                    ->hiddenLabel()
+                    ->state(new HtmlString('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>'))
                     ->hidden(),
                 Fieldset::make('Adresgegevens')
                     ->schema([

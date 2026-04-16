@@ -18,6 +18,16 @@ final class AlsIsGelijkAanGm1903EnWaarvoorwiltueventloke implements Rule
         return 'a46b5971-673b-415a-a7b4-fa4dde2e0c4f';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['8facfe56-5548-44e7-93b9-1356bc266e00'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM1903') && ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')));

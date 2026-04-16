@@ -18,6 +18,16 @@ final class RuleF56a54dd implements Rule
         return 'f56a54dd-4af9-452f-8bbd-cee5fba3c79b';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['48e9408a-3455-4d3c-b9ce-5f6f08f8f2b5'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('eventloketSession') !== '{}'));

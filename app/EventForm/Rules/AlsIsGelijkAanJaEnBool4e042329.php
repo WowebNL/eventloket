@@ -18,6 +18,16 @@ final class AlsIsGelijkAanJaEnBool4e042329 implements Rule
         return '4e042329-a992-45ae-998b-521ea980c55a';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('meldingvraag2') === 'Ja') && ((bool) $s->get('gemeenteVariabelen.report_question_3'))));

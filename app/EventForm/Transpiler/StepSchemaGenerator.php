@@ -308,8 +308,11 @@ class StepSchemaGenerator
         $html = (string) ($component['html'] ?? '');
         $escaped = str_replace(['\\', "'"], ['\\\\', "\\'"], $html);
 
-        return "{$pad}Placeholder::make('{$this->esc($key)}')\n"
-            ."{$pad}    ->content(new \\Illuminate\\Support\\HtmlString('{$escaped}'))"
+        // Filament's Placeholder is deprecated in favor of TextEntry with
+        // ->state(). HtmlString zorgt dat onze HTML-content gerenderd wordt.
+        return "{$pad}TextEntry::make('{$this->esc($key)}')\n"
+            ."{$pad}    ->hiddenLabel()\n"
+            ."{$pad}    ->state(new \\Illuminate\\Support\\HtmlString('{$escaped}'))"
             .$this->visibilityModifiers($component, $pad);
     }
 
@@ -496,12 +499,12 @@ class StepSchemaGenerator
         use Filament\\Forms\\Components\\DatePicker;
         use Filament\\Forms\\Components\\DateTimePicker;
         use Filament\\Forms\\Components\\FileUpload;
-        use Filament\\Forms\\Components\\Placeholder;
         use Filament\\Forms\\Components\\Radio;
         use Filament\\Forms\\Components\\Repeater;
         use Filament\\Forms\\Components\\Select;
         use Filament\\Forms\\Components\\Textarea;
         use Filament\\Forms\\Components\\TextInput;
+        use Filament\\Infolists\\Components\\TextEntry;
         use Filament\\Schemas\\Components\\Fieldset;
         use Filament\\Schemas\\Components\\Grid;
         use Filament\\Schemas\\Components\\Wizard\\Step;
@@ -512,9 +515,12 @@ class StepSchemaGenerator
          */
         final class {$className}
         {
+            public const UUID = '{$uuid}';
+
             public static function make(): Step
             {
                 return Step::make('{$stepLabel}')
+                    ->key(self::UUID)
                     ->schema([
         {$schemaBody}
                     ]);

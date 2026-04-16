@@ -18,6 +18,16 @@ final class AlsIsGelijkAanTrueEnReductieVanEvenemen implements Rule
         return 'be547255-4a1b-4f37-96e8-919d5351e7a5';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('inGemeentenResponse.line.start_end_equal') === 'True') && ((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2) && ((bool) $s->get('userSelectGemeente11'))));

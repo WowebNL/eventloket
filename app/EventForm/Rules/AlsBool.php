@@ -18,6 +18,16 @@ final class AlsBool implements Rule
         return 'ce043762-6d77-44dc-8e8c-cb605e9acdfa';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['48e9408a-3455-4d3c-b9ce-5f6f08f8f2b5'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (((bool) $s->get('eventloketSession.kvk')));

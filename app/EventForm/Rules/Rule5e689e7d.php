@@ -18,6 +18,16 @@ final class Rule5e689e7d implements Rule
         return '5e689e7d-0a06-4301-ada5-d36132b285cb';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('waarVindtHetEvenementPlaats.gebouw') === true));

@@ -19,6 +19,16 @@ final class AlsBoolEnIsNietGelijkAanNone99b8a502 implements Rule
         return '99b8a502-9ef8-4be2-8142-2a25c69ba905';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('addressToCheck')) && ($s->get('addressToCheck') !== 'None') && ($s->get('waarVindtHetEvenementPlaats11') !== '{\'gebouw\': False, \'buiten\': False, \'route\': True}')));

@@ -18,6 +18,16 @@ final class RuleB0b1b8ed implements Rule
         return 'b0b1b8ed-4bdf-4fde-9657-b11cd3d88f08';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6', 'd87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('evenementInGemeente') !== ''));

@@ -9,11 +9,11 @@ use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
@@ -26,14 +26,18 @@ use Illuminate\Support\HtmlString;
  */
 final class VergunningaanvraagVervolgvragenStep
 {
+    public const UUID = '661aabb7-e927-4a75-8d95-0a665c5d83fe';
+
     public static function make(): Step
     {
         return Step::make('Vergunningaanvraag: kenmerken')
+            ->key(self::UUID)
             ->schema([
                 Fieldset::make('Versterkte muziek')
                     ->schema([
-                        Placeholder::make('content5')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content5')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>')),
                         CheckboxList::make('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning')
                             ->label('Wie maakt de muziek op locatie bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -125,8 +129,9 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(),
                 Fieldset::make('Bouwsels &gt; 10m<sup>2</sup> ')
                     ->schema([
-                        Placeholder::make('content15')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat er bouwsels &gt; 10m2 zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content15')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat er bouwsels &gt; 10m2 zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>')),
                         CheckboxList::make('watVoorBouwselsPlaatsUOpDeLocaties')
                             ->label('Wat voor bouwsels plaats u op de locaties?')
                             ->options([
@@ -226,8 +231,9 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(),
                 Fieldset::make('Kansspelen')
                     ->schema([
-                        Placeholder::make('content16')
-                            ->content(new HtmlString('<p>U heeft kansspelen aangekruist.&nbsp;Hieronder volgen een aantal vragen daarover.</p>')),
+                        TextEntry::make('content16')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft kansspelen aangekruist.&nbsp;Hieronder volgen een aantal vragen daarover.</p>')),
                         Textarea::make('welkSoortKansspelBetreftHet')
                             ->label('Welk soort kansspel betreft het?')
                             ->required()
@@ -252,8 +258,9 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(),
                 Fieldset::make('Alcoholische dranken')
                     ->schema([
-                        Placeholder::make('content17')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat er alcoholische dranken genuttigd worden. Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content17')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat er alcoholische dranken genuttigd worden. Hieronder volgen een aantal vragen hierover.</p>')),
                         Radio::make('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop')
                             ->label('Is een persoon of organisatie verantwoordelijk voor de alcoholverkoop?')
                             ->options([
@@ -318,8 +325,9 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(),
                 Fieldset::make('Eten bereiden of verkopen')
                     ->schema([
-                        Placeholder::make('content18')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content18')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgen een aantal vragen hierover.</p>')),
                         Radio::make('welkSoortBereidingVanEtenswarenIsVanToepassingOpLocatieEvenementX')
                             ->label('Welk soort bereiding van etenswaren is van toepassing op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -352,8 +360,9 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(),
                 Fieldset::make('Belemmering van verkeer')
                     ->schema([
-                        Placeholder::make('content19')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat er sprake is van belemmering van verkeer. Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content19')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van belemmering van verkeer. Hieronder volgen een aantal vragen hierover.</p>')),
                         Textarea::make('beschrijfOpWelkeWijzeErSprakeIsVanBelemmeringVanVerkeer')
                             ->label('Beschrijf op welke wijze er sprake is van belemmering van verkeer')
                             ->required()
@@ -362,8 +371,9 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(),
                 Fieldset::make('Weg of vaarweg afsluiten')
                     ->schema([
-                        Placeholder::make('content20')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat u een (deel van-) de doorgaande weg of vaarweg wilt afsluiten voor doorgaand verkeer. Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content20')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat u een (deel van-) de doorgaande weg of vaarweg wilt afsluiten voor doorgaand verkeer. Hieronder volgen een aantal vragen hierover.</p>')),
                         Repeater::make('welkeDoorgangenWiltUAfsluiten')
                             ->label('Welke doorgangen wilt u afsluiten?')
                             ->schema([
@@ -385,8 +395,9 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(),
                 Fieldset::make('Toegang voor hulpdiensten is beperkt')
                     ->schema([
-                        Placeholder::make('content21')
-                            ->content(new HtmlString('<p><strong>Beschrijf in de bijlage “Verkeersplan” de calamiteitenroute en op welke wijze de toegang voor hulpdiensten beperkt wordt en welke maatregelen u heeft getroffen om de deze beperking op te lossen.</strong></p>')),
+                        TextEntry::make('content21')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p><strong>Beschrijf in de bijlage “Verkeersplan” de calamiteitenroute en op welke wijze de toegang voor hulpdiensten beperkt wordt en welke maatregelen u heeft getroffen om de deze beperking op te lossen.</strong></p>')),
                         TextInput::make('watIsDeNaamVanDeFunctionarisOfPersoonDieDeTaakHeeftOmInGevalVanEenCalamiteitDeHulpdienstenOpTeVangen')
                             ->label('Wat is de naam van de functionaris of persoon die de taak heeft om in geval van een calamiteit de hulpdiensten op te vangen?')
                             ->required()

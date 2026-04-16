@@ -18,6 +18,16 @@ final class RuleE8e0f322 implements Rule
         return 'e8e0f322-bd43-4e79-9a3b-be489189920b';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['ae44ab5b-c068-4ceb-b121-6e6907f78ef9'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['661aabb7-e927-4a75-8d95-0a665c5d83fe'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A7') === true));

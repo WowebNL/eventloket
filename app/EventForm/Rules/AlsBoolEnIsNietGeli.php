@@ -18,6 +18,16 @@ final class AlsBoolEnIsNietGeli implements Rule
         return '8124340f-cce5-47da-8691-91ad37fd6af0';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('eventloketSession.user_last_name')) && ($s->get('eventloketSession.user_last_name') !== 'None') && ($s->get('eventloketSession.user_last_name') !== 'NULL')));

@@ -18,6 +18,16 @@ final class AlsReductieVan1BeginnendBij0IsGelijkA implements Rule
         return 'a6fcec40-74f6-4741-862f-22ebf2de7142';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) === 1));

@@ -18,6 +18,16 @@ final class AlsIsGelijkAanJaEnTrueAlsOntbrekendGemeentevariabelenReportQuestiEa0
         return 'ea096e0f-e793-4df7-8292-df26ad862dc9';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('meldingvraag1') === 'Ja') && ((array_values(array_filter([

@@ -18,6 +18,16 @@ final class Rule35501489 implements Rule
         return '35501489-2e07-4d62-b5df-da1b4795d5e7';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['ae44ab5b-c068-4ceb-b121-6e6907f78ef9'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['6e285ace-f891-4324-b54e-639c1cfff9fa'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A37') === true));

@@ -18,6 +18,16 @@ final class AlsBoolEnIsNietGelijkAanNone580a3ef8 implements Rule
         return '580a3ef8-9fa6-4f5a-8714-502d86d6cb55';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('userSelectGemeente')) && ($s->get('userSelectGemeente') !== '')));

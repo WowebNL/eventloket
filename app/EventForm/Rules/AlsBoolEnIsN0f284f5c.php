@@ -18,6 +18,16 @@ final class AlsBoolEnIsN0f284f5c implements Rule
         return '0f284f5c-ffb1-4512-981d-5954e56c8b9e';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('eventloketSession.organisation_phone')) && ($s->get('eventloketSession.organisation_phone') !== 'None') && ($s->get('eventloketSession.organisation_phone') !== 'NULL')));

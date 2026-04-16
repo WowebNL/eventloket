@@ -63,7 +63,11 @@ class TranspileEventForm extends Command
         }
         File::ensureDirectoryExists($stepsDir);
 
-        $ruleGen = new RuleClassGenerator;
+        // Bouw per-stap de set veld-keys die op die stap wonen. Nodig voor
+        // het bepalen van trigger-scope + effect-scope per gegenereerde rule.
+        $stepFieldIndex = $this->buildStepFieldIndex($raw->formSteps);
+
+        $ruleGen = (new RuleClassGenerator)->withStepFieldIndex($stepFieldIndex);
         $ruleCount = 0;
         foreach ($raw->logicRules as $rule) {
             $generated = $ruleGen->generate($rule);
@@ -165,6 +169,59 @@ class TranspileEventForm extends Command
                         /** @var list<array<string, mixed>> $nested */
                         $nested = $column['components'];
                         $this->walkForTypes($nested, $index);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $steps
+     * @return array<string, list<string>> stepUuid → lijst van veld-keys op die stap
+     */
+    private function buildStepFieldIndex(array $steps): array
+    {
+        $index = [];
+        foreach ($steps as $step) {
+            $uuid = (string) ($step['uuid'] ?? '');
+            if ($uuid === '') {
+                continue;
+            }
+            $components = $step['configuration']['components'] ?? [];
+            if (! is_array($components)) {
+                continue;
+            }
+            /** @var list<array<string, mixed>> $components */
+            $keys = [];
+            $this->walkForKeys($components, $keys);
+            $index[$uuid] = $keys;
+        }
+
+        return $index;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $components
+     * @param  list<string>  $keys
+     */
+    private function walkForKeys(array $components, array &$keys): void
+    {
+        foreach ($components as $component) {
+            $key = $component['key'] ?? null;
+            if (is_string($key) && $key !== '') {
+                $keys[] = $key;
+            }
+            if (isset($component['components']) && is_array($component['components'])) {
+                /** @var list<array<string, mixed>> $nested */
+                $nested = $component['components'];
+                $this->walkForKeys($nested, $keys);
+            }
+            if (($component['type'] ?? null) === 'columns' && is_array($component['columns'] ?? null)) {
+                foreach ($component['columns'] as $column) {
+                    if (is_array($column) && is_array($column['components'] ?? null)) {
+                        /** @var list<array<string, mixed>> $nested */
+                        $nested = $column['components'];
+                        $this->walkForKeys($nested, $keys);
                     }
                 }
             }

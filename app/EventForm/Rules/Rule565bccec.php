@@ -18,6 +18,16 @@ final class Rule565bccec implements Rule
         return '565bccec-1a7b-40f3-975f-0edf8402b461';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['ae44ab5b-c068-4ceb-b121-6e6907f78ef9'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['e8f00982-ee47-4bec-bf31-a5c8d1b05e5e'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX.A48') === true));

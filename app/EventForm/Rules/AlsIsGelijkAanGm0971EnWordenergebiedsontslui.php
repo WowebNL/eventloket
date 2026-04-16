@@ -18,6 +18,16 @@ final class AlsIsGelijkAanGm0971EnWordenergebiedsontslui implements Rule
         return '6dcf345f-b3c5-4ec0-88af-969d124df26e';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM0971') && ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee')));

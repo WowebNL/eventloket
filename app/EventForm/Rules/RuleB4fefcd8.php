@@ -18,6 +18,16 @@ final class RuleB4fefcd8 implements Rule
         return 'b4fefcd8-faae-4139-93e1-e4b8108d6376';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['c75cc256-6729-4684-9f9b-ede6265b3e72'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('risicoClassificatie') !== ''));

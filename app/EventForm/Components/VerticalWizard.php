@@ -25,6 +25,15 @@ class VerticalWizard extends Wizard
 
     protected string $view = 'event-form.components.vertical-wizard';
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Persisteer de actieve stap in de query-string (?step=<uuid>) zodat
+        // we server-side kunnen bepalen welke step nu wordt getoond — nodig
+        // voor de scoped rules-evaluatie per stap.
+        $this->persistStepInQueryString('step');
+    }
+
     /**
      * @param  \Closure(string): bool  $resolver
      */

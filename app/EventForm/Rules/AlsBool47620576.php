@@ -19,6 +19,16 @@ final class AlsBool47620576 implements Rule
         return '47620576-e866-4f7e-98fb-cad476f4ac3b';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (((bool) $s->get('evenementInGemeente.brk_identification')));

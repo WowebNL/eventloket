@@ -18,6 +18,16 @@ final class AlsIsNietGelijkAanEnIsGelijkAanFa implements Rule
         return '29ff6bf6-c3fb-42e6-b523-d5478d203b85';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['c3c17c65-0cf1-4a79-a348-75eab01f46ec'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('eventloketPrefill') !== '{}') && ($s->get('watIsDeNaamVanHetEvenementVergunning') === '')));

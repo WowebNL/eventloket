@@ -18,6 +18,16 @@ final class AlsBoolEnIsN implements Rule
         return '5905fff0-6bec-4c28-9064-55772fb25859';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('eventloketSession.organisation_email')) && ($s->get('eventloketSession.organisation_email') !== 'None') && ($s->get('eventloketSession.organisation_address') !== 'NULL')));

@@ -18,6 +18,16 @@ final class Rule6b2aeed1 implements Rule
         return '6b2aeed1-8226-4a7c-9801-bbe61d576dca';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['8facfe56-5548-44e7-93b9-1356bc266e00'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('waarvoorWiltUEventloketGebruiken') === 'evenement'));

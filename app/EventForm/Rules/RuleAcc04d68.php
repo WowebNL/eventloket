@@ -18,6 +18,16 @@ final class RuleAcc04d68 implements Rule
         return 'acc04d68-e446-4c59-b8a5-d40ef246ee74';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['ae44ab5b-c068-4ceb-b121-6e6907f78ef9'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['d790edb5-712a-4f83-87a8-1a86e4831455'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX.A25') === true));

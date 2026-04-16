@@ -21,10 +21,28 @@ class RuleClassGenerator
     /** @var array<string, true> */
     private array $usedNames = [];
 
+    /** @var array<string, list<string>> stepUuid → lijst van veld-keys op die stap */
+    private array $stepFieldIndex = [];
+
     public function __construct(
         private readonly JsonLogicCompiler $logic = new JsonLogicCompiler,
         private readonly ActionCompiler $actions = new ActionCompiler(new JsonLogicCompiler),
+        private readonly RuleDependencyAnalyzer $deps = new RuleDependencyAnalyzer,
     ) {}
+
+    /**
+     * Voorzie de generator van een stepUuid → veld-keys mapping, zodat
+     * `triggerStepUuids()` en `effectStepUuids()` per rule berekend kunnen
+     * worden.
+     *
+     * @param  array<string, list<string>>  $index
+     */
+    public function withStepFieldIndex(array $index): self
+    {
+        $this->stepFieldIndex = $index;
+
+        return $this;
+    }
 
     /** @param  array<string, mixed>  $rule */
     public function generate(array $rule): GeneratedRule
@@ -41,12 +59,17 @@ class RuleClassGenerator
         $triggerExpr = $this->logic->compile($rule['json_logic_trigger'] ?? false);
         $actionStatements = $this->compileActions($rule['actions'] ?? []);
 
+        $triggerSteps = $this->resolveTriggerSteps($rule['json_logic_trigger'] ?? null);
+        $effectSteps = $this->resolveEffectSteps($rule['actions'] ?? []);
+
         $fileContent = $this->renderClassFile(
             className: $className,
             uuid: $uuid,
             description: $description,
             triggerExpr: $triggerExpr,
             actionStatements: $actionStatements,
+            triggerSteps: $triggerSteps,
+            effectSteps: $effectSteps,
         );
 
         return new GeneratedRule(
@@ -54,6 +77,69 @@ class RuleClassGenerator
             fileContent: $fileContent,
             uuid: $uuid,
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveTriggerSteps(mixed $trigger): array
+    {
+        if ($this->stepFieldIndex === []) {
+            return [];
+        }
+        $readKeys = $this->deps->readKeys($trigger);
+        if ($readKeys === []) {
+            return [];
+        }
+
+        $steps = [];
+        foreach ($this->stepFieldIndex as $stepUuid => $fields) {
+            foreach ($readKeys as $key) {
+                if (in_array($key, $fields, true)) {
+                    $steps[] = $stepUuid;
+                    break;
+                }
+            }
+        }
+
+        return array_values(array_unique($steps));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveEffectSteps(mixed $actions): array
+    {
+        if (! is_array($actions)) {
+            return [];
+        }
+
+        $steps = [];
+        foreach ($actions as $action) {
+            if (! is_array($action)) {
+                continue;
+            }
+
+            $payload = $action['action'] ?? [];
+            $type = is_array($payload) ? ($payload['type'] ?? '') : '';
+            if (($type === 'step-applicable' || $type === 'step-not-applicable')
+                && is_string($action['form_step_uuid'] ?? null)
+                && $action['form_step_uuid'] !== '') {
+                $steps[] = $action['form_step_uuid'];
+            }
+
+            $componentKey = is_string($action['component'] ?? null) ? $action['component'] : '';
+            if ($componentKey !== '' && $this->stepFieldIndex !== []) {
+                foreach ($this->stepFieldIndex as $stepUuid => $fields) {
+                    if (in_array($componentKey, $fields, true)) {
+                        $steps[] = $stepUuid;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($steps));
     }
 
     private function compileActions(mixed $actions): string
@@ -143,14 +229,22 @@ class RuleClassGenerator
         return $converted === false ? $value : $converted;
     }
 
+    /**
+     * @param  list<string>  $triggerSteps
+     * @param  list<string>  $effectSteps
+     */
     private function renderClassFile(
         string $className,
         string $uuid,
         string $description,
         string $triggerExpr,
         string $actionStatements,
+        array $triggerSteps,
+        array $effectSteps,
     ): string {
         $descriptionSanitized = str_replace(['*/', "\r\n", "\n"], ['* /', ' ', ' '], $description);
+        $triggerStepsPhp = $this->renderStepArrayLiteral($triggerSteps);
+        $effectStepsPhp = $this->renderStepArrayLiteral($effectSteps);
 
         return <<<PHP
         <?php
@@ -172,6 +266,16 @@ class RuleClassGenerator
                 return '{$uuid}';
             }
 
+            public function triggerStepUuids(): array
+            {
+                return {$triggerStepsPhp};
+            }
+
+            public function effectStepUuids(): array
+            {
+                return {$effectStepsPhp};
+            }
+
             public function applies(FormState \$s): bool
             {
                 return (bool) ({$triggerExpr});
@@ -184,5 +288,16 @@ class RuleClassGenerator
         }
 
         PHP;
+    }
+
+    /** @param  list<string>  $steps */
+    private function renderStepArrayLiteral(array $steps): string
+    {
+        if ($steps === []) {
+            return '[]';
+        }
+        $items = array_map(static fn (string $s): string => var_export($s, true), $steps);
+
+        return '['.implode(', ', $items).']';
     }
 }

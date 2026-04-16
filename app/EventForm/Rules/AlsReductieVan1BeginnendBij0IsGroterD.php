@@ -18,6 +18,16 @@ final class AlsReductieVan1BeginnendBij0IsGroterD implements Rule
         return 'e3992429-730a-4ed9-af3c-62ad897933fe';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2));

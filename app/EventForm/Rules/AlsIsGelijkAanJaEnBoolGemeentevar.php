@@ -18,6 +18,16 @@ final class AlsIsGelijkAanJaEnBoolGemeentevar implements Rule
         return '454a40c6-43c8-42cd-9d2f-6d2ace4fec53';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('indienErObjectenGeplaatstWordenZijnDezeDanKleiner') === 'Ja') && ((bool) $s->get('gemeenteVariabelen.report_question_1'))));

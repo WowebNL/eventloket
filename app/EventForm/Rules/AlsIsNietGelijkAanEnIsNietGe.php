@@ -18,6 +18,16 @@ final class AlsIsNietGelijkAanEnIsNietGe implements Rule
         return 'bb866a33-aa14-437f-a7bf-3303ad75a5d9';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('adresSenVanHetEvenement') !== '{}') && ($s->get('adresSenVanHetEvenement') !== '[]') && ($s->get('adresSenVanHetEvenement') !== 'None')));

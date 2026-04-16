@@ -18,6 +18,16 @@ final class AlsIsGelijkAanGm0917EnWaarvoorwiltueventloke396c72d1 implements Rule
         return '396c72d1-d354-4508-b370-5096131b4f1c';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM0917') && ($s->get('isVergunningaanvraag') === true)));

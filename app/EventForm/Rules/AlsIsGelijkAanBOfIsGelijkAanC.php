@@ -18,6 +18,16 @@ final class AlsIsGelijkAanBOfIsGelijkAanC implements Rule
         return 'f1202010-b8b7-45c0-8f31-756190313451';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['7982e106-bce0-49cf-bdaa-ada9eac8b6ba'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('risicoClassificatie') === 'B') || ($s->get('risicoClassificatie') === 'C')));

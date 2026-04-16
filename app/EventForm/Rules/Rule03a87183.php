@@ -18,6 +18,16 @@ final class Rule03a87183 implements Rule
         return '03a87183-48c3-4e5b-b6ec-287c4f3daf97';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['ae44ab5b-c068-4ceb-b121-6e6907f78ef9'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['8a5fb30f-287e-41a2-a9bc-e7340bdaaa99'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX.A33') === true));

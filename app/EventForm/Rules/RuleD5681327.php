@@ -18,6 +18,16 @@ final class RuleD5681327 implements Rule
         return 'd5681327-869c-4a3a-be73-88c973668af1';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['ae44ab5b-c068-4ceb-b121-6e6907f78ef9'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['f4e91db5-fd74-4eba-b818-96ed2cc07d84'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A53') === true));

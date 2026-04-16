@@ -415,7 +415,7 @@ describe('StepSchemaGenerator addressNL', function () {
 });
 
 describe('StepSchemaGenerator content', function () {
-    test('content blocks are emitted as Placeholder with HtmlString', function () {
+    test('content blocks are emitted as TextEntry with HtmlString', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -430,7 +430,8 @@ describe('StepSchemaGenerator content', function () {
 
         $content = generateStep($step);
 
-        expect($content)->toContain("Placeholder::make('info')")
+        // Placeholder is deprecated in Filament; we gebruiken TextEntry.
+        expect($content)->toContain("TextEntry::make('info')")
             ->and($content)->toContain('<p>Lees eerst de instructies.</p>');
     });
 });

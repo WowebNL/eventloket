@@ -46,6 +46,10 @@ class EventFormPage extends Page implements HasForms
     #[Locked]
     public array $stateSnapshot = [];
 
+    /** Unix timestamp van de laatste draft-save. Gebruikt voor throttling. */
+    #[Locked]
+    public int $lastDraftSaveAt = 0;
+
     protected FormState $state;
 
     public function state(): FormState
@@ -141,16 +145,41 @@ class EventFormPage extends Page implements HasForms
         }
 
         $this->state->absorbFields($this->data ?? []);
-        app(RulesEngine::class)->evaluate($this->state);
 
+        // Scoped evaluatie: run alleen rules die triggers hebben op de
+        // huidige stap. Van ~144 naar typisch <10 rules per klik.
+        $currentStep = $this->currentStepUuid();
+        if ($currentStep !== null) {
+            app(RulesEngine::class)->evaluateForStep($this->state, $currentStep);
+        } else {
+            // Fallback bij onbekende step (eerste load): globale pass.
+            app(RulesEngine::class)->evaluate($this->state);
+        }
+
+        // Throttle draft-save: minimaal 10s tussen schrijfacties. Sla altijd
+        // de in-memory snapshot op zodat hydratie werkt; de DB-write gaat
+        // throttled.
+        $this->stateSnapshot = $this->serializableSnapshot($this->state);
+
+        $now = time();
+        if ($now - $this->lastDraftSaveAt < 10) {
+            return;
+        }
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
         if ($user instanceof User && $org instanceof Organisation) {
-            app(DraftStore::class)->save($user, $org, $this->state, null);
+            app(DraftStore::class)->save($user, $org, $this->state, $this->currentStepUuid());
+            $this->lastDraftSaveAt = $now;
         }
-
-        $this->stateSnapshot = $this->serializableSnapshot($this->state);
     }
+
+    private function currentStepUuid(): ?string
+    {
+        $step = request()->query('step');
+
+        return is_string($step) && $step !== '' ? $step : null;
+    }
+
 
     public function submit(): void
     {

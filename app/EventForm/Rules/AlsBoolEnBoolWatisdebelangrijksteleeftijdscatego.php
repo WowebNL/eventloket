@@ -18,6 +18,16 @@ final class AlsBoolEnBoolWatisdebelangrijksteleeftijdscatego implements Rule
         return '55ce8acd-f972-417d-8920-64c8b0744e14';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['c75cc256-6729-4684-9f9b-ede6265b3e72'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('watIsDeAantrekkingskrachtVanHetEvenement')) && ((bool) $s->get('watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep')) && ((bool) $s->get('isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid')) && ((bool) $s->get('isEenDeelVanDeDoelgroepVerminderdZelfredzaam')) && ((bool) $s->get('isErSprakeVanAanwezigheidVanRisicovolleActiviteiten')) && ((bool) $s->get('watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep')) && ((bool) $s->get('isErSprakeVanOvernachten')) && ((bool) $s->get('isErGebruikVanAlcoholEnDrugs')) && ((bool) $s->get('watIsHetAantalGelijktijdigAanwezigPersonen')) && ((bool) $s->get('inWelkSeizoenVindtHetEvenementPlaats')) && ((bool) $s->get('inWelkeLocatieVindtHetEvenementPlaats')) && ((bool) $s->get('opWelkSoortOndergrondVindtHetEvenementPlaats')) && ((bool) $s->get('watIsDeTijdsduurVanHetEvenement')) && ((bool) $s->get('welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing'))));

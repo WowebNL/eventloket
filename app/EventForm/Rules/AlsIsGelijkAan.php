@@ -18,6 +18,16 @@ final class AlsIsGelijkAan implements Rule
         return '1d1ef5b0-f099-4585-a6b5-db9fad8f3a7a';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['48e9408a-3455-4d3c-b9ce-5f6f08f8f2b5'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('eventloketSession.kvk') === ''));

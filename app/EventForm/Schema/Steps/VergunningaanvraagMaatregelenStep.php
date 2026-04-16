@@ -6,11 +6,11 @@ namespace App\EventForm\Schema\Steps;
 
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
@@ -23,14 +23,18 @@ use Illuminate\Support\HtmlString;
  */
 final class VergunningaanvraagMaatregelenStep
 {
+    public const UUID = '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99';
+
     public static function make(): Step
     {
         return Step::make('Vergunningaanvraag: maatregelen')
+            ->key(self::UUID)
             ->schema([
                 Fieldset::make('Aanpassen locatie en/of verwijderen straatmeubilair')
                     ->schema([
-                        Placeholder::make('content29')
-                            ->content(new HtmlString('<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>')),
+                        TextEntry::make('content29')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>')),
                         Textarea::make('geefEenOmschrijvingWelkeAanpassingenOpLocatieEvenementXWaarNodigZijnOfWelkStraatmeubilairUWiltVerwijderenOfAanpassen')
                             ->label('Geef een omschrijving welke aanpassingen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }} waar nodig zijn of welk straatmeubilair u wilt verwijderen of aanpassen.')
                             ->required()
@@ -39,8 +43,9 @@ final class VergunningaanvraagMaatregelenStep
                     ->hidden(),
                 Fieldset::make('Extra afval')
                     ->schema([
-                        Placeholder::make('content30')
-                            ->content(new HtmlString('<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>')),
+                        TextEntry::make('content30')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>')),
                         Repeater::make('wieMaaktDeLocatiesEnDeOmgevingDaarvanSchoonEnWanneerGebeurtDat')
                             ->label('Wie maakt de locaties en de omgeving daarvan schoon, en wanneer gebeurt dat?')
                             ->schema([
@@ -83,8 +88,9 @@ final class VergunningaanvraagMaatregelenStep
                             ->live(),
                         Fieldset::make('Veldengroep')
                             ->schema([
-                                Placeholder::make('content37')
-                                    ->content(new HtmlString('<p>Vermeld hier van welke materialen u gebruik zou willen maken en ook de aantallen. Uw betreffende gemeente zal aangeven welke hulpmiddelen aangeboden kunnen worden.</p>')),
+                                TextEntry::make('content37')
+                                    ->hiddenLabel()
+                                    ->state(new HtmlString('<p>Vermeld hier van welke materialen u gebruik zou willen maken en ook de aantallen. Uw betreffende gemeente zal aangeven welke hulpmiddelen aangeboden kunnen worden.</p>')),
                                 TextInput::make('dranghekken1')
                                     ->label('Dranghekken')
                                     ->numeric(),

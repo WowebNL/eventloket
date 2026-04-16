@@ -19,6 +19,16 @@ final class AlsBoolEnIsNietGelijkAanNoneBd328413 implements Rule
         return 'bd328413-a566-42a6-87ba-ec575ea94347';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('addressesToCheck')) && ($s->get('addressesToCheck') !== 'None')));

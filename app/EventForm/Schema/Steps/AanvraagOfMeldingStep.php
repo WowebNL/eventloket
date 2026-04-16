@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
@@ -18,14 +18,19 @@ use Illuminate\Support\HtmlString;
  */
 final class AanvraagOfMeldingStep
 {
+    public const UUID = 'd87c01ce-8387-43b0-a8c8-e6cf5abb6da1';
+
     public static function make(): Step
     {
         return Step::make('Vergunningsplichtig scan')
+            ->key(self::UUID)
             ->schema([
-                Placeholder::make('content4')
-                    ->content(new HtmlString('<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>')),
-                Placeholder::make('contentGemeenteMelding')
-                    ->content(new HtmlString('<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>'))
+                TextEntry::make('content4')
+                    ->hiddenLabel()
+                    ->state(new HtmlString('<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>')),
+                TextEntry::make('contentGemeenteMelding')
+                    ->hiddenLabel()
+                    ->state(new HtmlString('<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>'))
                     ->hidden(),
                 Fieldset::make('Algemene vragen')
                     ->schema([
@@ -86,11 +91,13 @@ final class AanvraagOfMeldingStep
                             ->label('Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?')
                             ->required()
                             ->hidden(),
-                        Placeholder::make('contentGoNext')
-                            ->content(new HtmlString('<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>'))
+                        TextEntry::make('contentGoNext')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>'))
                             ->hidden(),
-                        Placeholder::make('MeldingTekst')
-                            ->content(new HtmlString('<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>'))
+                        TextEntry::make('MeldingTekst')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>'))
                             ->hidden(),
                     ])
                     ->hidden(),

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -16,12 +16,16 @@ use Illuminate\Support\HtmlString;
  */
 final class RisicoscanStep
 {
+    public const UUID = 'c75cc256-6729-4684-9f9b-ede6265b3e72';
+
     public static function make(): Step
     {
         return Step::make('Risicoscan')
+            ->key(self::UUID)
             ->schema([
-                Placeholder::make('content')
-                    ->content(new HtmlString('<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>')),
+                TextEntry::make('content')
+                    ->hiddenLabel()
+                    ->state(new HtmlString('<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>')),
                 Radio::make('watIsDeAantrekkingskrachtVanHetEvenement')
                     ->label('Wat is de aantrekkingskracht van het evenement?')
                     ->options([
@@ -148,8 +152,9 @@ final class RisicoscanStep
                         '0' => 'Goede aan- en afvoerwegen',
                     ])
                     ->required(),
-                Placeholder::make('risicoClassificatieContent')
-                    ->content(new HtmlString('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>'))
+                TextEntry::make('risicoClassificatieContent')
+                    ->hiddenLabel()
+                    ->state(new HtmlString('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>'))
                     ->hidden(),
             ]);
     }

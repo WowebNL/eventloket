@@ -8,11 +8,11 @@ use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
@@ -25,14 +25,18 @@ use Illuminate\Support\HtmlString;
  */
 final class VergunningaanvraagOverigStep
 {
+    public const UUID = 'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e';
+
     public static function make(): Step
     {
         return Step::make('Vergunningaanvraag: overig')
+            ->key(self::UUID)
             ->schema([
                 Fieldset::make('Voorwerpen op de weg')
                     ->schema([
-                        Placeholder::make('content32')
-                            ->content(new HtmlString('<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>')),
+                        TextEntry::make('content32')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>')),
                         Repeater::make('geefAanOpWelkeDataEnTijdenUDeVoorwerpenWiltPlaatsenOpDeOpenbareWegOfGroteVoertuigenWiltParkerenInDeBuurtVanHetEvenement')
                             ->label('Geef aan op welke data en tijden u de voorwerpen wilt plaatsen op de openbare weg of grote voertuigen wilt parkeren in de buurt van het evenement')
                             ->schema([
@@ -57,8 +61,9 @@ final class VergunningaanvraagOverigStep
                     ->hidden(),
                 Fieldset::make('Verkeersregelaars')
                     ->schema([
-                        Placeholder::make('content33')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content33')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>')),
                         Radio::make('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie')
                             ->label('Huurt u de verkeersregelaars in bij een daarin gespecialiseerd bedrijf/organisatie?')
                             ->required()
@@ -68,8 +73,9 @@ final class VergunningaanvraagOverigStep
                             ->required()
                             ->maxLength(10000)
                             ->visible(fn (Get $get): bool => $get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Ja'),
-                        Placeholder::make('content34')
-                            ->content(new HtmlString('<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>'))
+                        TextEntry::make('content34')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>'))
                             ->visible(fn (Get $get): bool => $get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Nee'),
                         TextInput::make('hoeveelVerkeersregelaarsWiltUInzetten')
                             ->label('Hoeveel verkeersregelaars wilt u inzetten?')

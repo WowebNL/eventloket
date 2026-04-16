@@ -18,6 +18,16 @@ final class AlsBoolEnReductieVan1Accumul implements Rule
         return '3247522b-8603-4c7c-ae8d-b92a75fb35d6';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('routeDoorGemeentenNamen')) && ((is_array($s->get('routeDoorGemeentenNamen')) ? count($s->get('routeDoorGemeentenNamen')) : 0) >= 2) && ((bool) $s->get('userSelectGemeente11'))));

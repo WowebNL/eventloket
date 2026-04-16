@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use Dotswan\MapPicker\Fields\Map;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
@@ -22,14 +22,18 @@ use Illuminate\Support\HtmlString;
  */
 final class VergunningsaanvraagVoorzieningenStep
 {
+    public const UUID = 'f4e91db5-fd74-4eba-b818-96ed2cc07d84';
+
     public static function make(): Step
     {
         return Step::make('Vergunningsaanvraag: voorzieningen')
+            ->key(self::UUID)
             ->schema([
                 Fieldset::make('WC\'s')
                     ->schema([
-                        Placeholder::make('content23')
-                            ->content(new HtmlString('<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>')),
+                        TextEntry::make('content23')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>')),
                         TextInput::make('hoeveelVasteToilettenZijnBeschikbaar')
                             ->label('Hoeveel vaste toiletten zijn beschikbaar?')
                             ->numeric()
@@ -70,8 +74,9 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(),
                 Fieldset::make('Douche\'s')
                     ->schema([
-                        Placeholder::make('content24')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>')),
+                        TextEntry::make('content24')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>')),
                         TextInput::make('hoeveelVasteDouchevoorzieningenZijnBeschikbaar')
                             ->label('Hoeveel vaste douchevoorzieningen zijn beschikbaar?')
                             ->numeric()
@@ -87,8 +92,9 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(),
                 Fieldset::make('EHBO')
                     ->schema([
-                        Placeholder::make('content25')
-                            ->content(new HtmlString('<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>')),
+                        TextEntry::make('content25')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>')),
                         TextInput::make('aantalVasteEersteHulpposten')
                             ->label('Aantal vaste eerste hulpposten')
                             ->numeric()
@@ -186,8 +192,9 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(),
                 Fieldset::make('Bouwsels')
                     ->schema([
-                        Placeholder::make('content26')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>')),
+                        TextEntry::make('content26')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>')),
                         TextInput::make('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc')
                             ->label('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?')
                             ->numeric()
@@ -197,8 +204,9 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(),
                 Fieldset::make('Beveiligers')
                     ->schema([
-                        Placeholder::make('content36')
-                            ->content(new HtmlString('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>')),
+                        TextEntry::make('content36')
+                            ->hiddenLabel()
+                            ->state(new HtmlString('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>')),
                         Textarea::make('gegevensBeveiligingsorganisatieOpLocatieEvenementX1')
                             ->label('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                             ->required()

@@ -18,6 +18,16 @@ final class Rule0c026fb1 implements Rule
         return '0c026fb1-e43c-4fa7-a33f-615efd68d3bb';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['661aabb7-e927-4a75-8d95-0a665c5d83fe'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['661aabb7-e927-4a75-8d95-0a665c5d83fe'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('watVoorBouwselsPlaatsUOpDeLocaties.A55') === true));

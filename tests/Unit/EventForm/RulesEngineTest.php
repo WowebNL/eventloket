@@ -14,16 +14,30 @@ final class CallableRule implements Rule
     /**
      * @param  callable(FormState): bool  $applies
      * @param  callable(FormState): void  $apply
+     * @param  list<string>  $triggerSteps
+     * @param  list<string>  $effectSteps
      */
     public function __construct(
         private readonly string $id,
         private $applies,
         private $apply,
+        private readonly array $triggerSteps = [],
+        private readonly array $effectSteps = [],
     ) {}
 
     public function identifier(): string
     {
         return $this->id;
+    }
+
+    public function triggerStepUuids(): array
+    {
+        return $this->triggerSteps;
+    }
+
+    public function effectStepUuids(): array
+    {
+        return $this->effectSteps;
     }
 
     public function applies(FormState $state): bool
@@ -116,6 +130,37 @@ describe('RulesEngine', function () {
 
         expect(fn () => $engine->evaluate($state))
             ->toThrow(RuntimeException::class, 'oscillating');
+    });
+
+    test('evaluateForStep runs only rules whose triggerStepUuids contain the given step', function () {
+        $state = FormState::empty();
+
+        $engine = new RulesEngine([
+            new CallableRule(
+                'on-step-A',
+                fn () => true,
+                fn (FormState $s) => $s->setVariable('ran-A', true),
+                triggerSteps: ['step-A'],
+            ),
+            new CallableRule(
+                'on-step-B',
+                fn () => true,
+                fn (FormState $s) => $s->setVariable('ran-B', true),
+                triggerSteps: ['step-B'],
+            ),
+            new CallableRule(
+                'global-no-scope',
+                fn () => true,
+                fn (FormState $s) => $s->setVariable('ran-global', true),
+                triggerSteps: [],
+            ),
+        ]);
+
+        $engine->evaluateForStep($state, 'step-A');
+
+        expect($state->get('ran-A'))->toBeTrue()
+            ->and($state->get('ran-B'))->toBeNull()
+            ->and($state->get('ran-global'))->toBeTrue(); // geen scope = globaal bij elke stap
     });
 
     test('selectboxes-style dot-access in trigger works', function () {

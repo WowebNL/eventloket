@@ -18,6 +18,16 @@ final class Rule4e724924 implements Rule
         return '4e724924-c5a7-451b-a2c5-282cf9a245ed';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['8facfe56-5548-44e7-93b9-1356bc266e00'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'));

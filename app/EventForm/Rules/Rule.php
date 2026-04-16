@@ -21,6 +21,26 @@ interface Rule
     public function identifier(): string;
 
     /**
+     * Step-UUIDs waarvan velden in de trigger gelezen worden. De
+     * ScopedRulesEngine filtert op deze lijst: bij een state-change op stap N
+     * runnen we alleen rules waarvan N in deze lijst voorkomt. Leeg = globaal
+     * (alleen bij mount relevant).
+     *
+     * @return list<string>
+     */
+    public function triggerStepUuids(): array;
+
+    /**
+     * Step-UUIDs die door acties van deze rule geraakt worden (target-step
+     * van een step-applicable-action of de step waar een beïnvloed veld
+     * woont). Informatief — nog niet gebruikt voor execution-pruning,
+     * maar handig voor debugging en latere optimalisaties.
+     *
+     * @return list<string>
+     */
+    public function effectStepUuids(): array;
+
+    /**
      * Moet de rule nu worden toegepast? Lees alleen uit `$state`, geen side-effects.
      */
     public function applies(FormState $state): bool;

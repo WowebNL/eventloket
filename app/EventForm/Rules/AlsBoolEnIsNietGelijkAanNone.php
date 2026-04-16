@@ -19,6 +19,16 @@ final class AlsBoolEnIsNietGelijkAanNone implements Rule
         return 'a7211d0c-f8aa-479b-b9b9-8474dbe70b75';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6'];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('locatieSOpKaart')) && ($s->get('locatieSOpKaart') !== 'None')));

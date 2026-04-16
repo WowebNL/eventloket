@@ -28,10 +28,34 @@ class RulesEngine
 
     public function evaluate(FormState $state): void
     {
+        $this->evaluateSet($state, $this->rules);
+    }
+
+    /**
+     * Evalueer alleen rules waarvan `triggerStepUuids()` de gegeven step-UUID
+     * bevat. Voor state-changes tijdens het invullen van stap N is dit
+     * voldoende en veel sneller dan een globale pass.
+     */
+    public function evaluateForStep(FormState $state, string $stepUuid): void
+    {
+        $scoped = [];
+        foreach ($this->rules as $rule) {
+            $triggers = $rule->triggerStepUuids();
+            if ($triggers === [] || in_array($stepUuid, $triggers, true)) {
+                // Geen scope-info → globaal nodig; of expliciet deze stap.
+                $scoped[] = $rule;
+            }
+        }
+        $this->evaluateSet($state, $scoped);
+    }
+
+    /** @param  iterable<Rule>  $rules */
+    private function evaluateSet(FormState $state, iterable $rules): void
+    {
         $previous = $this->snapshot($state);
 
         for ($pass = 1; $pass <= $this->maxPasses; $pass++) {
-            foreach ($this->rules as $rule) {
+            foreach ($rules as $rule) {
                 if ($rule->applies($state)) {
                     $rule->apply($state);
                 }

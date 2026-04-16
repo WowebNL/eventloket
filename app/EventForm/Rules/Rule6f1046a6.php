@@ -19,6 +19,16 @@ final class Rule6f1046a6 implements Rule
         return '6f1046a6-7866-491b-b87d-65bd67aade6f';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('inGemeentenResponse') !== '{}'));

@@ -18,6 +18,16 @@ final class Rule9ac0b4c7 implements Rule
         return '9ac0b4c7-ea17-48c4-9bd0-b760ed0570ba';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['2186344f-9821-45d1-bd52-9900ae15fcb6'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('binnenVeiligheidsregio') === false));

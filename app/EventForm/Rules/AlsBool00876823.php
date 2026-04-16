@@ -18,6 +18,16 @@ final class AlsBool00876823 implements Rule
         return '00876823-b3f3-44f6-a177-d355c84c0b12';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return ['00f09aee-fedd-44d6-b82c-3e3754d67b7a'];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (((bool) $s->get('evenementenInDeGemeente')));

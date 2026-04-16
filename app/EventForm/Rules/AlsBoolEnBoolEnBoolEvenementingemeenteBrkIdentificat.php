@@ -19,6 +19,16 @@ final class AlsBoolEnBoolEnBoolEvenementingemeenteBrkIdentificat implements Rule
         return '3fa0fbf5-9ee1-4c2a-9074-9993e208b010';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('EvenementStart')) && ((bool) $s->get('EvenementEind')) && ((bool) $s->get('evenementInGemeente.brk_identification'))));

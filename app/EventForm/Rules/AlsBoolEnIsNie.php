@@ -18,6 +18,16 @@ final class AlsBoolEnIsNie implements Rule
         return '583c258c-fcbd-4f1c-b127-58d04b6ed050';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((((bool) $s->get('eventloketSession.organisation_name')) && ($s->get('eventloketSession.organisation_name') !== 'None') && ($s->get('eventloketSession.organisation_name') !== 'NULL')));

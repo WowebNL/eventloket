@@ -18,6 +18,16 @@ final class AlsIsNietGelijkAanPostcodeHouseletterHousenumberHo implements Rule
         return '91bf1bff-b1af-4da7-b310-e56854d48f61';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('meldingAdres') !== '{\'postcode\': \'\', \'houseLetter\': \'\', \'houseNumber\': \'\', \'houseNumberAddition\': \'\'}') && ($s->get('meldingAdres') !== '{\'postcode\': \'\', \'houseLetter\': \'\', \'houseNumber\': \'\', \'houseNumberAddition\': \'\', \'city\': \'\', \'streetName\': \'\', \'secretStreetCity\': \'\'}') && ($s->get('meldingAdres') !== 'None') && ($s->get('waarVindtHetEvenementPlaats11') === '{\'route\': False, \'buiten\': False, \'gebouw\': False}')));

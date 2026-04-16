@@ -18,6 +18,16 @@ final class AlsBoolEn implements Rule
         return '2f7b0e09-2730-4aab-89e5-8b0182ee68bb';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) (($s->get('eventloketSession.organisation_address') !== ''));

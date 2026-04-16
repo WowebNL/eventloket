@@ -18,9 +18,12 @@ use Filament\Schemas\Components\Wizard\Step;
  */
 final class Vragenboom2Step
 {
+    public const UUID = 'ae44ab5b-c068-4ceb-b121-6e6907f78ef9';
+
     public static function make(): Step
     {
         return Step::make('Vergunningsaanvraag: soort')
+            ->key(self::UUID)
             ->schema([
                 Radio::make('voordatUVerderGaatMetHetBeantwoordenVanDeVragenVoorUwEvenementWillenWeGraagWetenOfUEerderEenVooraankondigingHeeftIngevuldVoorDitEvenement')
                     ->label('Voordat u verder gaat met het beantwoorden van de vragen voor uw evenement willen we graag weten of u eerder een vooraankondiging heeft ingevuld voor dit evenement?')

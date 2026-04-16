@@ -18,6 +18,16 @@ final class AlsIsGelijkAanGm0986En implements Rule
         return '5bbbf229-62eb-4e9a-89fc-b67ab1610385';
     }
 
+    public function triggerStepUuids(): array
+    {
+        return [];
+    }
+
+    public function effectStepUuids(): array
+    {
+        return [];
+    }
+
     public function applies(FormState $s): bool
     {
         return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM0986') && ($s->get('isVergunningaanvraag') === true)));

@@ -18,9 +18,12 @@ use Filament\Schemas\Components\Wizard\Step;
  */
 final class NaamVanHetEvenementStep
 {
+    public const UUID = 'c3c17c65-0cf1-4a79-a348-75eab01f46ec';
+
     public static function make(): Step
     {
         return Step::make('Het evenement')
+            ->key(self::UUID)
             ->schema([
                 TextInput::make('watIsDeNaamVanHetEvenementVergunning')
                     ->label('Wat is de naam van het evenement?')
