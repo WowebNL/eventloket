@@ -149,7 +149,8 @@ final class RisicoscanStep
                     ])
                     ->required(),
                 Placeholder::make('risicoClassificatieContent')
-                    ->content(new HtmlString('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>')),
+                    ->content(new HtmlString('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>'))
+                    ->hidden(),
             ]);
     }
 }

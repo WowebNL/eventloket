@@ -247,6 +247,92 @@ describe('StepSchemaGenerator nesting', function () {
     });
 });
 
+describe('StepSchemaGenerator visibility', function () {
+    test('hidden:true fields get ->hidden() emitted', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'organisatieInformatie',
+                    'type' => 'fieldset',
+                    'label' => 'Organisatie',
+                    'hidden' => true,
+                    'components' => [],
+                ],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain('->hidden()');
+    });
+
+    test('conditional.show=true with scalar eq emits ->visible() closure', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'soortEvenement', 'type' => 'select', 'label' => 'Soort'],
+                [
+                    'key' => 'omschrijfHetSoortEvenement',
+                    'type' => 'textarea',
+                    'label' => 'Omschrijf',
+                    'conditional' => ['show' => true, 'when' => 'soortEvenement', 'eq' => 'Anders'],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("\$get('soortEvenement')")
+            ->and($content)->toContain("'Anders'")
+            ->and($content)->toContain('->visible(fn');
+    });
+
+    test('conditional.show=false (verberg als) emits ->hidden() closure', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'soortEvenement', 'type' => 'select', 'label' => 'Soort'],
+                [
+                    'key' => 'omschrijfHetSoortEvenement',
+                    'type' => 'textarea',
+                    'label' => 'Omschrijf',
+                    'conditional' => ['show' => false, 'when' => 'soortEvenement', 'eq' => 'Anders'],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain('->hidden(fn')
+            ->and($content)->toContain("'Anders'");
+    });
+
+    test('conditional on selectboxes-target uses dot-access', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'waarVindtHetEvenementPlaats',
+                    'type' => 'selectboxes',
+                    'label' => 'Waar',
+                    'values' => [['value' => 'buiten', 'label' => 'Buiten']],
+                ],
+                [
+                    'key' => 'buitenFieldset',
+                    'type' => 'fieldset',
+                    'label' => 'Buiten-vraag',
+                    'conditional' => ['show' => true, 'when' => 'waarVindtHetEvenementPlaats', 'eq' => 'buiten'],
+                    'components' => [],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("\$get('waarVindtHetEvenementPlaats.buiten')")
+            ->and($content)->toContain('=== true');
+    });
+});
+
 describe('StepSchemaGenerator addressNL', function () {
     test('addressNL emits AddressNL::make with key', function () {
         $step = [

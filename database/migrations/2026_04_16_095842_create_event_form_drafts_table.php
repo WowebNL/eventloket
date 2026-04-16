@@ -15,7 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('organisation_id')->constrained()->cascadeOnDelete();
-            $table->jsonb('state');
+            // `json` werkt op zowel Postgres (alias van jsonb via defaults) als MySQL 5.7+.
+            $table->json('state');
             $table->string('current_step_key')->nullable();
             $table->timestamps();
 

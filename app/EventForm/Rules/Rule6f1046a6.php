@@ -37,7 +37,7 @@ final class Rule6f1046a6 implements Rule
                 })(MapContext::from($s, $__item));
             }
 
-            return $__result;
+return $__result;
         })()));
         $s->setVariable('evenementInGemeentenLijst', ((function () use ($s) {
             $__items = $s->get('inGemeentenResponse.all.items');
@@ -50,7 +50,7 @@ final class Rule6f1046a6 implements Rule
                 })(MapContext::from($s, $__item));
             }
 
-            return $__result;
+return $__result;
         })()));
         $s->setVariable('binnenVeiligheidsregio', $s->get('inGemeentenResponse.all.within'));
         $s->setVariable('gemeenten', $s->get('inGemeentenResponse.all.object'));
@@ -65,7 +65,7 @@ final class Rule6f1046a6 implements Rule
                 })(MapContext::from($s, $__item));
             }
 
-            return $__result;
+return $__result;
         })()));
     }
 }

@@ -14,6 +14,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -52,7 +53,8 @@ final class VergunningaanvraagOverigStep
                         Textarea::make('vulHierEventueelInformatieInOverHetPlaatsenVanVoorwerpenOpDeOpenbareWegOfHetParkerenVanGroteVoertuigen')
                             ->label('Vul hier eventueel informatie in over het plaatsen van voorwerpen op de openbare weg of het parkeren van grote voertuigen.')
                             ->maxLength(10000),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Verkeersregelaars')
                     ->schema([
                         Placeholder::make('content33')
@@ -63,14 +65,17 @@ final class VergunningaanvraagOverigStep
                         Textarea::make('zijnDeInTeZettenPersonenBeroepsmatigeVerkeersregelaarsOfIsErSprakeVanEvenementenverkeersregelaars')
                             ->label('Zijn de in te zetten personen beroepsmatige verkeersregelaars of is er sprake van evenementenverkeersregelaars?')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Ja'),
                         Placeholder::make('content34')
-                            ->content(new HtmlString('<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>')),
+                            ->content(new HtmlString('<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>'))
+                            ->visible(fn (Get $get): bool => $get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Nee'),
                         TextInput::make('hoeveelVerkeersregelaarsWiltUInzetten')
                             ->label('Hoeveel verkeersregelaars wilt u inzetten?')
                             ->numeric()
                             ->required(),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Vervoersmaatregelen')
                     ->schema([
                         CheckboxList::make('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs')
@@ -88,12 +93,14 @@ final class VergunningaanvraagOverigStep
                         Textarea::make('welkeAndereMaatregelenUWiltNemen')
                             ->label('Welke andere maatregelen u wilt nemen')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs.anders') === true),
                         Textarea::make('metWelkeOpenbaarVervoermaatschappijenHeeftUExtraAfsprakenGemaaktOverHetOpenbaarVervoer')
                             ->label('Met welke openbaar vervoermaatschappijen heeft u extra afspraken gemaakt over het openbaar vervoer?')
                             ->required()
                             ->maxLength(10000),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Promotie en communicatie')
                     ->schema([
                         Radio::make('wiltUPromotieMakenVoorUwEvenement')
@@ -107,7 +114,8 @@ final class VergunningaanvraagOverigStep
                                 'landelijk' => 'Landelijk',
                                 'lnternationaal' => 'lnternationaal',
                             ])
-                            ->required(),
+                            ->required()
+                            ->visible(fn (Get $get): bool => $get('wiltUPromotieMakenVoorUwEvenement') === 'Ja'),
                         CheckboxList::make('hoeWiltUPromotieMakenVoorUwEvenement')
                             ->label('Hoe wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -118,11 +126,13 @@ final class VergunningaanvraagOverigStep
                                 'vlaggen' => 'Vlaggen',
                                 'anders' => 'Anders',
                             ])
-                            ->required(),
+                            ->required()
+                            ->visible(fn (Get $get): bool => $get('wiltUPromotieMakenVoorUwEvenement') === 'Ja'),
                         Textarea::make('opWelkeAndereManierWiltUPromotieMaken')
                             ->label('Op welke andere manier wilt u promotie maken?')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('hoeWiltUPromotieMakenVoorUwEvenement.anders') === true),
                         TextInput::make('websiteVanUwEvenement')
                             ->label('Website van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                             ->maxLength(1000),
@@ -141,7 +151,8 @@ final class VergunningaanvraagOverigStep
                         Textarea::make('opWelkeWijzeInformeertUHen')
                             ->label('Op welke wijze informeert u hen?')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX') === 'Ja'),
                         FileUpload::make('wiltUDeInformatieTekstAanDeOmwonendeAlsBijlageToevoegen')
                             ->label('Wilt u de informatie-tekst aan de omwonende als bijlage toevoegen?'),
                     ]),
@@ -152,16 +163,20 @@ final class VergunningaanvraagOverigStep
                             ->required(),
                         Textarea::make('welkeErvaringHeeftDeOrganisatorMetHetOrganiserenVanEvenementen')
                             ->label('Welke ervaring heeft de organisator met het organiseren van evenementen?')
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee'),
                         Textarea::make('welkeRelevanteErvaringHeeftHetPersoneelDatDeOrganisatorInhuurtViaIntermediairs')
                             ->label('Welke relevante ervaring heeft het personeel dat de organisator inhuurt via intermediairs?')
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee'),
                         Textarea::make('welkeRelevanteErvaringHeeftHetPersoneelVanOnderAannemersAanWieDeOrganisatorWerkUitbesteedt')
                             ->label('Welke relevante ervaring heeft het personeel van (onder)aannemers aan wie de organisator werk uitbesteedt?')
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee'),
                         Textarea::make('welkeRelevanteErvaringHebbenDeVrijwilligersDieDeOrganisatorInzet')
                             ->label('Welke relevante ervaring hebben de vrijwilligers die de organisator  inzet?')
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee'),
                     ]),
                 Fieldset::make('Huisregels en flankerende evenementen')
                     ->schema([
@@ -169,14 +184,16 @@ final class VergunningaanvraagOverigStep
                             ->label('Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->required(),
                         FileUpload::make('uKuntHierHetHuisregelementUploaden')
-                            ->label('U kunt hier het huisregelement uploaden'),
+                            ->label('U kunt hier het huisregelement uploaden')
+                            ->visible(fn (Get $get): bool => $get('hanteertUHuisregelsVoorUwEvenementX') === 'Ja'),
                         Radio::make('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024')
                             ->label('Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->required(),
                         Textarea::make('lichtDeSideEventsToe')
                             ->label('Licht de side events toe')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024') === 'Ja'),
                     ]),
                 Fieldset::make('Verzekering')
                     ->schema([
@@ -184,7 +201,8 @@ final class VergunningaanvraagOverigStep
                             ->label('Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->required(),
                         FileUpload::make('uploadDeVerzekeringspolis')
-                            ->label('Upload de verzekeringspolis'),
+                            ->label('Upload de verzekeringspolis')
+                            ->visible(fn (Get $get): bool => $get('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement') === 'Ja'),
                     ]),
             ]);
     }

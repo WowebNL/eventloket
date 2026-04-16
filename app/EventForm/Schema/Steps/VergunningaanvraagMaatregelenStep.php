@@ -12,6 +12,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -34,7 +35,8 @@ final class VergunningaanvraagMaatregelenStep
                             ->label('Geef een omschrijving welke aanpassingen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }} waar nodig zijn of welk straatmeubilair u wilt verwijderen of aanpassen.')
                             ->required()
                             ->maxLength(10000),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Extra afval')
                     ->schema([
                         Placeholder::make('content30')
@@ -68,8 +70,10 @@ final class VergunningaanvraagMaatregelenStep
                             ->label('Voert u de schoonmaak zelf uit? ')
                             ->required(),
                         FileUpload::make('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen')
-                            ->label('U kunt het afvalplan hier uploaden of later als bijlage toevoegen.'),
-                    ]),
+                            ->label('U kunt het afvalplan hier uploaden of later als bijlage toevoegen.')
+                            ->visible(fn (Get $get): bool => $get('voertUDeSchoonmaakZelfUit') === 'Ja'),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Gemeentelijke hulpmiddelen')
                     ->schema([
                         Radio::make('wilUGebruikMakenVanGemeentelijkeHulpmiddelen')
@@ -106,8 +110,10 @@ final class VergunningaanvraagMaatregelenStep
                                 Textarea::make('geefAanOpWelkeLocatieUStroomWilt1')
                                     ->label('Geef aan op welke locatie u stroom wilt afnemen')
                                     ->required()
-                                    ->maxLength(10000),
-                            ]),
+                                    ->maxLength(10000)
+                                    ->visible(fn (Get $get): bool => $get('wenstUTegenBetalingStroomAfTeNemenVanDeGemeente') === 'Ja'),
+                            ])
+                            ->visible(fn (Get $get): bool => $get('wilUGebruikMakenVanGemeentelijkeHulpmiddelen') === 'Ja'),
                     ]),
             ]);
     }

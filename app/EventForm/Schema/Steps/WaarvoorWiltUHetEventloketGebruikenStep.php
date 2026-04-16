@@ -8,6 +8,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -37,7 +38,9 @@ final class WaarvoorWiltUHetEventloketGebruikenStep
                             ->label('Aantal verwachte aanwezigen')
                             ->numeric()
                             ->required(),
-                    ]),
+                    ])
+                    ->hidden()
+                    ->visible(fn (Get $get): bool => $get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'),
             ]);
     }
 }

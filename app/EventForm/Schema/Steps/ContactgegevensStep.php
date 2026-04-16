@@ -9,6 +9,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -83,9 +84,11 @@ final class ContactgegevensStep
                             ->label('Wat is het telefoonnummer van uw organisatie?')
                             ->required()
                             ->maxLength(1000),
-                    ]),
+                    ])
+                    ->hidden(),
                 Placeholder::make('waarschuwingGeenKvk')
-                    ->content(new HtmlString('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>')),
+                    ->content(new HtmlString('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>'))
+                    ->hidden(),
                 Fieldset::make('Adresgegevens')
                     ->schema([
                         Grid::make(2)
@@ -116,7 +119,8 @@ final class ContactgegevensStep
                                     ->required()
                                     ->maxLength(1000),
                             ]),
-                    ]),
+                    ])
+                    ->hidden(),
                 CheckboxList::make('extraContactpersonenToevoegen')
                     ->label('Extra contactpersonen toevoegen')
                     ->options([
@@ -138,7 +142,8 @@ final class ContactgegevensStep
                             ->label('E-mailadres')
                             ->email()
                             ->required(),
-                    ]),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('extraContactpersonenToevoegen.vooraf') === true),
                 Fieldset::make('Contactpersoon tijdens het evenement')
                     ->schema([
                         TextInput::make('naam1')
@@ -153,7 +158,8 @@ final class ContactgegevensStep
                             ->label('E-mailadres')
                             ->email()
                             ->required(),
-                    ]),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('extraContactpersonenToevoegen.tijdens') === true),
                 Fieldset::make('Contactpersoon na het evenement')
                     ->schema([
                         TextInput::make('naam2')
@@ -168,7 +174,8 @@ final class ContactgegevensStep
                             ->label('E-mailadres')
                             ->email()
                             ->required(),
-                    ]),
+                    ])
+                    ->visible(fn (Get $get): bool => $get('extraContactpersonenToevoegen.achteraf') === true),
             ]);
     }
 }

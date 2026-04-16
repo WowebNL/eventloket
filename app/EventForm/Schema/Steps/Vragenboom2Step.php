@@ -8,6 +8,7 @@ use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 
 /**
@@ -78,7 +79,8 @@ final class Vragenboom2Step
                 Textarea::make('welkeOverigeBouwwerkenGaatUPlaatsen')
                     ->label('Welke overige bouwwerken gaat u plaatsen?')
                     ->required()
-                    ->maxLength(10000),
+                    ->maxLength(10000)
+                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A22') === true),
                 CheckboxList::make('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX')
                     ->label('Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->options([
@@ -93,7 +95,8 @@ final class Vragenboom2Step
                     ]),
                 Textarea::make('welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX')
                     ->label('welke ander voorwerpen gaat u plaatsen bij evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
-                    ->maxLength(10000),
+                    ->maxLength(10000)
+                    ->visible(fn (Get $get): bool => $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX.A30') === true),
                 CheckboxList::make('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX')
                     ->label('Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->options([
@@ -122,7 +125,8 @@ final class Vragenboom2Step
                 Textarea::make('welkActiviteitBetreftUwEvenementX')
                     ->label('Welk activiteit betreft uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->required()
-                    ->maxLength(10000),
+                    ->maxLength(10000)
+                    ->visible(fn (Get $get): bool => $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A46') === true),
                 CheckboxList::make('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX')
                     ->label('Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                     ->options([
@@ -134,15 +138,18 @@ final class Vragenboom2Step
                     ]),
                 Radio::make('isUwEvenementToegankelijkVoorMensenMetEenBeperking')
                     ->label('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?')
-                    ->required(),
+                    ->required()
+                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A16') === true),
                 TextInput::make('voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX')
                     ->label('Voor hoeveel mensen met een lichamelijke of geestelijke beperking verzorgt u opvang tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->numeric()
-                    ->required(),
+                    ->required()
+                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A16') === true),
                 Textarea::make('welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement')
                     ->label('Welke maatregelen heeft u genomen om mensen met een beperking ongehinderd deel te laten nemen aan uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->required()
-                    ->maxLength(10000),
+                    ->maxLength(10000)
+                    ->visible(fn (Get $get): bool => $get('isUwEvenementToegankelijkVoorMensenMetEenBeperking') === 'Ja'),
             ]);
     }
 }

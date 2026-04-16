@@ -6,6 +6,7 @@ namespace App\EventForm\Schema\Steps;
 
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -26,16 +27,19 @@ final class MeldingStep
                     ->label('Wordt er alcohol geschonken tijdens uw evenement?')
                     ->required(),
                 Placeholder::make('content9')
-                    ->content(new HtmlString('<p>{% if gemeenteVariabelen.melding_alcohol_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_alcohol_ontheffing_tekst|urlize }}</p><p>{% endif %}</p>')),
+                    ->content(new HtmlString('<p>{% if gemeenteVariabelen.melding_alcohol_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_alcohol_ontheffing_tekst|urlize }}</p><p>{% endif %}</p>'))
+                    ->visible(fn (Get $get): bool => $get('wordtErAlcoholGeschonkenTijdensUwEvenement') === 'Ja'),
                 Radio::make('wordenErFilmopnamesMetBehulpVanDronesGemaakt')
                     ->label('Worden er filmopnames met behulp van drones gemaakt? ')
                     ->required(),
                 Placeholder::make('content10')
-                    ->content(new HtmlString('<p>{% if gemeenteVariabelen.melding_drone_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_drone_ontheffing_tekst }}</p><p>{% endif %}</p>')),
+                    ->content(new HtmlString('<p>{% if gemeenteVariabelen.melding_drone_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_drone_ontheffing_tekst }}</p><p>{% endif %}</p>'))
+                    ->visible(fn (Get $get): bool => $get('wordenErFilmopnamesMetBehulpVanDronesGemaakt') === 'Ja'),
                 Radio::make('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden')
                     ->label('Vinden er activiteiten plaats, waarvoor mogelijk brandveiligheidseisen gelden?'),
                 Placeholder::make('content11')
-                    ->content(new HtmlString('<p>Raadpleeg <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a> voor de regelgeving en ontheffing evenement organiseren.</p>')),
+                    ->content(new HtmlString('<p>Raadpleeg <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a> voor de regelgeving en ontheffing evenement organiseren.</p>'))
+                    ->visible(fn (Get $get): bool => $get('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden') === 'Ja'),
             ]);
     }
 }

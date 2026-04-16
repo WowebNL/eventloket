@@ -26,6 +26,23 @@ use RuntimeException;
  */
 class StepSchemaGenerator
 {
+    /** @var array<string, string> fieldKey → type (globale index over alle stappen) */
+    private array $fieldTypeIndex = [];
+
+    /**
+     * Geef de generator een globale mapping van veld-key → type zodat
+     * conditional-emissie correct `$get(key.subkey)` gebruikt voor
+     * selectboxes-targets.
+     *
+     * @param  array<string, string>  $index
+     */
+    public function withFieldTypeIndex(array $index): self
+    {
+        $this->fieldTypeIndex = $index;
+
+        return $this;
+    }
+
     /** @param  array<string, mixed>  $step */
     public function generate(array $step): GeneratedStep
     {
@@ -45,6 +62,14 @@ class StepSchemaGenerator
         }
 
         /** @var list<array<string, mixed>> $components */
+
+        // Fallback: als er geen globale fieldTypeIndex is gezet, bouwen we
+        // per-step een lokale index zodat in-step selectboxes-conditionals
+        // correct emitten.
+        if ($this->fieldTypeIndex === []) {
+            $this->indexComponentsLocal($components);
+        }
+
         $schemaBody = $this->renderComponents($components, indent: 16);
 
         $fileContent = $this->renderClassFile($className, $name, $uuid, $index, $schemaBody);
@@ -197,7 +222,8 @@ class StepSchemaGenerator
         $labelArg = $label !== '' ? "'{$this->esc($label)}'" : "''";
 
         return "{$pad}{$class}::make({$labelArg})\n"
-            ."{$pad}    ->schema([\n{$body}\n{$pad}    ])";
+            ."{$pad}    ->schema([\n{$body}\n{$pad}    ])"
+            .$this->visibilityModifiers($component, $pad);
     }
 
     /** @param  array<string, mixed>  $component */
@@ -221,7 +247,8 @@ class StepSchemaGenerator
         $body = $this->renderComponents($allInner, indent: strlen($pad) + 8);
 
         return "{$pad}Grid::make({$count})\n"
-            ."{$pad}    ->schema([\n{$body}\n{$pad}    ])";
+            ."{$pad}    ->schema([\n{$body}\n{$pad}    ])"
+            .$this->visibilityModifiers($component, $pad);
     }
 
     /** @param  array<string, mixed>  $component */
@@ -241,6 +268,7 @@ class StepSchemaGenerator
             $chain .= "\n{$pad}    ->label('{$this->esc($label)}')";
         }
         $chain .= "\n{$pad}    ->schema([\n{$body}\n{$pad}    ])";
+        $chain .= $this->visibilityModifiers($component, $pad);
 
         return $chain;
     }
@@ -252,7 +280,8 @@ class StepSchemaGenerator
         $label = (string) ($component['label'] ?? '');
         $labelArg = $label !== '' ? ", '{$this->esc($label)}'" : '';
 
-        return "{$pad}AddressNL::make('{$this->esc($key)}'{$labelArg})";
+        return "{$pad}AddressNL::make('{$this->esc($key)}'{$labelArg})"
+            .$this->visibilityModifiers($component, $pad);
     }
 
     /** @param  array<string, mixed>  $component */
@@ -263,7 +292,34 @@ class StepSchemaGenerator
         $escaped = str_replace(['\\', "'"], ['\\\\', "\\'"], $html);
 
         return "{$pad}Placeholder::make('{$this->esc($key)}')\n"
-            ."{$pad}    ->content(new \\Illuminate\\Support\\HtmlString('{$escaped}'))";
+            ."{$pad}    ->content(new \\Illuminate\\Support\\HtmlString('{$escaped}'))"
+            .$this->visibilityModifiers($component, $pad);
+    }
+
+    /** @param  list<array<string, mixed>>  $components */
+    private function indexComponentsLocal(array $components): void
+    {
+        foreach ($components as $component) {
+            $key = $component['key'] ?? null;
+            $type = $component['type'] ?? null;
+            if (is_string($key) && is_string($type) && $key !== '') {
+                $this->fieldTypeIndex[$key] = $type;
+            }
+            if (isset($component['components']) && is_array($component['components'])) {
+                /** @var list<array<string, mixed>> $nested */
+                $nested = $component['components'];
+                $this->indexComponentsLocal($nested);
+            }
+            if (($component['type'] ?? null) === 'columns' && is_array($component['columns'] ?? null)) {
+                foreach ($component['columns'] as $column) {
+                    if (is_array($column) && is_array($column['components'] ?? null)) {
+                        /** @var list<array<string, mixed>> $nested */
+                        $nested = $column['components'];
+                        $this->indexComponentsLocal($nested);
+                    }
+                }
+            }
+        }
     }
 
     /** @param  array<string, mixed>  $component */
@@ -279,6 +335,59 @@ class StepSchemaGenerator
         }
         if (isset($validate['minLength']) && is_numeric($validate['minLength'])) {
             $chain .= "\n{$pad}    ->minLength({$validate['minLength']})";
+        }
+        $chain .= $this->visibilityModifiers($component, $pad);
+
+        return $chain;
+    }
+
+    /**
+     * Emit Filament `->hidden()` / `->visible(fn)` / `->hidden(fn)` op basis
+     * van het OF `hidden`-boolflag en de `conditional.show/when/eq`-regel.
+     * Selectboxes-targets worden via dot-access benaderd (`$get('X.key')`).
+     *
+     * @param  array<string, mixed>  $component
+     */
+    private function visibilityModifiers(array $component, string $pad): string
+    {
+        $chain = '';
+
+        // Default hidden — OF-gedrag "dit veld is verborgen tenzij een rule 'm
+        // op hidden=false zet". In Filament ondersteunt ->hidden() + rules
+        // die de state muteren nog niet live-toggle van hidden; voor fase 1
+        // emitten we het flag zodat de initiële render klopt.
+        if (! empty($component['hidden'])) {
+            $chain .= "\n{$pad}    ->hidden()";
+        }
+
+        $conditional = $component['conditional'] ?? null;
+        if (! is_array($conditional)) {
+            return $chain;
+        }
+        $show = $conditional['show'] ?? null;
+        $when = $conditional['when'] ?? null;
+        $eq = $conditional['eq'] ?? '';
+        if (! is_bool($show) || ! is_string($when) || $when === '') {
+            return $chain;
+        }
+
+        $targetType = $this->fieldTypeIndex[$when] ?? null;
+        $isSelectboxes = $targetType === 'selectboxes';
+
+        if ($isSelectboxes) {
+            $eqString = (string) $eq;
+            $accessor = "\$get('".$this->esc($when).'.'.$this->esc($eqString)."')";
+            $test = $accessor.' === true';
+        } else {
+            $eqString = is_scalar($eq) ? (string) $eq : '';
+            $accessor = "\$get('".$this->esc($when)."')";
+            $test = $accessor." === '".$this->esc($eqString)."'";
+        }
+
+        if ($show === true) {
+            $chain .= "\n{$pad}    ->visible(fn (\\Filament\\Schemas\\Components\\Utilities\\Get \$get): bool => {$test})";
+        } else {
+            $chain .= "\n{$pad}    ->hidden(fn (\\Filament\\Schemas\\Components\\Utilities\\Get \$get): bool => {$test})";
         }
 
         return $chain;

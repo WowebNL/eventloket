@@ -15,6 +15,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -42,11 +43,13 @@ final class VergunningaanvraagVervolgvragenStep
                                 'tapeArtiest' => '(Tape-)artiest',
                                 'anders' => 'Anders',
                             ])
-                            ->required(),
+                            ->required()
+                            ->hidden(),
                         Textarea::make('opWelkeAndereManierWordtErMuziekGemaakt')
                             ->label('Op welke andere manier wordt er muziek gemaakt?')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning.anders') === true),
                         CheckboxList::make('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX')
                             ->label('Welke soorten muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -55,7 +58,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'A71' => 'Dance',
                                 'A72' => 'Pop (en overige)',
                             ])
-                            ->required(),
+                            ->required()
+                            ->hidden(),
                         CheckboxList::make('welkeSoortenDanceMuziekZijnErTeHorenOpLocatieEvenementX')
                             ->label('Welke soorten Dance muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -75,7 +79,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'trance' => 'Trance',
                                 'edm' => 'EDM',
                             ])
-                            ->required(),
+                            ->required()
+                            ->visible(fn (Get $get): bool => $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX.A71') === true),
                         CheckboxList::make('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement')
                             ->label('Welke soorten popmuziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -98,11 +103,13 @@ final class VergunningaanvraagVervolgvragenStep
                                 'soul' => 'Soul',
                                 'anders' => 'Anders',
                             ])
-                            ->required(),
+                            ->required()
+                            ->visible(fn (Get $get): bool => $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX.A72') === true),
                         Textarea::make('welkeAnderSoortPopmuziekIsErTeHorenOpEvenementX')
                             ->label('Welke ander soort popmuziek is er te horen op evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement.anders') === true),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX')
                             ->label('Wat is de geluidsbelasting in decibel (dB(A) norm - (0–103 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->numeric()
@@ -111,7 +118,8 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Wat is de geluidsbelasting in decibel Db(C) norm - (0–113 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->numeric()
                             ->required(),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Bouwsels &gt; 10m<sup>2</sup> ')
                     ->schema([
                         Placeholder::make('content15')
@@ -124,7 +132,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'A56' => 'Overkappingen',
                                 'A57' => 'Omheiningen',
                             ])
-                            ->required(),
+                            ->required()
+                            ->hidden(),
                         Repeater::make('tenten')
                             ->label('Welke tenten plaatst u?')
                             ->schema([
@@ -151,7 +160,8 @@ final class VergunningaanvraagVervolgvragenStep
                                         'betonblokken' => 'Betonblokken',
                                     ])
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('podia')
                             ->label('Welke podia plaatst u?')
                             ->schema([
@@ -171,7 +181,8 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->label('Hoogte in meter')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('overkappingen')
                             ->label('Welke overkappingen plaatst u?')
                             ->schema([
@@ -198,14 +209,17 @@ final class VergunningaanvraagVervolgvragenStep
                                         'betonblokken' => 'Betonblokken',
                                     ])
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Textarea::make('geefEenOmschrijvingVanSoortOmheining')
                             ->label('Geef een omschrijving van soort omheining')
                             ->required()
-                            ->maxLength(10000),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('watVoorBouwselsPlaatsUOpDeLocaties.A57') === true),
                         FileUpload::make('plaatstUTijdelijkeConstructiesTentenPodiaEtcDanDientUNaastHetVeiligheidsplanTevensEenDeelplanTijdelijkeConstructiesTeMakenEnTeUploadenAlsBijlage')
                             ->label('Plaatst u tijdelijke constructies (tenten, podia etc.) dan dient u naast het veiligheidsplan tevens een \'Deelplan Tijdelijke constructies\' te maken en te uploaden als bijlage.'),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Kansspelen')
                     ->schema([
                         Placeholder::make('content16')
@@ -219,7 +233,8 @@ final class VergunningaanvraagVervolgvragenStep
                             ->required(),
                         Radio::make('bestaatDeVereningingDieHetKansspelOrganiseertLangerDan3Jaar')
                             ->label('Bestaat de vereninging, die het kansspel organiseert langer dan 3 jaar?')
-                            ->required(),
+                            ->required()
+                            ->visible(fn (Get $get): bool => $get('isDeOrganisatieVanHetKansspelInHandenVanEenVereniging') === 'Ja'),
                         Textarea::make('watBentUVanPlanMetDeOpbrengstVanHetKansspelTeGaanDoen')
                             ->label('Wat bent u van plan met de opbrengst van het kansspel te gaan doen?')
                             ->required()
@@ -228,7 +243,8 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Geef een indicatie van de hoogte van het prijzengeld')
                             ->numeric()->prefix('€')
                             ->required(),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Alcoholische dranken')
                     ->schema([
                         Placeholder::make('content17')
@@ -257,7 +273,8 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->label('Geboorteplaats persoon')
                                     ->required()
                                     ->maxLength(1000),
-                            ]),
+                            ])
+                            ->visible(fn (Get $get): bool => $get('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop') === 'persoon'),
                         Fieldset::make('Organisatiegroep')
                             ->schema([
                                 TextInput::make('watIsDeNaamVanDeOrganisatie')
@@ -268,7 +285,8 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->label('Wat is het telefoonnummer van de organisatie?')
                                     ->tel()
                                     ->required(),
-                            ]),
+                            ])
+                            ->visible(fn (Get $get): bool => $get('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop') === 'organisatie'),
                         Repeater::make('watZijnDeLocatiesWaarUDrankenEnOfVoedselGaatVerstrekken')
                             ->label('Op hoeveel punten en op welke locaties gaat u dranken en voedsel verstrekken?')
                             ->schema([
@@ -287,9 +305,11 @@ final class VergunningaanvraagVervolgvragenStep
                                 TextInput::make('waarvanMetAlcohol')
                                     ->label('Waarvan met alcohol')
                                     ->numeric()
-                                    ->required(),
+                                    ->required()
+                                    ->hidden(fn (Get $get): bool => $get('watZijnDeLocatiesWaarUDrankenEnOfVoedselGaatVerstrekken.uitgiftepuntenDrank') === '0'),
                             ]),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Eten bereiden of verkopen')
                     ->schema([
                         Placeholder::make('content18')
@@ -314,12 +334,15 @@ final class VergunningaanvraagVervolgvragenStep
                                 'frituur' => 'Frituur',
                                 'anders' => 'Anders',
                             ])
-                            ->required(),
+                            ->required()
+                            ->hidden(),
                         Textarea::make('welkeAndereWarmtebronWordtGebruikt')
                             ->label('Welke andere warmtebron wordt gebruikt?')
                             ->required()
-                            ->maxLength(10000),
-                    ]),
+                            ->maxLength(10000)
+                            ->visible(fn (Get $get): bool => $get('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX.anders') === true),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Belemmering van verkeer')
                     ->schema([
                         Placeholder::make('content19')
@@ -328,7 +351,8 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Beschrijf op welke wijze er sprake is van belemmering van verkeer')
                             ->required()
                             ->maxLength(10000),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Weg of vaarweg afsluiten')
                     ->schema([
                         Placeholder::make('content20')
@@ -350,7 +374,8 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->label('Eind van de afsluiting')
                                     ->required(),
                             ]),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Toegang voor hulpdiensten is beperkt')
                     ->schema([
                         Placeholder::make('content21')
@@ -367,7 +392,8 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Vermeld waar binnen of bij het evenemententerrein de hulpdiensten worden opgevangen in geval van een calamiteit.')
                             ->required()
                             ->maxLength(10000),
-                    ]),
+                    ])
+                    ->hidden(),
             ]);
     }
 }

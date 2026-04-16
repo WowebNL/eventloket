@@ -8,6 +8,7 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 
 /**
@@ -28,16 +29,20 @@ final class NaamVanHetEvenementStep
                 Textarea::make('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning')
                     ->label('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                     ->required()
-                    ->maxLength(10000),
+                    ->maxLength(10000)
+                    ->hidden(fn (Get $get): bool => $get('watIsDeNaamVanHetEvenementVergunning') === ''),
                 Select::make('soortEvenement')
                     ->label('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?')
-                    ->required(),
+                    ->required()
+                    ->hidden(fn (Get $get): bool => $get('watIsDeNaamVanHetEvenementVergunning') === ''),
                 Textarea::make('omschrijfHetSoortEvenement')
                     ->label('Omschrijf het soort evenement')
                     ->required()
-                    ->maxLength(10000),
+                    ->maxLength(10000)
+                    ->visible(fn (Get $get): bool => $get('soortEvenement') === 'Anders'),
                 Radio::make('gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen')
-                    ->label('Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?'),
+                    ->label('Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?')
+                    ->visible(fn (Get $get): bool => $get('soortEvenement') === 'Markt of braderie'),
             ]);
     }
 }

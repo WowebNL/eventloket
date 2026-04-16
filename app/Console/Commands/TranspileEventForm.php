@@ -71,7 +71,12 @@ class TranspileEventForm extends Command
             $ruleCount++;
         }
 
-        $stepGen = new StepSchemaGenerator;
+        // Bouw eerst de globale field-type index over alle stappen zodat
+        // selectboxes-conditionals die naar een veld in een andere step
+        // wijzen, correct als dot-access (`$get('X.key')`) worden geëmit.
+        $fieldTypeIndex = $this->buildFieldTypeIndex($raw->formSteps);
+
+        $stepGen = (new StepSchemaGenerator)->withFieldTypeIndex($fieldTypeIndex);
         $stepCount = 0;
         foreach ($raw->formSteps as $step) {
             $generated = $stepGen->generate($step);
@@ -112,6 +117,53 @@ class TranspileEventForm extends Command
         $this->error("Unknown --source value: {$source} (expected: api|local)");
 
         return null;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $steps
+     * @return array<string, string> veld-key → type
+     */
+    private function buildFieldTypeIndex(array $steps): array
+    {
+        $index = [];
+        foreach ($steps as $step) {
+            $components = $step['configuration']['components'] ?? [];
+            if (is_array($components)) {
+                /** @var list<array<string, mixed>> $components */
+                $this->walkForTypes($components, $index);
+            }
+        }
+
+        return $index;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $components
+     * @param  array<string, string>  $index
+     */
+    private function walkForTypes(array $components, array &$index): void
+    {
+        foreach ($components as $component) {
+            $key = $component['key'] ?? null;
+            $type = $component['type'] ?? null;
+            if (is_string($key) && $key !== '' && is_string($type)) {
+                $index[$key] = $type;
+            }
+            if (isset($component['components']) && is_array($component['components'])) {
+                /** @var list<array<string, mixed>> $nested */
+                $nested = $component['components'];
+                $this->walkForTypes($nested, $index);
+            }
+            if (($component['type'] ?? null) === 'columns' && is_array($component['columns'] ?? null)) {
+                foreach ($component['columns'] as $column) {
+                    if (is_array($column) && is_array($column['components'] ?? null)) {
+                        /** @var list<array<string, mixed>> $nested */
+                        $nested = $column['components'];
+                        $this->walkForTypes($nested, $index);
+                    }
+                }
+            }
+        }
     }
 
     private function confirmOverwrite(string $rulesDir, string $stepsDir): bool

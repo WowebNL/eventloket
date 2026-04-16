@@ -11,6 +11,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -40,7 +41,8 @@ final class VergunningsaanvraagVoorzieningenStep
                         TextInput::make('hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar')
                             ->label('Hoeveel tijdelijke gespoelde toiletten zijn er beschikbaar?')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->hidden(fn (Get $get): bool => $get('hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar') === '0'),
                         TextInput::make('welkPercentageVanDeToilettenIsVoorHeren')
                             ->label('Hoeveel toiletten zijn voor heren?')
                             ->numeric()
@@ -63,7 +65,8 @@ final class VergunningsaanvraagVoorzieningenStep
                         Radio::make('gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater')
                             ->label('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?')
                             ->required(),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Douche\'s')
                     ->schema([
                         Placeholder::make('content24')
@@ -79,7 +82,8 @@ final class VergunningsaanvraagVoorzieningenStep
                         Radio::make('wordenDeDouchesTussentijdsSchoonGemaakt')
                             ->label('Worden de douches tussentijds schoon gemaakt?')
                             ->required(),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('EHBO')
                     ->schema([
                         Placeholder::make('content25')
@@ -124,7 +128,8 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->label('Welke organisatie verzorgt de eerste hulp?')
                             ->required()
                             ->maxLength(1000),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Verzorging van kinderen jonger dan 12 jaar')
                     ->schema([
                         TextInput::make('voorHoeveelKinderenInTotaalJongerDan12JaarIsVerzorgingNodig')
@@ -146,7 +151,8 @@ final class VergunningsaanvraagVoorzieningenStep
                                     ->label('Locatie van opvang van de kinderen onder 12 jaar')
                                     ->required(),
                             ]),
-                    ]),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Overnachtingen')
                     ->schema([
                         TextInput::make('voorHoeveelMensenVerzorgtUOvernachtingenTijdensUwEvenement1')
@@ -162,7 +168,8 @@ final class VergunningsaanvraagVoorzieningenStep
                                 Map::make('locatieVanOvernachtenDoorPubliekDeelnemers')
                                     ->label('Locatie van overnachten door publiek/deelnemers')
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Is er sprake van overnachten door personeel/organisatie?')
                             ->required(),
@@ -172,8 +179,10 @@ final class VergunningsaanvraagVoorzieningenStep
                                 Map::make('locatieVanOvernachtenDoorPersoneelOrganisatie1')
                                     ->label('Locatie van overnachten door personeel/organisatie')
                                     ->required(),
-                            ]),
-                    ]),
+                            ])
+                            ->hidden(),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Bouwsels')
                     ->schema([
                         Placeholder::make('content26')
@@ -181,8 +190,10 @@ final class VergunningsaanvraagVoorzieningenStep
                         TextInput::make('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc')
                             ->label('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?')
                             ->numeric()
-                            ->required(),
-                    ]),
+                            ->required()
+                            ->hidden(),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Beveiligers')
                     ->schema([
                         Placeholder::make('content36')
@@ -203,7 +214,8 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->label('Aantal beveiligers op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                             ->numeric()
                             ->required(),
-                    ]),
+                    ])
+                    ->hidden(),
             ]);
     }
 }

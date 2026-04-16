@@ -37,7 +37,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal verkoopunten')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('verkooppuntenMuntenEnBonnen')
                             ->label('Verkooppunten munten en bonnen')
                             ->schema([
@@ -49,7 +50,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal verkoopunten')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('verkooppuntenCashless')
                             ->label('Verkooppunten cashless')
                             ->schema([
@@ -61,7 +63,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal verkoopunten')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('Speeltoestellen')
                             ->label('Speeltoestellen')
                             ->schema([
@@ -73,7 +76,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal speeltoestellen')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('brandstofopslag')
                             ->label('Brandstofopslag')
                             ->schema([
@@ -85,7 +89,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal brandstofopslag')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('geluidstorens')
                             ->label('Geluidstorens')
                             ->schema([
@@ -97,7 +102,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal geluidstorens')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('Lichtmasten')
                             ->label('Lichtmasten')
                             ->schema([
@@ -109,7 +115,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal lichtmasten')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('marktkramen')
                             ->label('Marktkramen')
                             ->schema([
@@ -121,7 +128,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal marktkramen')
                                     ->numeric()
                                     ->required(),
-                            ]),
+                            ])
+                            ->hidden(),
                         Repeater::make('andersGroup')
                             ->label('Anders')
                             ->schema([
@@ -133,8 +141,10 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->label('Aantal anders')
                                     ->numeric()
                                     ->required(),
-                            ]),
-                    ]),
+                            ])
+                            ->hidden(),
+                    ])
+                    ->hidden(),
                 Fieldset::make('Brandgevaarlijke stoffen')
                     ->schema([
                         Placeholder::make('content28')
@@ -159,7 +169,8 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->required()
                                     ->maxLength(1000),
                             ]),
-                    ]),
+                    ])
+                    ->hidden(),
             ]);
     }
 }
