@@ -52,6 +52,7 @@ class TranspileEventForm extends Command
         $this->info('Transpiling '.count($raw->logicRules).' rules + '.count($raw->formSteps).' steps...');
 
         // Regenerate rules-folder: wipe generated files, keep handwritten Rule.php + RulesEngine.php.
+        // RuleRegistry.php is gegenereerd, dus die mag mee in de wipe.
         File::ensureDirectoryExists($rulesDir);
         foreach (File::files($rulesDir) as $file) {
             if (! in_array($file->getFilename(), ['Rule.php', 'RulesEngine.php'], true)) {
@@ -69,11 +70,19 @@ class TranspileEventForm extends Command
 
         $ruleGen = (new RuleClassGenerator)->withStepFieldIndex($stepFieldIndex);
         $ruleCount = 0;
+        $ruleClassNames = [];
         foreach ($raw->logicRules as $rule) {
             $generated = $ruleGen->generate($rule);
             File::put("{$rulesDir}/{$generated->className}.php", $generated->fileContent);
+            $ruleClassNames[] = $generated->className;
             $ruleCount++;
         }
+
+        // Schrijf RuleRegistry.php met expliciete `::class`-references zodat
+        // PhpStorm de gegenereerde rules ziet als gebruikt + de runtime-
+        // discovery niet langer afhankelijk is van filesystem-scans.
+        sort($ruleClassNames);
+        File::put("{$rulesDir}/RuleRegistry.php", $this->renderRuleRegistry($ruleClassNames));
 
         // Bouw eerst de globale field-type index over alle stappen zodat
         // selectboxes-conditionals die naar een veld in een andere step
@@ -318,6 +327,55 @@ class TranspileEventForm extends Command
                 }
             }
         }
+    }
+
+    /**
+     * @param  list<string>  $classNames
+     */
+    private function renderRuleRegistry(array $classNames): string
+    {
+        $lines = array_map(
+            static fn (string $name): string => "            {$name}::class,",
+            $classNames,
+        );
+        $body = implode("\n", $lines);
+        $count = count($classNames);
+
+        return <<<PHP
+        <?php
+
+        declare(strict_types=1);
+
+        namespace App\\EventForm\\Rules;
+
+        /**
+         * Auto-gegenereerd door `php artisan transpile:event-form`. Niet handmatig
+         * aanpassen — wijzigingen worden bij de volgende transpile-run overschreven.
+         *
+         * Dit registry maakt twee dingen mogelijk:
+         *  - PhpStorm en andere static-analysis tools zien expliciete
+         *    `::class`-references naar elke Rule, zodat ze niet als "no usages"
+         *    gemarkeerd worden.
+         *  - `EventFormServiceProvider` bouwt z'n RulesEngine vanuit deze
+         *    deterministische lijst i.p.v. een filesystem-scan.
+         */
+        final class RuleRegistry
+        {
+            /** @return list<class-string<Rule>> */
+            public static function all(): array
+            {
+                return [
+        {$body}
+                ];
+            }
+
+            public static function count(): int
+            {
+                return {$count};
+            }
+        }
+
+        PHP;
     }
 
     private function confirmOverwrite(string $rulesDir, string $stepsDir): bool

@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\EventForm\Rules\Rule;
+use App\EventForm\Rules\RuleRegistry;
 use App\EventForm\Rules\RulesEngine;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
 
 /**
  * Registreert de RulesEngine met alle gegenereerde Rule-klassen uit
- * `app/EventForm/Rules/`. Via reflection-scan zodat nieuwe rules (na een
- * `transpile:event-form`-run) automatisch meegenomen worden zonder
- * handmatige registratie.
+ * `App\EventForm\Rules\RuleRegistry::all()`.
+ *
+ * RuleRegistry wordt door `transpile:event-form` (her)geschreven en bevat
+ * expliciete `::class`-references — dat houdt static-analysis (PhpStorm,
+ * PHPStan) blij én maakt de boot-volgorde van rules deterministisch.
  */
 class EventFormServiceProvider extends ServiceProvider
 {
@@ -29,25 +31,15 @@ class EventFormServiceProvider extends ServiceProvider
      */
     private function discoverRules(): array
     {
-        $dir = app_path('EventForm/Rules');
-        if (! is_dir($dir)) {
+        // Voor een fresh project waar `transpile:event-form` nog niet is gedraaid
+        // bestaat RuleRegistry nog niet. In dat geval starten we met een lege
+        // RulesEngine i.p.v. een hard fail.
+        if (! class_exists(RuleRegistry::class)) {
             return [];
         }
 
         $rules = [];
-        foreach (File::files($dir) as $file) {
-            $name = $file->getFilenameWithoutExtension();
-            if (in_array($name, ['Rule', 'RulesEngine'], true)) {
-                continue;
-            }
-            $fqcn = 'App\\EventForm\\Rules\\'.$name;
-            if (! class_exists($fqcn)) {
-                continue;
-            }
-            $reflection = new \ReflectionClass($fqcn);
-            if (! $reflection->implementsInterface(Rule::class) || $reflection->isAbstract()) {
-                continue;
-            }
+        foreach (RuleRegistry::all() as $fqcn) {
             $rules[] = $this->app->make($fqcn);
         }
 
