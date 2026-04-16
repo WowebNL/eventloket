@@ -37,7 +37,7 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         TextEntry::make('content32')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content32');
                                 if ($rule === true) {
@@ -154,7 +154,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content33')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content33');
                                 if ($rule === true) {
@@ -199,7 +199,7 @@ return false || (! ($get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerd
                             }),
                         TextEntry::make('content34')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content34');
                                 if ($rule === true) {

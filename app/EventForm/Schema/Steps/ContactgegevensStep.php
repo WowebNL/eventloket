@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -29,7 +30,7 @@ final class ContactgegevensStep
             ->schema([
                 TextEntry::make('loadUserInformation')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Een ogenblik geduld, uw gegevens worden ingeladen…</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Een ogenblik geduld, uw gegevens worden ingeladen…</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('loadUserInformation');
                         if ($rule === true) {
@@ -261,7 +262,7 @@ return true || (false);
                     }),
                 TextEntry::make('waarschuwingGeenKvk')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('waarschuwingGeenKvk');
                         if ($rule === true) {

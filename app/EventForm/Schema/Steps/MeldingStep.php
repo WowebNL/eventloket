@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
@@ -26,7 +27,7 @@ final class MeldingStep
             ->schema([
                 TextEntry::make('content7')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Welkom bij de pagina voor het indienen van melding. Wij vragen u nu om verderde details voor uw evenement in te vullen.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Welkom bij de pagina voor het indienen van melding. Wij vragen u nu om verderde details voor uw evenement in te vullen.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content7');
                         if ($rule === true) {
@@ -57,7 +58,7 @@ return false || (false);
                     ->live(),
                 TextEntry::make('content9')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>{% if gemeenteVariabelen.melding_alcohol_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_alcohol_ontheffing_tekst|urlize }}</p><p>{% endif %}</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>{% if gemeenteVariabelen.melding_alcohol_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_alcohol_ontheffing_tekst|urlize }}</p><p>{% endif %}</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content9');
                         if ($rule === true) {
@@ -88,7 +89,7 @@ return false || (false);
                     ->live(),
                 TextEntry::make('content10')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>{% if gemeenteVariabelen.melding_drone_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_drone_ontheffing_tekst }}</p><p>{% endif %}</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>{% if gemeenteVariabelen.melding_drone_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_drone_ontheffing_tekst }}</p><p>{% endif %}</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content10');
                         if ($rule === true) {
@@ -118,7 +119,7 @@ return false || (false);
                     ->live(),
                 TextEntry::make('content11')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Raadpleeg <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a> voor de regelgeving en ontheffing evenement organiseren.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Raadpleeg <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a> voor de regelgeving en ontheffing evenement organiseren.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content11');
                         if ($rule === true) {

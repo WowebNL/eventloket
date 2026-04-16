@@ -28,7 +28,7 @@ final class AanvraagOfMeldingStep
             ->schema([
                 TextEntry::make('content4')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content4');
                         if ($rule === true) {
@@ -41,7 +41,7 @@ return false || (false);
                     }),
                 TextEntry::make('contentGemeenteMelding')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentGemeenteMelding');
                         if ($rule === true) {
@@ -290,7 +290,7 @@ return true || (false);
                             ->live(),
                         TextEntry::make('contentGoNext')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('contentGoNext');
                                 if ($rule === true) {
@@ -303,7 +303,7 @@ return true || (false);
                             }),
                         TextEntry::make('MeldingTekst')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('MeldingTekst');
                                 if ($rule === true) {

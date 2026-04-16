@@ -29,7 +29,7 @@ final class TijdenStep
             ->schema([
                 TextEntry::make('content2')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p><span style="color:rgb(0,0,0);">Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</span></p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><span style="color:rgb(0,0,0);">Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</span></p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content2');
                         if ($rule === true) {
@@ -81,7 +81,7 @@ return false || (false);
                     }),
                 TextEntry::make('evenmentenInDeBuurtContent')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('evenmentenInDeBuurtContent');
                         if ($rule === true) {
@@ -242,7 +242,7 @@ return false || (false);
                     }),
                 TextEntry::make('overzichtTijden')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<h2>Overzicht ingevulde tijden</h2><figure class="table"><table><thead><tr><th><strong>Activiteit</strong></th><th>&nbsp;</th><th><strong>Start</strong></th><th>&nbsp;</th><th><strong>Eind</strong></th></tr></thead><tbody><tr><th><strong>Opbouw</strong></th><td>&nbsp;</td><td>{{ OpbouwStart }}</td><td>&nbsp;</td><td>{{ OpbouwEind }}</td></tr><tr><th><strong>Publiek</strong></th><td>&nbsp;</td><td>{{ EvenementStart }}</td><td>&nbsp;</td><td>{{ EvenementEind }}</td></tr><tr><th><strong>Afbouw</strong></th><td>&nbsp;</td><td>{{ AfbouwStart }}</td><td>&nbsp;</td><td>{{ AfbouwEind }}</td></tr></tbody></table></figure><p><br>Wijzig de velden boven dit overzicht indien de tijden niet correct zijn.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<h2>Overzicht ingevulde tijden</h2><figure class="table"><table><thead><tr><th><strong>Activiteit</strong></th><th>&nbsp;</th><th><strong>Start</strong></th><th>&nbsp;</th><th><strong>Eind</strong></th></tr></thead><tbody><tr><th><strong>Opbouw</strong></th><td>&nbsp;</td><td>{{ OpbouwStart }}</td><td>&nbsp;</td><td>{{ OpbouwEind }}</td></tr><tr><th><strong>Publiek</strong></th><td>&nbsp;</td><td>{{ EvenementStart }}</td><td>&nbsp;</td><td>{{ EvenementEind }}</td></tr><tr><th><strong>Afbouw</strong></th><td>&nbsp;</td><td>{{ AfbouwStart }}</td><td>&nbsp;</td><td>{{ AfbouwEind }}</td></tr></tbody></table></figure><p><br>Wijzig de velden boven dit overzicht indien de tijden niet correct zijn.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('overzichtTijden');
                         if ($rule === true) {

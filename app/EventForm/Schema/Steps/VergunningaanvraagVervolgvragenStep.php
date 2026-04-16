@@ -38,7 +38,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->schema([
                         TextEntry::make('content5')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content5');
                                 if ($rule === true) {
@@ -225,7 +225,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content15')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er bouwsels &gt; 10m2 zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er bouwsels &gt; 10m2 zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content15');
                                 if ($rule === true) {
@@ -541,7 +541,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content16')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft kansspelen aangekruist.&nbsp;Hieronder volgen een aantal vragen daarover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft kansspelen aangekruist.&nbsp;Hieronder volgen een aantal vragen daarover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content16');
                                 if ($rule === true) {
@@ -644,7 +644,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content17')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er alcoholische dranken genuttigd worden. Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er alcoholische dranken genuttigd worden. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content17');
                                 if ($rule === true) {
@@ -867,7 +867,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content18')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content18');
                                 if ($rule === true) {
@@ -963,7 +963,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content19')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van belemmering van verkeer. Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er sprake is van belemmering van verkeer. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content19');
                                 if ($rule === true) {
@@ -1003,7 +1003,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content20')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat u een (deel van-) de doorgaande weg of vaarweg wilt afsluiten voor doorgaand verkeer. Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u een (deel van-) de doorgaande weg of vaarweg wilt afsluiten voor doorgaand verkeer. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content20');
                                 if ($rule === true) {
@@ -1107,7 +1107,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content21')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p><strong>Beschrijf in de bijlage “Verkeersplan” de calamiteitenroute en op welke wijze de toegang voor hulpdiensten beperkt wordt en welke maatregelen u heeft getroffen om de deze beperking op te lossen.</strong></p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><strong>Beschrijf in de bijlage “Verkeersplan” de calamiteitenroute en op welke wijze de toegang voor hulpdiensten beperkt wordt en welke maatregelen u heeft getroffen om de deze beperking op te lossen.</strong></p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content21');
                                 if ($rule === true) {

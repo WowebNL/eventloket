@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
@@ -26,7 +27,7 @@ final class RisicoscanStep
             ->schema([
                 TextEntry::make('content')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content');
                         if ($rule === true) {
@@ -319,7 +320,7 @@ return false || (false);
                     ->live(),
                 TextEntry::make('risicoClassificatieContent')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('risicoClassificatieContent');
                         if ($rule === true) {

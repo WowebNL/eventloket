@@ -34,7 +34,7 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->schema([
                         TextEntry::make('content23')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content23');
                                 if ($rule === true) {
@@ -193,7 +193,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content24')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content24');
                                 if ($rule === true) {
@@ -264,7 +264,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content25')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content25');
                                 if ($rule === true) {
@@ -662,7 +662,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content26')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content26');
                                 if ($rule === true) {
@@ -702,7 +702,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content36')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content36');
                                 if ($rule === true) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -30,7 +31,7 @@ final class VergunningsaanvraagVoorwerpenStep
                     ->schema([
                         TextEntry::make('content27')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er diverse voorwerpen geplaatst worden. Wilt u hier de aantallen en locaties (indien meerdere) invullen?</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er diverse voorwerpen geplaatst worden. Wilt u hier de aantallen en locaties (indien meerdere) invullen?</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content27');
                                 if ($rule === true) {
@@ -434,7 +435,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content28')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van Aggregaten,&nbsp; brandstofopslag en andere brandgevaarlijke stoffen. Denk aan :</p><ul><li>Aggregaten</li><li>Brandstofopslag</li><li>Gasflessen</li><li>Frituur</li><li>Houtskoolbarbecue</li><li>Open vuur (vuurplaats, vuurkorven)</li><li>Vuurwerk</li><li>Carbid-, kanon- en kamerschieten</li><li>Materiaal voor showeffecten</li></ul>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er sprake is van Aggregaten,&nbsp; brandstofopslag en andere brandgevaarlijke stoffen. Denk aan :</p><ul><li>Aggregaten</li><li>Brandstofopslag</li><li>Gasflessen</li><li>Frituur</li><li>Houtskoolbarbecue</li><li>Open vuur (vuurplaats, vuurkorven)</li><li>Vuurwerk</li><li>Carbid-, kanon- en kamerschieten</li><li>Materiaal voor showeffecten</li></ul>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content28');
                                 if ($rule === true) {

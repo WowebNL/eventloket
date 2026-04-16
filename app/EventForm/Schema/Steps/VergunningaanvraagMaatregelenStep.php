@@ -35,7 +35,7 @@ final class VergunningaanvraagMaatregelenStep
                     ->schema([
                         TextEntry::make('content29')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content29');
                                 if ($rule === true) {
@@ -75,7 +75,7 @@ return true || (false);
                     ->schema([
                         TextEntry::make('content30')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content30');
                                 if ($rule === true) {
@@ -250,7 +250,7 @@ return false || (false);
                             ->schema([
                                 TextEntry::make('content37')
                                     ->hiddenLabel()
-                                    ->state(new HtmlString('<p>Vermeld hier van welke materialen u gebruik zou willen maken en ook de aantallen. Uw betreffende gemeente zal aangeven welke hulpmiddelen aangeboden kunnen worden.</p>'))
+                                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Vermeld hier van welke materialen u gebruik zou willen maken en ook de aantallen. Uw betreffende gemeente zal aangeven welke hulpmiddelen aangeboden kunnen worden.</p>', $livewire->state())))
                                     ->hidden(function (Get $get, $livewire) {
                                         $rule = $livewire->state()->isFieldHidden('content37');
                                         if ($rule === true) {

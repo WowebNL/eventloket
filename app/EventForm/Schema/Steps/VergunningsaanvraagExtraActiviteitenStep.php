@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
@@ -26,7 +27,7 @@ final class VergunningsaanvraagExtraActiviteitenStep
             ->schema([
                 TextEntry::make('contentBalon')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Het oplaten van ballonnen kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op <a href="www.lvnl.nl" target="_blank" rel="noopener noreferrer">www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Het oplaten van ballonnen kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op <a href="www.lvnl.nl" target="_blank" rel="noopener noreferrer">www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentBalon');
                         if ($rule === true) {
@@ -39,7 +40,7 @@ return true || (false);
                     }),
                 TextEntry::make('contentLasershow')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Het uitvoeren van een lasershow kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op <a href="www.lvnl.nl" target="_blank" rel="noopener noreferrer">www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Het uitvoeren van een lasershow kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op <a href="www.lvnl.nl" target="_blank" rel="noopener noreferrer">www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentLasershow');
                         if ($rule === true) {
@@ -52,7 +53,7 @@ return true || (false);
                     }),
                 TextEntry::make('contentZeppelin')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Het oplaten van een zeppelin kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op<a href="www.lvnl.nl " target="_blank" rel="noopener noreferrer"> www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Het oplaten van een zeppelin kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op<a href="www.lvnl.nl " target="_blank" rel="noopener noreferrer"> www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentZeppelin');
                         if ($rule === true) {
@@ -65,7 +66,7 @@ return true || (false);
                     }),
                 TextEntry::make('contentDieren')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Voor activiteiten met dieren verwijzen wij u naar de website van <a href="https://www.nvwa.nl/onderwerpen/evenementen-met-levende-dieren" target="_blank" rel="noopener noreferrer">de Nederlandse Voedsel- en Warenautoriteit</a></p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor activiteiten met dieren verwijzen wij u naar de website van <a href="https://www.nvwa.nl/onderwerpen/evenementen-met-levende-dieren" target="_blank" rel="noopener noreferrer">de Nederlandse Voedsel- en Warenautoriteit</a></p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentDieren');
                         if ($rule === true) {
@@ -78,7 +79,7 @@ return true || (false);
                     }),
                 TextEntry::make('contentVuurwerk')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Het afsteken van vuurwerk, buiten de oud/nieuw periode is voorbehouden aan professionele bedrijven, die hiervoor een toepassingsvergunning nodig hebben en per evenement hiervoor een ontbrandingstoestemming moeten aanvragen. De regels hiervoor zijn te vinden op <a href="https://ondernemersplein.overheid.nl/professioneel-vuurwerk-opslaan-en-afsteken/provincie/limburg/" target="_blank" rel="noopener noreferrer">de website van het ondernemersplein</a>.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Het afsteken van vuurwerk, buiten de oud/nieuw periode is voorbehouden aan professionele bedrijven, die hiervoor een toepassingsvergunning nodig hebben en per evenement hiervoor een ontbrandingstoestemming moeten aanvragen. De regels hiervoor zijn te vinden op <a href="https://ondernemersplein.overheid.nl/professioneel-vuurwerk-opslaan-en-afsteken/provincie/limburg/" target="_blank" rel="noopener noreferrer">de website van het ondernemersplein</a>.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentVuurwerk');
                         if ($rule === true) {
@@ -91,7 +92,7 @@ return true || (false);
                     }),
                 TextEntry::make('contentTattoo')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Voor het plaatsen van tatoeages of piercings tijdens evenementen is een vergunning van de Gemeenschappelijke Gezondheidsdienst (GGD) noodzakelijk. De regels hiervoor vindt u op <a href="https://ondernemersplein.overheid.nl/vergunning-aanvragen-voor-tatoeeren-of-piercen/" target="_blank" rel="noopener noreferrer">de website van het ondernemersplein.</a></p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor het plaatsen van tatoeages of piercings tijdens evenementen is een vergunning van de Gemeenschappelijke Gezondheidsdienst (GGD) noodzakelijk. De regels hiervoor vindt u op <a href="https://ondernemersplein.overheid.nl/vergunning-aanvragen-voor-tatoeeren-of-piercen/" target="_blank" rel="noopener noreferrer">de website van het ondernemersplein.</a></p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentTattoo');
                         if ($rule === true) {
@@ -104,7 +105,7 @@ return true || (false);
                     }),
                 TextEntry::make('contentVuurkorf')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Voor het plaatsen van vuurkorven of het aansteken van open vuur verwijzen we naar <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a>.</p><p>Controleer ook bij uw betreffende gemeente of een aparte ontheffing hiervoor nodig is voor het gebruik van open vuur of vuurkorven.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor het plaatsen van vuurkorven of het aansteken van open vuur verwijzen we naar <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a>.</p><p>Controleer ook bij uw betreffende gemeente of een aparte ontheffing hiervoor nodig is voor het gebruik van open vuur of vuurkorven.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentVuurkorf');
                         if ($rule === true) {
@@ -117,7 +118,7 @@ return true || (false);
                     }),
                 TextEntry::make('contentWapen')
                     ->hiddenLabel()
-                    ->state(new HtmlString('<p>Controleer of u een ontheffing van het wapenverbod nodig heeft voor uw evenement op <a href="https://www.rijksoverheid.nl/wetten-en-regelingen/productbeschrijvingen/ontheffing-wapenverbod-aanvragen" target="_blank" rel="noopener noreferrer">de website van Rijksoverheid</a>.</p>'))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Controleer of u een ontheffing van het wapenverbod nodig heeft voor uw evenement op <a href="https://www.rijksoverheid.nl/wetten-en-regelingen/productbeschrijvingen/ontheffing-wapenverbod-aanvragen" target="_blank" rel="noopener noreferrer">de website van Rijksoverheid</a>.</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('contentWapen');
                         if ($rule === true) {

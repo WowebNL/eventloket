@@ -396,11 +396,13 @@ class StepSchemaGenerator
         $html = (string) ($component['html'] ?? '');
         $escaped = str_replace(['\\', "'"], ['\\\\', "\\'"], $html);
 
-        // Filament's Placeholder is deprecated in favor of TextEntry with
-        // ->state(). HtmlString zorgt dat onze HTML-content gerenderd wordt.
+        // Content-HTML kan `{{ var }}` en `{% get_value ... %}` bevatten; die
+        // moeten door LabelRenderer voordat Filament ze rendert. De closure
+        // resolved ze bij elke render tegen de huidige FormState.
         return "{$pad}TextEntry::make('{$this->esc($key)}')\n"
             ."{$pad}    ->hiddenLabel()\n"
-            ."{$pad}    ->state(new \\Illuminate\\Support\\HtmlString('{$escaped}'))"
+            ."{$pad}    ->state(fn (\$livewire) => new \\Illuminate\\Support\\HtmlString("
+            ."app(\\App\\EventForm\\Template\\LabelRenderer::class)->render('{$escaped}', \$livewire->state())))"
             .$this->visibilityModifiers($component, $pad);
     }
 

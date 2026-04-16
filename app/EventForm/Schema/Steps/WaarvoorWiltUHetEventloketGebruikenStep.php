@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -48,7 +49,7 @@ return false || (false);
                     ->schema([
                         TextEntry::make('content3')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>Een vooraankondiging biedt u de mogelijkheid om alvast een voorkeursdatum voor uw evenement te registreren in onze applicatie.</p><p>Een vooraankondiging zal tijdig omgezet moeten worden in een melding of vergunning, anders vervalt de aanvraag, als niet voldaan wordt aan de wettelijke doorlooptijden.</p><p>Voor een vooraankondiging dient u minimaal de volgende gegevens in te vullen:</p>'))
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Een vooraankondiging biedt u de mogelijkheid om alvast een voorkeursdatum voor uw evenement te registreren in onze applicatie.</p><p>Een vooraankondiging zal tijdig omgezet moeten worden in een melding of vergunning, anders vervalt de aanvraag, als niet voldaan wordt aan de wettelijke doorlooptijden.</p><p>Voor een vooraankondiging dient u minimaal de volgende gegevens in te vullen:</p>', $livewire->state())))
                             ->hidden(function (Get $get, $livewire) {
                                 $rule = $livewire->state()->isFieldHidden('content3');
                                 if ($rule === true) {
