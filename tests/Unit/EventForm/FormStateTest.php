@@ -137,4 +137,18 @@ describe('FormState', function () {
         expect($state->get('auth_bsn'))->toBe('123456789')
             ->and($state->get('auth_kvk'))->toBe('12345678');
     });
+
+    test('setVariable and setField share the same bucket (OF-semantics)', function () {
+        // In OF's client zijn veld-values en variables dezelfde pool. Een rule
+        // die `setVariable('watIsUwVoornaam', 'Eva')` doet, vult daarmee óók
+        // het Filament-veld voor die key. fields() moet die waarde zichtbaar
+        // maken aan form->fill().
+        $state = FormState::empty();
+        $state->setVariable('watIsUwVoornaam', 'Eva');
+        $state->setField('watIsUwAchternaam', 'Janssen');
+
+        expect($state->get('watIsUwVoornaam'))->toBe('Eva')
+            ->and($state->get('watIsUwAchternaam'))->toBe('Janssen')
+            ->and($state->fields())->toHaveKeys(['watIsUwVoornaam', 'watIsUwAchternaam']);
+    });
 });

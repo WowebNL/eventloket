@@ -26,15 +26,18 @@ use Illuminate\Contracts\Support\Arrayable;
 class FormState implements Arrayable
 {
     /**
-     * @param  array<string, mixed>  $fields
-     * @param  array<string, mixed>  $variables
-     * @param  array<string, mixed>  $system
-     * @param  array<string, bool>  $fieldHiddenOverrides  veld-key → forced hidden state
-     * @param  array<string, bool>  $stepApplicable  step-key → applicable flag (default true)
+     * @param  array<string, mixed>  $values  gedeelde pool voor veld-waarden
+     *                                        + form-variables — in OF zijn dit
+     *                                        dezelfde bak. Een rule die
+     *                                        `setVariable('watIsUwVoornaam', X)`
+     *                                        doet vult daarmee ook het Filament-
+     *                                        veld met die key.
+     * @param  array<string, mixed>  $system  authUser, authOrganisation, submission_id etc.
+     * @param  array<string, bool>  $fieldHiddenOverrides  veld-key → forced hidden
+     * @param  array<string, bool>  $stepApplicable  step-key → applicable (default true)
      */
     public function __construct(
-        private array $fields = [],
-        private array $variables = [],
+        private array $values = [],
         private array $system = [],
         private array $fieldHiddenOverrides = [],
         private array $stepApplicable = [],
@@ -47,10 +50,9 @@ class FormState implements Arrayable
 
     /**
      * Haal een waarde op via dot-notation. Zoekvolgorde:
-     *   1) fields['path']                (exacte match, niet gesplitst)
-     *   2) fields[head] → ...             (dot-descend)
-     *   3) variables[head] → ...
-     *   4) system[head] → ...
+     *   1) values['path']  (exacte match op unified fields+variables bucket)
+     *   2) values[head] → dot-descend
+     *   3) system[head] → dot-descend
      */
     public function get(string $path): mixed
     {
@@ -58,13 +60,13 @@ class FormState implements Arrayable
             return null;
         }
 
-        if (array_key_exists($path, $this->fields)) {
-            return $this->fields[$path];
+        if (array_key_exists($path, $this->values)) {
+            return $this->values[$path];
         }
 
         [$head, $rest] = $this->splitPath($path);
 
-        foreach ([$this->fields, $this->variables, $this->system] as $bag) {
+        foreach ([$this->values, $this->system] as $bag) {
             if (array_key_exists($head, $bag)) {
                 return $this->descend($bag[$head], $rest);
             }
@@ -75,12 +77,12 @@ class FormState implements Arrayable
 
     public function setField(string $key, mixed $value): void
     {
-        $this->fields[$key] = $value;
+        $this->values[$key] = $value;
     }
 
     public function setVariable(string $key, mixed $value): void
     {
-        $this->variables[$key] = $value;
+        $this->values[$key] = $value;
     }
 
     public function setSystem(string $key, mixed $value): void
@@ -136,13 +138,13 @@ class FormState implements Arrayable
     /** @return array<string, mixed> */
     public function fields(): array
     {
-        return $this->fields;
+        return $this->values;
     }
 
     /** @return array<string, mixed> */
     public function variables(): array
     {
-        return $this->variables;
+        return $this->values;
     }
 
     /**
@@ -152,7 +154,7 @@ class FormState implements Arrayable
      */
     public function absorbFields(array $data): void
     {
-        $this->fields = array_replace($this->fields, $data);
+        $this->values = array_replace($this->values, $data);
     }
 
     /**
@@ -162,15 +164,14 @@ class FormState implements Arrayable
      */
     public function absorbVariables(array $values): void
     {
-        $this->variables = array_replace($this->variables, $values);
+        $this->values = array_replace($this->values, $values);
     }
 
     /** @return array<string, mixed> */
     public function toSnapshot(): array
     {
         return [
-            'fields' => $this->fields,
-            'variables' => $this->variables,
+            'values' => $this->values,
             'system' => $this->system,
             'field_hidden' => $this->fieldHiddenOverrides,
             'step_applicable' => $this->stepApplicable,
@@ -180,9 +181,15 @@ class FormState implements Arrayable
     /** @param  array<string, mixed>  $snapshot */
     public static function fromSnapshot(array $snapshot): self
     {
+        // Backwards-compat: oude snapshots hadden gescheiden fields+variables.
+        $values = array_replace(
+            self::arrayFrom($snapshot, 'fields'),
+            self::arrayFrom($snapshot, 'variables'),
+            self::arrayFrom($snapshot, 'values'),
+        );
+
         return new self(
-            fields: self::arrayFrom($snapshot, 'fields'),
-            variables: self::arrayFrom($snapshot, 'variables'),
+            values: $values,
             system: self::arrayFrom($snapshot, 'system'),
             fieldHiddenOverrides: self::boolMapFrom($snapshot, 'field_hidden'),
             stepApplicable: self::boolMapFrom($snapshot, 'step_applicable'),

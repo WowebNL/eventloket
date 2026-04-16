@@ -21,13 +21,13 @@ class MapContext extends FormState
      */
     public static function from(FormState $outer, mixed $item): self
     {
-        $fields = is_array($item) ? $item : [];
+        $values = is_array($item) ? $item : [];
         if (is_object($item)) {
             foreach (get_object_vars($item) as $k => $v) {
-                $fields[$k] = $v;
+                $values[$k] = $v;
             }
         }
 
-        return new self(fields: $fields);
+        return new self(values: $values);
     }
 }

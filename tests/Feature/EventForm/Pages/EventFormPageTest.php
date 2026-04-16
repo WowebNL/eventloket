@@ -46,8 +46,10 @@ test('mount hydrates eventloketSession via ServiceFetcher', function () {
 });
 
 test('mount loads an existing draft if present for user + organisation', function () {
+    // Gebruik een veld-key die GEEN prefill-rule op zich heeft, zodat de
+    // mount-pass van RulesEngine de draft-waarde niet overschrijft.
     $state = FormState::empty();
-    $state->setField('watIsUwVoornaam', 'Eva');
+    $state->setField('watIsDeNaamVanHetEvenementVergunning', 'Eva se feest');
     Draft::create([
         'user_id' => $this->user->id,
         'organisation_id' => $this->organisation->id,
@@ -60,5 +62,5 @@ test('mount loads an existing draft if present for user + organisation', functio
     /** @var EventFormPage $page */
     $page = $component->instance();
 
-    expect($page->state()->get('watIsUwVoornaam'))->toBe('Eva');
+    expect($page->state()->get('watIsDeNaamVanHetEvenementVergunning'))->toBe('Eva se feest');
 });
