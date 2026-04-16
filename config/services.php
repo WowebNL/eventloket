@@ -50,4 +50,8 @@ return [
     'locatieserver' => [
         'base_url' => env('LOCATIESERVER_BASE_URL', 'https://api.pdok.nl/bzk/locatieserver'),
     ],
+
+    'open_notificaties' => [
+        'log_incoming' => env('OPEN_NOTIFICATIES_LOG_INCOMING', false),
+    ],
 ];
