@@ -410,7 +410,8 @@ return true || (false);
                         }
 
 return true || (false);
-                    }),
+                    })
+                    ->live(),
                 TextEntry::make('contentRouteDoorkuistMeerdereGemeenteInfo')
                     ->hiddenLabel()
                     ->state(new HtmlString('<p>De ingetekende route doorkruist de volgende gemeente(n): {{ routeDoorGemeentenNamen|join:", " }} &nbsp;U gaat de vergunningaanvraag invullen voor de gemeente&nbsp;<strong> {% get_value evenementInGemeente \'name\' %}</strong>, de overige gemeente(n) die gebruik maken van Eventloket op de route zullen automatisch geïnformeerd worden.</p>'))

@@ -131,7 +131,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 CheckboxList::make('welkeVoorzieningenZijnAanwezigBijUwEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -228,7 +229,8 @@ return false || (! (in_array('A30', (array) $get('welkeVoorwerpenGaatUPlaatsenBi
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 CheckboxList::make('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -287,7 +289,8 @@ return false || (! (in_array('A46', (array) $get('welkeVanDeOnderstaandeActivite
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('isUwEvenementToegankelijkVoorMensenMetEenBeperking')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?', $livewire->state()))
                     ->options([

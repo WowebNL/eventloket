@@ -551,7 +551,8 @@ return false || (false);
                                 }
 
 return false || (false);
-                            }),
+                            })
+                            ->live(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Op welke locatie of locaties is er sprake van overnachten door publiek/deelnemers?')
                             ->schema([
@@ -606,7 +607,8 @@ return true || (false);
                                 }
 
 return false || (false);
-                            }),
+                            })
+                            ->live(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2')
                             ->label('Op welke locatie of locaties is er sprake van overnachten door personeel/organisatie?')
                             ->schema([

@@ -79,9 +79,15 @@ class TranspileEventForm extends Command
         // selectboxes-conditionals die naar een veld in een andere step
         // wijzen, correct als dot-access (`$get('X.key')`) worden geëmit.
         $fieldTypeIndex = $this->buildFieldTypeIndex($raw->formSteps);
-        // En de set keys die ergens als conditional.when trigger dienen —
-        // die krijgen ->live() zodat Filament de visibility herevalueert.
-        $triggerKeys = $this->collectTriggerKeys($raw->formSteps);
+        // Set keys die ergens een trigger vormen, komen uit 2 bronnen:
+        //  - directe `conditional.when` op een ander component
+        //  - rule-triggers (JsonLogic leest een veld)
+        // Beide soorten velden moeten `->live()` krijgen zodat Filament bij
+        // state-change zowel z'n visibility-closures als onze rules triggert.
+        $triggerKeys = array_values(array_unique(array_merge(
+            $this->collectTriggerKeys($raw->formSteps),
+            $this->collectRuleTriggerKeys($raw->logicRules),
+        )));
 
         $stepGen = (new StepSchemaGenerator)
             ->withFieldTypeIndex($fieldTypeIndex)
@@ -244,6 +250,27 @@ class TranspileEventForm extends Command
                 }
             }
         }
+    }
+
+    /**
+     * Verzamel de veld-keys die in de triggers van logic-rules als
+     * `{var: X}` voorkomen. Alleen de root-key telt — sub-paden zijn van
+     * de geneste structuur van die root af te leiden.
+     *
+     * @param  list<array<string, mixed>>  $rules
+     * @return list<string>
+     */
+    private function collectRuleTriggerKeys(array $rules): array
+    {
+        $analyzer = new \App\EventForm\Transpiler\RuleDependencyAnalyzer;
+        $keys = [];
+        foreach ($rules as $rule) {
+            foreach ($analyzer->readKeys($rule['json_logic_trigger'] ?? null) as $k) {
+                $keys[$k] = true;
+            }
+        }
+
+        return array_keys($keys);
     }
 
     /**

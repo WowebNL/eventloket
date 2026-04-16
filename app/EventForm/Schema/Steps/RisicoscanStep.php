@@ -57,7 +57,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep')
                     ->label('Wat is de belangrijkste leeftijdscategorie van de doelgroep?')
                     ->options([
@@ -79,7 +80,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid')
                     ->label('Is er sprake van aanwezigheid van politieke aandacht en/of mediageniekheid?')
                     ->options([
@@ -96,7 +98,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('isEenDeelVanDeDoelgroepVerminderdZelfredzaam')
                     ->label('Is een deel van de doelgroep verminderd zelfredzaam?')
                     ->options([
@@ -115,7 +118,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('isErSprakeVanAanwezigheidVanRisicovolleActiviteiten')
                     ->label('Is er sprake van aanwezigheid van risicovolle activiteiten?')
                     ->options([
@@ -132,7 +136,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep')
                     ->label('Wat is het grootste deel van de samenstelling van de doelgroep?')
                     ->options([
@@ -150,7 +155,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('isErSprakeVanOvernachten')
                     ->label('Is er sprake van overnachten?')
                     ->options([
@@ -167,7 +173,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('isErGebruikVanAlcoholEnDrugs')
                     ->label('Is er gebruik van alcohol en drugs?')
                     ->options([
@@ -185,7 +192,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('watIsHetAantalGelijktijdigAanwezigPersonen')
                     ->label('Wat is het aantal gelijktijdig aanwezig personen?')
                     ->options([
@@ -206,7 +214,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('inWelkSeizoenVindtHetEvenementPlaats')
                     ->label('In welk seizoen vindt het evenement plaats?')
                     ->options([
@@ -223,7 +232,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('inWelkeLocatieVindtHetEvenementPlaats')
                     ->label('In welke locatie vindt het evenement plaats?')
                     ->options([
@@ -244,7 +254,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('opWelkSoortOndergrondVindtHetEvenementPlaats')
                     ->label('Op welk soort ondergrond vindt het evenement plaats?')
                     ->options([
@@ -262,7 +273,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('watIsDeTijdsduurVanHetEvenement')
                     ->label('Wat is de tijdsduur van het evenement?')
                     ->options([
@@ -283,7 +295,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 Radio::make('welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing')
                     ->label('Welke beschikbaarheid van aan- en afvoerwegen is van toepassing?')
                     ->options([
@@ -302,7 +315,8 @@ return false || (false);
                         }
 
 return false || (false);
-                    }),
+                    })
+                    ->live(),
                 TextEntry::make('risicoClassificatieContent')
                     ->hiddenLabel()
                     ->state(new HtmlString('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>'))

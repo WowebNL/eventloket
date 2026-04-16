@@ -178,7 +178,8 @@ return false || (! ($get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadO
                                 }
 
 return false || (! ($get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst') === 'Ja'));
-                            }),
+                            })
+                            ->live(),
                         Radio::make('meldingvraag1')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_1 }}', $livewire->state()))
                             ->options([
@@ -195,7 +196,8 @@ return false || (! ($get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst
                                 }
 
 return true || (false);
-                            }),
+                            })
+                            ->live(),
                         Radio::make('meldingvraag2')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_2 }}', $livewire->state()))
                             ->options([
@@ -212,7 +214,8 @@ return true || (false);
                                 }
 
 return true || (false);
-                            }),
+                            })
+                            ->live(),
                         Radio::make('meldingvraag3')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_3 }}', $livewire->state()))
                             ->options([
@@ -229,7 +232,8 @@ return true || (false);
                                 }
 
 return true || (false);
-                            }),
+                            })
+                            ->live(),
                         Radio::make('meldingvraag4')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_4 }}', $livewire->state()))
                             ->options([
@@ -246,7 +250,8 @@ return true || (false);
                                 }
 
 return true || (false);
-                            }),
+                            })
+                            ->live(),
                         Radio::make('meldingvraag5')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_5 }}', $livewire->state()))
                             ->options([
@@ -263,7 +268,8 @@ return true || (false);
                                 }
 
 return true || (false);
-                            }),
+                            })
+                            ->live(),
                         Radio::make('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer')
                             ->label('Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?')
                             ->options([
@@ -280,7 +286,8 @@ return true || (false);
                                 }
 
 return true || (false);
-                            }),
+                            })
+                            ->live(),
                         TextEntry::make('contentGoNext')
                             ->hiddenLabel()
                             ->state(new HtmlString('<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>'))
