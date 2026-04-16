@@ -247,6 +247,26 @@ describe('StepSchemaGenerator nesting', function () {
     });
 });
 
+describe('StepSchemaGenerator addressNL', function () {
+    test('addressNL emits AddressNL::make with key', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'adresVanHetGebouw',
+                    'type' => 'addressNL',
+                    'label' => 'Adres van het gebouw',
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("AddressNL::make('adresVanHetGebouw'")
+            ->and($content)->toContain("use App\\EventForm\\Components\\AddressNL;");
+    });
+});
+
 describe('StepSchemaGenerator content', function () {
     test('content blocks are emitted as Placeholder with HtmlString', function () {
         $step = [

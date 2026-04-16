@@ -88,7 +88,7 @@ class StepSchemaGenerator
             'selectboxes' => $this->renderWithOptions($pad, 'CheckboxList', $component),
             'file' => $this->renderCallChain($pad, 'FileUpload', $key, $label, $component),
             'map' => $this->renderCallChain($pad, 'Map', $key, $label, $component),
-            'addressNL' => $this->renderTextInput($component, $pad, extra: "->placeholder('Postcode + huisnummer')"),
+            'addressNL' => $this->renderAddressNL($component, $pad),
             'fieldset' => $this->renderContainer($component, $pad, 'Fieldset', $label ?: $key),
             'columns' => $this->renderColumns($component, $pad),
             'editgrid' => $this->renderRepeater($component, $pad),
@@ -246,6 +246,16 @@ class StepSchemaGenerator
     }
 
     /** @param  array<string, mixed>  $component */
+    private function renderAddressNL(array $component, string $pad): string
+    {
+        $key = (string) ($component['key'] ?? '');
+        $label = (string) ($component['label'] ?? '');
+        $labelArg = $label !== '' ? ", '{$this->esc($label)}'" : '';
+
+        return "{$pad}AddressNL::make('{$this->esc($key)}'{$labelArg})";
+    }
+
+    /** @param  array<string, mixed>  $component */
     private function renderContent(array $component, string $pad): string
     {
         $key = (string) ($component['key'] ?? 'content');
@@ -327,6 +337,7 @@ class StepSchemaGenerator
 
         namespace App\\EventForm\\Schema\\Steps;
 
+        use App\\EventForm\\Components\\AddressNL;
         use Dotswan\\MapPicker\\Fields\\Map;
         use Filament\\Forms\\Components\\CheckboxList;
         use Filament\\Forms\\Components\\DatePicker;

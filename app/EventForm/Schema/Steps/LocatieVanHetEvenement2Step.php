@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\AddressNL;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
@@ -47,10 +48,7 @@ final class LocatieVanHetEvenement2Step
                             ->label('Naam van de locatie')
                             ->required()
                             ->maxLength(1000),
-                        TextInput::make('adresVanHetGebouwWaarUwEvenementPlaatsvindt1')
-                            ->label('Adres van het gebouw waar uw evenement plaatsvindt.')
-                            ->placeholder('Postcode + huisnummer')
-                            ->required(),
+                        AddressNL::make('adresVanHetGebouwWaarUwEvenementPlaatsvindt1', 'Adres van het gebouw waar uw evenement plaatsvindt.'),
                     ]),
                 Fieldset::make('Buiten op één of meerdere plaatsen')
                     ->schema([
