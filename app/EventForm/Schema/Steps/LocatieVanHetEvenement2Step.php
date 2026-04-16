@@ -359,7 +359,7 @@ return false || (! (in_array('route', (array) $get('waarVindtHetEvenementPlaats'
                     }),
                 TextEntry::make('NotWithin')
                     ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<h3><span style="color:#e64c4c;">Let op</span></h3><p>Een ingevoerd adres of (een deel van) een getekende route of locatie valt buiten de gemeenten die EventLoket gebruiken.</p><p>Eventloket wordt gebruikt door de gemeenten:&nbsp;{{ alleGemeenteNamen }}</p>', $livewire->state())))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<h3><span >Let op</span></h3><p>Een ingevoerd adres of (een deel van) een getekende route of locatie valt buiten de gemeenten die EventLoket gebruiken.</p><p>Eventloket wordt gebruikt door de gemeenten:&nbsp;{{ alleGemeenteNamen }}</p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('NotWithin');
                         if ($rule === true) {

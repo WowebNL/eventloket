@@ -413,7 +413,7 @@ class StepSchemaGenerator
     private function renderContent(array $component, string $pad): string
     {
         $key = (string) ($component['key'] ?? 'content');
-        $html = (string) ($component['html'] ?? '');
+        $html = $this->stripInlineColors((string) ($component['html'] ?? ''));
         $escaped = str_replace(['\\', "'"], ['\\\\', "\\'"], $html);
 
         // Content-HTML kan `{{ var }}` en `{% get_value ... %}` bevatten; die
@@ -646,6 +646,31 @@ class StepSchemaGenerator
         }
 
         return $name;
+    }
+
+    /**
+     * OF's content-HTML komt uit een WYSIWYG-editor die `color:rgb(X,Y,Z)`
+     * en `background-color:...` hard-coded in `style`-attributen zet.
+     * Daardoor respecteert de tekst niet de dark/light-mode van de shell.
+     * We strippen deze kleur-regels zodat `color` van de parent geërfd
+     * wordt. Andere style-properties blijven intact.
+     */
+    private function stripInlineColors(string $html): string
+    {
+        return (string) preg_replace_callback(
+            '/\bstyle="([^"]*)"/i',
+            function (array $m): string {
+                $style = (string) $m[1];
+                $style = (string) preg_replace('/(?:^|;)\s*(?:background-)?color\s*:[^;]*;?/i', '', $style);
+                $style = trim($style, "; \t");
+                if ($style === '') {
+                    return '';
+                }
+
+                return 'style="'.$style.'"';
+            },
+            $html,
+        );
     }
 
     /**

@@ -635,6 +635,28 @@ describe('StepSchemaGenerator addressNL', function () {
 });
 
 describe('StepSchemaGenerator content', function () {
+    test('content blocks have inline color styles stripped (dark-mode safe)', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'info',
+                    'type' => 'content',
+                    'label' => 'Info',
+                    'html' => '<p><span style="color:rgb(0,0,0);">Zwarte tekst</span></p>',
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        // Geen inline color meer — de tekst erft de parent-kleur, dus werkt in
+        // zowel light- als dark-mode.
+        expect($content)->not->toContain('color:rgb(0,0,0)')
+            ->and($content)->not->toContain('color: rgb(0,0,0)')
+            ->and($content)->toContain('Zwarte tekst');
+    });
+
     test('content blocks are emitted as TextEntry with HtmlString', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',

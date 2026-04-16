@@ -29,7 +29,7 @@ final class TijdenStep
             ->schema([
                 TextEntry::make('content2')
                     ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><span style="color:rgb(0,0,0);">Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</span></p>', $livewire->state())))
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><span >Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</span></p>', $livewire->state())))
                     ->hidden(function (Get $get, $livewire) {
                         $rule = $livewire->state()->isFieldHidden('content2');
                         if ($rule === true) {
