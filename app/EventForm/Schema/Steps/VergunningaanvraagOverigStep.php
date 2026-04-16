@@ -96,7 +96,7 @@ final class VergunningaanvraagOverigStep
                             ->label('Welke andere maatregelen u wilt nemen')
                             ->required()
                             ->maxLength(10000)
-                            ->visible(fn (Get $get): bool => $get('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs.anders') === true),
+                            ->visible(fn (Get $get): bool => in_array('anders', (array) $get('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs'), true)),
                         Textarea::make('metWelkeOpenbaarVervoermaatschappijenHeeftUExtraAfsprakenGemaaktOverHetOpenbaarVervoer')
                             ->label('Met welke openbaar vervoermaatschappijen heeft u extra afspraken gemaakt over het openbaar vervoer?')
                             ->required()
@@ -136,7 +136,7 @@ final class VergunningaanvraagOverigStep
                             ->label('Op welke andere manier wilt u promotie maken?')
                             ->required()
                             ->maxLength(10000)
-                            ->visible(fn (Get $get): bool => $get('hoeWiltUPromotieMakenVoorUwEvenement.anders') === true),
+                            ->visible(fn (Get $get): bool => in_array('anders', (array) $get('hoeWiltUPromotieMakenVoorUwEvenement'), true)),
                         TextInput::make('websiteVanUwEvenement')
                             ->label('Website van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                             ->maxLength(1000),

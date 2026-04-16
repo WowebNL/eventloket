@@ -81,7 +81,7 @@ final class Vragenboom2Step
                     ->label('Welke overige bouwwerken gaat u plaatsen?')
                     ->required()
                     ->maxLength(10000)
-                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A22') === true),
+                    ->visible(fn (Get $get): bool => in_array('A22', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true)),
                 CheckboxList::make('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX')
                     ->label('Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->options([
@@ -98,7 +98,7 @@ final class Vragenboom2Step
                 Textarea::make('welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX')
                     ->label('welke ander voorwerpen gaat u plaatsen bij evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->maxLength(10000)
-                    ->visible(fn (Get $get): bool => $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX.A30') === true),
+                    ->visible(fn (Get $get): bool => in_array('A30', (array) $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX'), true)),
                 CheckboxList::make('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX')
                     ->label('Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->options([
@@ -129,7 +129,7 @@ final class Vragenboom2Step
                     ->label('Welk activiteit betreft uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->required()
                     ->maxLength(10000)
-                    ->visible(fn (Get $get): bool => $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A46') === true),
+                    ->visible(fn (Get $get): bool => in_array('A46', (array) $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX'), true)),
                 CheckboxList::make('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX')
                     ->label('Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                     ->options([
@@ -142,13 +142,13 @@ final class Vragenboom2Step
                 Radio::make('isUwEvenementToegankelijkVoorMensenMetEenBeperking')
                     ->label('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?')
                     ->required()
-                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A16') === true)
+                    ->visible(fn (Get $get): bool => in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true))
                     ->live(),
                 TextInput::make('voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX')
                     ->label('Voor hoeveel mensen met een lichamelijke of geestelijke beperking verzorgt u opvang tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->numeric()
                     ->required()
-                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A16') === true),
+                    ->visible(fn (Get $get): bool => in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true)),
                 Textarea::make('welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement')
                     ->label('Welke maatregelen heeft u genomen om mensen met een beperking ongehinderd deel te laten nemen aan uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->required()

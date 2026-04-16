@@ -43,7 +43,7 @@ final class LocatieVanHetEvenement2Step
                     ->schema([
 
                     ])
-                    ->visible(fn (Get $get): bool => $get('waarVindtHetEvenementPlaats.gebouw') === true),
+                    ->visible(fn (Get $get): bool => in_array('gebouw', (array) $get('waarVindtHetEvenementPlaats'), true)),
                 Repeater::make('adresVanDeGebouwEn')
                     ->label('Adres van de gebouw(en)')
                     ->schema([
@@ -58,7 +58,7 @@ final class LocatieVanHetEvenement2Step
                     ->schema([
 
                     ])
-                    ->visible(fn (Get $get): bool => $get('waarVindtHetEvenementPlaats.buiten') === true),
+                    ->visible(fn (Get $get): bool => in_array('buiten', (array) $get('waarVindtHetEvenementPlaats'), true)),
                 Repeater::make('locatieSOpKaart')
                     ->label('Locatie(s) op kaart')
                     ->schema([
@@ -108,20 +108,20 @@ final class LocatieVanHetEvenement2Step
                             ->live(),
                         Placeholder::make('content1')
                             ->content(new HtmlString('<p>Voor het gebruik van provinciale wegen, of in het geval van een wegwedstrijd die door meerdere gemeenten binnen de provincie voert dient er <a href="https://www.limburg.nl/@1161/wedstrijden-weg" target="_blank" rel="noopener noreferrer">een verzoek voor ontheffing van de openbare weg </a>gericht te worden aan de Provincie Limburg.</p>'))
-                            ->visible(fn (Get $get): bool => $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan.provincie') === true),
+                            ->visible(fn (Get $get): bool => in_array('provincie', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true)),
                         Placeholder::make('content39')
                             ->content(new HtmlString('<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/waters van het Waterschap dient u een aanvraag te doen via <a href="https://www.waterschaplimburg.nl/overons/regels-wetgeving-0/melding-vergunning/" target="_blank" rel="noopener noreferrer">de website</a>.</p>'))
-                            ->visible(fn (Get $get): bool => $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan.waterschap') === true),
+                            ->visible(fn (Get $get): bool => in_array('waterschap', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true)),
                         Placeholder::make('content41')
                             ->content(new HtmlString('<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/waters van het Rijkswaterstaat dient u een aanvraag te doen via <a href="https://www.rijkswaterstaat.nl/wegen/wetten-regels-en-vergunningen/vergunningen-rijkswegen" target="_blank" rel="noopener noreferrer">de website van Rijkswaterstaat</a>.</p>'))
-                            ->visible(fn (Get $get): bool => $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan.rijkswaterstaat') === true),
+                            ->visible(fn (Get $get): bool => in_array('rijkswaterstaat', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true)),
                         Placeholder::make('content40')
                             ->content(new HtmlString('<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/paden van het Staatsbosheer dient u een aanvraag te doen via <a href="https://www.staatsbosbeheer.nl/contact/evenementen-aanmelden" target="_blank" rel="noopener noreferrer">de website van Staatsbosbeheer</a>.</p>'))
-                            ->visible(fn (Get $get): bool => $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan.staatsbosbeheer') === true),
+                            ->visible(fn (Get $get): bool => in_array('staatsbosbeheer', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true)),
                         Placeholder::make('routeStartEndContent2')
                             ->content(new HtmlString('<p>{% if not inGemeentenResponse.line.start or not inGemeentenResponse.line.end %}</p><p>Er is nog geen route ingetekend of de route start of eindigt &nbsp;buiten de gemeenten die gebruik maken van Eventloket.&nbsp;</p><p>{% elif inGemeentenResponse.line.start_end_equal == False %}</p><p>De route start in de gemeente <strong>{{ inGemeentenResponse.line.start.name }}</strong> en eindigt in de gemeente <strong>{{ inGemeentenResponse.line.end.name }}</strong>, hierdoor kan het zijn dat u bij beide gemeenten een vergunningaanvraag moet doen. U dient vult dit formulier helemaal in voor 1 gemeente, als u de aanvraag vervolgens heeft gedaan kunt u binnen de aanvraag in Eventloket de knop “Nieuwe aanvraag” gebruiken om een nieuw aanvraag te starten waarbij (een deel van) het formulier al vooraf ingevuld is.</p><p>{% elif inGemeentenResponse.line.start_end_equal == True %}</p><p>De route start en eindigt binnen de gemeente <strong>{{ inGemeentenResponse.line.start.name }}.</strong></p><p>{% endif %}</p>')),
                     ])
-                    ->visible(fn (Get $get): bool => $get('waarVindtHetEvenementPlaats.route') === true),
+                    ->visible(fn (Get $get): bool => in_array('route', (array) $get('waarVindtHetEvenementPlaats'), true)),
                 Placeholder::make('NotWithin')
                     ->content(new HtmlString('<h3><span style="color:#e64c4c;">Let op</span></h3><p>Een ingevoerd adres of (een deel van) een getekende route of locatie valt buiten de gemeenten die EventLoket gebruiken.</p><p>Eventloket wordt gebruikt door de gemeenten:&nbsp;{{ alleGemeenteNamen }}</p>'))
                     ->hidden(),

@@ -144,7 +144,7 @@ final class ContactgegevensStep
                             ->email()
                             ->required(),
                     ])
-                    ->visible(fn (Get $get): bool => $get('extraContactpersonenToevoegen.vooraf') === true),
+                    ->visible(fn (Get $get): bool => in_array('vooraf', (array) $get('extraContactpersonenToevoegen'), true)),
                 Fieldset::make('Contactpersoon tijdens het evenement')
                     ->schema([
                         TextInput::make('naam1')
@@ -160,7 +160,7 @@ final class ContactgegevensStep
                             ->email()
                             ->required(),
                     ])
-                    ->visible(fn (Get $get): bool => $get('extraContactpersonenToevoegen.tijdens') === true),
+                    ->visible(fn (Get $get): bool => in_array('tijdens', (array) $get('extraContactpersonenToevoegen'), true)),
                 Fieldset::make('Contactpersoon na het evenement')
                     ->schema([
                         TextInput::make('naam2')
@@ -176,7 +176,7 @@ final class ContactgegevensStep
                             ->email()
                             ->required(),
                     ])
-                    ->visible(fn (Get $get): bool => $get('extraContactpersonenToevoegen.achteraf') === true),
+                    ->visible(fn (Get $get): bool => in_array('achteraf', (array) $get('extraContactpersonenToevoegen'), true)),
             ]);
     }
 }

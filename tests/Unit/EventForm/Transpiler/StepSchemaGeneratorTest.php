@@ -365,7 +365,7 @@ describe('StepSchemaGenerator visibility', function () {
             ->and($content)->toContain("'Anders'");
     });
 
-    test('conditional on selectboxes-target uses dot-access', function () {
+    test('conditional on selectboxes-target uses in_array for Filament state', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -387,8 +387,10 @@ describe('StepSchemaGenerator visibility', function () {
 
         $content = generateStep($step);
 
-        expect($content)->toContain("\$get('waarVindtHetEvenementPlaats.buiten')")
-            ->and($content)->toContain('=== true');
+        // Filament CheckboxList slaat selectboxes op als array van values,
+        // niet als object — de closure gebruikt in_array.
+        expect($content)->toContain("in_array('buiten'")
+            ->and($content)->toContain("\$get('waarVindtHetEvenementPlaats')");
     });
 });
 

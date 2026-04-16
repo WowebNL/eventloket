@@ -416,9 +416,12 @@ class StepSchemaGenerator
         $isSelectboxes = $targetType === 'selectboxes';
 
         if ($isSelectboxes) {
+            // Filament CheckboxList bewaart state als `['key1', 'key2']` — een
+            // vlakke array van geselecteerde values — in plaats van OF's
+            // object-vorm `{key1: true, key2: false}`. In de visibility-closure
+            // kijken we dus of de eq-waarde in die array voorkomt.
             $eqString = (string) $eq;
-            $accessor = "\$get('".$this->esc($when).'.'.$this->esc($eqString)."')";
-            $test = $accessor.' === true';
+            $test = "in_array('".$this->esc($eqString)."', (array) \$get('".$this->esc($when)."'), true)";
         } else {
             $eqString = is_scalar($eq) ? (string) $eq : '';
             $accessor = "\$get('".$this->esc($when)."')";

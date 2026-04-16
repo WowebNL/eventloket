@@ -50,7 +50,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Op welke andere manier wordt er muziek gemaakt?')
                             ->required()
                             ->maxLength(10000)
-                            ->visible(fn (Get $get): bool => $get('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning.anders') === true),
+                            ->visible(fn (Get $get): bool => in_array('anders', (array) $get('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning'), true)),
                         CheckboxList::make('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX')
                             ->label('Welke soorten muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -82,7 +82,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'edm' => 'EDM',
                             ])
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX.A71') === true),
+                            ->visible(fn (Get $get): bool => in_array('A71', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true)),
                         CheckboxList::make('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement')
                             ->label('Welke soorten popmuziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -106,13 +106,13 @@ final class VergunningaanvraagVervolgvragenStep
                                 'anders' => 'Anders',
                             ])
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX.A72') === true)
+                            ->visible(fn (Get $get): bool => in_array('A72', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true))
                             ->live(),
                         Textarea::make('welkeAnderSoortPopmuziekIsErTeHorenOpEvenementX')
                             ->label('Welke ander soort popmuziek is er te horen op evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->required()
                             ->maxLength(10000)
-                            ->visible(fn (Get $get): bool => $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement.anders') === true),
+                            ->visible(fn (Get $get): bool => in_array('anders', (array) $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement'), true)),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX')
                             ->label('Wat is de geluidsbelasting in decibel (dB(A) norm - (0–103 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->numeric()
@@ -219,7 +219,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Geef een omschrijving van soort omheining')
                             ->required()
                             ->maxLength(10000)
-                            ->visible(fn (Get $get): bool => $get('watVoorBouwselsPlaatsUOpDeLocaties.A57') === true),
+                            ->visible(fn (Get $get): bool => in_array('A57', (array) $get('watVoorBouwselsPlaatsUOpDeLocaties'), true)),
                         FileUpload::make('plaatstUTijdelijkeConstructiesTentenPodiaEtcDanDientUNaastHetVeiligheidsplanTevensEenDeelplanTijdelijkeConstructiesTeMakenEnTeUploadenAlsBijlage')
                             ->label('Plaatst u tijdelijke constructies (tenten, podia etc.) dan dient u naast het veiligheidsplan tevens een \'Deelplan Tijdelijke constructies\' te maken en te uploaden als bijlage.'),
                     ])
@@ -347,7 +347,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Welke andere warmtebron wordt gebruikt?')
                             ->required()
                             ->maxLength(10000)
-                            ->visible(fn (Get $get): bool => $get('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX.anders') === true),
+                            ->visible(fn (Get $get): bool => in_array('anders', (array) $get('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX'), true)),
                     ])
                     ->hidden(),
                 Fieldset::make('Belemmering van verkeer')
