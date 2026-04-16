@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Infolists\Components\TextEntry;
@@ -32,10 +33,10 @@ final class TijdenStep
                 Grid::make(2)
                     ->schema([
                         DateTimePicker::make('EvenementStart')
-                            ->label('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required(),
                         DateTimePicker::make('EvenementEind')
-                            ->label('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required(),
                     ]),
                 TextEntry::make('evenmentenInDeBuurtContent')
@@ -43,40 +44,56 @@ final class TijdenStep
                     ->state(new HtmlString('<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>'))
                     ->hidden(),
                 Radio::make('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten')
-                    ->label('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?')
+                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->required()
                     ->live(),
                 Grid::make(2)
                     ->schema([
                         DateTimePicker::make('OpbouwStart')
-                            ->label('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required()
                             ->visible(fn (Get $get): bool => $get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja'),
                         DateTimePicker::make('OpbouwEind')
-                            ->label('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required()
                             ->visible(fn (Get $get): bool => $get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja'),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXOpbouwactiviteiten')
-                    ->label('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?')
+                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->required(),
                 Radio::make('zijnErAansluitendAanHetEvenementAfbouwactiviteiten')
-                    ->label('Zijn er aansluitend aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?')
+                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er aansluitend aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?', $livewire->state()))
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->required()
                     ->live(),
                 Grid::make(2)
                     ->schema([
                         DateTimePicker::make('AfbouwStart')
-                            ->label('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required()
                             ->visible(fn (Get $get): bool => $get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja'),
                         DateTimePicker::make('AfbouwEind')
-                            ->label('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required()
                             ->visible(fn (Get $get): bool => $get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja'),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXAfbouwactiviteiten3')
-                    ->label('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?')
+                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?', $livewire->state()))
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->required(),
                 TextEntry::make('overzichtTijden')
                     ->hiddenLabel()

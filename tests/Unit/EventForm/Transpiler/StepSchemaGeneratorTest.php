@@ -247,6 +247,116 @@ describe('StepSchemaGenerator nesting', function () {
     });
 });
 
+describe('StepSchemaGenerator variable-backed options', function () {
+    test('select with openForms.dataSrc=variable gets options from variable initial_value', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'soortEvenement',
+                    'type' => 'select',
+                    'label' => 'Soort',
+                    'values' => [['value' => '', 'label' => '']],
+                    'openForms' => ['dataSrc' => 'variable', 'itemsExpression' => ['var' => 'evenementTypen']],
+                ],
+            ]],
+        ];
+
+        $content = (new \App\EventForm\Transpiler\StepSchemaGenerator)
+            ->withVariableInitialValues([
+                'evenementTypen' => ['Markt of braderie', 'Muziekevenement', 'Kermis'],
+            ])
+            ->generate($step)->fileContent;
+
+        expect($content)->toContain("'Markt of braderie' => 'Markt of braderie'")
+            ->and($content)->toContain("'Muziekevenement' => 'Muziekevenement'");
+    });
+
+    test('radio backed by jaNeeLijst gets Ja/Nee options', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'heeftOpbouw',
+                    'type' => 'radio',
+                    'label' => 'Opbouw?',
+                    'values' => [['value' => '', 'label' => '']],
+                    'openForms' => ['dataSrc' => 'variable', 'itemsExpression' => ['var' => 'jaNeeLijst']],
+                ],
+            ]],
+        ];
+
+        $content = (new \App\EventForm\Transpiler\StepSchemaGenerator)
+            ->withVariableInitialValues(['jaNeeLijst' => ['Ja', 'Nee']])
+            ->generate($step)->fileContent;
+
+        expect($content)->toContain("'Ja' => 'Ja'")
+            ->and($content)->toContain("'Nee' => 'Nee'");
+    });
+
+    test('checkboxes backed by a code-pair list emit code as key + label as value', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'voorwerpen',
+                    'type' => 'selectboxes',
+                    'label' => 'Voorwerpen',
+                    'values' => [['value' => '', 'label' => '']],
+                    'openForms' => ['dataSrc' => 'variable', 'itemsExpression' => ['var' => 'voorwerpenLijst']],
+                ],
+            ]],
+        ];
+
+        $content = (new \App\EventForm\Transpiler\StepSchemaGenerator)
+            ->withVariableInitialValues([
+                'voorwerpenLijst' => [
+                    ['A23', 'Verkooppunten toegangskaarten'],
+                    ['A24', 'Verkooppunten munten'],
+                ],
+            ])
+            ->generate($step)->fileContent;
+
+        expect($content)->toContain("'A23' => 'Verkooppunten toegangskaarten'")
+            ->and($content)->toContain("'A24' => 'Verkooppunten munten'");
+    });
+});
+
+describe('StepSchemaGenerator label interpolation', function () {
+    test('labels with {{ var }} get a closure that delegates to LabelRenderer', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'soortEvenement',
+                    'type' => 'select',
+                    'label' => 'Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?',
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain('->label(fn')
+            ->and($content)->toContain('LabelRenderer')
+            ->and($content)->toContain('{{ watIsDeNaamVanHetEvenementVergunning }}');
+    });
+
+    test('labels without placeholders stay as plain strings', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'voornaam', 'type' => 'textfield', 'label' => 'Wat is uw voornaam?'],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("->label('Wat is uw voornaam?')")
+            ->and($content)->not->toContain('LabelRenderer');
+    });
+});
+
 describe('StepSchemaGenerator live triggers', function () {
     test('a field used as conditional.when trigger gets ->live()', function () {
         $step = [

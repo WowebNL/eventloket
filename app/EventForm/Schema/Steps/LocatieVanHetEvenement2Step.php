@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\AddressNL;
+use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
@@ -34,7 +35,7 @@ final class LocatieVanHetEvenement2Step
             ->key(self::UUID)
             ->schema([
                 CheckboxList::make('waarVindtHetEvenementPlaats')
-                    ->label('Waar vindt het evenement {{ watIsDeNaamVanHetEvenementVergunning }} plaats?')
+                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Waar vindt het evenement {{ watIsDeNaamVanHetEvenementVergunning }} plaats?', $livewire->state()))
                     ->options([
                         'gebouw' => 'In een gebouw of meerdere gebouwen',
                         'buiten' => 'Buiten op één of meerdere plaatsen',
@@ -94,6 +95,17 @@ final class LocatieVanHetEvenement2Step
                             ->maxLength(1000),
                         Select::make('watVoorEvenementGaatPlaatsvindenOpDeRoute1')
                             ->label('Wat voor evenement gaat plaatsvinden op de route?')
+                            ->options([
+                                'fietstochtGeenWedstrijd' => 'Fietstocht - geen wedstrijd',
+                                'fietstochtWedstrijd' => 'Fietstocht - wedstrijd',
+                                'gemotoriseerdeToertochtGeenWedstrijd' => 'Gemotoriseerde toertocht - geen wedstrijd',
+                                'gemotoriseerdeToertochtWedstrijd' => 'Gemotoriseerde toertocht - wedstrijd',
+                                'wandeltochtGeenWedstrijd' => 'Wandeltocht - geen wedstrijd',
+                                'wandeltochtWedstrijd' => 'Wandeltocht - wedstrijd',
+                                'A112' => 'Carnavalsoptocht',
+                                'A113' => 'Hardloopwedstijd',
+                                'A114' => 'Overig',
+                            ])
                             ->required()
                             ->live(),
                         Textarea::make('welkSoortRouteEvenementBetreftUwEvenementX')

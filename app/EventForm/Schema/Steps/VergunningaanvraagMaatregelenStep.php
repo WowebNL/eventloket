@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
@@ -36,7 +37,7 @@ final class VergunningaanvraagMaatregelenStep
                             ->hiddenLabel()
                             ->state(new HtmlString('<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>')),
                         Textarea::make('geefEenOmschrijvingWelkeAanpassingenOpLocatieEvenementXWaarNodigZijnOfWelkStraatmeubilairUWiltVerwijderenOfAanpassen')
-                            ->label('Geef een omschrijving welke aanpassingen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }} waar nodig zijn of welk straatmeubilair u wilt verwijderen of aanpassen.')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geef een omschrijving welke aanpassingen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }} waar nodig zijn of welk straatmeubilair u wilt verwijderen of aanpassen.', $livewire->state()))
                             ->required()
                             ->maxLength(10000),
                     ])
@@ -65,14 +66,22 @@ final class VergunningaanvraagMaatregelenStep
                                     ->required(),
                             ]),
                         TextInput::make('hoeveelExtraAfvalinzamelpuntenGaatUOpLocatieEvenementXPlaatsen')
-                            ->label('Hoeveel extra afvalinzamelpunten gaat u op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. plaatsen?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Hoeveel extra afvalinzamelpunten gaat u op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. plaatsen?', $livewire->state()))
                             ->numeric()
                             ->required(),
                         Radio::make('doetUAanAfvalscheidingOpLocatieEvenementX')
-                            ->label('Doet u aan afvalscheiding op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Doet u aan afvalscheiding op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required(),
                         Radio::make('voertUDeSchoonmaakZelfUit')
                             ->label('Voert u de schoonmaak zelf uit? ')
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required()
                             ->live(),
                         FileUpload::make('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen')
@@ -84,6 +93,10 @@ final class VergunningaanvraagMaatregelenStep
                     ->schema([
                         Radio::make('wilUGebruikMakenVanGemeentelijkeHulpmiddelen')
                             ->label('Wil U gebruik maken van gemeentelijke hulpmiddelen?')
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required()
                             ->live(),
                         Fieldset::make('Veldengroep')
@@ -114,6 +127,10 @@ final class VergunningaanvraagMaatregelenStep
                                     ->numeric(),
                                 Radio::make('wenstUTegenBetalingStroomAfTeNemenVanDeGemeente1')
                                     ->label('Wenst u tegen betaling stroom af te nemen van de gemeente?')
+                                    ->options([
+                                        'Ja' => 'Ja',
+                                        'Nee' => 'Nee',
+                                    ])
                                     ->required(),
                                 Textarea::make('geefAanOpWelkeLocatieUStroomWilt1')
                                     ->label('Geef aan op welke locatie u stroom wilt afnemen')

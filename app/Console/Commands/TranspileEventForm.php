@@ -85,7 +85,8 @@ class TranspileEventForm extends Command
 
         $stepGen = (new StepSchemaGenerator)
             ->withFieldTypeIndex($fieldTypeIndex)
-            ->withTriggerKeys($triggerKeys);
+            ->withTriggerKeys($triggerKeys)
+            ->withVariableInitialValues($this->buildVariableInitialValues($raw->variables));
         $stepCount = 0;
         foreach ($raw->formSteps as $step) {
             $generated = $stepGen->generate($step);
@@ -173,6 +174,23 @@ class TranspileEventForm extends Command
                 }
             }
         }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $variables
+     * @return array<string, mixed>  key → initial_value
+     */
+    private function buildVariableInitialValues(array $variables): array
+    {
+        $map = [];
+        foreach ($variables as $variable) {
+            $key = $variable['key'] ?? null;
+            if (is_string($key) && $key !== '' && array_key_exists('initial_value', $variable)) {
+                $map[$key] = $variable['initial_value'];
+            }
+        }
+
+        return $map;
     }
 
     /**

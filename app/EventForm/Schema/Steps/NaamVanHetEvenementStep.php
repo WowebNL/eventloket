@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -31,12 +32,33 @@ final class NaamVanHetEvenementStep
                     ->maxLength(1000)
                     ->live(),
                 Textarea::make('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning')
-                    ->label('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
+                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                     ->required()
                     ->maxLength(10000)
                     ->hidden(fn (Get $get): bool => $get('watIsDeNaamVanHetEvenementVergunning') === ''),
                 Select::make('soortEvenement')
-                    ->label('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->options([
+                        'Buurt-, barbecue of straatfeest, buitenspeeldagen, (eindejaars-)feesten, garagesales' => 'Buurt-, barbecue of straatfeest, buitenspeeldagen, (eindejaars-)feesten, garagesales',
+                        'Muziekevenement Cultuur- of kunstevenement of toneelvoorstellingen' => 'Muziekevenement Cultuur- of kunstevenement of toneelvoorstellingen',
+                        'Sportevenement' => 'Sportevenement',
+                        'Markt of braderie' => 'Markt of braderie',
+                        'Circus' => 'Circus',
+                        'Kermis' => 'Kermis',
+                        'Beurs of Congres' => 'Beurs of Congres',
+                        'Auto- scooter- of motorshow' => 'Auto- scooter- of motorshow',
+                        'Vliegshow' => 'Vliegshow',
+                        'Festival' => 'Festival',
+                        'Optocht, processie of corso' => 'Optocht, processie of corso',
+                        'Culinair evenement' => 'Culinair evenement',
+                        'Dierenshow' => 'Dierenshow',
+                        'Evenement op het water' => 'Evenement op het water',
+                        'Scoutingwedstrijden' => 'Scoutingwedstrijden',
+                        'Truck event' => 'Truck event',
+                        'Verkeerseducatie' => 'Verkeerseducatie',
+                        'Halloweenfeesten' => 'Halloweenfeesten',
+                        'Anders' => 'Anders',
+                    ])
                     ->required()
                     ->hidden(fn (Get $get): bool => $get('watIsDeNaamVanHetEvenementVergunning') === '')
                     ->live(),
@@ -47,6 +69,10 @@ final class NaamVanHetEvenementStep
                     ->visible(fn (Get $get): bool => $get('soortEvenement') === 'Anders'),
                 Radio::make('gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen')
                     ->label('Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?')
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->visible(fn (Get $get): bool => $get('soortEvenement') === 'Markt of braderie'),
             ]);
     }

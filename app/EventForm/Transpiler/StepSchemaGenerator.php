@@ -32,6 +32,9 @@ class StepSchemaGenerator
     /** @var array<string, true> keys die als conditional.when trigger dienen */
     private array $triggerKeys = [];
 
+    /** @var array<string, mixed> variable-key → initial_value, voor options-emit */
+    private array $variableInitialValues = [];
+
     /**
      * Geef de generator een globale mapping van veld-key → type zodat
      * conditional-emissie correct `$get(key.subkey)` gebruikt voor
@@ -56,6 +59,20 @@ class StepSchemaGenerator
     public function withTriggerKeys(array $keys): self
     {
         $this->triggerKeys = array_fill_keys($keys, true);
+
+        return $this;
+    }
+
+    /**
+     * Voorzie de generator van initial-values van form-variables, zodat
+     * select/radio/checkboxlist-velden met `openForms.dataSrc = "variable"`
+     * hun opties kunnen emitten op basis van `itemsExpression.var`.
+     *
+     * @param  array<string, mixed>  $values  varKey → initial_value
+     */
+    public function withVariableInitialValues(array $values): self
+    {
+        $this->variableInitialValues = $values;
 
         return $this;
     }
@@ -146,7 +163,7 @@ class StepSchemaGenerator
         $label = (string) ($component['label'] ?? '');
         $chain = "{$pad}TextInput::make('{$this->esc($key)}')";
         if ($label !== '') {
-            $chain .= "\n{$pad}    ->label('{$this->esc($label)}')";
+            $chain .= "\n{$pad}    ".$this->labelModifier($label, $pad);
         }
         if ($extra !== '') {
             $chain .= "\n{$pad}    {$extra}";
@@ -161,7 +178,7 @@ class StepSchemaGenerator
     {
         $chain = "{$pad}{$class}::make('{$this->esc($key)}')";
         if ($label !== '') {
-            $chain .= "\n{$pad}    ->label('{$this->esc($label)}')";
+            $chain .= "\n{$pad}    ".$this->labelModifier($label, $pad);
         }
         $chain .= $this->commonModifiers($component, $pad);
 
@@ -175,7 +192,7 @@ class StepSchemaGenerator
         $label = (string) ($component['label'] ?? '');
         $chain = "{$pad}{$class}::make('{$this->esc($key)}')";
         if ($label !== '') {
-            $chain .= "\n{$pad}    ->label('{$this->esc($label)}')";
+            $chain .= "\n{$pad}    ".$this->labelModifier($label, $pad);
         }
         $chain .= $this->renderOptionsBlock($component, $pad);
         $chain .= $this->commonModifiers($component, $pad);
@@ -183,16 +200,40 @@ class StepSchemaGenerator
         return $chain;
     }
 
+    /**
+     * Emit `->label(...)`. Labels met `{{ var }}` krijgen een closure die
+     * de Livewire-state op render-tijd oplost via LabelRenderer. Statische
+     * labels krijgen een simpele string-vorm.
+     */
+    private function labelModifier(string $label, string $pad): string
+    {
+        if (! str_contains($label, '{{')) {
+            return "->label('{$this->esc($label)}')";
+        }
+
+        // `$livewire` is een Filament parameter die de hostende Page injecteert;
+        // die heeft een `state()` accessor naar de FormState.
+        return '->label(fn ($livewire): string => app(\\App\\EventForm\\Template\\LabelRenderer::class)'
+            ."->render('{$this->esc($label)}', \$livewire->state()))";
+    }
+
     /** @param  array<string, mixed>  $component */
     private function renderOptionsBlock(array $component, string $pad): string
     {
         $values = $component['values'] ?? null;
-        if (! is_array($values) || $values === []) {
-            $data = $component['data']['values'] ?? null;
-            if (is_array($data)) {
-                $values = $data;
+
+        // Lege/placeholder values-lijst (bij OF de `[{label:'',value:''}]`
+        // default) → probeer `data.values[]` (select met inline lijst) of
+        // `openForms.dataSrc === 'variable'` (opties uit variable).
+        if (! $this->isUsableValuesList($values)) {
+            $dataValues = $component['data']['values'] ?? null;
+            if ($this->isUsableValuesList($dataValues)) {
+                $values = $dataValues;
+            } else {
+                $values = $this->resolveVariableBackedOptions($component);
             }
         }
+
         if (! is_array($values) || $values === []) {
             return '';
         }
@@ -314,6 +355,71 @@ class StepSchemaGenerator
             ."{$pad}    ->hiddenLabel()\n"
             ."{$pad}    ->state(new \\Illuminate\\Support\\HtmlString('{$escaped}'))"
             .$this->visibilityModifiers($component, $pad);
+    }
+
+    /**
+     * Detecteert de "lege placeholder" die OF vaak laat staan
+     * (`[{label:'', value:''}]`) als legitieme options.
+     *
+     * @param  mixed  $values
+     */
+    private function isUsableValuesList(mixed $values): bool
+    {
+        if (! is_array($values) || $values === []) {
+            return false;
+        }
+        foreach ($values as $v) {
+            if (is_array($v) && isset($v['value']) && is_string($v['value']) && $v['value'] !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Resolve options voor een component dat z'n lijst uit een form-variable
+     * trekt (OF's `openForms.dataSrc === 'variable'`). Emit een list<value,label>
+     * passend bij `renderOptionsBlock`.
+     *
+     * @param  array<string, mixed>  $component
+     * @return list<array{value: string, label: string}>|null
+     */
+    private function resolveVariableBackedOptions(array $component): ?array
+    {
+        $openForms = $component['openForms'] ?? null;
+        if (! is_array($openForms) || ($openForms['dataSrc'] ?? null) !== 'variable') {
+            return null;
+        }
+        $expr = $openForms['itemsExpression'] ?? null;
+        if (! is_array($expr) || ! is_string($expr['var'] ?? null)) {
+            return null;
+        }
+        $varName = $expr['var'];
+        if (! array_key_exists($varName, $this->variableInitialValues)) {
+            return null;
+        }
+        $initial = $this->variableInitialValues[$varName];
+        if (! is_array($initial) || $initial === []) {
+            return null;
+        }
+
+        $result = [];
+        foreach ($initial as $entry) {
+            if (is_string($entry)) {
+                // Flat string-array ("Ja", "Nee", ... / event types)
+                $result[] = ['value' => $entry, 'label' => $entry];
+            } elseif (is_array($entry) && count($entry) >= 2) {
+                // Nested [code, label]-pair (zoals voorwerpenLijst).
+                $v = $entry[0] ?? null;
+                $l = $entry[1] ?? null;
+                if (is_string($v) && is_string($l)) {
+                    $result[] = ['value' => $v, 'label' => $l];
+                }
+            }
+        }
+
+        return $result === [] ? null : $result;
     }
 
     /** @param  list<array<string, mixed>>  $components */

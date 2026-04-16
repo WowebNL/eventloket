@@ -29,6 +29,10 @@ final class MeldingStep
                     ->state(new HtmlString('<p>Welkom bij de pagina voor het indienen van melding. Wij vragen u nu om verderde details voor uw evenement in te vullen.</p>')),
                 Radio::make('wordtErAlcoholGeschonkenTijdensUwEvenement')
                     ->label('Wordt er alcohol geschonken tijdens uw evenement?')
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->required()
                     ->live(),
                 TextEntry::make('content9')
@@ -37,6 +41,10 @@ final class MeldingStep
                     ->visible(fn (Get $get): bool => $get('wordtErAlcoholGeschonkenTijdensUwEvenement') === 'Ja'),
                 Radio::make('wordenErFilmopnamesMetBehulpVanDronesGemaakt')
                     ->label('Worden er filmopnames met behulp van drones gemaakt? ')
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->required()
                     ->live(),
                 TextEntry::make('content10')
@@ -45,6 +53,10 @@ final class MeldingStep
                     ->visible(fn (Get $get): bool => $get('wordenErFilmopnamesMetBehulpVanDronesGemaakt') === 'Ja'),
                 Radio::make('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden')
                     ->label('Vinden er activiteiten plaats, waarvoor mogelijk brandveiligheidseisen gelden?')
+                    ->options([
+                        'Ja' => 'Ja',
+                        'Nee' => 'Nee',
+                    ])
                     ->live(),
                 TextEntry::make('content11')
                     ->hiddenLabel()

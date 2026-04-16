@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
@@ -39,7 +40,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->hiddenLabel()
                             ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>')),
                         CheckboxList::make('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning')
-                            ->label('Wie maakt de muziek op locatie bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wie maakt de muziek op locatie bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
                                 'dj' => 'DJ',
                                 'band' => 'Band',
@@ -56,7 +57,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->maxLength(10000)
                             ->visible(fn (Get $get): bool => in_array('anders', (array) $get('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning'), true)),
                         CheckboxList::make('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX')
-                            ->label('Welke soorten muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
                                 'A69' => 'Klassiek',
                                 'A70' => 'Jazz',
@@ -67,7 +68,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->hidden()
                             ->live(),
                         CheckboxList::make('welkeSoortenDanceMuziekZijnErTeHorenOpLocatieEvenementX')
-                            ->label('Welke soorten Dance muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten Dance muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
                                 'acid' => 'Acid',
                                 'ambient' => 'Ambient',
@@ -88,7 +89,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->required()
                             ->visible(fn (Get $get): bool => in_array('A71', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true)),
                         CheckboxList::make('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement')
-                            ->label('Welke soorten popmuziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten popmuziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
                                 'blues' => 'Blues',
                                 'country' => 'Country',
@@ -113,16 +114,16 @@ final class VergunningaanvraagVervolgvragenStep
                             ->visible(fn (Get $get): bool => in_array('A72', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true))
                             ->live(),
                         Textarea::make('welkeAnderSoortPopmuziekIsErTeHorenOpEvenementX')
-                            ->label('Welke ander soort popmuziek is er te horen op evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke ander soort popmuziek is er te horen op evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required()
                             ->maxLength(10000)
                             ->visible(fn (Get $get): bool => in_array('anders', (array) $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement'), true)),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX')
-                            ->label('Wat is de geluidsbelasting in decibel (dB(A) norm - (0–103 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de geluidsbelasting in decibel (dB(A) norm - (0–103 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->numeric()
                             ->required(),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBCNorm0103DBVanUwEvenement')
-                            ->label('Wat is de geluidsbelasting in decibel Db(C) norm - (0–113 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de geluidsbelasting in decibel Db(C) norm - (0–113 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->numeric()
                             ->required(),
                     ])
@@ -240,10 +241,18 @@ final class VergunningaanvraagVervolgvragenStep
                             ->maxLength(10000),
                         Radio::make('isDeOrganisatieVanHetKansspelInHandenVanEenVereniging')
                             ->label('Is de organisatie van het kansspel in handen van een vereniging?')
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required()
                             ->live(),
                         Radio::make('bestaatDeVereningingDieHetKansspelOrganiseertLangerDan3Jaar')
                             ->label('Bestaat de vereninging, die het kansspel organiseert langer dan 3 jaar?')
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required()
                             ->visible(fn (Get $get): bool => $get('isDeOrganisatieVanHetKansspelInHandenVanEenVereniging') === 'Ja'),
                         Textarea::make('watBentUVanPlanMetDeOpbrengstVanHetKansspelTeGaanDoen')
@@ -329,7 +338,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->hiddenLabel()
                             ->state(new HtmlString('<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgen een aantal vragen hierover.</p>')),
                         Radio::make('welkSoortBereidingVanEtenswarenIsVanToepassingOpLocatieEvenementX')
-                            ->label('Welk soort bereiding van etenswaren is van toepassing op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welk soort bereiding van etenswaren is van toepassing op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
                                 'beperkteBereiding' => 'Beperkte bereiding',
                                 'eenvoudigeBereiding' => 'Eenvoudige bereiding',
@@ -337,10 +346,14 @@ final class VergunningaanvraagVervolgvragenStep
                             ])
                             ->required(),
                         Radio::make('maaktUGebruikVanEenCateraarSOpLocatieEvenementX')
-                            ->label('Maakt u gebruik van een cateraar(s) op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Maakt u gebruik van een cateraar(s) op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required(),
                         CheckboxList::make('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX')
-                            ->label('Met welke warmtebron wordt het eten ter plaatse klaargemaakt  op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Met welke warmtebron wordt het eten ter plaatse klaargemaakt  op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
                                 'gas' => 'Gas',
                                 'houtskoolbarbecueOfHoutoven' => 'Houtskoolbarbecue of houtoven',

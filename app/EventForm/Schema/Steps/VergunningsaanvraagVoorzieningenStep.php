@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
@@ -65,10 +66,18 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->numeric()
                             ->required(),
                         Radio::make('reinigtUDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunning')
-                            ->label('Reinigt u de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Reinigt u de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required(),
                         Radio::make('gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater')
-                            ->label('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?', $livewire->state()))
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required(),
                     ])
                     ->hidden(),
@@ -87,6 +96,10 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->required(),
                         Radio::make('wordenDeDouchesTussentijdsSchoonGemaakt')
                             ->label('Worden de douches tussentijds schoon gemaakt?')
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required(),
                     ])
                     ->hidden(),
@@ -163,11 +176,15 @@ final class VergunningsaanvraagVoorzieningenStep
                 Fieldset::make('Overnachtingen')
                     ->schema([
                         TextInput::make('voorHoeveelMensenVerzorgtUOvernachtingenTijdensUwEvenement1')
-                            ->label('Voor hoeveel mensen verzorgt u overnachtingen tijdens uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Voor hoeveel mensen verzorgt u overnachtingen tijdens uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->numeric()
                             ->required(),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers')
                             ->label('Is er sprake van overnachten door publiek/deelnemers?')
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Op welke locatie of locaties is er sprake van overnachten door publiek/deelnemers?')
@@ -179,6 +196,10 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->hidden(),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Is er sprake van overnachten door personeel/organisatie?')
+                            ->options([
+                                'Ja' => 'Ja',
+                                'Nee' => 'Nee',
+                            ])
                             ->required(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2')
                             ->label('Op welke locatie of locaties is er sprake van overnachten door personeel/organisatie?')
@@ -196,7 +217,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->hiddenLabel()
                             ->state(new HtmlString('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>')),
                         TextInput::make('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc')
-                            ->label('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?', $livewire->state()))
                             ->numeric()
                             ->required()
                             ->hidden(),
@@ -208,7 +229,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->hiddenLabel()
                             ->state(new HtmlString('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>')),
                         Textarea::make('gegevensBeveiligingsorganisatieOpLocatieEvenementX1')
-                            ->label('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                             ->required()
                             ->maxLength(10000),
                         TextInput::make('vergunningnummerBeveiligingsorganisatie1')
@@ -220,7 +241,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->required()
                             ->maxLength(1000),
                         TextInput::make('aantalBeveiligersOpLocatieEvenementX1')
-                            ->label('Aantal beveiligers op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Aantal beveiligers op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                             ->numeric()
                             ->required(),
                     ])
