@@ -247,6 +247,65 @@ describe('StepSchemaGenerator nesting', function () {
     });
 });
 
+describe('StepSchemaGenerator live triggers', function () {
+    test('a field used as conditional.when trigger gets ->live()', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'soortEvenement', 'type' => 'select', 'label' => 'Soort'],
+                [
+                    'key' => 'omschrijf',
+                    'type' => 'textarea',
+                    'label' => 'Omschrijf',
+                    'conditional' => ['show' => true, 'when' => 'soortEvenement', 'eq' => 'Anders'],
+                ],
+            ]],
+        ];
+
+        $generator = (new \App\EventForm\Transpiler\StepSchemaGenerator)
+            ->withTriggerKeys(['soortEvenement']);
+        $content = $generator->generate($step)->fileContent;
+
+        // Het trigger-veld (select) moet ->live() hebben zodat Filament
+        // de visibility-closure bij state-change her-evalueert.
+        expect($content)->toContain("Select::make('soortEvenement')")
+            ->and($content)->toContain('->live()');
+    });
+
+    test('a selectboxes used as trigger also gets ->live()', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'waarVindtHetEvenementPlaats',
+                    'type' => 'selectboxes',
+                    'label' => 'Waar',
+                    'values' => [['value' => 'buiten', 'label' => 'Buiten']],
+                ],
+            ]],
+        ];
+
+        $generator = (new \App\EventForm\Transpiler\StepSchemaGenerator)
+            ->withTriggerKeys(['waarVindtHetEvenementPlaats']);
+
+        expect($generator->generate($step)->fileContent)->toContain('->live()');
+    });
+
+    test('a non-trigger field does not get ->live()', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'opmerking', 'type' => 'textarea', 'label' => 'Opmerking'],
+            ]],
+        ];
+
+        $generator = (new \App\EventForm\Transpiler\StepSchemaGenerator)
+            ->withTriggerKeys([]);
+
+        expect($generator->generate($step)->fileContent)->not->toContain('->live()');
+    });
+});
+
 describe('StepSchemaGenerator visibility', function () {
     test('hidden:true fields get ->hidden() emitted', function () {
         $step = [

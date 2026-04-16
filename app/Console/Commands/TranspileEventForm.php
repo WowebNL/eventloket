@@ -75,8 +75,13 @@ class TranspileEventForm extends Command
         // selectboxes-conditionals die naar een veld in een andere step
         // wijzen, correct als dot-access (`$get('X.key')`) worden geëmit.
         $fieldTypeIndex = $this->buildFieldTypeIndex($raw->formSteps);
+        // En de set keys die ergens als conditional.when trigger dienen —
+        // die krijgen ->live() zodat Filament de visibility herevalueert.
+        $triggerKeys = $this->collectTriggerKeys($raw->formSteps);
 
-        $stepGen = (new StepSchemaGenerator)->withFieldTypeIndex($fieldTypeIndex);
+        $stepGen = (new StepSchemaGenerator)
+            ->withFieldTypeIndex($fieldTypeIndex)
+            ->withTriggerKeys($triggerKeys);
         $stepCount = 0;
         foreach ($raw->formSteps as $step) {
             $generated = $stepGen->generate($step);
@@ -160,6 +165,53 @@ class TranspileEventForm extends Command
                         /** @var list<array<string, mixed>> $nested */
                         $nested = $column['components'];
                         $this->walkForTypes($nested, $index);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $steps
+     * @return list<string>
+     */
+    private function collectTriggerKeys(array $steps): array
+    {
+        /** @var array<string, true> $keys */
+        $keys = [];
+        foreach ($steps as $step) {
+            $components = $step['configuration']['components'] ?? [];
+            if (is_array($components)) {
+                /** @var list<array<string, mixed>> $components */
+                $this->walkForTriggers($components, $keys);
+            }
+        }
+
+        return array_keys($keys);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $components
+     * @param  array<string, true>  $keys
+     */
+    private function walkForTriggers(array $components, array &$keys): void
+    {
+        foreach ($components as $component) {
+            $conditional = $component['conditional'] ?? null;
+            if (is_array($conditional) && is_string($conditional['when'] ?? null) && $conditional['when'] !== '') {
+                $keys[$conditional['when']] = true;
+            }
+            if (isset($component['components']) && is_array($component['components'])) {
+                /** @var list<array<string, mixed>> $nested */
+                $nested = $component['components'];
+                $this->walkForTriggers($nested, $keys);
+            }
+            if (($component['type'] ?? null) === 'columns' && is_array($component['columns'] ?? null)) {
+                foreach ($component['columns'] as $column) {
+                    if (is_array($column) && is_array($column['components'] ?? null)) {
+                        /** @var list<array<string, mixed>> $nested */
+                        $nested = $column['components'];
+                        $this->walkForTriggers($nested, $keys);
                     }
                 }
             }

@@ -127,7 +127,8 @@ final class ContactgegevensStep
                         'vooraf' => 'Contactpersoon voorafgaand aan het evenement',
                         'tijdens' => 'Contactpersoon tijdens het evenement',
                         'achteraf' => 'Contactpersoon na het evenement',
-                    ]),
+                    ])
+                    ->live(),
                 Fieldset::make('Contactpersoon voorafgaand aan het evenement')
                     ->schema([
                         TextInput::make('naam')

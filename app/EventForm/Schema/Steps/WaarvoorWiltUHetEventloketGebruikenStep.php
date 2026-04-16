@@ -29,7 +29,8 @@ final class WaarvoorWiltUHetEventloketGebruikenStep
                         'evenement' => 'U wilt voor uw evementen een aanvraag indienen',
                         'vooraankondiging' => 'U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in',
                     ])
-                    ->required(),
+                    ->required()
+                    ->live(),
                 Fieldset::make('Vooraankondiging')
                     ->schema([
                         Placeholder::make('content3')

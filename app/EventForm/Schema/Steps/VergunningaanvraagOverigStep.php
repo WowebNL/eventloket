@@ -61,7 +61,8 @@ final class VergunningaanvraagOverigStep
                             ->content(new HtmlString('<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>')),
                         Radio::make('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie')
                             ->label('Huurt u de verkeersregelaars in bij een daarin gespecialiseerd bedrijf/organisatie?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Textarea::make('zijnDeInTeZettenPersonenBeroepsmatigeVerkeersregelaarsOfIsErSprakeVanEvenementenverkeersregelaars')
                             ->label('Zijn de in te zetten personen beroepsmatige verkeersregelaars of is er sprake van evenementenverkeersregelaars?')
                             ->required()
@@ -89,7 +90,8 @@ final class VergunningaanvraagOverigStep
                                 'bezoekersStimulerenMetDeFietsTeKomen' => 'Bezoekers stimuleren met de fiets te komen',
                                 'anders' => 'Anders',
                             ])
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Textarea::make('welkeAndereMaatregelenUWiltNemen')
                             ->label('Welke andere maatregelen u wilt nemen')
                             ->required()
@@ -105,7 +107,8 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('wiltUPromotieMakenVoorUwEvenement')
                             ->label('Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Radio::make('opWelkNiveauWiltUPromotieMaken')
                             ->label('Op welk niveau wilt u promotie maken?')
                             ->options([
@@ -127,7 +130,8 @@ final class VergunningaanvraagOverigStep
                                 'anders' => 'Anders',
                             ])
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('wiltUPromotieMakenVoorUwEvenement') === 'Ja'),
+                            ->visible(fn (Get $get): bool => $get('wiltUPromotieMakenVoorUwEvenement') === 'Ja')
+                            ->live(),
                         Textarea::make('opWelkeAndereManierWiltUPromotieMaken')
                             ->label('Op welke andere manier wilt u promotie maken?')
                             ->required()
@@ -147,7 +151,8 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX')
                             ->label('Geeft u omwonenden en nabijgelegen bedrijven vooraf informatie over uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Textarea::make('opWelkeWijzeInformeertUHen')
                             ->label('Op welke wijze informeert u hen?')
                             ->required()
@@ -160,7 +165,8 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('organiseertUUwEvenementXVoorDeEersteKeer')
                             ->label('Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Textarea::make('welkeErvaringHeeftDeOrganisatorMetHetOrganiserenVanEvenementen')
                             ->label('Welke ervaring heeft de organisator met het organiseren van evenementen?')
                             ->maxLength(10000)
@@ -182,13 +188,15 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('hanteertUHuisregelsVoorUwEvenementX')
                             ->label('Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         FileUpload::make('uKuntHierHetHuisregelementUploaden')
                             ->label('U kunt hier het huisregelement uploaden')
                             ->visible(fn (Get $get): bool => $get('hanteertUHuisregelsVoorUwEvenementX') === 'Ja'),
                         Radio::make('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024')
                             ->label('Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Textarea::make('lichtDeSideEventsToe')
                             ->label('Licht de side events toe')
                             ->required()
@@ -199,7 +207,8 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement')
                             ->label('Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         FileUpload::make('uploadDeVerzekeringspolis')
                             ->label('Upload de verzekeringspolis')
                             ->visible(fn (Get $get): bool => $get('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement') === 'Ja'),

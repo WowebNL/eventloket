@@ -37,7 +37,8 @@ final class VergunningsaanvraagVoorzieningenStep
                         TextInput::make('hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar')
                             ->label('Hoeveel tijdelijke chemische toiletten / Dixies zijn er beschikbaar?')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->live(),
                         TextInput::make('hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar')
                             ->label('Hoeveel tijdelijke gespoelde toiletten zijn er beschikbaar?')
                             ->numeric()

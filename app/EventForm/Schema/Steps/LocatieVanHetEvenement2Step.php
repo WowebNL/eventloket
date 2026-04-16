@@ -37,7 +37,8 @@ final class LocatieVanHetEvenement2Step
                         'buiten' => 'Buiten op één of meerdere plaatsen',
                         'route' => 'Op een route',
                     ])
-                    ->required(),
+                    ->required()
+                    ->live(),
                 Fieldset::make('In een gebouw of meerdere gebouwen')
                     ->schema([
 
@@ -89,7 +90,8 @@ final class LocatieVanHetEvenement2Step
                             ->maxLength(1000),
                         Select::make('watVoorEvenementGaatPlaatsvindenOpDeRoute1')
                             ->label('Wat voor evenement gaat plaatsvinden op de route?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Textarea::make('welkSoortRouteEvenementBetreftUwEvenementX')
                             ->label('Welk soort evenement vindt plaats op de route?')
                             ->required()
@@ -102,7 +104,8 @@ final class LocatieVanHetEvenement2Step
                                 'waterschap' => 'Waterschap',
                                 'rijkswaterstaat' => 'Rijkswaterstaat',
                                 'staatsbosbeheer' => 'Staatsbosbeheer',
-                            ]),
+                            ])
+                            ->live(),
                         Placeholder::make('content1')
                             ->content(new HtmlString('<p>Voor het gebruik van provinciale wegen, of in het geval van een wegwedstrijd die door meerdere gemeenten binnen de provincie voert dient er <a href="https://www.limburg.nl/@1161/wedstrijden-weg" target="_blank" rel="noopener noreferrer">een verzoek voor ontheffing van de openbare weg </a>gericht te worden aan de Provincie Limburg.</p>'))
                             ->visible(fn (Get $get): bool => $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan.provincie') === true),

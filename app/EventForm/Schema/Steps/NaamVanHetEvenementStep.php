@@ -25,7 +25,8 @@ final class NaamVanHetEvenementStep
                 TextInput::make('watIsDeNaamVanHetEvenementVergunning')
                     ->label('Wat is de naam van het evenement?')
                     ->required()
-                    ->maxLength(1000),
+                    ->maxLength(1000)
+                    ->live(),
                 Textarea::make('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning')
                     ->label('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}')
                     ->required()
@@ -34,7 +35,8 @@ final class NaamVanHetEvenementStep
                 Select::make('soortEvenement')
                     ->label('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->required()
-                    ->hidden(fn (Get $get): bool => $get('watIsDeNaamVanHetEvenementVergunning') === ''),
+                    ->hidden(fn (Get $get): bool => $get('watIsDeNaamVanHetEvenementVergunning') === '')
+                    ->live(),
                 Textarea::make('omschrijfHetSoortEvenement')
                     ->label('Omschrijf het soort evenement')
                     ->required()

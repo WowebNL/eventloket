@@ -75,7 +75,8 @@ final class Vragenboom2Step
                         'A20' => 'Overkappingen',
                         'A21' => 'Omheining van de evenementenlocatie(s)',
                         'A22' => 'Overige bouwwerken',
-                    ]),
+                    ])
+                    ->live(),
                 Textarea::make('welkeOverigeBouwwerkenGaatUPlaatsen')
                     ->label('Welke overige bouwwerken gaat u plaatsen?')
                     ->required()
@@ -92,7 +93,8 @@ final class Vragenboom2Step
                         'A28' => 'Lichtmasten',
                         'A29' => 'Marktkramen',
                         'A30' => 'Andere voorwerpen',
-                    ]),
+                    ])
+                    ->live(),
                 Textarea::make('welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX')
                     ->label('welke ander voorwerpen gaat u plaatsen bij evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->maxLength(10000)
@@ -121,7 +123,8 @@ final class Vragenboom2Step
                         'A45' => 'Showeffecten',
                         'A106' => 'Gebruik van drones',
                         'A46' => 'Overig',
-                    ]),
+                    ])
+                    ->live(),
                 Textarea::make('welkActiviteitBetreftUwEvenementX')
                     ->label('Welk activiteit betreft uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->required()
@@ -139,7 +142,8 @@ final class Vragenboom2Step
                 Radio::make('isUwEvenementToegankelijkVoorMensenMetEenBeperking')
                     ->label('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?')
                     ->required()
-                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A16') === true),
+                    ->visible(fn (Get $get): bool => $get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A16') === true)
+                    ->live(),
                 TextInput::make('voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX')
                     ->label('Voor hoeveel mensen met een lichamelijke of geestelijke beperking verzorgt u opvang tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                     ->numeric()

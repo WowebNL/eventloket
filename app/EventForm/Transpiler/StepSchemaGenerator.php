@@ -29,6 +29,9 @@ class StepSchemaGenerator
     /** @var array<string, string> fieldKey → type (globale index over alle stappen) */
     private array $fieldTypeIndex = [];
 
+    /** @var array<string, true> keys die als conditional.when trigger dienen */
+    private array $triggerKeys = [];
+
     /**
      * Geef de generator een globale mapping van veld-key → type zodat
      * conditional-emissie correct `$get(key.subkey)` gebruikt voor
@@ -39,6 +42,20 @@ class StepSchemaGenerator
     public function withFieldTypeIndex(array $index): self
     {
         $this->fieldTypeIndex = $index;
+
+        return $this;
+    }
+
+    /**
+     * Geef de set keys door die als trigger voor `conditional.when` dienen.
+     * Die velden krijgen een `->live()` modifier zodat Filament hun
+     * visibility-closures bij elke state-change opnieuw evalueert.
+     *
+     * @param  list<string>  $keys
+     */
+    public function withTriggerKeys(array $keys): self
+    {
+        $this->triggerKeys = array_fill_keys($keys, true);
 
         return $this;
     }
@@ -337,8 +354,32 @@ class StepSchemaGenerator
             $chain .= "\n{$pad}    ->minLength({$validate['minLength']})";
         }
         $chain .= $this->visibilityModifiers($component, $pad);
+        $chain .= $this->liveModifier($component, $pad);
 
         return $chain;
+    }
+
+    /**
+     * Emit `->live()` op velden die elders als trigger voor een
+     * `conditional.when` worden gebruikt. Zonder `->live()` herberekent
+     * Filament de `visible()`-closures niet bij state-changes.
+     *
+     * @param  array<string, mixed>  $component
+     */
+    private function liveModifier(array $component, string $pad): string
+    {
+        if ($this->triggerKeys === []) {
+            // Auto-detectie: als de fieldTypeIndex gevuld is (runtime scan
+            // binnen één step), zijn er geen trigger-keys bekend; in dat
+            // geval ook niets emitten.
+            return '';
+        }
+        $key = $component['key'] ?? null;
+        if (! is_string($key) || ! isset($this->triggerKeys[$key])) {
+            return '';
+        }
+
+        return "\n{$pad}    ->live()";
     }
 
     /**

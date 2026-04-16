@@ -39,7 +39,8 @@ final class TijdenStep
                     ->hidden(),
                 Radio::make('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten')
                     ->label('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?')
-                    ->required(),
+                    ->required()
+                    ->live(),
                 Grid::make(2)
                     ->schema([
                         DateTimePicker::make('OpbouwStart')
@@ -56,7 +57,8 @@ final class TijdenStep
                     ->required(),
                 Radio::make('zijnErAansluitendAanHetEvenementAfbouwactiviteiten')
                     ->label('Zijn er aansluitend aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?')
-                    ->required(),
+                    ->required()
+                    ->live(),
                 Grid::make(2)
                     ->schema([
                         DateTimePicker::make('AfbouwStart')

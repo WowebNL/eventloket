@@ -31,27 +31,33 @@ final class AanvraagOfMeldingStep
                     ->schema([
                         Radio::make('isHetAantalAanwezigenBijUwEvenementMinderDanSdf')
                             ->label('Is het aantal aanwezigen bij uw evenement minder dan {% get_value gemeenteVariabelen \'aanwezigen\' %} personen?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Radio::make('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen')
                             ->label('Vinden de activiteiten van uw evenement plaats tussen {{ gemeenteVariabelen.tijdstip_mogelijk_niet_vergunningsplichtig.start }} uur en {{ gemeenteVariabelen.tijdstip_mogelijk_niet_vergunningsplichtig.end }} uur?')
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Ja'),
+                            ->visible(fn (Get $get): bool => $get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Ja')
+                            ->live(),
                         Radio::make('WordtErAlleenMuziekGeluidGeproduceerdTussen')
                             ->label('Wordt er alleen muziek/geluid geproduceerd tussen {{ gemeenteVariabelen.muziektijden.start }} uur en {{ gemeenteVariabelen.muziektijden.end }} uur?')
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen') === 'Ja'),
+                            ->visible(fn (Get $get): bool => $get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen') === 'Ja')
+                            ->live(),
                         Radio::make('IsdeGeluidsproductieLagerDan')
                             ->label('Is de geluidsproductie lager dan {{ gemeenteVariabelen.melding_maximale_dba }} dB(A) bronvermogen, gemeten op 3 meter afstand van de bron?')
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Ja'),
+                            ->visible(fn (Get $get): bool => $get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Ja')
+                            ->live(),
                         Radio::make('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten')
                             ->label('Er vinden GEEN activiteiten plaats op de rijbaan, (brom)fietspad of parkeerplaats of anderszins een belemmering vormen voor het verkeer en de hulpdiensten?')
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('IsdeGeluidsproductieLagerDan') === 'Ja'),
+                            ->visible(fn (Get $get): bool => $get('IsdeGeluidsproductieLagerDan') === 'Ja')
+                            ->live(),
                         Radio::make('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst')
                             ->label('Worden er minder dan {{ gemeenteVariabelen.aantal_objecten }} objecten (bijv. tent, springkussen) geplaatst?')
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten') === 'Ja'),
+                            ->visible(fn (Get $get): bool => $get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten') === 'Ja')
+                            ->live(),
                         Radio::make('indienErObjectenGeplaatstWordenZijnDezeDanKleiner')
                             ->label('Indien er objecten geplaatst worden, zijn deze dan kleiner {{ gemeenteVariabelen.maximale_grootte_objecten_in_m2 }} m2? ')
                             ->required()

@@ -68,7 +68,8 @@ final class VergunningaanvraagMaatregelenStep
                             ->required(),
                         Radio::make('voertUDeSchoonmaakZelfUit')
                             ->label('Voert u de schoonmaak zelf uit? ')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         FileUpload::make('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen')
                             ->label('U kunt het afvalplan hier uploaden of later als bijlage toevoegen.')
                             ->visible(fn (Get $get): bool => $get('voertUDeSchoonmaakZelfUit') === 'Ja'),
@@ -78,7 +79,8 @@ final class VergunningaanvraagMaatregelenStep
                     ->schema([
                         Radio::make('wilUGebruikMakenVanGemeentelijkeHulpmiddelen')
                             ->label('Wil U gebruik maken van gemeentelijke hulpmiddelen?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Fieldset::make('Veldengroep')
                             ->schema([
                                 Placeholder::make('content37')

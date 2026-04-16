@@ -44,7 +44,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'anders' => 'Anders',
                             ])
                             ->required()
-                            ->hidden(),
+                            ->hidden()
+                            ->live(),
                         Textarea::make('opWelkeAndereManierWordtErMuziekGemaakt')
                             ->label('Op welke andere manier wordt er muziek gemaakt?')
                             ->required()
@@ -59,7 +60,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'A72' => 'Pop (en overige)',
                             ])
                             ->required()
-                            ->hidden(),
+                            ->hidden()
+                            ->live(),
                         CheckboxList::make('welkeSoortenDanceMuziekZijnErTeHorenOpLocatieEvenementX')
                             ->label('Welke soorten Dance muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->options([
@@ -104,7 +106,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'anders' => 'Anders',
                             ])
                             ->required()
-                            ->visible(fn (Get $get): bool => $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX.A72') === true),
+                            ->visible(fn (Get $get): bool => $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX.A72') === true)
+                            ->live(),
                         Textarea::make('welkeAnderSoortPopmuziekIsErTeHorenOpEvenementX')
                             ->label('Welke ander soort popmuziek is er te horen op evenement {{ watIsDeNaamVanHetEvenementVergunning }}?')
                             ->required()
@@ -133,7 +136,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'A57' => 'Omheiningen',
                             ])
                             ->required()
-                            ->hidden(),
+                            ->hidden()
+                            ->live(),
                         Repeater::make('tenten')
                             ->label('Welke tenten plaatst u?')
                             ->schema([
@@ -230,7 +234,8 @@ final class VergunningaanvraagVervolgvragenStep
                             ->maxLength(10000),
                         Radio::make('isDeOrganisatieVanHetKansspelInHandenVanEenVereniging')
                             ->label('Is de organisatie van het kansspel in handen van een vereniging?')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Radio::make('bestaatDeVereningingDieHetKansspelOrganiseertLangerDan3Jaar')
                             ->label('Bestaat de vereninging, die het kansspel organiseert langer dan 3 jaar?')
                             ->required()
@@ -255,7 +260,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'persoon' => 'Persoon',
                                 'organisatie' => 'Organisatie',
                             ])
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Fieldset::make('Persoongroep')
                             ->schema([
                                 TextInput::make('voornaamVanDePersoonAlcohol')
@@ -335,7 +341,8 @@ final class VergunningaanvraagVervolgvragenStep
                                 'anders' => 'Anders',
                             ])
                             ->required()
-                            ->hidden(),
+                            ->hidden()
+                            ->live(),
                         Textarea::make('welkeAndereWarmtebronWordtGebruikt')
                             ->label('Welke andere warmtebron wordt gebruikt?')
                             ->required()
