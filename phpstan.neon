@@ -55,3 +55,18 @@ parameters:
         -
             identifier: ternary.alwaysFalse
             path: app/EventForm/Rules/*
+        # Gegenereerde Schema/Steps: de visibility-closures combineren een
+        # statisch-emit `true`/`false` met runtime `$get(...)`-checks; PHPStan
+        # ziet dat als dead code maar het is intentional per-veld codegen.
+        -
+            identifier: booleanOr.leftAlwaysTrue
+            path: app/EventForm/Schema/Steps/*
+        -
+            identifier: booleanOr.leftAlwaysFalse
+            path: app/EventForm/Schema/Steps/*
+        -
+            identifier: booleanOr.rightAlwaysTrue
+            path: app/EventForm/Schema/Steps/*
+        -
+            identifier: booleanOr.rightAlwaysFalse
+            path: app/EventForm/Schema/Steps/*

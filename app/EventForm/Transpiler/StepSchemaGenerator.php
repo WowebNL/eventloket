@@ -534,58 +534,66 @@ class StepSchemaGenerator
     }
 
     /**
-     * Emit Filament `->hidden()` / `->visible(fn)` / `->hidden(fn)` op basis
-     * van het OF `hidden`-boolflag en de `conditional.show/when/eq`-regel.
-     * Selectboxes-targets worden via dot-access benaderd (`$get('X.key')`).
+     * Emit één gecombineerde `->hidden(fn)` closure die drie zichtbaarheids-
+     * bronnen respecteert in deze volgorde van prioriteit:
+     *
+     * 1. **Rule-driven override**: `FormState::isFieldHidden($key)` — een rule
+     *    die `setFieldHidden('X', true|false)` aanroept heeft vetorecht.
+     * 2. **OF default** (`component.hidden = true`): het veld is initieel
+     *    verborgen tenzij een rule 'm expliciet op zichtbaar zet.
+     * 3. **Directe `conditional.show/when/eq`** op het component: show-match
+     *    of hide-match vertaalt naar een `$get`-closure. Selectboxes-targets
+     *    gebruiken `in_array` vanwege Filament's array-state-formaat.
+     *
+     * Filament's `->hidden()` wint van `->visible()`, dus we emitten altijd
+     * één `->hidden(fn)`.
      *
      * @param  array<string, mixed>  $component
      */
     private function visibilityModifiers(array $component, string $pad): string
     {
-        $chain = '';
-
-        // Default hidden — OF-gedrag "dit veld is verborgen tenzij een rule 'm
-        // op hidden=false zet". In Filament ondersteunt ->hidden() + rules
-        // die de state muteren nog niet live-toggle van hidden; voor fase 1
-        // emitten we het flag zodat de initiële render klopt.
-        if (! empty($component['hidden'])) {
-            $chain .= "\n{$pad}    ->hidden()";
-        }
+        $key = (string) ($component['key'] ?? '');
+        $defaultHidden = (bool) ($component['hidden'] ?? false);
 
         $conditional = $component['conditional'] ?? null;
-        if (! is_array($conditional)) {
-            return $chain;
-        }
-        $show = $conditional['show'] ?? null;
-        $when = $conditional['when'] ?? null;
-        $eq = $conditional['eq'] ?? '';
-        if (! is_bool($show) || ! is_string($when) || $when === '') {
-            return $chain;
-        }
+        $conditionalTest = null;
+        if (is_array($conditional)) {
+            $show = $conditional['show'] ?? null;
+            $when = $conditional['when'] ?? null;
+            $eq = $conditional['eq'] ?? '';
+            if (is_bool($show) && is_string($when) && $when !== '') {
+                $targetType = $this->fieldTypeIndex[$when] ?? null;
+                $isSelectboxes = $targetType === 'selectboxes';
 
-        $targetType = $this->fieldTypeIndex[$when] ?? null;
-        $isSelectboxes = $targetType === 'selectboxes';
+                if ($isSelectboxes) {
+                    $match = "in_array('".$this->esc((string) $eq)."', (array) \$get('".$this->esc($when)."'), true)";
+                } else {
+                    $eqString = is_scalar($eq) ? (string) $eq : '';
+                    $match = "\$get('".$this->esc($when)."') === '".$this->esc($eqString)."'";
+                }
 
-        if ($isSelectboxes) {
-            // Filament CheckboxList bewaart state als `['key1', 'key2']` — een
-            // vlakke array van geselecteerde values — in plaats van OF's
-            // object-vorm `{key1: true, key2: false}`. In de visibility-closure
-            // kijken we dus of de eq-waarde in die array voorkomt.
-            $eqString = (string) $eq;
-            $test = "in_array('".$this->esc($eqString)."', (array) \$get('".$this->esc($when)."'), true)";
-        } else {
-            $eqString = is_scalar($eq) ? (string) $eq : '';
-            $accessor = "\$get('".$this->esc($when)."')";
-            $test = $accessor." === '".$this->esc($eqString)."'";
+                // show=true → verberg als NIET matcht. show=false → verberg als WEL matcht.
+                $conditionalTest = $show === true ? "! ({$match})" : $match;
+            }
         }
 
-        if ($show === true) {
-            $chain .= "\n{$pad}    ->visible(fn (\\Filament\\Schemas\\Components\\Utilities\\Get \$get): bool => {$test})";
-        } else {
-            $chain .= "\n{$pad}    ->hidden(fn (\\Filament\\Schemas\\Components\\Utilities\\Get \$get): bool => {$test})";
+        if (! $defaultHidden && $conditionalTest === null && $key === '') {
+            return '';
         }
 
-        return $chain;
+        $defaultPhp = $defaultHidden ? 'true' : 'false';
+        $conditionalPhp = $conditionalTest ?? 'false';
+        $keyLiteral = "'".$this->esc($key)."'";
+
+        // Closure-body: eerst rule-override checken, dan fallback op default + conditional.
+        $body = "function (\\Filament\\Schemas\\Components\\Utilities\\Get \$get, \$livewire) {"
+            ." \$rule = \$livewire->state()->isFieldHidden({$keyLiteral});"
+            ." if (\$rule === true) { return true; }"
+            ." if (\$rule === false) { return false; }"
+            ." return {$defaultPhp} || ({$conditionalPhp});"
+            .' }';
+
+        return "\n{$pad}    ->hidden({$body})";
     }
 
     private function buildClassName(string $value): string

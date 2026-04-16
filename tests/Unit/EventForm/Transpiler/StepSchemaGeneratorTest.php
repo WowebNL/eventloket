@@ -474,7 +474,7 @@ describe('StepSchemaGenerator live triggers', function () {
 });
 
 describe('StepSchemaGenerator visibility', function () {
-    test('hidden:true fields get ->hidden() emitted', function () {
+    test('hidden:true fields emit a ->hidden(fn) closure that checks FormState + default', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -488,10 +488,14 @@ describe('StepSchemaGenerator visibility', function () {
             ]],
         ];
 
-        expect(generateStep($step))->toContain('->hidden()');
+        $content = generateStep($step);
+
+        expect($content)->toContain('->hidden(')
+            ->and($content)->toContain("isFieldHidden('organisatieInformatie')")
+            ->and($content)->toContain('true');
     });
 
-    test('conditional.show=true with scalar eq emits ->visible() closure', function () {
+    test('conditional.show=true emits closure that hides when no match', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -509,10 +513,10 @@ describe('StepSchemaGenerator visibility', function () {
 
         expect($content)->toContain("\$get('soortEvenement')")
             ->and($content)->toContain("'Anders'")
-            ->and($content)->toContain('->visible(fn');
+            ->and($content)->toContain('->hidden(');
     });
 
-    test('conditional.show=false (verberg als) emits ->hidden() closure', function () {
+    test('conditional.show=false (verberg als) hides when match', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -528,7 +532,7 @@ describe('StepSchemaGenerator visibility', function () {
 
         $content = generateStep($step);
 
-        expect($content)->toContain('->hidden(fn')
+        expect($content)->toContain('->hidden(')
             ->and($content)->toContain("'Anders'");
     });
 
@@ -558,6 +562,29 @@ describe('StepSchemaGenerator visibility', function () {
         // niet als object — de closure gebruikt in_array.
         expect($content)->toContain("in_array('buiten'")
             ->and($content)->toContain("\$get('waarVindtHetEvenementPlaats')");
+    });
+
+    test('rule-driven hidden override wins: FormState::isFieldHidden(false) keeps field visible', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'locatieSOpKaart',
+                    'type' => 'editgrid',
+                    'label' => 'Locaties',
+                    'hidden' => true,
+                    'components' => [],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        // Gegenereerde closure moet eerst isFieldHidden() checken en vroeg
+        // returnen als de rule expliciet true/false zegt.
+        expect($content)->toContain("isFieldHidden('locatieSOpKaart')")
+            ->and($content)->toContain('$rule === false')
+            ->and($content)->toContain('$rule === true');
     });
 });
 

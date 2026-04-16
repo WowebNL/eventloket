@@ -33,19 +33,57 @@ final class WaarvoorWiltUHetEventloketGebruikenStep
                         'vooraankondiging' => 'U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in',
                     ])
                     ->required()
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('waarvoorWiltUEventloketGebruiken');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    })
                     ->live(),
                 Fieldset::make('Vooraankondiging')
                     ->schema([
                         TextEntry::make('content3')
                             ->hiddenLabel()
-                            ->state(new HtmlString('<p>Een vooraankondiging biedt u de mogelijkheid om alvast een voorkeursdatum voor uw evenement te registreren in onze applicatie.</p><p>Een vooraankondiging zal tijdig omgezet moeten worden in een melding of vergunning, anders vervalt de aanvraag, als niet voldaan wordt aan de wettelijke doorlooptijden.</p><p>Voor een vooraankondiging dient u minimaal de volgende gegevens in te vullen:</p>')),
+                            ->state(new HtmlString('<p>Een vooraankondiging biedt u de mogelijkheid om alvast een voorkeursdatum voor uw evenement te registreren in onze applicatie.</p><p>Een vooraankondiging zal tijdig omgezet moeten worden in een melding of vergunning, anders vervalt de aanvraag, als niet voldaan wordt aan de wettelijke doorlooptijden.</p><p>Voor een vooraankondiging dient u minimaal de volgende gegevens in te vullen:</p>'))
+                            ->hidden(function (Get $get, $livewire) {
+                                $rule = $livewire->state()->isFieldHidden('content3');
+                                if ($rule === true) {
+                                    return true;
+                                } if ($rule === false) {
+                                    return false;
+                                }
+
+return false || (false);
+                            }),
                         TextInput::make('aantalVerwachteAanwezigen')
                             ->label('Aantal verwachte aanwezigen')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->hidden(function (Get $get, $livewire) {
+                                $rule = $livewire->state()->isFieldHidden('aantalVerwachteAanwezigen');
+                                if ($rule === true) {
+                                    return true;
+                                } if ($rule === false) {
+                                    return false;
+                                }
+
+return false || (false);
+                            }),
                     ])
-                    ->hidden()
-                    ->visible(fn (Get $get): bool => $get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'),
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('vooraankondiginggroep');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return true || (! ($get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'));
+                    }),
             ]);
     }
 }

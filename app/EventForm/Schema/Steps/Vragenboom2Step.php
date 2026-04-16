@@ -32,15 +32,45 @@ final class Vragenboom2Step
                         'Ja' => 'Ja',
                         'Nee' => 'Nee',
                     ])
-                    ->required(),
+                    ->required()
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('voordatUVerderGaatMetHetBeantwoordenVanDeVragenVoorUwEvenementWillenWeGraagWetenOfUEerderEenVooraankondigingHeeftIngevuldVoorDitEvenement');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 TextInput::make('watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is tijdens de hele duur van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} het totaal aantal aanwezige personen van alle dagen bij elkaar opgeteld?', $livewire->state()))
                     ->numeric()
-                    ->required(),
+                    ->required()
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 TextInput::make('watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is het maximaal aanwezige aantal personen dat op enig moment aanwezig kan zijn bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->numeric()
-                    ->required(),
+                    ->required()
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 Radio::make('watZijnDeBelangrijksteLeeftijdscategorieenVanHetPubliekTijdensUwEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat zijn de belangrijkste leeftijdscategorieen van het publiek tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -49,14 +79,34 @@ final class Vragenboom2Step
                         '3045Jaar' => '30 - 45 jaar',
                         '45JaarEnOuder' => '45 jaar en ouder',
                     ])
-                    ->required(),
+                    ->required()
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('watZijnDeBelangrijksteLeeftijdscategorieenVanHetPubliekTijdensUwEvenement');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 Radio::make('isUwEvenementXGratisToegankelijkVoorHetPubliek')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} gratis toegankelijk voor het publiek?', $livewire->state()))
                     ->options([
                         'Ja' => 'Ja',
                         'Nee' => 'Nee',
                     ])
-                    ->required(),
+                    ->required()
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('isUwEvenementXGratisToegankelijkVoorHetPubliek');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 CheckboxList::make('kruisAanWatVanToepassingIsVoorUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan wat van toepassing is voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -71,7 +121,17 @@ final class Vragenboom2Step
                         'A9' => 'Een deel van een doorgaande weg gebruiken voor het evenement',
                         'A10' => 'Een (een deel van) de weg of vaarweg afsluiten voor doorgaand verkeer',
                         'A11' => 'Toegang voor hulpdiensten  tot de evenementlocatie(s) (en de omliggende percelen en gebouwen) is beperkt.',
-                    ]),
+                    ])
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('kruisAanWatVanToepassingIsVoorUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 CheckboxList::make('welkeVoorzieningenZijnAanwezigBijUwEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -88,12 +148,31 @@ final class Vragenboom2Step
                         'A21' => 'Omheining van de evenementenlocatie(s)',
                         'A22' => 'Overige bouwwerken',
                     ])
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('welkeVoorzieningenZijnAanwezigBijUwEvenement');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    })
                     ->live(),
                 Textarea::make('welkeOverigeBouwwerkenGaatUPlaatsen')
                     ->label('Welke overige bouwwerken gaat u plaatsen?')
                     ->required()
                     ->maxLength(10000)
-                    ->visible(fn (Get $get): bool => in_array('A22', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true)),
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('welkeOverigeBouwwerkenGaatUPlaatsen');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (! (in_array('A22', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true)));
+                    }),
                 CheckboxList::make('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -106,11 +185,30 @@ final class Vragenboom2Step
                         'A29' => 'Marktkramen',
                         'A30' => 'Andere voorwerpen',
                     ])
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    })
                     ->live(),
                 Textarea::make('welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('welke ander voorwerpen gaat u plaatsen bij evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->maxLength(10000)
-                    ->visible(fn (Get $get): bool => in_array('A30', (array) $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX'), true)),
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (! (in_array('A30', (array) $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX'), true)));
+                    }),
                 CheckboxList::make('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -120,7 +218,17 @@ final class Vragenboom2Step
                         'A34' => 'Gebruik van eco-glazen of statiegeld op (plastic)glazen',
                         'A35' => 'Er zijn vrij toegankelijke drinkwatervoorzieningen beschikbaar',
                         'A36' => 'Waterverneveling, bijvoorbeeld door fonteinen, douches of andere waterbronnen (Legionellapreventie)',
-                    ]),
+                    ])
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 CheckboxList::make('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->options([
@@ -136,12 +244,31 @@ final class Vragenboom2Step
                         'A106' => 'Gebruik van drones',
                         'A46' => 'Overig',
                     ])
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    })
                     ->live(),
                 Textarea::make('welkActiviteitBetreftUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welk activiteit betreft uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->required()
                     ->maxLength(10000)
-                    ->visible(fn (Get $get): bool => in_array('A46', (array) $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX'), true)),
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('welkActiviteitBetreftUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (! (in_array('A46', (array) $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX'), true)));
+                    }),
                 CheckboxList::make('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                     ->options([
@@ -150,7 +277,17 @@ final class Vragenboom2Step
                         'A50' => 'Bewegwijzering aanbrengen',
                         'A51' => 'Verkeersregelaars inzetten',
                         'A52' => 'Vervoersmaatregelen nemen (parkeren, openbaar vervoer, pendelbussen)',
-                    ]),
+                    ])
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (false);
+                    }),
                 Radio::make('isUwEvenementToegankelijkVoorMensenMetEenBeperking')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?', $livewire->state()))
                     ->options([
@@ -158,18 +295,45 @@ final class Vragenboom2Step
                         'Nee' => 'Nee',
                     ])
                     ->required()
-                    ->visible(fn (Get $get): bool => in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true))
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('isUwEvenementToegankelijkVoorMensenMetEenBeperking');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (! (in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true)));
+                    })
                     ->live(),
                 TextInput::make('voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Voor hoeveel mensen met een lichamelijke of geestelijke beperking verzorgt u opvang tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->numeric()
                     ->required()
-                    ->visible(fn (Get $get): bool => in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true)),
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (! (in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true)));
+                    }),
                 Textarea::make('welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke maatregelen heeft u genomen om mensen met een beperking ongehinderd deel te laten nemen aan uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->required()
                     ->maxLength(10000)
-                    ->visible(fn (Get $get): bool => $get('isUwEvenementToegankelijkVoorMensenMetEenBeperking') === 'Ja'),
+                    ->hidden(function (Get $get, $livewire) {
+                        $rule = $livewire->state()->isFieldHidden('welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement');
+                        if ($rule === true) {
+                            return true;
+                        } if ($rule === false) {
+                            return false;
+                        }
+
+return false || (! ($get('isUwEvenementToegankelijkVoorMensenMetEenBeperking') === 'Ja'));
+                    }),
             ]);
     }
 }
