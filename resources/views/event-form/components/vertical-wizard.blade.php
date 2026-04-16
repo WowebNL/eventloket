@@ -179,19 +179,25 @@
                 min-width: 0;
             }
 
+            /*
+             * Filament 4 levert kleuren als oklch(...) waarden in `--primary-*`
+             * en `--gray-*` (zie support/Assets/AssetManager::renderStyles). We
+             * gebruiken die variabelen direct als kleurwaarde — wrappen in
+             * `rgb(...)` werkt hier niet.
+             */
             .fi-vertical-wizard-sidebar {
                 align-self: start;
                 position: sticky;
                 top: 1.5rem;
                 padding: 1rem;
-                background: rgb(var(--color-gray-50, 249 250 251) / 1);
-                border: 1px solid rgb(var(--color-gray-200, 229 231 235) / 1);
+                background: color-mix(in oklab, var(--gray-50) 100%, transparent);
+                border: 1px solid var(--gray-200);
                 border-radius: 0.75rem;
             }
 
             :is(.dark .fi-vertical-wizard-sidebar) {
-                background: rgb(var(--color-gray-900, 17 24 39) / 0.5);
-                border-color: rgb(var(--color-gray-800, 31 41 55) / 1);
+                background: color-mix(in oklab, var(--gray-900) 60%, transparent);
+                border-color: var(--gray-800);
             }
 
             .fi-vertical-wizard-list {
@@ -215,23 +221,22 @@
                 width: 100%;
                 cursor: pointer;
                 transition: background-color 0.15s;
+                position: relative;
             }
 
             .fi-vertical-wizard-step-btn:hover {
-                background: rgb(var(--color-gray-100, 243 244 246) / 1);
+                background: var(--gray-100);
             }
 
             :is(.dark .fi-vertical-wizard-step-btn:hover) {
-                background: rgb(var(--color-gray-800, 31 41 55) / 1);
+                background: var(--gray-800);
             }
 
-            .fi-vertical-wizard-step[data-status="active"] .fi-vertical-wizard-step-btn {
-                background: rgb(var(--primary-50, 239 246 255) / 1);
-            }
-
-            :is(.dark .fi-vertical-wizard-step[data-status="active"] .fi-vertical-wizard-step-btn) {
-                background: rgb(var(--primary-950, 23 37 84) / 0.4);
-            }
+            /*
+             * Actieve stap markeren we met een duidelijke ring rond het
+             * step-marker-cirkeltje — simpel en direct herkenbaar zonder
+             * op theme-specifieke achtergronden te leunen.
+             */
 
             .fi-vertical-wizard-step-marker {
                 flex: 0 0 auto;
@@ -241,41 +246,42 @@
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                border: 2px solid rgb(var(--color-gray-300, 209 213 219) / 1);
-                background: rgb(var(--color-white, 255 255 255) / 1);
+                border: 2px solid var(--gray-300);
+                background: #ffffff;
                 font-size: 0.75rem;
                 font-weight: 600;
-                color: rgb(var(--color-gray-600, 75 85 99) / 1);
+                color: var(--gray-600);
             }
 
             :is(.dark .fi-vertical-wizard-step-marker) {
-                border-color: rgb(var(--color-gray-700, 55 65 81) / 1);
-                background: rgb(var(--color-gray-900, 17 24 39) / 1);
-                color: rgb(var(--color-gray-400, 156 163 175) / 1);
+                border-color: var(--gray-700);
+                background: var(--gray-900);
+                color: var(--gray-400);
             }
 
             .fi-vertical-wizard-step[data-status="active"] .fi-vertical-wizard-step-marker {
-                border-color: rgb(var(--primary-600, 37 99 235) / 1);
-                background: rgb(var(--primary-600, 37 99 235) / 1);
-                color: rgb(var(--color-white, 255 255 255) / 1);
+                border-color: var(--primary-600);
+                background: var(--primary-600);
+                color: #ffffff;
+                box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary-500) 25%, transparent);
             }
 
             .fi-vertical-wizard-step[data-status="completed"] .fi-vertical-wizard-step-marker {
-                border-color: rgb(var(--color-success-600, 22 163 74) / 1);
-                background: rgb(var(--color-success-600, 22 163 74) / 1);
-                color: rgb(var(--color-white, 255 255 255) / 1);
+                border-color: var(--primary-500);
+                background: var(--primary-500);
+                color: #ffffff;
             }
 
             .fi-vertical-wizard-step-not-applicable .fi-vertical-wizard-step-marker {
-                border-color: rgb(var(--color-gray-200, 229 231 235) / 1);
-                background: rgb(var(--color-gray-100, 243 244 246) / 1);
-                color: rgb(var(--color-gray-400, 156 163 175) / 1);
+                border-color: var(--gray-200);
+                background: var(--gray-100);
+                color: var(--gray-400);
             }
 
             :is(.dark .fi-vertical-wizard-step-not-applicable .fi-vertical-wizard-step-marker) {
-                border-color: rgb(var(--color-gray-800, 31 41 55) / 1);
-                background: rgb(var(--color-gray-800, 31 41 55) / 1);
-                color: rgb(var(--color-gray-500, 107 114 128) / 1);
+                border-color: var(--gray-800);
+                background: var(--gray-800);
+                color: var(--gray-500);
             }
 
             .fi-vertical-wizard-step-icon {
@@ -294,22 +300,31 @@
                 font-weight: 500;
                 font-size: 0.875rem;
                 line-height: 1.25rem;
-                color: rgb(var(--color-gray-900, 17 24 39) / 1);
+                color: var(--gray-900);
             }
 
             :is(.dark .fi-vertical-wizard-step-label) {
-                color: rgb(var(--color-gray-100, 243 244 246) / 1);
+                color: var(--gray-100);
+            }
+
+            .fi-vertical-wizard-step[data-status="active"] .fi-vertical-wizard-step-label {
+                font-weight: 600;
+                color: var(--primary-700);
+            }
+
+            :is(.dark .fi-vertical-wizard-step[data-status="active"] .fi-vertical-wizard-step-label) {
+                color: var(--primary-300);
             }
 
             .fi-vertical-wizard-step-not-applicable .fi-vertical-wizard-step-label {
-                color: rgb(var(--color-gray-500, 107 114 128) / 1);
+                color: var(--gray-500);
                 text-decoration: line-through;
-                text-decoration-color: rgb(var(--color-gray-400, 156 163 175) / 1);
+                text-decoration-color: var(--gray-400);
             }
 
             .fi-vertical-wizard-step-description {
                 font-size: 0.75rem;
-                color: rgb(var(--color-gray-500, 107 114 128) / 1);
+                color: var(--gray-500);
             }
         </style>
     @endpush
