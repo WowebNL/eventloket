@@ -2,35 +2,26 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\EventForm\Services\MunicipalityVariablesService;
 use App\Http\Controllers\Controller;
 use App\Models\Municipality;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MunicipalityVariableController extends Controller
 {
-    /**
-     * Handle the incoming request.
-     */
-    public function __invoke(Request $request, Municipality $municipality)
+    public function __construct(
+        private readonly MunicipalityVariablesService $service,
+    ) {}
+
+    public function __invoke(Request $request, Municipality $municipality): JsonResponse
     {
         $asKeyValue = $request->boolean('as_key_value', false);
-        $variables = $municipality
-            ->variables()
-            ->withTrashed()
-            ->get()
-            ->map(function ($variable) {
-                return [
-                    'id' => $variable->id,
-                    'name' => $variable->name,
-                    'key' => $variable->key,
-                    'type' => $variable->type,
-                    'value' => $variable->formatted_value,
-                    'is_default' => $variable->is_default,
-                ];
-            });
 
-        return response()->json([
-            'data' => $asKeyValue ? $variables->pluck('value', 'key') : $variables,
-        ]);
+        $data = $asKeyValue
+            ? $this->service->forMunicipalityAsKeyValue($municipality)
+            : $this->service->forMunicipality($municipality);
+
+        return response()->json(['data' => $data]);
     }
 }
