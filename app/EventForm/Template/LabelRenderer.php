@@ -24,7 +24,23 @@ class LabelRenderer
 {
     public function render(string $template, FormState $state): string
     {
-        if ($template === '' || ! str_contains($template, '{{')) {
+        if ($template === '') {
+            return $template;
+        }
+
+        // Volgorde: eerst Jinja-`{% get_value var 'key' %}`-tags (uit OF's
+        // custom-tags), dan de simpele `{{ var }}`-placeholders.
+        if (str_contains($template, '{%')) {
+            $template = (string) preg_replace_callback(
+                "/\{%\s*get_value\s+(\w+)\s+['\"]([^'\"]+)['\"]\s*%\}/",
+                fn (array $m): string => $this->stringify(
+                    $state->get($m[1].'.'.$m[2]),
+                ),
+                $template,
+            );
+        }
+
+        if (! str_contains($template, '{{')) {
             return $template;
         }
 

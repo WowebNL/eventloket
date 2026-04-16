@@ -93,12 +93,13 @@
 
     {{-- Verticale sidebar --}}
     @if (! $isHeaderHidden)
-        <aside class="fi-vertical-wizard-sidebar" x-cloak x-ref="header">
+        <aside class="fi-vertical-wizard-sidebar" x-cloak>
             <ol
                 @if (filled($label = $getLabel()))
                     aria-label="{{ $label }}"
                 @endif
                 role="list"
+                x-ref="header"
                 class="fi-vertical-wizard-list"
             >
                 @foreach ($steps as $step)

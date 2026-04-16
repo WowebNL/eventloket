@@ -69,4 +69,32 @@ describe('LabelRenderer', function () {
 
         expect($renderer->render('{{ isActive }}', $state))->toBe('true');
     });
+
+    test('get_value tag reads a nested key from a variable', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setVariable('evenementInGemeente', ['name' => 'Maastricht', 'brk_identification' => 'GM0882']);
+
+        $template = "U gaat verder voor de gemeente: {% get_value evenementInGemeente 'name' %}";
+
+        expect($renderer->render($template, $state))
+            ->toBe('U gaat verder voor de gemeente: Maastricht');
+    });
+
+    test('get_value tag with double-quoted key works too', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setVariable('gemeenteVariabelen', ['aanwezigen' => 500]);
+
+        expect($renderer->render('Limiet: {% get_value gemeenteVariabelen "aanwezigen" %} personen', $state))
+            ->toBe('Limiet: 500 personen');
+    });
+
+    test('get_value tag returns empty when variable or key is missing', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+
+        expect($renderer->render("Leeg: {% get_value onbekend 'x' %}!", $state))
+            ->toBe('Leeg: !');
+    });
 });
