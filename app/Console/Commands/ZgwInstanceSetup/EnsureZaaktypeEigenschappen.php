@@ -29,7 +29,7 @@ class EnsureZaaktypeEigenschappen extends Command
 
         $connection = new OpenzaakConnection;
         $this->headers = $connection->getHeaders();
-        $this->baseUrl = rtrim(config('openzaak.url'), '/').'/catalogi/api/v1/';
+        $this->baseUrl = config('openzaak.catalogi_base_url') ?? rtrim(config('openzaak.url'), '/').'/catalogi/api/v1/';
 
         if ($this->dryRun) {
             $this->warn('DRY-RUN modus: er worden geen wijzigingen doorgevoerd.');
