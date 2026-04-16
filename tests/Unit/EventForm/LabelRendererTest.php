@@ -98,3 +98,87 @@ describe('LabelRenderer', function () {
             ->toBe('Leeg: !');
     });
 });
+
+describe('LabelRenderer Jinja control-flow', function () {
+    test('{% if %}/{% endif %} renders body only when condition is truthy', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setVariable('flag', true);
+
+        $template = 'Start{% if flag %} MIDDEN{% endif %} einde';
+        expect($renderer->render($template, $state))->toBe('Start MIDDEN einde');
+
+        $state->setVariable('flag', false);
+        expect($renderer->render($template, $state))->toBe('Start einde');
+    });
+
+    test('{% if %} / {% else %} / {% endif %} picks the matching branch', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setVariable('inLog', true);
+        $template = '{% if inLog %}Welkom{% else %}Gast{% endif %}';
+
+        expect($renderer->render($template, $state))->toBe('Welkom');
+
+        $state->setVariable('inLog', false);
+        expect($renderer->render($template, $state))->toBe('Gast');
+    });
+
+    test('{% elif %}-chain walks until first true condition', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $template =
+            "{% if x == 'a' %}A"
+            ."{% elif x == 'b' %}B"
+            ."{% elif x == 'c' %}C"
+            ."{% else %}ANDERS"
+            .'{% endif %}';
+
+        foreach (['a' => 'A', 'b' => 'B', 'c' => 'C', 'z' => 'ANDERS'] as $val => $expected) {
+            $state->setVariable('x', $val);
+            expect($renderer->render($template, $state))->toBe($expected);
+        }
+    });
+
+    test('condition with nested var path works', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setVariable('inGemeentenResponse', [
+            'line' => ['start_end_equal' => true],
+        ]);
+        $template =
+            '{% if inGemeentenResponse.line.start_end_equal == True %}same'
+            .'{% elif inGemeentenResponse.line.start_end_equal == False %}diff'
+            .'{% endif %}';
+
+        expect($renderer->render($template, $state))->toBe('same');
+
+        $state->setVariable('inGemeentenResponse', ['line' => ['start_end_equal' => false]]);
+        expect($renderer->render($template, $state))->toBe('diff');
+    });
+
+    test('"not X" negates a truthy value', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setVariable('x', null);
+
+        $template = '{% if not x %}leeg{% endif %}';
+        expect($renderer->render($template, $state))->toBe('leeg');
+
+        $state->setVariable('x', 'iets');
+        expect($renderer->render($template, $state))->toBe('');
+    });
+
+    test('"or" / "and" combine conditions', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setVariable('a', null);
+        $state->setVariable('b', 'yes');
+
+        $template = '{% if not a or not b %}missing{% endif %}';
+        expect($renderer->render($template, $state))->toBe('missing');
+
+        $state->setVariable('a', 'yes');
+        expect($renderer->render($template, $state))->toBe('');
+    });
+});
