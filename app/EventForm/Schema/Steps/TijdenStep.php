@@ -62,7 +62,7 @@ final class TijdenStep
                                     return $rule;
                                 }
 
-                                return ! $get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja';
+                                return ! ($get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja');
                             }),
                         DateTimePicker::make('OpbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -73,7 +73,7 @@ final class TijdenStep
                                     return $rule;
                                 }
 
-                                return ! $get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja';
+                                return ! ($get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja');
                             }),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXOpbouwactiviteiten')
@@ -102,7 +102,7 @@ final class TijdenStep
                                     return $rule;
                                 }
 
-                                return ! $get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja';
+                                return ! ($get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja');
                             }),
                         DateTimePicker::make('AfbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -113,7 +113,7 @@ final class TijdenStep
                                     return $rule;
                                 }
 
-                                return ! $get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja';
+                                return ! ($get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja');
                             }),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXAfbouwactiviteiten3')

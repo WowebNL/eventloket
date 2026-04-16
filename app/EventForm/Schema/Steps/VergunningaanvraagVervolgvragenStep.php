@@ -61,7 +61,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! in_array('anders', (array) $get('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning'), true);
+                                return ! (in_array('anders', (array) $get('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning'), true));
                             }),
                         CheckboxList::make('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -100,7 +100,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! in_array('A71', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true);
+                                return ! (in_array('A71', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true));
                             }),
                         CheckboxList::make('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten popmuziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -131,7 +131,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! in_array('A72', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true);
+                                return ! (in_array('A72', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true));
                             })
                             ->live(),
                         Textarea::make('welkeAnderSoortPopmuziekIsErTeHorenOpEvenementX')
@@ -144,7 +144,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! in_array('anders', (array) $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement'), true);
+                                return ! (in_array('anders', (array) $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement'), true));
                             }),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de geluidsbelasting in decibel (dB(A) norm - (0–103 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -259,7 +259,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! in_array('A57', (array) $get('watVoorBouwselsPlaatsUOpDeLocaties'), true);
+                                return ! (in_array('A57', (array) $get('watVoorBouwselsPlaatsUOpDeLocaties'), true));
                             }),
                         FileUpload::make('plaatstUTijdelijkeConstructiesTentenPodiaEtcDanDientUNaastHetVeiligheidsplanTevensEenDeelplanTijdelijkeConstructiesTeMakenEnTeUploadenAlsBijlage')
                             ->label('Plaatst u tijdelijke constructies (tenten, podia etc.) dan dient u naast het veiligheidsplan tevens een \'Deelplan Tijdelijke constructies\' te maken en te uploaden als bijlage.'),
@@ -295,7 +295,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! $get('isDeOrganisatieVanHetKansspelInHandenVanEenVereniging') === 'Ja';
+                                return ! ($get('isDeOrganisatieVanHetKansspelInHandenVanEenVereniging') === 'Ja');
                             }),
                         Textarea::make('watBentUVanPlanMetDeOpbrengstVanHetKansspelTeGaanDoen')
                             ->label('Wat bent u van plan met de opbrengst van het kansspel te gaan doen?')
@@ -344,7 +344,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! $get('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop') === 'persoon';
+                                return ! ($get('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop') === 'persoon');
                             }),
                         Fieldset::make('Organisatiegroep')
                             ->schema([
@@ -363,7 +363,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! $get('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop') === 'organisatie';
+                                return ! ($get('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop') === 'organisatie');
                             }),
                         Repeater::make('watZijnDeLocatiesWaarUDrankenEnOfVoedselGaatVerstrekken')
                             ->label('Op hoeveel punten en op welke locaties gaat u dranken en voedsel verstrekken?')
@@ -437,7 +437,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     return $rule;
                                 }
 
-                                return ! in_array('anders', (array) $get('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX'), true);
+                                return ! (in_array('anders', (array) $get('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX'), true));
                             }),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('etenBereidenOfVerkopen') !== false),

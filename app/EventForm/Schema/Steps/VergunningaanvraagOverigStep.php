@@ -94,7 +94,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Ja';
+                                return ! ($get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Ja');
                             }),
                         TextEntry::make('content34')
                             ->hiddenLabel()
@@ -105,7 +105,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Nee';
+                                return ! ($get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Nee');
                             }),
                         TextInput::make('hoeveelVerkeersregelaarsWiltUInzetten')
                             ->label('Hoeveel verkeersregelaars wilt u inzetten?')
@@ -138,7 +138,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! in_array('anders', (array) $get('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs'), true);
+                                return ! (in_array('anders', (array) $get('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs'), true));
                             }),
                         Textarea::make('metWelkeOpenbaarVervoermaatschappijenHeeftUExtraAfsprakenGemaaktOverHetOpenbaarVervoer')
                             ->label('Met welke openbaar vervoermaatschappijen heeft u extra afspraken gemaakt over het openbaar vervoer?')
@@ -171,7 +171,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('wiltUPromotieMakenVoorUwEvenement') === 'Ja';
+                                return ! ($get('wiltUPromotieMakenVoorUwEvenement') === 'Ja');
                             }),
                         CheckboxList::make('hoeWiltUPromotieMakenVoorUwEvenement')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Hoe wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -190,7 +190,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('wiltUPromotieMakenVoorUwEvenement') === 'Ja';
+                                return ! ($get('wiltUPromotieMakenVoorUwEvenement') === 'Ja');
                             })
                             ->live(),
                         Textarea::make('opWelkeAndereManierWiltUPromotieMaken')
@@ -203,7 +203,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! in_array('anders', (array) $get('hoeWiltUPromotieMakenVoorUwEvenement'), true);
+                                return ! (in_array('anders', (array) $get('hoeWiltUPromotieMakenVoorUwEvenement'), true));
                             }),
                         TextInput::make('websiteVanUwEvenement')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Website van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
@@ -235,7 +235,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX') === 'Ja';
+                                return ! ($get('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX') === 'Ja');
                             }),
                         FileUpload::make('wiltUDeInformatieTekstAanDeOmwonendeAlsBijlageToevoegen')
                             ->label('Wilt u de informatie-tekst aan de omwonende als bijlage toevoegen?'),
@@ -259,7 +259,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee';
+                                return ! ($get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee');
                             }),
                         Textarea::make('welkeRelevanteErvaringHeeftHetPersoneelDatDeOrganisatorInhuurtViaIntermediairs')
                             ->label('Welke relevante ervaring heeft het personeel dat de organisator inhuurt via intermediairs?')
@@ -270,7 +270,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee';
+                                return ! ($get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee');
                             }),
                         Textarea::make('welkeRelevanteErvaringHeeftHetPersoneelVanOnderAannemersAanWieDeOrganisatorWerkUitbesteedt')
                             ->label('Welke relevante ervaring heeft het personeel van (onder)aannemers aan wie de organisator werk uitbesteedt?')
@@ -281,7 +281,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee';
+                                return ! ($get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee');
                             }),
                         Textarea::make('welkeRelevanteErvaringHebbenDeVrijwilligersDieDeOrganisatorInzet')
                             ->label('Welke relevante ervaring hebben de vrijwilligers die de organisator  inzet?')
@@ -292,7 +292,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee';
+                                return ! ($get('organiseertUUwEvenementXVoorDeEersteKeer') === 'Nee');
                             }),
                     ]),
                 Fieldset::make('Huisregels en flankerende evenementen')
@@ -313,7 +313,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('hanteertUHuisregelsVoorUwEvenementX') === 'Ja';
+                                return ! ($get('hanteertUHuisregelsVoorUwEvenementX') === 'Ja');
                             }),
                         Radio::make('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -333,7 +333,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024') === 'Ja';
+                                return ! ($get('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024') === 'Ja');
                             }),
                     ]),
                 Fieldset::make('Verzekering')
@@ -354,7 +354,7 @@ final class VergunningaanvraagOverigStep
                                     return $rule;
                                 }
 
-                                return ! $get('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement') === 'Ja';
+                                return ! ($get('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement') === 'Ja');
                             }),
                     ]),
             ]);

@@ -30,7 +30,7 @@ final class AlsIsGelijkAanGm1903EnWaarvoorwiltueventloke implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM1903') && ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')));
+        return (bool) (($s->get('evenementInGemeente.brk_identification') === 'GM1903') && ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'));
     }
 
     public function apply(FormState $s): void

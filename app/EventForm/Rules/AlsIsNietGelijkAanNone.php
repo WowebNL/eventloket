@@ -30,7 +30,7 @@ final class AlsIsNietGelijkAanNone implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((((bool) $s->get('adresVanDeGebouwEn')) && ($s->get('adresVanDeGebouwEn') !== 'None')));
+        return (bool) ((bool) $s->get('adresVanDeGebouwEn') && ($s->get('adresVanDeGebouwEn') !== 'None'));
     }
 
     public function apply(FormState $s): void

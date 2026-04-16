@@ -30,7 +30,7 @@ final class Rule3a1ac5f3 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee'));
+        return (bool) ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee');
     }
 
     public function apply(FormState $s): void

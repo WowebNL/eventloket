@@ -31,7 +31,7 @@ final class Rule6f1046a6 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('inGemeentenResponse') !== '{}'));
+        return (bool) ($s->get('inGemeentenResponse') !== '{}');
     }
 
     public function apply(FormState $s): void

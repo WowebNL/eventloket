@@ -30,7 +30,7 @@ final class AlsIsGelijkAanGm0981En implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM0981') && ($s->get('isVergunningaanvraag') === true)));
+        return (bool) (($s->get('evenementInGemeente.brk_identification') === 'GM0981') && ($s->get('isVergunningaanvraag') === true));
     }
 
     public function apply(FormState $s): void

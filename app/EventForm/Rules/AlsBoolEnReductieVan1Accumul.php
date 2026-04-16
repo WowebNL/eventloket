@@ -30,7 +30,7 @@ final class AlsBoolEnReductieVan1Accumul implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((((bool) $s->get('routeDoorGemeentenNamen')) && ((is_array($s->get('routeDoorGemeentenNamen')) ? count($s->get('routeDoorGemeentenNamen')) : 0) >= 2) && ((bool) $s->get('userSelectGemeente11'))));
+        return (bool) ((bool) $s->get('routeDoorGemeentenNamen') && ((is_array($s->get('routeDoorGemeentenNamen')) ? count($s->get('routeDoorGemeentenNamen')) : 0) >= 2) && (bool) $s->get('userSelectGemeente11'));
     }
 
     public function apply(FormState $s): void

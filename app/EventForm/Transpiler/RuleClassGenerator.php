@@ -245,6 +245,7 @@ class RuleClassGenerator
         $descriptionSanitized = str_replace(['*/', "\r\n", "\n"], ['* /', ' ', ' '], $description);
         $triggerStepsPhp = $this->renderStepArrayLiteral($triggerSteps);
         $effectStepsPhp = $this->renderStepArrayLiteral($effectSteps);
+        $returnExpr = $this->prepareBoolReturn($triggerExpr);
 
         return <<<PHP
         <?php
@@ -278,7 +279,7 @@ class RuleClassGenerator
 
             public function applies(FormState \$s): bool
             {
-                return (bool) ({$triggerExpr});
+                return {$returnExpr};
             }
 
             public function apply(FormState \$s): void
@@ -288,6 +289,34 @@ class RuleClassGenerator
         }
 
         PHP;
+    }
+
+    /**
+     * Bereidt de trigger-expressie voor als return-expressie in `applies()`.
+     *
+     * `applies()` heeft return-type `bool` en `strict_types=1`, dus een
+     * willekeurige mixed-expressie moet één keer naar bool gecast worden.
+     * We slaan die cast over in twee gevallen:
+     *  - de compiler heeft zelf al `(bool) ...` geëmit (bang-operator)
+     *  - het is een literal `true`/`false`
+     *
+     * In alle andere gevallen emitten we één enkele `(bool) ...`-prefix. De
+     * compiler wrapt binaire/variadische operator-emissies al tussen haakjes,
+     * dus `(bool) ($a === $b)` bindt correct over de hele vergelijking.
+     */
+    private function prepareBoolReturn(string $expr): string
+    {
+        $expr = trim($expr);
+
+        if ($expr === 'true' || $expr === 'false') {
+            return $expr;
+        }
+
+        if (str_starts_with($expr, '(bool) ')) {
+            return $expr;
+        }
+
+        return '(bool) '.$expr;
     }
 
     /** @param  list<string>  $steps */

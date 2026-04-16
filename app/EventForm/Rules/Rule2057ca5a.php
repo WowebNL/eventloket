@@ -31,7 +31,7 @@ final class Rule2057ca5a implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('submission_id') !== ''));
+        return (bool) ($s->get('submission_id') !== '');
     }
 
     public function apply(FormState $s): void

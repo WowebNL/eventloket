@@ -30,7 +30,7 @@ final class AlsIsGelijkAanTrueEnReductieVanEvenemen implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('inGemeentenResponse.line.start_end_equal') === 'True') && ((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2) && ((bool) $s->get('userSelectGemeente11'))));
+        return (bool) (($s->get('inGemeentenResponse.line.start_end_equal') === 'True') && ((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2) && (bool) $s->get('userSelectGemeente11'));
     }
 
     public function apply(FormState $s): void

@@ -30,7 +30,7 @@ final class RuleB0b1b8ed implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('evenementInGemeente') !== ''));
+        return (bool) ($s->get('evenementInGemeente') !== '');
     }
 
     public function apply(FormState $s): void

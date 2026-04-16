@@ -156,7 +156,7 @@ final class ContactgegevensStep
                             return $rule;
                         }
 
-                        return ! in_array('vooraf', (array) $get('extraContactpersonenToevoegen'), true);
+                        return ! (in_array('vooraf', (array) $get('extraContactpersonenToevoegen'), true));
                     }),
                 Fieldset::make('Contactpersoon tijdens het evenement')
                     ->schema([
@@ -179,7 +179,7 @@ final class ContactgegevensStep
                             return $rule;
                         }
 
-                        return ! in_array('tijdens', (array) $get('extraContactpersonenToevoegen'), true);
+                        return ! (in_array('tijdens', (array) $get('extraContactpersonenToevoegen'), true));
                     }),
                 Fieldset::make('Contactpersoon na het evenement')
                     ->schema([
@@ -202,7 +202,7 @@ final class ContactgegevensStep
                             return $rule;
                         }
 
-                        return ! in_array('achteraf', (array) $get('extraContactpersonenToevoegen'), true);
+                        return ! (in_array('achteraf', (array) $get('extraContactpersonenToevoegen'), true));
                     }),
             ]);
     }

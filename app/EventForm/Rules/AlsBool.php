@@ -30,7 +30,7 @@ final class AlsBool implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (((bool) $s->get('eventloketSession.kvk')));
+        return (bool) $s->get('eventloketSession.kvk');
     }
 
     public function apply(FormState $s): void

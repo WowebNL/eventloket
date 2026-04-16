@@ -646,7 +646,10 @@ class StepSchemaGenerator
         }
 
         // show=true → verberg als geen match; show=false → verberg bij match.
-        return $show === true ? "! {$match}" : $match;
+        // Haakjes rond $match zijn essentieel omdat `!` strakker bindt dan
+        // `===` — zonder haakjes wordt `! $get(...) === 'Y'` een bool-vs-string
+        // vergelijking die altijd false oplevert.
+        return $show === true ? "! ({$match})" : $match;
     }
 
     private function buildClassName(string $value): string

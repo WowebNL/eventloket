@@ -30,7 +30,7 @@ final class RuleF56a54dd implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('eventloketSession') !== '{}'));
+        return (bool) ($s->get('eventloketSession') !== '{}');
     }
 
     public function apply(FormState $s): void
@@ -40,6 +40,6 @@ final class RuleF56a54dd implements Rule
         $s->setVariable('watIsUwTelefoonnummer', $s->get('eventloketSession.user_phone'));
         $s->setVariable('watIsHetKamerVanKoophandelNummerVanUwOrganisatie', $s->get('eventloketSession.kvk'));
         $s->setFieldHidden('loadUserInformation', true);
-        $s->setVariable('eventloketPrefill', (((bool) $s->get('eventloketSession.prefill_data')) ? $s->get('eventloketSession.prefill_data') : '{}'));
+        $s->setVariable('eventloketPrefill', ((bool) $s->get('eventloketSession.prefill_data') ? $s->get('eventloketSession.prefill_data') : '{}'));
     }
 }

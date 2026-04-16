@@ -30,7 +30,7 @@ final class Rule6b2aeed1 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('waarvoorWiltUEventloketGebruiken') === 'evenement'));
+        return (bool) ($s->get('waarvoorWiltUEventloketGebruiken') === 'evenement');
     }
 
     public function apply(FormState $s): void

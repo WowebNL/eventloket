@@ -30,7 +30,7 @@ final class AlsBoolEnIsNietGelijkAanNone580a3ef8 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((((bool) $s->get('userSelectGemeente')) && ($s->get('userSelectGemeente') !== '')));
+        return (bool) ((bool) $s->get('userSelectGemeente') && ($s->get('userSelectGemeente') !== ''));
     }
 
     public function apply(FormState $s): void

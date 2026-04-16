@@ -56,7 +56,7 @@ final class AanvraagOfMeldingStep
                                     return $rule;
                                 }
 
-                                return ! $get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Ja';
+                                return ! ($get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Ja');
                             })
                             ->live(),
                         Radio::make('WordtErAlleenMuziekGeluidGeproduceerdTussen')
@@ -72,7 +72,7 @@ final class AanvraagOfMeldingStep
                                     return $rule;
                                 }
 
-                                return ! $get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen') === 'Ja';
+                                return ! ($get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen') === 'Ja');
                             })
                             ->live(),
                         Radio::make('IsdeGeluidsproductieLagerDan')
@@ -88,7 +88,7 @@ final class AanvraagOfMeldingStep
                                     return $rule;
                                 }
 
-                                return ! $get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Ja';
+                                return ! ($get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Ja');
                             })
                             ->live(),
                         Radio::make('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten')
@@ -104,7 +104,7 @@ final class AanvraagOfMeldingStep
                                     return $rule;
                                 }
 
-                                return ! $get('IsdeGeluidsproductieLagerDan') === 'Ja';
+                                return ! ($get('IsdeGeluidsproductieLagerDan') === 'Ja');
                             })
                             ->live(),
                         Radio::make('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst')
@@ -120,7 +120,7 @@ final class AanvraagOfMeldingStep
                                     return $rule;
                                 }
 
-                                return ! $get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten') === 'Ja';
+                                return ! ($get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten') === 'Ja');
                             })
                             ->live(),
                         Radio::make('indienErObjectenGeplaatstWordenZijnDezeDanKleiner')
@@ -136,7 +136,7 @@ final class AanvraagOfMeldingStep
                                     return $rule;
                                 }
 
-                                return ! $get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst') === 'Ja';
+                                return ! ($get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst') === 'Ja');
                             })
                             ->live(),
                         Radio::make('meldingvraag1')

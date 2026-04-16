@@ -30,9 +30,9 @@ final class AlsIsGelijkAanJaEnTrueAlsOntbrekendGemeentevariabelenReportQuestiEa0
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('meldingvraag1') === 'Ja') && ((array_values(array_filter([
+        return (bool) (($s->get('meldingvraag1') === 'Ja') && ((array_values(array_filter([
             0 => 'gemeenteVariabelen.report_question_2',
-        ], static fn ($k) => $s->get($k) === null || $s->get($k) === ''))) ? true : false)));
+        ], static fn ($k) => $s->get($k) === null || $s->get($k) === ''))) ? true : false));
     }
 
     public function apply(FormState $s): void

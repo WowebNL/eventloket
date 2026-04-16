@@ -30,7 +30,7 @@ final class AlsIsGelijkAanJaEnBool implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('meldingvraag4') === 'Ja') && ((bool) $s->get('gemeenteVariabelen.report_question_5'))));
+        return (bool) (($s->get('meldingvraag4') === 'Ja') && (bool) $s->get('gemeenteVariabelen.report_question_5'));
     }
 
     public function apply(FormState $s): void

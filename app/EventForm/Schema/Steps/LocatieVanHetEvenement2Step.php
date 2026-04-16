@@ -130,7 +130,7 @@ final class LocatieVanHetEvenement2Step
                                     return $rule;
                                 }
 
-                                return ! $get('watVoorEvenementGaatPlaatsvindenOpDeRoute1') === 'A114';
+                                return ! ($get('watVoorEvenementGaatPlaatsvindenOpDeRoute1') === 'A114');
                             }),
                         CheckboxList::make('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan')
                             ->label('Komt uw route over wegen van wegbeheerders, anders dan de betreffende gemeente? Zo ja, kruis deze dan aan.')
@@ -150,7 +150,7 @@ final class LocatieVanHetEvenement2Step
                                     return $rule;
                                 }
 
-                                return ! in_array('provincie', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true);
+                                return ! (in_array('provincie', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
                         TextEntry::make('content39')
                             ->hiddenLabel()
@@ -161,7 +161,7 @@ final class LocatieVanHetEvenement2Step
                                     return $rule;
                                 }
 
-                                return ! in_array('waterschap', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true);
+                                return ! (in_array('waterschap', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
                         TextEntry::make('content41')
                             ->hiddenLabel()
@@ -172,7 +172,7 @@ final class LocatieVanHetEvenement2Step
                                     return $rule;
                                 }
 
-                                return ! in_array('rijkswaterstaat', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true);
+                                return ! (in_array('rijkswaterstaat', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
                         TextEntry::make('content40')
                             ->hiddenLabel()
@@ -183,7 +183,7 @@ final class LocatieVanHetEvenement2Step
                                     return $rule;
                                 }
 
-                                return ! in_array('staatsbosbeheer', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true);
+                                return ! (in_array('staatsbosbeheer', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
                         TextEntry::make('routeStartEndContent2')
                             ->hiddenLabel()
@@ -195,7 +195,7 @@ final class LocatieVanHetEvenement2Step
                             return $rule;
                         }
 
-                        return ! in_array('route', (array) $get('waarVindtHetEvenementPlaats'), true);
+                        return ! (in_array('route', (array) $get('waarVindtHetEvenementPlaats'), true));
                     }),
                 TextEntry::make('NotWithin')
                     ->hiddenLabel()

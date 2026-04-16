@@ -30,7 +30,7 @@ final class AlsBoolEnIsN0f284f5c implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((((bool) $s->get('eventloketSession.organisation_phone')) && ($s->get('eventloketSession.organisation_phone') !== 'None') && ($s->get('eventloketSession.organisation_phone') !== 'NULL')));
+        return (bool) ((bool) $s->get('eventloketSession.organisation_phone') && ($s->get('eventloketSession.organisation_phone') !== 'None') && ($s->get('eventloketSession.organisation_phone') !== 'NULL'));
     }
 
     public function apply(FormState $s): void

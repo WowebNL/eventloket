@@ -30,7 +30,7 @@ final class AlsReductieVan1BeginnendBij0IsGelijkA implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) === 1));
+        return (bool) ((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) === 1);
     }
 
     public function apply(FormState $s): void

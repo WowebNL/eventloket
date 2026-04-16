@@ -30,7 +30,7 @@ final class AlsIsNietGelijkAanEnIsGelijkAanFa implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('eventloketPrefill') !== '{}') && ($s->get('watIsDeNaamVanHetEvenementVergunning') === '')));
+        return (bool) (($s->get('eventloketPrefill') !== '{}') && ($s->get('watIsDeNaamVanHetEvenementVergunning') === ''));
     }
 
     public function apply(FormState $s): void

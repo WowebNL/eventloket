@@ -45,7 +45,7 @@ final class MeldingStep
                             return $rule;
                         }
 
-                        return ! $get('wordtErAlcoholGeschonkenTijdensUwEvenement') === 'Ja';
+                        return ! ($get('wordtErAlcoholGeschonkenTijdensUwEvenement') === 'Ja');
                     }),
                 Radio::make('wordenErFilmopnamesMetBehulpVanDronesGemaakt')
                     ->label('Worden er filmopnames met behulp van drones gemaakt? ')
@@ -64,7 +64,7 @@ final class MeldingStep
                             return $rule;
                         }
 
-                        return ! $get('wordenErFilmopnamesMetBehulpVanDronesGemaakt') === 'Ja';
+                        return ! ($get('wordenErFilmopnamesMetBehulpVanDronesGemaakt') === 'Ja');
                     }),
                 Radio::make('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden')
                     ->label('Vinden er activiteiten plaats, waarvoor mogelijk brandveiligheidseisen gelden?')
@@ -82,7 +82,7 @@ final class MeldingStep
                             return $rule;
                         }
 
-                        return ! $get('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden') === 'Ja';
+                        return ! ($get('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden') === 'Ja');
                     }),
             ]);
     }

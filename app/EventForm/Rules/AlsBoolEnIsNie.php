@@ -30,7 +30,7 @@ final class AlsBoolEnIsNie implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((((bool) $s->get('eventloketSession.organisation_name')) && ($s->get('eventloketSession.organisation_name') !== 'None') && ($s->get('eventloketSession.organisation_name') !== 'NULL')));
+        return (bool) ((bool) $s->get('eventloketSession.organisation_name') && ($s->get('eventloketSession.organisation_name') !== 'None') && ($s->get('eventloketSession.organisation_name') !== 'NULL'));
     }
 
     public function apply(FormState $s): void

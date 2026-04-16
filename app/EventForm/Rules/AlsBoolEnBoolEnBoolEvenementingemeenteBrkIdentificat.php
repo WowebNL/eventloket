@@ -31,7 +31,7 @@ final class AlsBoolEnBoolEnBoolEvenementingemeenteBrkIdentificat implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((((bool) $s->get('EvenementStart')) && ((bool) $s->get('EvenementEind')) && ((bool) $s->get('evenementInGemeente.brk_identification'))));
+        return (bool) ((bool) $s->get('EvenementStart') && (bool) $s->get('EvenementEind') && (bool) $s->get('evenementInGemeente.brk_identification'));
     }
 
     public function apply(FormState $s): void

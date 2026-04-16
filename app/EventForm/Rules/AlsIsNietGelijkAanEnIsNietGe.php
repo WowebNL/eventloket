@@ -30,7 +30,7 @@ final class AlsIsNietGelijkAanEnIsNietGe implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('adresSenVanHetEvenement') !== '{}') && ($s->get('adresSenVanHetEvenement') !== '[]') && ($s->get('adresSenVanHetEvenement') !== 'None')));
+        return (bool) (($s->get('adresSenVanHetEvenement') !== '{}') && ($s->get('adresSenVanHetEvenement') !== '[]') && ($s->get('adresSenVanHetEvenement') !== 'None'));
     }
 
     public function apply(FormState $s): void

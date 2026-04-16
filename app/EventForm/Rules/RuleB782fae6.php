@@ -30,7 +30,7 @@ final class RuleB782fae6 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A17') === true));
+        return (bool) ($s->get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A17') === true);
     }
 
     public function apply(FormState $s): void

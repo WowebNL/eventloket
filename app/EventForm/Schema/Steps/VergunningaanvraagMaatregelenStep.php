@@ -92,7 +92,7 @@ final class VergunningaanvraagMaatregelenStep
                                     return $rule;
                                 }
 
-                                return ! $get('voertUDeSchoonmaakZelfUit') === 'Ja';
+                                return ! ($get('voertUDeSchoonmaakZelfUit') === 'Ja');
                             }),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('extraAfval') !== false),
@@ -149,7 +149,7 @@ final class VergunningaanvraagMaatregelenStep
                                             return $rule;
                                         }
 
-                                        return ! $get('wenstUTegenBetalingStroomAfTeNemenVanDeGemeente') === 'Ja';
+                                        return ! ($get('wenstUTegenBetalingStroomAfTeNemenVanDeGemeente') === 'Ja');
                                     }),
                             ])
                             ->hidden(function (Get $get, $livewire): bool {
@@ -158,7 +158,7 @@ final class VergunningaanvraagMaatregelenStep
                                     return $rule;
                                 }
 
-                                return ! $get('wilUGebruikMakenVanGemeentelijkeHulpmiddelen') === 'Ja';
+                                return ! ($get('wilUGebruikMakenVanGemeentelijkeHulpmiddelen') === 'Ja');
                             }),
                     ]),
             ]);

@@ -30,7 +30,7 @@ final class AlsBoolEn implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('eventloketSession.organisation_address') !== ''));
+        return (bool) ($s->get('eventloketSession.organisation_address') !== '');
     }
 
     public function apply(FormState $s): void

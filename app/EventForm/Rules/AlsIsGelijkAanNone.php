@@ -30,7 +30,7 @@ final class AlsIsGelijkAanNone implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('waarVindtHetEvenementPlaats11') === '{\'route\': False, \'buiten\': False, \'gebouw\': False}') && ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') !== 'Nee')));
+        return (bool) (($s->get('waarVindtHetEvenementPlaats11') === '{\'route\': False, \'buiten\': False, \'gebouw\': False}') && ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') !== 'Nee'));
     }
 
     public function apply(FormState $s): void

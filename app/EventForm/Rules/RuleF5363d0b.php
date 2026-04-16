@@ -30,7 +30,7 @@ final class RuleF5363d0b implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A44') === true));
+        return (bool) ($s->get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A44') === true);
     }
 
     public function apply(FormState $s): void

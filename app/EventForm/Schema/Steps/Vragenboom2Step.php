@@ -100,7 +100,7 @@ final class Vragenboom2Step
                             return $rule;
                         }
 
-                        return ! in_array('A22', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true);
+                        return ! (in_array('A22', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true));
                     }),
                 CheckboxList::make('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -124,7 +124,7 @@ final class Vragenboom2Step
                             return $rule;
                         }
 
-                        return ! in_array('A30', (array) $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX'), true);
+                        return ! (in_array('A30', (array) $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX'), true));
                     }),
                 CheckboxList::make('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -163,7 +163,7 @@ final class Vragenboom2Step
                             return $rule;
                         }
 
-                        return ! in_array('A46', (array) $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX'), true);
+                        return ! (in_array('A46', (array) $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX'), true));
                     }),
                 CheckboxList::make('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
@@ -188,7 +188,7 @@ final class Vragenboom2Step
                             return $rule;
                         }
 
-                        return ! in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true);
+                        return ! (in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true));
                     })
                     ->live(),
                 TextInput::make('voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX')
@@ -201,7 +201,7 @@ final class Vragenboom2Step
                             return $rule;
                         }
 
-                        return ! in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true);
+                        return ! (in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true));
                     }),
                 Textarea::make('welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke maatregelen heeft u genomen om mensen met een beperking ongehinderd deel te laten nemen aan uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -213,7 +213,7 @@ final class Vragenboom2Step
                             return $rule;
                         }
 
-                        return ! $get('isUwEvenementToegankelijkVoorMensenMetEenBeperking') === 'Ja';
+                        return ! ($get('isUwEvenementToegankelijkVoorMensenMetEenBeperking') === 'Ja');
                     }),
             ]);
     }

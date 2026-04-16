@@ -135,7 +135,10 @@ class JsonLogicCompiler
             ? $args[0]
             : $args;
 
-        return '((bool) '.$this->compile($inner).')';
+        // `(bool)` heeft de hoogste precedence, dus omringende haakjes zijn
+        // niet nodig — de parent-expressie groepeert als dat moet. Scheelt
+        // een dubbele laag haakjes in de geemit-te rule-bodies.
+        return '(bool) '.$this->compile($inner);
     }
 
     private function compileIf(mixed $args): string

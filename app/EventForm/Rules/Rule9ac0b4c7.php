@@ -30,7 +30,7 @@ final class Rule9ac0b4c7 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('binnenVeiligheidsregio') === false));
+        return (bool) ($s->get('binnenVeiligheidsregio') === false);
     }
 
     public function apply(FormState $s): void

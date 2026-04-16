@@ -30,7 +30,7 @@ final class AlsBoolEnIsNietGeli implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((((bool) $s->get('eventloketSession.user_last_name')) && ($s->get('eventloketSession.user_last_name') !== 'None') && ($s->get('eventloketSession.user_last_name') !== 'NULL')));
+        return (bool) ((bool) $s->get('eventloketSession.user_last_name') && ($s->get('eventloketSession.user_last_name') !== 'None') && ($s->get('eventloketSession.user_last_name') !== 'NULL'));
     }
 
     public function apply(FormState $s): void

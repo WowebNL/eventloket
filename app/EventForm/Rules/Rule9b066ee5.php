@@ -30,7 +30,7 @@ final class Rule9b066ee5 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A4') === true));
+        return (bool) ($s->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A4') === true);
     }
 
     public function apply(FormState $s): void

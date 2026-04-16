@@ -30,7 +30,7 @@ final class AlsIsGelijkAanGm0917EnWaarvoorwiltueventloke396c72d1 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM0917') && ($s->get('isVergunningaanvraag') === true)));
+        return (bool) (($s->get('evenementInGemeente.brk_identification') === 'GM0917') && ($s->get('isVergunningaanvraag') === true));
     }
 
     public function apply(FormState $s): void

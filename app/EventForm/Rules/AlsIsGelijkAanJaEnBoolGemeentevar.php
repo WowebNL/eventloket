@@ -30,7 +30,7 @@ final class AlsIsGelijkAanJaEnBoolGemeentevar implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('indienErObjectenGeplaatstWordenZijnDezeDanKleiner') === 'Ja') && ((bool) $s->get('gemeenteVariabelen.report_question_1'))));
+        return (bool) (($s->get('indienErObjectenGeplaatstWordenZijnDezeDanKleiner') === 'Ja') && (bool) $s->get('gemeenteVariabelen.report_question_1'));
     }
 
     public function apply(FormState $s): void

@@ -30,7 +30,7 @@ final class AlsIsGelijkAanBOfIsGelijkAanC implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('risicoClassificatie') === 'B') || ($s->get('risicoClassificatie') === 'C')));
+        return (bool) (($s->get('risicoClassificatie') === 'B') || ($s->get('risicoClassificatie') === 'C'));
     }
 
     public function apply(FormState $s): void

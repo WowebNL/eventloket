@@ -30,7 +30,7 @@ final class AlsBool00876823 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (((bool) $s->get('evenementenInDeGemeente')));
+        return (bool) $s->get('evenementenInDeGemeente');
     }
 
     public function apply(FormState $s): void

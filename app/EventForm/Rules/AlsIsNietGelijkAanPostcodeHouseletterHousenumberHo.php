@@ -30,7 +30,7 @@ final class AlsIsNietGelijkAanPostcodeHouseletterHousenumberHo implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('meldingAdres') !== '{\'postcode\': \'\', \'houseLetter\': \'\', \'houseNumber\': \'\', \'houseNumberAddition\': \'\'}') && ($s->get('meldingAdres') !== '{\'postcode\': \'\', \'houseLetter\': \'\', \'houseNumber\': \'\', \'houseNumberAddition\': \'\', \'city\': \'\', \'streetName\': \'\', \'secretStreetCity\': \'\'}') && ($s->get('meldingAdres') !== 'None') && ($s->get('waarVindtHetEvenementPlaats11') === '{\'route\': False, \'buiten\': False, \'gebouw\': False}')));
+        return (bool) (($s->get('meldingAdres') !== '{\'postcode\': \'\', \'houseLetter\': \'\', \'houseNumber\': \'\', \'houseNumberAddition\': \'\'}') && ($s->get('meldingAdres') !== '{\'postcode\': \'\', \'houseLetter\': \'\', \'houseNumber\': \'\', \'houseNumberAddition\': \'\', \'city\': \'\', \'streetName\': \'\', \'secretStreetCity\': \'\'}') && ($s->get('meldingAdres') !== 'None') && ($s->get('waarVindtHetEvenementPlaats11') === '{\'route\': False, \'buiten\': False, \'gebouw\': False}'));
     }
 
     public function apply(FormState $s): void

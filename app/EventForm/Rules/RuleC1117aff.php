@@ -30,7 +30,7 @@ final class RuleC1117aff implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX.A23') === true));
+        return (bool) ($s->get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX.A23') === true);
     }
 
     public function apply(FormState $s): void

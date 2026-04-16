@@ -86,7 +86,7 @@ final class NaamVanHetEvenementStep
                             return $rule;
                         }
 
-                        return ! $get('soortEvenement') === 'Anders';
+                        return ! ($get('soortEvenement') === 'Anders');
                     }),
                 Radio::make('gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen')
                     ->label('Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?')
@@ -100,7 +100,7 @@ final class NaamVanHetEvenementStep
                             return $rule;
                         }
 
-                        return ! $get('soortEvenement') === 'Markt of braderie';
+                        return ! ($get('soortEvenement') === 'Markt of braderie');
                     }),
             ]);
     }

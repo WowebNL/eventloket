@@ -30,7 +30,7 @@ final class AlsReductieVan1BeginnendBij0IsGroterD implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2));
+        return (bool) ((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2);
     }
 
     public function apply(FormState $s): void

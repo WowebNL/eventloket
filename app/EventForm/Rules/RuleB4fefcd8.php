@@ -30,7 +30,7 @@ final class RuleB4fefcd8 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('risicoClassificatie') !== ''));
+        return (bool) ($s->get('risicoClassificatie') !== '');
     }
 
     public function apply(FormState $s): void

@@ -30,7 +30,7 @@ final class AlsIsGelijkAanGm0994EnWordenergebiedsontslui implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM0994') && ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee')));
+        return (bool) (($s->get('evenementInGemeente.brk_identification') === 'GM0994') && ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee'));
     }
 
     public function apply(FormState $s): void
