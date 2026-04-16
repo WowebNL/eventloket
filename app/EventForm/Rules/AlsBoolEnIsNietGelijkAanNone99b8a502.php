@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Rules;
 
+use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
 
 /**
@@ -23,5 +24,8 @@ final class AlsBoolEnIsNietGelijkAanNone99b8a502 implements Rule
         return (bool) ((((bool) $s->get('addressToCheck')) && ($s->get('addressToCheck') !== 'None') && ($s->get('waarVindtHetEvenementPlaats11') !== '{\'gebouw\': False, \'buiten\': False, \'route\': True}')));
     }
 
-    public function apply(FormState $s): void {}
+    public function apply(FormState $s): void
+    {
+        app(ServiceFetcher::class)->fetch('inGemeentenResponse', $s);
+    }
 }

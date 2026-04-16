@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Rules;
 
+use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
 
 /**
@@ -23,5 +24,8 @@ final class AlsBoolEnBoolEnBoolEvenementingemeenteBrkIdentificat implements Rule
         return (bool) ((((bool) $s->get('EvenementStart')) && ((bool) $s->get('EvenementEind')) && ((bool) $s->get('evenementInGemeente.brk_identification'))));
     }
 
-    public function apply(FormState $s): void {}
+    public function apply(FormState $s): void
+    {
+        app(ServiceFetcher::class)->fetch('evenementenInDeGemeente', $s);
+    }
 }

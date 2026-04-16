@@ -128,18 +128,19 @@ describe('ActionCompiler set-registration-backend', function () {
 });
 
 describe('ActionCompiler fetch-from-service', function () {
-    test('fetch-from-service compiles to a no-op placeholder (handled separately)', function () {
+    test('fetch-from-service emits a ServiceFetcher::fetch() call on the variable', function () {
         $action = [
             'component' => '',
-            'variable' => 'inGemeentenResponse',
+            'variable' => 'gemeenteVariabelen',
             'action' => ['type' => 'fetch-from-service', 'value' => ''],
         ];
-        // This compiles but does not execute HTTP — the Filament page
-        // triggers the fetch via ServiceFetcher. Action body just records intent.
-        $state = FormState::empty();
-        $after = applyAction($action, $state);
-        // The compiled body should not throw; we expect the state to remain
-        // unchanged because service-fetch rules are handled outside RulesEngine.
-        expect($after)->toBe($state);
+
+        $statement = (new \App\EventForm\Transpiler\ActionCompiler(
+            new \App\EventForm\Transpiler\JsonLogicCompiler,
+        ))->compile($action);
+
+        expect($statement)->toContain('ServiceFetcher')
+            ->and($statement)->toContain("'gemeenteVariabelen'")
+            ->and($statement)->toContain('->fetch(');
     });
 });

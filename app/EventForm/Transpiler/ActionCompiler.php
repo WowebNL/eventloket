@@ -47,7 +47,7 @@ class ActionCompiler
             'step-applicable' => $this->compileStepApplicable($action, true),
             'step-not-applicable' => $this->compileStepApplicable($action, false),
             'set-registration-backend' => $this->compileSetRegistrationBackend($payload),
-            'fetch-from-service' => '',
+            'fetch-from-service' => $this->compileFetchFromService($action),
             default => throw new RuntimeException("Unsupported action type: {$type}"),
         };
     }
@@ -114,6 +114,23 @@ class ActionCompiler
             '$s->setStepApplicable(%s, %s);',
             var_export($stepUuid, true),
             $applicable ? 'true' : 'false',
+        );
+    }
+
+    /** @param  array<string, mixed>  $action */
+    private function compileFetchFromService(array $action): string
+    {
+        $variable = (string) ($action['variable'] ?? '');
+        if ($variable === '') {
+            // Sommige fetch-from-service actions mikken op een component i.p.v.
+            // variable. In onze data komen alleen variable-gerichte fetches
+            // voor; we skippen stilletjes als de variable ontbreekt.
+            return '';
+        }
+
+        return sprintf(
+            'app(\App\EventForm\Services\ServiceFetcher::class)->fetch(%s, $s);',
+            var_export($variable, true),
         );
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Rules;
 
+use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
 
 /**
@@ -23,5 +24,8 @@ final class Rule2057ca5a implements Rule
         return (bool) (($s->get('submission_id') !== ''));
     }
 
-    public function apply(FormState $s): void {}
+    public function apply(FormState $s): void
+    {
+        app(ServiceFetcher::class)->fetch('eventloketSession', $s);
+    }
 }

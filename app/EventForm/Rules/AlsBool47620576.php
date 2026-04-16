@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Rules;
 
+use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
 
 /**
@@ -25,6 +26,7 @@ final class AlsBool47620576 implements Rule
 
     public function apply(FormState $s): void
     {
+        app(ServiceFetcher::class)->fetch('gemeenteVariabelen', $s);
         $s->setFieldHidden('algemeneVragen', false);
     }
 }
