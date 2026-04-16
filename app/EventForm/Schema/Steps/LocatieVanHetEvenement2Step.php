@@ -53,20 +53,6 @@ final class LocatieVanHetEvenement2Step
 return false || (false);
                     })
                     ->live(),
-                Fieldset::make('In een gebouw of meerdere gebouwen')
-                    ->schema([
-
-                    ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('veldengroep');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (! (in_array('gebouw', (array) $get('waarVindtHetEvenementPlaats'), true)));
-                    }),
                 Repeater::make('adresVanDeGebouwEn')
                     ->label('Adres van de gebouw(en)')
                     ->schema([
@@ -105,20 +91,6 @@ return false || (false);
                         }
 
 return true || (false);
-                    }),
-                Fieldset::make('Buiten op één of meerdere plaatsen')
-                    ->schema([
-
-                    ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('buitenOpEenOfMeerderePlaatsen');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (! (in_array('buiten', (array) $get('waarVindtHetEvenementPlaats'), true)));
                     }),
                 Repeater::make('locatieSOpKaart')
                     ->label('Locatie(s) op kaart')

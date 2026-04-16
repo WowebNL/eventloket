@@ -148,7 +148,7 @@ class StepSchemaGenerator
             'file' => $this->renderCallChain($pad, 'FileUpload', $key, $label, $component),
             'map' => $this->renderMap($component, $pad),
             'addressNL' => $this->renderAddressNL($component, $pad),
-            'fieldset' => $this->renderContainer($component, $pad, 'Fieldset', $label ?: $key),
+            'fieldset' => $this->renderFieldset($component, $pad, $label ?: $key),
             'columns' => $this->renderColumns($component, $pad),
             'editgrid' => $this->renderRepeater($component, $pad),
             'content' => $this->renderContent($component, $pad),
@@ -266,6 +266,26 @@ class StepSchemaGenerator
         }
 
         return "\n{$pad}    ->options([\n".implode(",\n", $pairs)."\n{$pad}    ])";
+    }
+
+    /**
+     * OF gebruikt lege fieldsets als inline section-header (alleen een
+     * legend-label, geen schema). Filament Fieldset::make() eist een
+     * niet-leeg schema. Zonder children slaan we deze dus over — de
+     * volgende velden (die vaak top-level met eigen visibility-rules
+     * staan) vervullen de echte inhoudelijke rol.
+     *
+     * @param  array<string, mixed>  $component
+     */
+    private function renderFieldset(array $component, string $pad, string $label): ?string
+    {
+        $inner = $component['components'] ?? [];
+        $hasChildren = is_array($inner) && array_filter($inner, static fn ($c): bool => is_array($c)) !== [];
+        if (! $hasChildren) {
+            return null;
+        }
+
+        return $this->renderContainer($component, $pad, 'Fieldset', $label);
     }
 
     /** @param  array<string, mixed>  $component */

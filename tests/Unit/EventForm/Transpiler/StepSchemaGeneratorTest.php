@@ -239,6 +239,28 @@ describe('StepSchemaGenerator field emission', function () {
 });
 
 describe('StepSchemaGenerator nesting', function () {
+    test('empty fieldset (no children) is skipped', function () {
+        // OF gebruikt lege fieldsets als section-header; in Filament rendert
+        // dat als een grote lege box en dat is puur visuele ruis.
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'leegVakje',
+                    'type' => 'fieldset',
+                    'label' => 'Alleen een header',
+                    'components' => [],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        // Geen Fieldset::make call voor deze lege fieldset.
+        expect($content)->not->toContain('Fieldset::make')
+            ->and($content)->not->toContain("'Alleen een header'");
+    });
+
     test('fieldset wraps its children in Fieldset::make', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
@@ -483,7 +505,9 @@ describe('StepSchemaGenerator visibility', function () {
                     'type' => 'fieldset',
                     'label' => 'Organisatie',
                     'hidden' => true,
-                    'components' => [],
+                    'components' => [
+                        ['key' => 'dummy', 'type' => 'textfield', 'label' => 'Dummy'],
+                    ],
                 ],
             ]],
         ];
@@ -551,7 +575,9 @@ describe('StepSchemaGenerator visibility', function () {
                     'type' => 'fieldset',
                     'label' => 'Buiten-vraag',
                     'conditional' => ['show' => true, 'when' => 'waarVindtHetEvenementPlaats', 'eq' => 'buiten'],
-                    'components' => [],
+                    'components' => [
+                        ['key' => 'dummy', 'type' => 'textfield', 'label' => 'Dummy'],
+                    ],
                 ],
             ]],
         ];
