@@ -206,7 +206,7 @@ return [
                 'formaat' => 'datum_tijd',
                 'lengte' => '14',
                 'kardinaliteit' => '1',
-                'waardenverzameling' => []
+                'waardenverzameling' => [],
             ],
         ],
         [
@@ -217,7 +217,7 @@ return [
                 'formaat' => 'datum_tijd',
                 'lengte' => '14',
                 'kardinaliteit' => '1',
-                'waardenverzameling' => []
+                'waardenverzameling' => [],
             ],
         ],
         [

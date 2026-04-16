@@ -77,6 +77,7 @@ class ClientsRelationManager extends RelationManager
                         $data['grant_types'] = ['client_credentials'];
                         $data['redirect_uris'] = [];
                         $data['revoked'] = false;
+                        $data['scopes'] = ['*'];
 
                         return $data;
                     }),

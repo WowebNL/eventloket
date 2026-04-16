@@ -100,6 +100,10 @@ class AppServiceProvider extends ServiceProvider
             Password::defaults(fn () => Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised());
         }
         Passport::tokensExpireIn(CarbonInterval::days(config('app.api.token_expire_in_days')));
+        Passport::tokensCan([
+            'api:access' => 'Algemene toegang tot de API endpoints',
+            'notifications:receive' => 'Toegang tot de open-notifications listen webhook',
+        ]);
 
         Carbon::mixin(new CarbonBusinessDaysMixin);
 
