@@ -146,7 +146,7 @@ class StepSchemaGenerator
             'select' => $this->renderWithOptions($pad, 'Select', $component),
             'selectboxes' => $this->renderWithOptions($pad, 'CheckboxList', $component),
             'file' => $this->renderCallChain($pad, 'FileUpload', $key, $label, $component),
-            'map' => $this->renderCallChain($pad, 'Map', $key, $label, $component),
+            'map' => $this->renderMap($component, $pad),
             'addressNL' => $this->renderAddressNL($component, $pad),
             'fieldset' => $this->renderContainer($component, $pad, 'Fieldset', $label ?: $key),
             'columns' => $this->renderColumns($component, $pad),
@@ -327,6 +327,48 @@ class StepSchemaGenerator
         }
         $chain .= "\n{$pad}    ->schema([\n{$body}\n{$pad}    ])";
         $chain .= $this->visibilityModifiers($component, $pad);
+
+        return $chain;
+    }
+
+    /**
+     * Emit een Dotswan Map-veld met interactie-type uit OF's `component.interactions`.
+     * Defaults naar Zuid-Limburg (Maastricht) als startpositie; GeoMan is
+     * altijd aan zodat de user kan tekenen/bewerken.
+     *
+     * @param  array<string, mixed>  $component
+     */
+    private function renderMap(array $component, string $pad): string
+    {
+        $key = (string) ($component['key'] ?? '');
+        $label = (string) ($component['label'] ?? '');
+        $interactions = is_array($component['interactions'] ?? null) ? $component['interactions'] : [];
+        $allowPolygon = (bool) ($interactions['polygon'] ?? false);
+        $allowPolyline = (bool) ($interactions['polyline'] ?? false);
+        $allowMarker = (bool) ($interactions['marker'] ?? false);
+
+        // Als er geen interactions-config is, defaulten we naar marker-only
+        // (OF-gedrag voor "punt-selectie" velden).
+        if (! $allowPolygon && ! $allowPolyline && ! $allowMarker) {
+            $allowMarker = true;
+        }
+
+        $chain = "{$pad}Map::make('{$this->esc($key)}')";
+        if ($label !== '') {
+            $chain .= "\n{$pad}    ".$this->labelModifier($label, $pad);
+        }
+
+        // Default: Maastricht (Veiligheidsregio Zuid-Limburg).
+        $chain .= "\n{$pad}    ->defaultLocation(50.8514, 5.6910)";
+        $chain .= "\n{$pad}    ->zoom(11)";
+        $chain .= "\n{$pad}    ->geoMan(true)";
+        $chain .= "\n{$pad}    ->geoManEditable(true)";
+        $chain .= "\n{$pad}    ->drawPolygon(".($allowPolygon ? 'true' : 'false').')';
+        $chain .= "\n{$pad}    ->drawPolyline(".($allowPolyline ? 'true' : 'false').')';
+        $chain .= "\n{$pad}    ->drawMarker(".($allowMarker ? 'true' : 'false').')';
+        $chain .= "\n{$pad}    ->drawCircle(false)";
+        $chain .= "\n{$pad}    ->drawRectangle(false)";
+        $chain .= $this->commonModifiers($component, $pad);
 
         return $chain;
     }

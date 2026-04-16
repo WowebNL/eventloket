@@ -392,6 +392,15 @@ final class VergunningaanvraagVervolgvragenStep
                             ->schema([
                                 Map::make('positieVanDeDoorgang')
                                     ->label('Positie van de doorgang')
+                                    ->defaultLocation(50.8514, 5.6910)
+                                    ->zoom(11)
+                                    ->geoMan(true)
+                                    ->geoManEditable(true)
+                                    ->drawPolygon(false)
+                                    ->drawPolyline(false)
+                                    ->drawMarker(true)
+                                    ->drawCircle(false)
+                                    ->drawRectangle(false)
                                     ->required(),
                                 TextInput::make('naamVanDeDoorgang')
                                     ->label('Naam van de doorgang')

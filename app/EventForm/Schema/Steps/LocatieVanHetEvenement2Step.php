@@ -72,6 +72,15 @@ final class LocatieVanHetEvenement2Step
                             ->maxLength(1000),
                         Map::make('buitenLocatieVanHetEvenement')
                             ->label('Buiten locatie van het evenement')
+                            ->defaultLocation(50.8514, 5.6910)
+                            ->zoom(11)
+                            ->geoMan(true)
+                            ->geoManEditable(true)
+                            ->drawPolygon(true)
+                            ->drawPolyline(false)
+                            ->drawMarker(false)
+                            ->drawCircle(false)
+                            ->drawRectangle(false)
                             ->required(),
                     ])
                     ->hidden(),
@@ -85,6 +94,15 @@ final class LocatieVanHetEvenement2Step
                             ->schema([
                                 Map::make('routeVanHetEvenement')
                                     ->label('Route van het evenement')
+                                    ->defaultLocation(50.8514, 5.6910)
+                                    ->zoom(11)
+                                    ->geoMan(true)
+                                    ->geoManEditable(true)
+                                    ->drawPolygon(false)
+                                    ->drawPolyline(true)
+                                    ->drawMarker(false)
+                                    ->drawCircle(false)
+                                    ->drawRectangle(false)
                                     ->required(),
                             ]),
                         FileUpload::make('gpxBestandVanDeRoute')

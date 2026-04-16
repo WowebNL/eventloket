@@ -169,6 +169,15 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->schema([
                                 Map::make('locatieVanOpvangVanDeKinderenOnder12Jaar')
                                     ->label('Locatie van opvang van de kinderen onder 12 jaar')
+                                    ->defaultLocation(50.8514, 5.6910)
+                                    ->zoom(11)
+                                    ->geoMan(true)
+                                    ->geoManEditable(true)
+                                    ->drawPolygon(false)
+                                    ->drawPolyline(false)
+                                    ->drawMarker(true)
+                                    ->drawCircle(false)
+                                    ->drawRectangle(false)
                                     ->required(),
                             ]),
                     ])
@@ -191,6 +200,15 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->schema([
                                 Map::make('locatieVanOvernachtenDoorPubliekDeelnemers')
                                     ->label('Locatie van overnachten door publiek/deelnemers')
+                                    ->defaultLocation(50.8514, 5.6910)
+                                    ->zoom(11)
+                                    ->geoMan(true)
+                                    ->geoManEditable(true)
+                                    ->drawPolygon(false)
+                                    ->drawPolyline(false)
+                                    ->drawMarker(true)
+                                    ->drawCircle(false)
+                                    ->drawRectangle(false)
                                     ->required(),
                             ])
                             ->hidden(),
@@ -206,6 +224,15 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->schema([
                                 Map::make('locatieVanOvernachtenDoorPersoneelOrganisatie1')
                                     ->label('Locatie van overnachten door personeel/organisatie')
+                                    ->defaultLocation(50.8514, 5.6910)
+                                    ->zoom(11)
+                                    ->geoMan(true)
+                                    ->geoManEditable(true)
+                                    ->drawPolygon(false)
+                                    ->drawPolyline(false)
+                                    ->drawMarker(true)
+                                    ->drawCircle(false)
+                                    ->drawRectangle(false)
                                     ->required(),
                             ])
                             ->hidden(),

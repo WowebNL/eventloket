@@ -169,7 +169,7 @@ describe('StepSchemaGenerator field emission', function () {
         expect(generateStep($step))->toContain("FileUpload::make('bijlage')");
     });
 
-    test('map emits dotswan Map field', function () {
+    test('map emits dotswan Map field with default location + zoom + GeoMan', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -177,7 +177,64 @@ describe('StepSchemaGenerator field emission', function () {
             ]],
         ];
 
-        expect(generateStep($step))->toContain("Map::make('locatie')");
+        $content = generateStep($step);
+
+        expect($content)->toContain("Map::make('locatie')")
+            ->and($content)->toContain('->defaultLocation(')
+            ->and($content)->toContain('->zoom(')
+            ->and($content)->toContain('->geoMan(true)')
+            ->and($content)->toContain('->geoManEditable(true)');
+    });
+
+    test('map with polygon interaction only allows polygon drawing', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'buitenLocatie',
+                    'type' => 'map',
+                    'label' => 'Buitenlocatie',
+                    'interactions' => ['marker' => false, 'polygon' => true, 'polyline' => false],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain('->drawPolygon(true)')
+            ->and($content)->toContain('->drawPolyline(false)')
+            ->and($content)->toContain('->drawMarker(false)');
+    });
+
+    test('map with polyline interaction only allows line drawing (routes)', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'routeVanHetEvenement',
+                    'type' => 'map',
+                    'label' => 'Route',
+                    'interactions' => ['marker' => false, 'polygon' => false, 'polyline' => true],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain('->drawPolyline(true)')
+            ->and($content)->toContain('->drawPolygon(false)')
+            ->and($content)->toContain('->drawMarker(false)');
+    });
+
+    test('map without interactions config defaults to marker-only', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'punt', 'type' => 'map', 'label' => 'Punt'],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain('->drawMarker(true)');
     });
 });
 

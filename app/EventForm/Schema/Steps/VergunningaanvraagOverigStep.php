@@ -47,6 +47,15 @@ final class VergunningaanvraagOverigStep
                                     ->maxLength(1000),
                                 Map::make('positieVanHetVoorwerp')
                                     ->label('Positie van het voorwerp')
+                                    ->defaultLocation(50.8514, 5.6910)
+                                    ->zoom(11)
+                                    ->geoMan(true)
+                                    ->geoManEditable(true)
+                                    ->drawPolygon(false)
+                                    ->drawPolyline(false)
+                                    ->drawMarker(true)
+                                    ->drawCircle(false)
+                                    ->drawRectangle(false)
                                     ->required(),
                                 DateTimePicker::make('startTijdstipVoorwerp')
                                     ->label('Start tijdstip')
