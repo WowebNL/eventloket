@@ -132,6 +132,29 @@ describe('RulesEngine', function () {
             ->toThrow(RuntimeException::class, 'oscillating');
     });
 
+    test('field-hidden overrides are reset before each evaluate, so stale rules do not persist', function () {
+        // Simuleer: gebruiker had eerder 'buiten' aangevinkt → rule zette
+        // locatieSOpKaart zichtbaar (hidden=false). Nu unchecken.
+        $state = FormState::empty();
+        $state->setField('choice', 'buiten');
+        $state->setFieldHidden('locatieSOpKaart', false); // stale override uit vorige evaluate
+
+        $engine = new RulesEngine([
+            new CallableRule(
+                'show-when-buiten',
+                fn (FormState $s) => $s->get('choice') === 'buiten',
+                fn (FormState $s) => $s->setFieldHidden('locatieSOpKaart', false),
+            ),
+        ]);
+
+        // User vinkt 'buiten' uit; in de nieuwe state fires de rule niet meer.
+        $state->setField('choice', null);
+        $engine->evaluate($state);
+
+        // Override moet gereset zijn → default (hidden=true) kan weer kicken.
+        expect($state->isFieldHidden('locatieSOpKaart'))->toBeNull();
+    });
+
     test('evaluateForStep runs only rules whose triggerStepUuids contain the given step', function () {
         $state = FormState::empty();
 

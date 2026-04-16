@@ -93,6 +93,19 @@ class FormState implements Arrayable
         $this->fieldHiddenOverrides[$fieldKey] = $hidden;
     }
 
+    /**
+     * Leeg alle rule-driven visibility-overrides. Wordt door de
+     * RulesEngine aangeroepen vóór elke pass — anders zou een rule die
+     * ooit eens `hidden=false` heeft gezet die waarde voor altijd
+     * behouden, ook nadat z'n trigger niet meer waar is. Defaults
+     * (component.hidden uit OF + conditional.show/when/eq) nemen het
+     * opnieuw over.
+     */
+    public function resetFieldHiddenOverrides(): void
+    {
+        $this->fieldHiddenOverrides = [];
+    }
+
     public function isFieldHidden(string $fieldKey): ?bool
     {
         return $this->fieldHiddenOverrides[$fieldKey] ?? null;

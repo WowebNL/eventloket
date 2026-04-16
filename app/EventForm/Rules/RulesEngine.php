@@ -28,6 +28,10 @@ class RulesEngine
 
     public function evaluate(FormState $state): void
     {
+        // Wipe rule-driven field-hidden overrides zodat velden die door een
+        // niet-meer-triggerende rule op `hidden=false` stonden, terugvallen
+        // op hun default (component.hidden + conditional).
+        $state->resetFieldHiddenOverrides();
         $this->evaluateSet($state, $this->rules);
     }
 
@@ -38,6 +42,8 @@ class RulesEngine
      */
     public function evaluateForStep(FormState $state, string $stepUuid): void
     {
+        $state->resetFieldHiddenOverrides();
+
         $scoped = [];
         foreach ($this->rules as $rule) {
             $triggers = $rule->triggerStepUuids();
