@@ -6276,64 +6276,6 @@
             "time": "2025-12-14T04:43:48+00:00"
         },
         {
-            "name": "rbdwllr/reallysimplejwt",
-            "version": "4.0.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/RobDWaller/ReallySimpleJWT.git",
-                "reference": "2b92aba98c71cfc4046dea895659450bfce530ed"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/RobDWaller/ReallySimpleJWT/zipball/2b92aba98c71cfc4046dea895659450bfce530ed",
-                "reference": "2b92aba98c71cfc4046dea895659450bfce530ed",
-                "shasum": ""
-            },
-            "require": {
-                "php": ">=7.4.0"
-            },
-            "require-dev": {
-                "infection/infection": "^0.20",
-                "phpbench/phpbench": "^1.0",
-                "phploc/phploc": "^7.0",
-                "phpmd/phpmd": "^2.9",
-                "phpstan/phpstan": "^0.12",
-                "phpunit/phpunit": "^9.5",
-                "sebastian/phpcpd": "^6.0",
-                "squizlabs/php_codesniffer": "^3.5"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "ReallySimpleJWT\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Rob Waller",
-                    "email": "rdwaller1984@gmail.com"
-                }
-            ],
-            "description": "A really simple library to generate user authentication JSON Web Tokens.",
-            "keywords": [
-                "Authentication",
-                "json",
-                "json web tokens",
-                "jwt",
-                "php",
-                "tokens"
-            ],
-            "support": {
-                "issues": "https://github.com/RobDWaller/ReallySimpleJWT/issues",
-                "source": "https://github.com/RobDWaller/ReallySimpleJWT/tree/4.0.3"
-            },
-            "time": "2021-07-12T10:12:22+00:00"
-        },
-        {
             "name": "ryangjchandler/blade-capture-directive",
             "version": "v1.1.1",
             "source": {
@@ -9908,16 +9850,13 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/WowebNL/laravel-openzaak.git",
-                "reference": "0596eb837677e377c13effdf14c95cd7209bbd9e"
+                "reference": "8ecf94df51f76fc2e0063caf8bf1857f82508770"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WowebNL/laravel-openzaak/zipball/0596eb837677e377c13effdf14c95cd7209bbd9e",
-                "reference": "0596eb837677e377c13effdf14c95cd7209bbd9e",
+                "url": "https://api.github.com/repos/WowebNL/laravel-openzaak/zipball/8ecf94df51f76fc2e0063caf8bf1857f82508770",
+                "reference": "8ecf94df51f76fc2e0063caf8bf1857f82508770",
                 "shasum": ""
-            },
-            "require": {
-                "rbdwllr/reallysimplejwt": "^4.0"
             },
             "default-branch": true,
             "type": "library",
@@ -9947,7 +9886,7 @@
                 "source": "https://github.com/WowebNL/laravel-openzaak/tree/main",
                 "issues": "https://github.com/WowebNL/laravel-openzaak/issues"
             },
-            "time": "2026-04-16T11:11:51+00:00"
+            "time": "2026-04-16T13:30:42+00:00"
         }
     ],
     "packages-dev": [

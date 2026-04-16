@@ -10,10 +10,6 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Laravel\Passport\Client;
 use Laravel\Passport\Token;
-use ReallySimpleJWT\Build;
-use ReallySimpleJWT\Encoders\EncodeHS256;
-use ReallySimpleJWT\Helper\Validator;
-use ReallySimpleJWT\Interfaces\Secret as SecretInterface;
 
 class RegisterOpenNotificatiesAbonnement extends Command
 {
@@ -245,8 +241,9 @@ class RegisterOpenNotificatiesAbonnement extends Command
         return Command::SUCCESS;
     }
 
-    private function buildJwt(string $clientId, string $clientSecret): string
+    private function buildJwt(string $clientId, string $clientSecret) : string
     {
+
         $payload = [
             'iss' => $clientId,
             'iat' => Carbon::now()->timestamp,
@@ -254,24 +251,12 @@ class RegisterOpenNotificatiesAbonnement extends Command
             'user_id' => 'application',
             'user_representation' => 'Application background task',
         ];
+        $encode = fn($data) => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 
-        // Use Build directly with a permissive secret validator so that local
-        // secrets that don't meet ReallySimpleJWT's complexity requirements
-        // (min 12 chars, upper/lower/digit/special) still work.
-        $laxSecret = new class implements SecretInterface
-        {
-            public function validate(string $secret): bool
-            {
-                return strlen($secret) > 0;
-            }
-        };
+        $header    = $encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
+        $body      = $encode(json_encode($payload));
+        $signature = $encode(hash_hmac('sha256', "$header.$body", $clientSecret, true));
 
-        $builder = new Build('JWT', new Validator, $laxSecret, new EncodeHS256);
-
-        foreach ($payload as $key => $value) {
-            $builder->setPayloadClaim($key, $value);
-        }
-
-        return $builder->setSecret($clientSecret)->build()->getToken();
+        return "$header.$body.$signature";
     }
 }
