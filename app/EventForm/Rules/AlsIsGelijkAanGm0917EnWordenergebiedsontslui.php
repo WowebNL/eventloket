@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\EventForm\Rules;
+
+use App\EventForm\State\FormState;
+
+/**
+ * @openforms-rule-uuid 479ac7b1-e701-4bd1-97ce-dbe2e8aea919
+ *
+ * @openforms-rule-description Als ({{evenementInGemeente.brk_identification}} is gelijk aan 'GM0917')en ({{wordenErGebiedsontslui…
+ */
+final class AlsIsGelijkAanGm0917EnWordenergebiedsontslui implements Rule
+{
+    public function identifier(): string
+    {
+        return '479ac7b1-e701-4bd1-97ce-dbe2e8aea919';
+    }
+
+    public function applies(FormState $s): bool
+    {
+        return (bool) ((($s->get('evenementInGemeente.brk_identification') === 'GM0917') && ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee')));
+    }
+
+    public function apply(FormState $s): void
+    {
+        $s->setSystem('registration_backend', 'backend6');
+    }
+}

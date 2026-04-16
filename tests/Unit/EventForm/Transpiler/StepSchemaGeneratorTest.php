@@ -1,0 +1,269 @@
+<?php
+
+declare(strict_types=1);
+
+use App\EventForm\Transpiler\StepSchemaGenerator;
+
+function generateStep(array $step): string
+{
+    $generator = new StepSchemaGenerator;
+
+    return $generator->generate($step)->fileContent;
+}
+
+describe('StepSchemaGenerator class structure', function () {
+    test('generated class has Step::make with step name', function () {
+        $step = [
+            'uuid' => 'step-uuid-1',
+            'slug' => 'contactgegevens',
+            'name' => 'Contactgegevens',
+            'index' => 0,
+            'configuration' => ['components' => []],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("namespace App\\EventForm\\Schema\\Steps")
+            ->and($content)->toContain('class ContactgegevensStep')
+            ->and($content)->toContain("Step::make('Contactgegevens')")
+            ->and($content)->toContain('@openforms-step-uuid step-uuid-1');
+    });
+
+    test('class name is derived from step slug as PascalCase', function () {
+        $step = [
+            'uuid' => 'x',
+            'slug' => 'vergunningaanvraag-vervolgvragen',
+            'name' => 'Vergunningaanvraag: kenmerken',
+            'configuration' => ['components' => []],
+        ];
+
+        $generator = new StepSchemaGenerator;
+        $generated = $generator->generate($step);
+
+        expect($generated->className)->toBe('VergunningaanvraagVervolgvragenStep');
+    });
+});
+
+describe('StepSchemaGenerator field emission', function () {
+    test('textfield emits TextInput', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => [
+                'components' => [
+                    [
+                        'key' => 'watIsUwVoornaam',
+                        'type' => 'textfield',
+                        'label' => 'Wat is uw voornaam?',
+                        'validate' => ['required' => true, 'maxLength' => 50],
+                    ],
+                ],
+            ],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("TextInput::make('watIsUwVoornaam')")
+            ->and($content)->toContain("->label('Wat is uw voornaam?')")
+            ->and($content)->toContain('->required()')
+            ->and($content)->toContain('->maxLength(50)');
+    });
+
+    test('textarea emits Textarea', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => [
+                'components' => [
+                    ['key' => 'beschrijving', 'type' => 'textarea', 'label' => 'Beschrijving'],
+                ],
+            ],
+        ];
+
+        expect(generateStep($step))->toContain("Textarea::make('beschrijving')");
+    });
+
+    test('email emits TextInput with email()', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'emailveld', 'type' => 'email', 'label' => 'E-mail'],
+            ]],
+        ];
+
+        $content = generateStep($step);
+        expect($content)->toContain("TextInput::make('emailveld')")
+            ->and($content)->toContain('->email()');
+    });
+
+    test('number emits TextInput numeric', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'aantal', 'type' => 'number', 'label' => 'Aantal'],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain('->numeric()');
+    });
+
+    test('radio emits Radio with options', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'waarvoorWiltUEventloketGebruiken',
+                    'type' => 'radio',
+                    'label' => 'Waarvoor?',
+                    'values' => [
+                        ['value' => 'evenement', 'label' => 'Voor een evenement'],
+                        ['value' => 'vooraankondiging', 'label' => 'Voor een vooraankondiging'],
+                    ],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("Radio::make('waarvoorWiltUEventloketGebruiken')")
+            ->and($content)->toContain("'evenement' => 'Voor een evenement'")
+            ->and($content)->toContain("'vooraankondiging' => 'Voor een vooraankondiging'");
+    });
+
+    test('selectboxes emits CheckboxList', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'extras',
+                    'type' => 'selectboxes',
+                    'label' => 'Extras',
+                    'values' => [
+                        ['value' => 'a', 'label' => 'Optie A'],
+                        ['value' => 'b', 'label' => 'Optie B'],
+                    ],
+                ],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain("CheckboxList::make('extras')");
+    });
+
+    test('datetime emits DateTimePicker', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'start', 'type' => 'datetime', 'label' => 'Start'],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain("DateTimePicker::make('start')");
+    });
+
+    test('file emits FileUpload', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'bijlage', 'type' => 'file', 'label' => 'Bijlage'],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain("FileUpload::make('bijlage')");
+    });
+
+    test('map emits dotswan Map field', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'locatie', 'type' => 'map', 'label' => 'Locatie'],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain("Map::make('locatie')");
+    });
+});
+
+describe('StepSchemaGenerator nesting', function () {
+    test('fieldset wraps its children in Fieldset::make', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'persoon',
+                    'type' => 'fieldset',
+                    'label' => 'Persoon',
+                    'components' => [
+                        ['key' => 'naam', 'type' => 'textfield', 'label' => 'Naam'],
+                    ],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("Fieldset::make('Persoon')")
+            ->and($content)->toContain("TextInput::make('naam')");
+    });
+
+    test('columns wraps its children in Grid', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'cols',
+                    'type' => 'columns',
+                    'columns' => [
+                        ['components' => [['key' => 'a', 'type' => 'textfield', 'label' => 'A']]],
+                        ['components' => [['key' => 'b', 'type' => 'textfield', 'label' => 'B']]],
+                    ],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain('Grid::make(2)')
+            ->and($content)->toContain("TextInput::make('a')")
+            ->and($content)->toContain("TextInput::make('b')");
+    });
+
+    test('editgrid emits Repeater with inner schema', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'tenten',
+                    'type' => 'editgrid',
+                    'label' => 'Welke tenten',
+                    'components' => [
+                        ['key' => 'tentnummer', 'type' => 'textfield', 'label' => 'Tent nr'],
+                    ],
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("Repeater::make('tenten')")
+            ->and($content)->toContain("TextInput::make('tentnummer')");
+    });
+});
+
+describe('StepSchemaGenerator content', function () {
+    test('content blocks are emitted as Placeholder with HtmlString', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                [
+                    'key' => 'info',
+                    'type' => 'content',
+                    'label' => 'Info',
+                    'html' => '<p>Lees eerst de instructies.</p>',
+                ],
+            ]],
+        ];
+
+        $content = generateStep($step);
+
+        expect($content)->toContain("Placeholder::make('info')")
+            ->and($content)->toContain('<p>Lees eerst de instructies.</p>');
+    });
+});

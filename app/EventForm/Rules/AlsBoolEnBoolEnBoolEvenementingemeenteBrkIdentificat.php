@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\EventForm\Rules;
+
+use App\EventForm\State\FormState;
+
+/**
+ * @openforms-rule-uuid 3fa0fbf5-9ee1-4c2a-9074-9993e208b010
+ *
+ * @openforms-rule-description Als bool({{EvenementStart}})en bool({{EvenementEind}})en bool({{evenementInGemeente.brk_identificat…
+ */
+final class AlsBoolEnBoolEnBoolEvenementingemeenteBrkIdentificat implements Rule
+{
+    public function identifier(): string
+    {
+        return '3fa0fbf5-9ee1-4c2a-9074-9993e208b010';
+    }
+
+    public function applies(FormState $s): bool
+    {
+        return (bool) ((((bool) $s->get('EvenementStart')) && ((bool) $s->get('EvenementEind')) && ((bool) $s->get('evenementInGemeente.brk_identification'))));
+    }
+
+    public function apply(FormState $s): void {}
+}
