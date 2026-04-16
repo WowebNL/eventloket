@@ -7,7 +7,6 @@ namespace App\EventForm\Schema\Steps;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\HtmlString;
 
@@ -27,17 +26,7 @@ final class RisicoscanStep
             ->schema([
                 TextEntry::make('content')
                     ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('content');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>', $livewire->state()))),
                 Radio::make('watIsDeAantrekkingskrachtVanHetEvenement')
                     ->label('Wat is de aantrekkingskracht van het evenement?')
                     ->options([
@@ -49,16 +38,6 @@ return false || (false);
                         '3' => 'Internationaal',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsDeAantrekkingskrachtVanHetEvenement');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep')
                     ->label('Wat is de belangrijkste leeftijdscategorie van de doelgroep?')
@@ -72,16 +51,6 @@ return false || (false);
                         '0.75__2' => 'Alle leeftijden',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid')
                     ->label('Is er sprake van aanwezigheid van politieke aandacht en/of mediageniekheid?')
@@ -90,16 +59,6 @@ return false || (false);
                         '1' => 'Ja',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('isEenDeelVanDeDoelgroepVerminderdZelfredzaam')
                     ->label('Is een deel van de doelgroep verminderd zelfredzaam?')
@@ -110,16 +69,6 @@ return false || (false);
                         '0' => 'Volledig zelfredzaam',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('isEenDeelVanDeDoelgroepVerminderdZelfredzaam');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('isErSprakeVanAanwezigheidVanRisicovolleActiviteiten')
                     ->label('Is er sprake van aanwezigheid van risicovolle activiteiten?')
@@ -128,16 +77,6 @@ return false || (false);
                         '1' => 'Ja',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('isErSprakeVanAanwezigheidVanRisicovolleActiviteiten');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep')
                     ->label('Wat is het grootste deel van de samenstelling van de doelgroep?')
@@ -147,16 +86,6 @@ return false || (false);
                         '1' => 'Alleen deelnemers',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('isErSprakeVanOvernachten')
                     ->label('Is er sprake van overnachten?')
@@ -165,16 +94,6 @@ return false || (false);
                         '1' => 'Er wordt overnacht op een niet daartoe bestemde locatie',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('isErSprakeVanOvernachten');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('isErGebruikVanAlcoholEnDrugs')
                     ->label('Is er gebruik van alcohol en drugs?')
@@ -184,16 +103,6 @@ return false || (false);
                         '1' => 'Aanwezig, met risicoverwachting',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('isErGebruikVanAlcoholEnDrugs');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('watIsHetAantalGelijktijdigAanwezigPersonen')
                     ->label('Wat is het aantal gelijktijdig aanwezig personen?')
@@ -206,16 +115,6 @@ return false || (false);
                         '1.25' => '> 15.000',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsHetAantalGelijktijdigAanwezigPersonen');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('inWelkSeizoenVindtHetEvenementPlaats')
                     ->label('In welk seizoen vindt het evenement plaats?')
@@ -224,16 +123,6 @@ return false || (false);
                         '0.5' => 'Zomer of winter',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('inWelkSeizoenVindtHetEvenementPlaats');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('inWelkeLocatieVindtHetEvenementPlaats')
                     ->label('In welke locatie vindt het evenement plaats?')
@@ -246,16 +135,6 @@ return false || (false);
                         '1' => 'Op, aan of in het water',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('inWelkeLocatieVindtHetEvenementPlaats');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('opWelkSoortOndergrondVindtHetEvenementPlaats')
                     ->label('Op welk soort ondergrond vindt het evenement plaats?')
@@ -265,16 +144,6 @@ return false || (false);
                         '0.75' => 'Onverharde ondergrond, drassig',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('opWelkSoortOndergrondVindtHetEvenementPlaats');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('watIsDeTijdsduurVanHetEvenement')
                     ->label('Wat is de tijdsduur van het evenement?')
@@ -287,16 +156,6 @@ return false || (false);
                         '1.25' => 'Meerdere aaneengesloten dagen',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsDeTijdsduurVanHetEvenement');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Radio::make('welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing')
                     ->label('Welke beschikbaarheid van aan- en afvoerwegen is van toepassing?')
@@ -307,30 +166,11 @@ return false || (false);
                         '0' => 'Goede aan- en afvoerwegen',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 TextEntry::make('risicoClassificatieContent')
                     ->hiddenLabel()
                     ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('risicoClassificatieContent');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('risicoClassificatieContent') !== false),
             ]);
     }
 }

@@ -30,30 +30,18 @@ final class NaamVanHetEvenementStep
                     ->label('Wat is de naam van het evenement?')
                     ->required()
                     ->maxLength(1000)
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsDeNaamVanHetEvenementVergunning');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Textarea::make('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                     ->required()
                     ->maxLength(10000)
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || ($get('watIsDeNaamVanHetEvenementVergunning') === '');
+                        return $get('watIsDeNaamVanHetEvenementVergunning') === '';
                     }),
                 Select::make('soortEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -79,30 +67,26 @@ return false || ($get('watIsDeNaamVanHetEvenementVergunning') === '');
                         'Anders' => 'Anders',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('soortEvenement');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || ($get('watIsDeNaamVanHetEvenementVergunning') === '');
+                        return $get('watIsDeNaamVanHetEvenementVergunning') === '';
                     })
                     ->live(),
                 Textarea::make('omschrijfHetSoortEvenement')
                     ->label('Omschrijf het soort evenement')
                     ->required()
                     ->maxLength(10000)
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('omschrijfHetSoortEvenement');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! ($get('soortEvenement') === 'Anders'));
+                        return ! $get('soortEvenement') === 'Anders';
                     }),
                 Radio::make('gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen')
                     ->label('Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?')
@@ -110,15 +94,13 @@ return false || (! ($get('soortEvenement') === 'Anders'));
                         'Ja' => 'Ja',
                         'Nee' => 'Nee',
                     ])
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! ($get('soortEvenement') === 'Markt of braderie'));
+                        return ! $get('soortEvenement') === 'Markt of braderie';
                     }),
             ]);
     }

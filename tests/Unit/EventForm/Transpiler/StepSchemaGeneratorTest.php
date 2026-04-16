@@ -516,7 +516,9 @@ describe('StepSchemaGenerator visibility', function () {
 
         expect($content)->toContain('->hidden(')
             ->and($content)->toContain("isFieldHidden('organisatieInformatie')")
-            ->and($content)->toContain('true');
+            // Default-hidden emit: "!== false" is genoeg — het veld is
+            // verborgen tenzij een rule expliciet unhides.
+            ->and($content)->toContain('!== false');
     });
 
     test('conditional.show=true emits closure that hides when no match', function () {
@@ -590,7 +592,7 @@ describe('StepSchemaGenerator visibility', function () {
             ->and($content)->toContain("\$get('waarVindtHetEvenementPlaats')");
     });
 
-    test('rule-driven hidden override wins: FormState::isFieldHidden(false) keeps field visible', function () {
+    test('default-hidden without conditional emits minimal closure (just rule-check)', function () {
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -599,18 +601,41 @@ describe('StepSchemaGenerator visibility', function () {
                     'type' => 'editgrid',
                     'label' => 'Locaties',
                     'hidden' => true,
-                    'components' => [],
+                    'components' => [
+                        ['key' => 'dummy', 'type' => 'textfield', 'label' => 'Dummy'],
+                    ],
                 ],
             ]],
         ];
 
         $content = generateStep($step);
 
-        // Gegenereerde closure moet eerst isFieldHidden() checken en vroeg
-        // returnen als de rule expliciet true/false zegt.
         expect($content)->toContain("isFieldHidden('locatieSOpKaart')")
-            ->and($content)->toContain('$rule === false')
-            ->and($content)->toContain('$rule === true');
+            // Geen overbodige `false || ...` patronen of dubbele if-returns.
+            ->and($content)->not->toContain('false || (')
+            ->and($content)->not->toContain('true || (');
+    });
+
+    test('emitted closure has no "} if" chain — elseif instead', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'x', 'type' => 'textfield', 'label' => 'X', 'hidden' => true],
+            ]],
+        ];
+
+        expect(generateStep($step))->not->toContain('} if (');
+    });
+
+    test('visibility closure has a return type', function () {
+        $step = [
+            'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
+            'configuration' => ['components' => [
+                ['key' => 'x', 'type' => 'textfield', 'label' => 'X', 'hidden' => true],
+            ]],
+        ];
+
+        expect(generateStep($step))->toContain('): bool');
     });
 });
 

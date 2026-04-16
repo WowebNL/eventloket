@@ -28,30 +28,11 @@ final class AanvraagOfMeldingStep
             ->schema([
                 TextEntry::make('content4')
                     ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('content4');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>', $livewire->state()))),
                 TextEntry::make('contentGemeenteMelding')
                     ->hiddenLabel()
                     ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('contentGemeenteMelding');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentGemeenteMelding') !== false),
                 Fieldset::make('Algemene vragen')
                     ->schema([
                         Radio::make('isHetAantalAanwezigenBijUwEvenementMinderDanSdf')
@@ -61,16 +42,6 @@ return true || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('isHetAantalAanwezigenBijUwEvenementMinderDanSdf');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            })
                             ->live(),
                         Radio::make('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Vinden de activiteiten van uw evenement plaats tussen {{ gemeenteVariabelen.tijdstip_mogelijk_niet_vergunningsplichtig.start }} uur en {{ gemeenteVariabelen.tijdstip_mogelijk_niet_vergunningsplichtig.end }} uur?', $livewire->state()))
@@ -79,15 +50,13 @@ return false || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
+                            ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
+                                if ($rule !== null) {
+                                    return $rule;
                                 }
 
-return false || (! ($get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Ja'));
+                                return ! $get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Ja';
                             })
                             ->live(),
                         Radio::make('WordtErAlleenMuziekGeluidGeproduceerdTussen')
@@ -97,15 +66,13 @@ return false || (! ($get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
+                            ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('WordtErAlleenMuziekGeluidGeproduceerdTussen');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
+                                if ($rule !== null) {
+                                    return $rule;
                                 }
 
-return false || (! ($get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen') === 'Ja'));
+                                return ! $get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen') === 'Ja';
                             })
                             ->live(),
                         Radio::make('IsdeGeluidsproductieLagerDan')
@@ -115,15 +82,13 @@ return false || (! ($get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstip
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
+                            ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('IsdeGeluidsproductieLagerDan');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
+                                if ($rule !== null) {
+                                    return $rule;
                                 }
 
-return false || (! ($get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Ja'));
+                                return ! $get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Ja';
                             })
                             ->live(),
                         Radio::make('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten')
@@ -133,15 +98,13 @@ return false || (! ($get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Ja'
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
+                            ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
+                                if ($rule !== null) {
+                                    return $rule;
                                 }
 
-return false || (! ($get('IsdeGeluidsproductieLagerDan') === 'Ja'));
+                                return ! $get('IsdeGeluidsproductieLagerDan') === 'Ja';
                             })
                             ->live(),
                         Radio::make('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst')
@@ -151,15 +114,13 @@ return false || (! ($get('IsdeGeluidsproductieLagerDan') === 'Ja'));
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
+                            ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
+                                if ($rule !== null) {
+                                    return $rule;
                                 }
 
-return false || (! ($get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten') === 'Ja'));
+                                return ! $get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten') === 'Ja';
                             })
                             ->live(),
                         Radio::make('indienErObjectenGeplaatstWordenZijnDezeDanKleiner')
@@ -169,15 +130,13 @@ return false || (! ($get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadO
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
+                            ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('indienErObjectenGeplaatstWordenZijnDezeDanKleiner');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
+                                if ($rule !== null) {
+                                    return $rule;
                                 }
 
-return false || (! ($get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst') === 'Ja'));
+                                return ! $get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst') === 'Ja';
                             })
                             ->live(),
                         Radio::make('meldingvraag1')
@@ -187,16 +146,7 @@ return false || (! ($get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('meldingvraag1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            })
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag1') !== false)
                             ->live(),
                         Radio::make('meldingvraag2')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_2 }}', $livewire->state()))
@@ -205,16 +155,7 @@ return true || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('meldingvraag2');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            })
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag2') !== false)
                             ->live(),
                         Radio::make('meldingvraag3')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_3 }}', $livewire->state()))
@@ -223,16 +164,7 @@ return true || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('meldingvraag3');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            })
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag3') !== false)
                             ->live(),
                         Radio::make('meldingvraag4')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_4 }}', $livewire->state()))
@@ -241,16 +173,7 @@ return true || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('meldingvraag4');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            })
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag4') !== false)
                             ->live(),
                         Radio::make('meldingvraag5')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_5 }}', $livewire->state()))
@@ -259,16 +182,7 @@ return true || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('meldingvraag5');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            })
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag5') !== false)
                             ->live(),
                         Radio::make('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer')
                             ->label('Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?')
@@ -277,54 +191,18 @@ return true || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            })
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') !== false)
                             ->live(),
                         TextEntry::make('contentGoNext')
                             ->hiddenLabel()
                             ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>', $livewire->state())))
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('contentGoNext');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            }),
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentGoNext') !== false),
                         TextEntry::make('MeldingTekst')
                             ->hiddenLabel()
                             ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>', $livewire->state())))
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('MeldingTekst');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            }),
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('MeldingTekst') !== false),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('algemeneVragen');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('algemeneVragen') !== false),
             ]);
     }
 }

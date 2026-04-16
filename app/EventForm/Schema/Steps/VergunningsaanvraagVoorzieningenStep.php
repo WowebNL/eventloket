@@ -34,442 +34,143 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->schema([
                         TextEntry::make('content23')
                             ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>', $livewire->state())))
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('content23');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>', $livewire->state()))),
                         TextInput::make('hoeveelVasteToilettenZijnBeschikbaar')
                             ->label('Hoeveel vaste toiletten zijn beschikbaar?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('hoeveelVasteToilettenZijnBeschikbaar');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar')
                             ->label('Hoeveel tijdelijke chemische toiletten / Dixies zijn er beschikbaar?')
                             ->numeric()
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            })
                             ->live(),
                         TextInput::make('hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar')
                             ->label('Hoeveel tijdelijke gespoelde toiletten zijn er beschikbaar?')
                             ->numeric()
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
+                            ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
+                                if ($rule !== null) {
+                                    return $rule;
                                 }
 
-return false || ($get('hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar') === '0');
+                                return $get('hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar') === '0';
                             }),
                         TextInput::make('welkPercentageVanDeToilettenIsVoorHeren')
                             ->label('Hoeveel toiletten zijn voor heren?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('welkPercentageVanDeToilettenIsVoorHeren');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalToilettenDamen')
                             ->label('Hoeveel toiletten zijn voor dames?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalToilettenDamen');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalToilettenMiva')
                             ->label('Hoeveel toiletten zijn voor MIVA/rolstoelgebruikers?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalToilettenMiva');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('handenwaspunten')
                             ->label('Hoeveel handenwaspunten worden er bij de toiletten ingericht op locatie Evenement ')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('handenwaspunten');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         Radio::make('reinigtUDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunning')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Reinigt u de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
                                 'Ja' => 'Ja',
                                 'Nee' => 'Nee',
                             ])
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('reinigtUDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunning');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         Radio::make('gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?', $livewire->state()))
                             ->options([
                                 'Ja' => 'Ja',
                                 'Nee' => 'Nee',
                             ])
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('wCs');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wCs') !== false),
                 Fieldset::make('Douche\'s')
                     ->schema([
                         TextEntry::make('content24')
                             ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>', $livewire->state())))
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('content24');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
                         TextInput::make('hoeveelVasteDouchevoorzieningenZijnBeschikbaar')
                             ->label('Hoeveel vaste douchevoorzieningen zijn beschikbaar?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('hoeveelVasteDouchevoorzieningenZijnBeschikbaar');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('hoeveelTijdelijkeDouchevoorzieningenZijnBeschikbaar')
                             ->label('Hoeveel tijdelijke douchevoorzieningen zijn beschikbaar?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('hoeveelTijdelijkeDouchevoorzieningenZijnBeschikbaar');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         Radio::make('wordenDeDouchesTussentijdsSchoonGemaakt')
                             ->label('Worden de douches tussentijds schoon gemaakt?')
                             ->options([
                                 'Ja' => 'Ja',
                                 'Nee' => 'Nee',
                             ])
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('wordenDeDouchesTussentijdsSchoonGemaakt');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('douches');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('douches') !== false),
                 Fieldset::make('EHBO')
                     ->schema([
                         TextEntry::make('content25')
                             ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>', $livewire->state())))
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('content25');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>', $livewire->state()))),
                         TextInput::make('aantalVasteEersteHulpposten')
                             ->label('Aantal vaste eerste hulpposten')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalVasteEersteHulpposten');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalMobieleEersteHulpteams')
                             ->label('Aantal mobiele eerste hulpteams')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalMobieleEersteHulpteams');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalEersteHulpverlenersMetNiveauBasisEersteHulp')
                             ->label('Aantal Eerste hulpverleners met niveau \'Basis eerste hulp\'')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalEersteHulpverlenersMetNiveauBasisEersteHulp');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalEersteHulpverlenersMetNiveauEvenementenEersteHulp')
                             ->label('Aantal Eerste hulpverleners met niveau \'Evenementen eerste hulp\'')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalEersteHulpverlenersMetNiveauEvenementenEersteHulp');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalZorgprofessionalsMetNiveauBasisZorg')
                             ->label('Aantal Zorgprofessionals met niveau \'Basis Zorg\'')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalZorgprofessionalsMetNiveauBasisZorg');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalZorgprofessionalsMetNiveauSpoedZorg')
                             ->label('Aantal Zorgprofessionals met niveau \'Spoed Zorg\'')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalZorgprofessionalsMetNiveauSpoedZorg');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalZorgprofessionalsMetNiveauMedischeZorg')
                             ->label('Aantal Zorgprofessionals met niveau \'Medische Zorg\'')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalZorgprofessionalsMetNiveauMedischeZorg');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalZorgprofessionalsMetNiveauSpecialistischeSpoedzorg')
                             ->label('Aantal Zorgprofessionals met niveau \'Specialistische Spoedzorg\'')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalZorgprofessionalsMetNiveauSpecialistischeSpoedzorg');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('aantalZorgprofessionalsMetNiveauArtsenSpecialistischeSpoedzorg')
                             ->label('Aantal Zorgprofessionals met niveau \'Artsen specialistische Spoedzorg\'')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalZorgprofessionalsMetNiveauArtsenSpecialistischeSpoedzorg');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('welkeOrganisatieVerzorgtDeEersteHulp')
                             ->label('Welke organisatie verzorgt de eerste hulp?')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('welkeOrganisatieVerzorgtDeEersteHulp');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('ehbo');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('ehbo') !== false),
                 Fieldset::make('Verzorging van kinderen jonger dan 12 jaar')
                     ->schema([
                         TextInput::make('voorHoeveelKinderenInTotaalJongerDan12JaarIsVerzorgingNodig')
                             ->label('Voor hoeveel kinderen in totaal jonger dan 12 jaar is verzorging nodig?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('voorHoeveelKinderenInTotaalJongerDan12JaarIsVerzorgingNodig');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('hoeveelVanHetTotaalAantalKinderenOnder12JaarValtInDeLeeftijdscategorieVan04Jaar')
                             ->label('Hoeveel van het totaal aantal kinderen onder 12 jaar valt in de leeftijdscategorie van 0-4 jaar?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('hoeveelVanHetTotaalAantalKinderenOnder12JaarValtInDeLeeftijdscategorieVan04Jaar');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('hoeveelVanHetTotaalAantalKinderenOnder12JaarValtInDeLeeftijdscategorieVan512Jaar')
                             ->label('Hoeveel van het totaal aantal kinderen onder 12 jaar valt in de leeftijdscategorie van 5-12 jaar?')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('hoeveelVanHetTotaalAantalKinderenOnder12JaarValtInDeLeeftijdscategorieVan512Jaar');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         Repeater::make('opWelkeLocatieOfLocatiesVindErOpvangVanDeKinderenOnder12JaarPlaats')
                             ->label('Op welke locatie of locaties vind er opvang van de kinderen onder 12 jaar plaats?')
                             ->schema([
@@ -486,55 +187,16 @@ return false || (false);
                                     ->drawRectangle(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
-                                    ->required()
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('locatieVanOpvangVanDeKinderenOnder12Jaar');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
-                            ])
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesVindErOpvangVanDeKinderenOnder12JaarPlaats');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                                    ->required(),
+                            ]),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('verzorgingVanKinderenJongerDan12Jaar');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verzorgingVanKinderenJongerDan12Jaar') !== false),
                 Fieldset::make('Overnachtingen')
                     ->schema([
                         TextInput::make('voorHoeveelMensenVerzorgtUOvernachtingenTijdensUwEvenement1')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Voor hoeveel mensen verzorgt u overnachtingen tijdens uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('voorHoeveelMensenVerzorgtUOvernachtingenTijdensUwEvenement1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers')
                             ->label('Is er sprake van overnachten door publiek/deelnemers?')
                             ->options([
@@ -542,16 +204,6 @@ return false || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('isErSprakeVanOvernachtenDoorPubliekDeelnemers');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            })
                             ->live(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Op welke locatie of locaties is er sprake van overnachten door publiek/deelnemers?')
@@ -569,28 +221,9 @@ return false || (false);
                                     ->drawRectangle(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
-                                    ->required()
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('locatieVanOvernachtenDoorPubliekDeelnemers');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->required(),
                             ])
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            }),
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1') !== false),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Is er sprake van overnachten door personeel/organisatie?')
                             ->options([
@@ -598,16 +231,6 @@ return true || (false);
                                 'Nee' => 'Nee',
                             ])
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('isErSprakeVanOvernachtenDoorPubliekDeelnemers1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            })
                             ->live(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2')
                             ->label('Op welke locatie of locaties is er sprake van overnachten door personeel/organisatie?')
@@ -625,161 +248,46 @@ return false || (false);
                                     ->drawRectangle(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
-                                    ->required()
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('locatieVanOvernachtenDoorPersoneelOrganisatie1');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->required(),
                             ])
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            }),
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2') !== false),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('overnachtingen');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('overnachtingen') !== false),
                 Fieldset::make('Bouwsels')
                     ->schema([
                         TextEntry::make('content26')
                             ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>', $livewire->state())))
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('content26');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>', $livewire->state()))),
                         TextInput::make('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?', $livewire->state()))
                             ->numeric()
                             ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return true || (false);
-                            }),
+                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc') !== false),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('bouwsels');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('bouwsels') !== false),
                 Fieldset::make('Beveiligers')
                     ->schema([
                         TextEntry::make('content36')
                             ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>', $livewire->state())))
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('content36');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>', $livewire->state()))),
                         Textarea::make('gegevensBeveiligingsorganisatieOpLocatieEvenementX1')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                             ->required()
-                            ->maxLength(10000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('gegevensBeveiligingsorganisatieOpLocatieEvenementX1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(10000),
                         TextInput::make('vergunningnummerBeveiligingsorganisatie1')
                             ->label('Vergunningnummer beveiligingsorganisatie')
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('vergunningnummerBeveiligingsorganisatie1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('vestigingsplaatsBeveiligingsorganisatie1')
                             ->label('Vestigingsplaats beveiligingsorganisatie')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('vestigingsplaatsBeveiligingsorganisatie1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                         TextInput::make('aantalBeveiligersOpLocatieEvenementX1')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Aantal beveiligers op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                             ->numeric()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('aantalBeveiligersOpLocatieEvenementX1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('beveiligers1');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('beveiligers1') !== false),
             ]);
     }
 }

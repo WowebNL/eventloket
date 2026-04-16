@@ -55,9 +55,10 @@ parameters:
         -
             identifier: ternary.alwaysFalse
             path: app/EventForm/Rules/*
-        # Gegenereerde Schema/Steps: de visibility-closures combineren een
-        # statisch-emit `true`/`false` met runtime `$get(...)`-checks; PHPStan
-        # ziet dat als dead code maar het is intentional per-veld codegen.
+        # Gegenereerde Schema/Steps: de visibility-closures combineren
+        # Filament's `$get()`-results (mixed) met conditional-eq-values uit
+        # de OF-config. PHPStan's inferentie is te strikt en vindt sommige
+        # vergelijkingen "altijd false/true" — false positives in codegen.
         -
             identifier: booleanOr.leftAlwaysTrue
             path: app/EventForm/Schema/Steps/*
@@ -69,4 +70,16 @@ parameters:
             path: app/EventForm/Schema/Steps/*
         -
             identifier: booleanOr.rightAlwaysFalse
+            path: app/EventForm/Schema/Steps/*
+        -
+            identifier: identical.alwaysFalse
+            path: app/EventForm/Schema/Steps/*
+        -
+            identifier: identical.alwaysTrue
+            path: app/EventForm/Schema/Steps/*
+        -
+            identifier: notIdentical.alwaysFalse
+            path: app/EventForm/Schema/Steps/*
+        -
+            identifier: notIdentical.alwaysTrue
             path: app/EventForm/Schema/Steps/*

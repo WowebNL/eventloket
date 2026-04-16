@@ -27,17 +27,7 @@ final class MeldingStep
             ->schema([
                 TextEntry::make('content7')
                     ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Welkom bij de pagina voor het indienen van melding. Wij vragen u nu om verderde details voor uw evenement in te vullen.</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('content7');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Welkom bij de pagina voor het indienen van melding. Wij vragen u nu om verderde details voor uw evenement in te vullen.</p>', $livewire->state()))),
                 Radio::make('wordtErAlcoholGeschonkenTijdensUwEvenement')
                     ->label('Wordt er alcohol geschonken tijdens uw evenement?')
                     ->options([
@@ -45,29 +35,17 @@ return false || (false);
                         'Nee' => 'Nee',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('wordtErAlcoholGeschonkenTijdensUwEvenement');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 TextEntry::make('content9')
                     ->hiddenLabel()
                     ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>{% if gemeenteVariabelen.melding_alcohol_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_alcohol_ontheffing_tekst|urlize }}</p><p>{% endif %}</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('content9');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! ($get('wordtErAlcoholGeschonkenTijdensUwEvenement') === 'Ja'));
+                        return ! $get('wordtErAlcoholGeschonkenTijdensUwEvenement') === 'Ja';
                     }),
                 Radio::make('wordenErFilmopnamesMetBehulpVanDronesGemaakt')
                     ->label('Worden er filmopnames met behulp van drones gemaakt? ')
@@ -76,29 +54,17 @@ return false || (! ($get('wordtErAlcoholGeschonkenTijdensUwEvenement') === 'Ja')
                         'Nee' => 'Nee',
                     ])
                     ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('wordenErFilmopnamesMetBehulpVanDronesGemaakt');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 TextEntry::make('content10')
                     ->hiddenLabel()
                     ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>{% if gemeenteVariabelen.melding_drone_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_drone_ontheffing_tekst }}</p><p>{% endif %}</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('content10');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! ($get('wordenErFilmopnamesMetBehulpVanDronesGemaakt') === 'Ja'));
+                        return ! $get('wordenErFilmopnamesMetBehulpVanDronesGemaakt') === 'Ja';
                     }),
                 Radio::make('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden')
                     ->label('Vinden er activiteiten plaats, waarvoor mogelijk brandveiligheidseisen gelden?')
@@ -106,29 +72,17 @@ return false || (! ($get('wordenErFilmopnamesMetBehulpVanDronesGemaakt') === 'Ja
                         'Ja' => 'Ja',
                         'Nee' => 'Nee',
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 TextEntry::make('content11')
                     ->hiddenLabel()
                     ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Raadpleeg <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a> voor de regelgeving en ontheffing evenement organiseren.</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('content11');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! ($get('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden') === 'Ja'));
+                        return ! $get('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden') === 'Ja';
                     }),
             ]);
     }

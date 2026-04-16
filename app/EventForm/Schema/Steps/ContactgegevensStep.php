@@ -30,249 +30,71 @@ final class ContactgegevensStep
             ->schema([
                 TextEntry::make('loadUserInformation')
                     ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Een ogenblik geduld, uw gegevens worden ingeladen…</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('loadUserInformation');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Een ogenblik geduld, uw gegevens worden ingeladen…</p>', $livewire->state()))),
                 TextInput::make('watIsUwVoornaam')
                     ->label('Wat is uw voornaam?')
                     ->required()
-                    ->maxLength(1000)
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsUwVoornaam');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->maxLength(1000),
                 TextInput::make('watIsUwAchternaam')
                     ->label('Wat is uw achternaam?')
                     ->required()
-                    ->maxLength(1000)
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsUwAchternaam');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->maxLength(1000),
                 TextInput::make('watIsUwEMailadres')
                     ->label('Wat is uw e-mailadres?')
                     ->email()
-                    ->required()
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsUwEMailadres');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->required(),
                 TextInput::make('watIsUwTelefoonnummer')
                     ->label('Wat is uw telefoonnummer?')
                     ->required()
-                    ->maxLength(1000)
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('watIsUwTelefoonnummer');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    }),
+                    ->maxLength(1000),
                 Fieldset::make('Organisatie informatie')
                     ->schema([
                         TextInput::make('watIsHetKamerVanKoophandelNummerVanUwOrganisatie')
                             ->label('Wat is het Kamer van Koophandel nummer van uw organisatie?')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('watIsHetKamerVanKoophandelNummerVanUwOrganisatie');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                         TextInput::make('watIsDeNaamVanUwOrganisatie')
                             ->label('Wat is de naam van uw organisatie?')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('watIsDeNaamVanUwOrganisatie');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                         Grid::make(2)
                             ->schema([
                                 TextInput::make('postcode1')
                                     ->label('Postcode')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('postcode1');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('huisletter1')
                                     ->label('Huisletter')
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('huisletter1');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('straatnaam1')
                                     ->label('Straatnaam')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('straatnaam1');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('huisnummer1')
                                     ->label('Huisnummer')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('huisnummer1');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('huisnummertoevoeging1')
                                     ->label('Huisnummertoevoeging')
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('huisnummertoevoeging1');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('plaatsnaam1')
                                     ->label('Plaatsnaam')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('plaatsnaam1');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
-                            ])
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('kolommen1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                                    ->maxLength(1000),
+                            ]),
                         TextInput::make('emailadresOrganisatie')
                             ->label('Wat is het e-mailadres van uw organisatie?')
-                            ->email()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('emailadresOrganisatie');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->email(),
                         TextInput::make('telefoonnummerOrganisatie')
                             ->label('Wat is het telefoonnummer van uw organisatie?')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('telefoonnummerOrganisatie');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('organisatieInformatie');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('organisatieInformatie') !== false),
                 TextEntry::make('waarschuwingGeenKvk')
                     ->hiddenLabel()
                     ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>', $livewire->state())))
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('waarschuwingGeenKvk');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('waarschuwingGeenKvk') !== false),
                 Fieldset::make('Adresgegevens')
                     ->schema([
                         Grid::make(2)
@@ -280,120 +102,31 @@ return true || (false);
                                 TextInput::make('postcode')
                                     ->label('Postcode')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('postcode');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('huisletter')
                                     ->label('Huisletter')
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('huisletter');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('straatnaam')
                                     ->label('Straatnaam')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('straatnaam');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('land')
                                     ->label('Land')
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('land');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('huisnummer')
                                     ->label('Huisnummer')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('huisnummer');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('huisnummertoevoeging')
                                     ->label('Huisnummertoevoeging')
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('huisnummertoevoeging');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
+                                    ->maxLength(1000),
                                 TextInput::make('plaatsnaam')
                                     ->label('Plaatsnaam')
                                     ->required()
-                                    ->maxLength(1000)
-                                    ->hidden(function (Get $get, $livewire) {
-                                        $rule = $livewire->state()->isFieldHidden('plaatsnaam');
-                                        if ($rule === true) {
-                                            return true;
-                                        } if ($rule === false) {
-                                            return false;
-                                        }
-
-return false || (false);
-                                    }),
-                            ])
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('kolommen');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                                    ->maxLength(1000),
+                            ]),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('adresgegevens');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return true || (false);
-                    }),
+                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('adresgegevens') !== false),
                 CheckboxList::make('extraContactpersonenToevoegen')
                     ->label('Extra contactpersonen toevoegen')
                     ->options([
@@ -401,181 +134,75 @@ return true || (false);
                         'tijdens' => 'Contactpersoon tijdens het evenement',
                         'achteraf' => 'Contactpersoon na het evenement',
                     ])
-                    ->hidden(function (Get $get, $livewire) {
-                        $rule = $livewire->state()->isFieldHidden('extraContactpersonenToevoegen');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
-                        }
-
-return false || (false);
-                    })
                     ->live(),
                 Fieldset::make('Contactpersoon voorafgaand aan het evenement')
                     ->schema([
                         TextInput::make('naam')
                             ->label('Naam')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('naam');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                         TextInput::make('telefoonnummer')
                             ->label('Telefoonnummer')
                             ->tel()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('telefoonnummer');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('eMailadres')
                             ->label('E-mailadres')
                             ->email()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('eMailadres');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('contactpersoonVoorafgaandAanHetEvenement');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! (in_array('vooraf', (array) $get('extraContactpersonenToevoegen'), true)));
+                        return ! in_array('vooraf', (array) $get('extraContactpersonenToevoegen'), true);
                     }),
                 Fieldset::make('Contactpersoon tijdens het evenement')
                     ->schema([
                         TextInput::make('naam1')
                             ->label('Naam')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('naam1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                         TextInput::make('telefoonnummer1')
                             ->label('Telefoonnummer')
                             ->tel()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('telefoonnummer1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('eMailadres1')
                             ->label('E-mailadres')
                             ->email()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('eMailadres1');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('contactpersoonVoorafgaandAanHetEvenement1');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! (in_array('tijdens', (array) $get('extraContactpersonenToevoegen'), true)));
+                        return ! in_array('tijdens', (array) $get('extraContactpersonenToevoegen'), true);
                     }),
                 Fieldset::make('Contactpersoon na het evenement')
                     ->schema([
                         TextInput::make('naam2')
                             ->label('Naam')
                             ->required()
-                            ->maxLength(1000)
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('naam2');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->maxLength(1000),
                         TextInput::make('telefoonnummer2')
                             ->label('Telefoonnummer')
                             ->tel()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('telefoonnummer2');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                         TextInput::make('eMailadres2')
                             ->label('E-mailadres')
                             ->email()
-                            ->required()
-                            ->hidden(function (Get $get, $livewire) {
-                                $rule = $livewire->state()->isFieldHidden('eMailadres2');
-                                if ($rule === true) {
-                                    return true;
-                                } if ($rule === false) {
-                                    return false;
-                                }
-
-return false || (false);
-                            }),
+                            ->required(),
                     ])
-                    ->hidden(function (Get $get, $livewire) {
+                    ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('contactpersoonVoorafgaandAanHetEvenement2');
-                        if ($rule === true) {
-                            return true;
-                        } if ($rule === false) {
-                            return false;
+                        if ($rule !== null) {
+                            return $rule;
                         }
 
-return false || (! (in_array('achteraf', (array) $get('extraContactpersonenToevoegen'), true)));
+                        return ! in_array('achteraf', (array) $get('extraContactpersonenToevoegen'), true);
                     }),
             ]);
     }
