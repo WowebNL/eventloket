@@ -24,7 +24,7 @@ class MunicipalityVariableFactory extends Factory
         return [
             'municipality_id' => Municipality::factory(),
             'name' => fake()->words(2, true),
-            'key' => fake()->slug(2),
+            'key' => fake()->word(),
             'type' => $type,
             'value' => $this->generateValueForType($type),
             'is_default' => fake()->boolean(30), // 30% chance of being default

@@ -83,6 +83,6 @@ test('Widgets are rendered in organisation dashboard', function () {
     $this->actingAs($this->businessAdminUser);
 
     livewire(Dashboard::class)
-        ->assertSee('app.filament.organiser.widgets.intro') // intro widget
-        ->assertSee('app.filament.organiser.widgets.shortlink'); // shortlink widget
+        ->assertSee('App\\Filament\\Organiser\\Widgets\\Intro') // intro widget
+        ->assertSee('App\\Filament\\Organiser\\Widgets\\Shortlink'); // shortlink widget
 });
