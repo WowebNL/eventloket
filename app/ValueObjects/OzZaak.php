@@ -58,7 +58,10 @@ class OzZaak implements Arrayable
         ...$otherParams
     ) {
         $this->initiator = Arr::has($this->_expand, 'rollen')
-            ? new Rol(...Arr::first(Arr::where($this->_expand['rollen'], fn ($item) => $item['omschrijvingGeneriek'] === 'initiator')))
+            ? new Rol(...Arr::mapWithKeys(
+                Arr::first(Arr::where($this->_expand['rollen'], fn ($item) => strtolower($item['omschrijvingGeneriek']) === 'initiator')),
+                fn ($value, $key) => [lcfirst($key) => $value]
+            ))
             : null;
 
         $this->status = Arr::has($this->_expand, 'status')
