@@ -18,10 +18,10 @@ class Informatieobject implements Arrayable
         public readonly string $versie,
         public readonly string $bestandsnaam,
         public readonly string $inhoud,
-        public readonly string $beschrijving,
         public readonly string $informatieobjecttype,
         public readonly string $formaat,
         public readonly bool $locked,
+        public readonly ?string $beschrijving,
         public readonly ?Besluit $besluit = null,
         ...$otherParams
     ) {}
