@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DocumentVertrouwelijkheden;
+use App\ValueObjects\OzZaaktype;
 use App\ValueObjects\ZGW\InformatieobjectType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -52,7 +53,8 @@ class Zaaktype extends Model
     {
         // TODO: user need to see type in zaakdocumentstable and besluiteninfolist, only need type name there
         return Attribute::make(
-            get: fn () => $this->getDocumentTypes()->filter(fn (InformatieobjectType $type) => in_array($type->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)))->sortBy('omschrijving'),
+            // get: fn () => $this->getDocumentTypes()->filter(fn (InformatieobjectType $type) => in_array($type->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)))->sortBy('omschrijving'),
+            get: fn () => $this->getDocumentTypes()->sortBy('omschrijving'), // temp disable vertrouwelijkheid check
         );
     }
 
@@ -74,9 +76,9 @@ class Zaaktype extends Model
     private function getDocumentTypes()
     {
         return Cache::rememberForever('zaaktype_'.$this->id.'_document_types', function () {
-            $items = (new Openzaak)->catalogi()->informatieobjecttypen()->getAll(['zaaktype' => $this->zgw_zaaktype_url]);
+            $zaaktype = new OzZaaktype(...(new Openzaak)->catalogi()->get($this->zgw_zaaktype_url));
             $collection = collect();
-            foreach ($items as $item) {
+            foreach ($zaaktype->informatieobjecttypen as $item) {
                 $collection->push(new InformatieobjectType(...$item));
             }
 
