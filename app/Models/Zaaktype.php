@@ -78,7 +78,8 @@ class Zaaktype extends Model
         return Cache::rememberForever('zaaktype_'.$this->id.'_document_types', function () {
             $zaaktype = new OzZaaktype(...(new Openzaak)->get($this->zgw_zaaktype_url)->toArray());
             $collection = collect();
-            foreach ($zaaktype->informatieobjecttypen as $item) {
+            foreach ($zaaktype->informatieobjecttypen as $url) {
+                $item = (new Openzaak)->get($url)->toArray();
                 $collection->push(new InformatieobjectType(...$item));
             }
 
