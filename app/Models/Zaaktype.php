@@ -76,7 +76,7 @@ class Zaaktype extends Model
     private function getDocumentTypes()
     {
         return Cache::rememberForever('zaaktype_'.$this->id.'_document_types', function () {
-            $zaaktype = new OzZaaktype(...(new Openzaak)->catalogi()->get($this->zgw_zaaktype_url));
+            $zaaktype = new OzZaaktype(...(new Openzaak)->get($this->zgw_zaaktype_url)->toArray());
             $collection = collect();
             foreach ($zaaktype->informatieobjecttypen as $item) {
                 $collection->push(new InformatieobjectType(...$item));

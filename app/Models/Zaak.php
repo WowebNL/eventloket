@@ -171,7 +171,8 @@ class Zaak extends Model implements Eventable
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
                     return $this->getDocuments();
                 } else {
-                    return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
+                    // return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
+                    return $this->getDocuments(); // temp disable vertrouwelijkheid check
                 }
             },
         );
