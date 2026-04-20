@@ -25,6 +25,11 @@ class UpdateInitiatorZGW implements ShouldQueue
      */
     public function handle(Openzaak $openzaak, ObjectsApi $objectsapi): void
     {
+        if(str_contains($this->zaakUrlZGW, 'https://zaken.preprod-rx-services.nl/')) {
+            // updating a role is experimental in Open Zaak and doesnt work on RX services, so we need to skip this for now to prevent errors in the queue. This can be removed when excluding Open Forms
+            return;
+        }
+        
         $zaak = new OzZaak(...$openzaak->get($this->zaakUrlZGW.'?expand=rollen,zaakobjecten')->toArray());
         $formSubmissionObject = new FormSubmissionObject(...$objectsapi->get(basename($zaak->data_object_url))->toArray());
 
