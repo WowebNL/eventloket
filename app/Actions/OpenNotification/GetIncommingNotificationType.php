@@ -48,6 +48,9 @@ class GetIncommingNotificationType
             return OpenNotificationType::NewZaakDocument;
         } elseif (($data['actie'] === 'update' || $data['actie'] === 'partial_update') && $data['kanaal'] === 'documenten' && $data['resource'] === 'enkelvoudiginformatieobject') {
             return OpenNotificationType::UpdatedZaakDocument;
+        } elseif ($data['actie'] === 'create' && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaak') {
+            // temporary because OF does not create the zaakobject for OneGround
+            return OpenNotificationType::checkAndSetZaakobject;
         }
 
         // TODO: Implement other notification types

@@ -51,6 +51,8 @@ class AddZaakeigenschappenZGW implements ShouldQueue
                 if (str_starts_with($waarde, '[') || str_starts_with($waarde, '{')) {
                     // json value
                     $waarde = OpenFormsNormalizer::normalizeJson($waarde);
+                } elseif (str_contains($this->zaakUrlZGW, 'https://zaken.preprod-rx-services.nl/') && preg_match('/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/', $waarde)) {
+                    $waarde = \Carbon\Carbon::parse($waarde)->format('YmdHis');
                 }
                 $data = [
                     'zaak' => $zaak->url,
