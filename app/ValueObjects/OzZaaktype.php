@@ -15,6 +15,7 @@ class OzZaaktype implements Arrayable
         public readonly string $omschrijving,
         public readonly string $doorlooptijd,
         public readonly string $servicenorm,
+        public readonly array $informatieobjecttypen,
         // private readonly array $_expand = [],
         ...$otherParams
     ) {
@@ -30,6 +31,7 @@ class OzZaaktype implements Arrayable
             'omschrijving' => $this->omschrijving,
             'doorlooptijd' => $this->doorlooptijd,
             'servicenorm' => $this->servicenorm,
+            'informatieobjecttypen' => $this->informatieobjecttypen,
         ];
     }
 }

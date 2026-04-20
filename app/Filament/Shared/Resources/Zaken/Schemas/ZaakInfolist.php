@@ -344,7 +344,7 @@ class ZaakInfolist
 
                                                     $record->clearZgwCache();
 
-                                                    if ($oldStatus != $record->reference_data->status_name) {
+                                                    if ($oldStatus != $record->reference_data->status_name && $record->organisation?->users) {
                                                         foreach ($record->organisation->users as $user) {
                                                             /** @var OrganiserUser $user */
                                                             $user->notify(new ZaakStatusChanged($record, $oldStatus));
