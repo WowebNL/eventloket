@@ -14,7 +14,7 @@ final readonly class Rol implements Arrayable
         public string $roltype,
         public string $omschrijving,
         public string $omschrijvingGeneriek,
-        public array $contactpersoonRol,
+        public ?array $contactpersoonRol,
         public array $betrokkeneIdentificatie,
         ...$otherParams
     ) {}
