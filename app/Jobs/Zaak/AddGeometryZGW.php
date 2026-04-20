@@ -34,9 +34,8 @@ class AddGeometryZGW implements ShouldQueue
         $zaakEventAddresses = $formSubmissionObject->zaakEventAddresses; // note this needs refactoring, variable zaakEventAddresses is filled in previous called method getFormattedEventLocation()
 
         if ($geoJson) {
-            Log::info('Adding geometry to zaak', ['zaakUrl' => $this->zaakUrlZGW, 'geoJson' => $geoJson]);
             $openzaak->zaken()->zaken()->patch($zaak->uuid, [
-                'zaakgeometrie' => $geoJson,
+                'zaakgeometrie' => json_decode($geoJson, true),
             ]);
         }
 
