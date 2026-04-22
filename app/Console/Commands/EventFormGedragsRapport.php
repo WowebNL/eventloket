@@ -32,9 +32,13 @@ class EventFormGedragsRapport extends Command
 
     private FieldCatalog $catalog;
 
+    /** @var array<string, array{ok: bool, mismatches: list<array{path: string, expected: mixed, actual: mixed}>}>  key = "$provider|$label" */
+    private array $jsReference = [];
+
     public function handle(): int
     {
         $this->catalog = FieldCatalog::fromLocalDump();
+        $this->loadJsReference();
 
         $providers = $this->discoverProviders();
         if ($providers === []) {
@@ -74,6 +78,35 @@ class EventFormGedragsRapport extends Command
     }
 
     /**
+     * Lees de verificatie-fixture die door `node dev-scripts/verify-
+     * scenarios-jsonlogic.mjs` is gegenereerd. Als het bestand bestaat
+     * gebruiken we het voor een derde kolom in het rapport: "JS-spec",
+     * de onafhankelijke verificatie via canonieke json-logic-js library.
+     * Ontbreekt het bestand, dan toont het rapport alleen de PHP-run.
+     */
+    private function loadJsReference(): void
+    {
+        $path = base_path('tests/Feature/EventForm/Equivalence/jsonlogic-verification.json');
+        if (! is_file($path)) {
+            return;
+        }
+        $raw = json_decode((string) file_get_contents($path), true);
+        if (! is_array($raw)) {
+            return;
+        }
+        foreach ($raw as $entry) {
+            if (! is_array($entry) || ! isset($entry['provider'], $entry['label'])) {
+                continue;
+            }
+            $key = $entry['provider'].'|'.$entry['label'];
+            $this->jsReference[$key] = [
+                'ok' => (bool) ($entry['ok'] ?? false),
+                'mismatches' => is_array($entry['mismatches'] ?? null) ? $entry['mismatches'] : [],
+            ];
+        }
+    }
+
+    /**
      * @return list<class-string<ScenarioProvider>>
      */
     private function discoverProviders(): array
@@ -110,14 +143,17 @@ class EventFormGedragsRapport extends Command
     {
         $results = [];
         foreach ($providers as $provider) {
-            foreach ($provider::all() as $entry) {
+            foreach ($provider::all() as $label => $entry) {
                 $scenario = $entry[0];
                 $diffs = EquivalenceScenario::run($scenario);
+                $jsKey = $provider.'|'.$label;
+                $jsRef = $this->jsReference[$jsKey] ?? null;
                 $results[] = [
                     'provider' => $provider,
                     'scenario' => $scenario,
                     'pass' => $diffs === [],
                     'diffs' => $diffs,
+                    'js_ref' => $jsRef,
                 ];
             }
         }
@@ -238,7 +274,7 @@ class EventFormGedragsRapport extends Command
 
         // Elk scenario
         foreach ($items as $item) {
-            $lines[] = $this->renderScenario($item['scenario'], $item['pass'], $item['diffs']);
+            $lines[] = $this->renderScenario($item['scenario'], $item['pass'], $item['diffs'], $item['js_ref'] ?? null);
         }
 
         return implode("\n", $lines);
@@ -254,6 +290,23 @@ class EventFormGedragsRapport extends Command
         $passed = count(array_filter($results, static fn ($r) => $r['pass']));
         $failed = $total - $passed;
 
+        // JS-spec referentie: tel hoeveel scenarios er ook onafhankelijk
+        // door de canonieke json-logic-js runtime heen zijn bevestigd.
+        $jsVerified = 0;
+        $jsMismatch = 0;
+        foreach ($results as $r) {
+            $ref = $r['js_ref'] ?? null;
+            if ($ref === null) continue;
+            if ($ref['ok']) $jsVerified++;
+            else $jsMismatch++;
+        }
+        $jsLine = '';
+        if ($jsVerified > 0 || $jsMismatch > 0) {
+            $jsLine = $jsMismatch === 0
+                ? "✅ Ook **{$jsVerified} van {$total} scenarios bevestigd door de onafhankelijke JsonLogic-spec** (via json-logic-js, de canonieke referentie die Open Forms zelf ook volgt)."
+                : "❌ {$jsMismatch} scenarios wijken af volgens de onafhankelijke JsonLogic-spec — dat duidt op een inconsistentie tussen onze PHP en de OF-definitie.";
+        }
+
         $lines = [
             '# Gedragsspecificatie evenementformulier',
             '',
@@ -262,17 +315,33 @@ class EventFormGedragsRapport extends Command
             '**Samenvatting:** '.($failed === 0 ? '✅ Alle scenarios slagen' : "❌ {$failed} van {$total} scenarios faalt")
                 ." — {$passed} geslaagd, {$failed} gefaald, {$total} totaal.",
             '',
+        ];
+        if ($jsLine !== '') {
+            $lines[] = $jsLine;
+            $lines[] = '';
+        }
+        $lines = array_merge($lines, [
             'Dit document is de index op de gedragsspecificatie. Elke pagina van het '
                 .'evenementformulier heeft een eigen bestand waarin de scenarios voor dat '
-                .'gedeelte beschreven staan. ✅ betekent: de Filament-versie reageert exact '
-                .'zoals Open Forms zou doen. ❌ betekent: er is een afwijking die '
-                .'onderzocht moet worden.',
+                .'gedeelte beschreven staan.',
+            '',
+            'Elk scenario wordt onafhankelijk gecheckt:',
+            '',
+            '- **PHP (Filament)** — onze getranspileerde RulesEngine draait de rule-logica '
+                .'op een FormState met de gegeven input.',
+            '- **JS-spec (json-logic-js)** — de OF-rules gaan door een onafhankelijke '
+                .'implementatie van de JsonLogic-spec heen. Deze library wordt standaard '
+                .'gebruikt door web-tools die OF-rules evalueren. Als beide paden dezelfde '
+                .'uitkomst geven, is het gedrag byte-equivalent aan wat de spec voorschrijft.',
+            '',
+            '✅ betekent: geslaagd in de betreffende check. ❌ betekent: er is een afwijking '
+                .'die onderzocht moet worden.',
             '',
             '---',
             '',
             '## Overzicht per pagina',
             '',
-        ];
+        ]);
 
         // Counts per stap-key
         $counts = [];
@@ -348,14 +417,24 @@ class EventFormGedragsRapport extends Command
     /**
      * @param  array<string, mixed>  $scenario
      * @param  array<string, mixed>  $diffs
+     * @param  ?array{ok: bool, mismatches: list<array{path: string, expected: mixed, actual: mixed}>}  $jsRef
      */
-    private function renderScenario(array $scenario, bool $pass, array $diffs): string
+    private function renderScenario(array $scenario, bool $pass, array $diffs, ?array $jsRef): string
     {
-        $icon = $pass ? '✅' : '❌';
+        $phpIcon = $pass ? '✅' : '❌';
         $lines = [];
-        $lines[] = "### {$icon} {$scenario['naam']}";
+        $lines[] = "### {$phpIcon} {$scenario['naam']}";
         $lines[] = '';
         $lines[] = $scenario['omschrijving'];
+        $lines[] = '';
+
+        // Bewijs-badges: één voor onze PHP-implementatie, één voor de
+        // onafhankelijke json-logic-js spec-referentie als die beschikbaar is.
+        $badges = ["**PHP (Filament):** {$phpIcon}"];
+        if ($jsRef !== null) {
+            $badges[] = '**JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** '.($jsRef['ok'] ? '✅' : '❌');
+        }
+        $lines[] = implode('  ·  ', $badges);
         $lines[] = '';
 
         if (! empty($scenario['gegeven'])) {
@@ -375,9 +454,17 @@ class EventFormGedragsRapport extends Command
         }
 
         if (! $pass) {
-            $lines[] = '> **Afwijking:**';
+            $lines[] = '> **PHP afwijking:**';
             foreach ($diffs as $path => $diff) {
                 $lines[] = '> - `'.$path.'` — verwacht: `'.json_encode($diff['expected']).'`, werkelijk: `'.json_encode($diff['actual']).'`';
+            }
+            $lines[] = '';
+        }
+
+        if ($jsRef !== null && ! $jsRef['ok']) {
+            $lines[] = '> **JS-spec afwijking:**';
+            foreach ($jsRef['mismatches'] as $m) {
+                $lines[] = '> - `'.$m['path'].'` — verwacht: `'.json_encode($m['expected']).'`, json-logic-js: `'.json_encode($m['actual']).'`';
             }
             $lines[] = '';
         }

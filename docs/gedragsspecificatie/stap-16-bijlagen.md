@@ -12,6 +12,8 @@ Welke bijlagen verplicht zijn hangt af van de risico-classificatie en de kenmerk
 
 Bij een middelhoog risico (classificatie B) is de organisator verplicht een veiligheidsplan te uploaden. Het veiligheidsplan-veld wordt zichtbaar, samen met de bijbehorende uitleg-teksten.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `risicoClassificatie` = "B"
 
@@ -23,6 +25,8 @@ Bij een middelhoog risico (classificatie B) is de organisator verplicht een veil
 
 Hoog-risico evenementen (classificatie C) vragen om hetzelfde veiligheidsplan als B. Het upload-veld en de uitleg-tekst worden zichtbaar.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `risicoClassificatie` = "C"
 
@@ -33,6 +37,8 @@ Hoog-risico evenementen (classificatie C) vragen om hetzelfde veiligheidsplan al
 ### ✅ Verkeersmaatregelen (A50) → upload-veld bebordingsplan verschijnt
 
 Als de organisator aangeeft verkeersmaatregelen te treffen (kenmerk A50), moet er een bebordings- en bewegwijzeringsplan bijgevoegd worden. Het upload-veld daarvoor wordt zichtbaar.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}" — "Bewegwijzering aanbrengen" aangevinkt

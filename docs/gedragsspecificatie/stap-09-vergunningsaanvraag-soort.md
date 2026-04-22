@@ -12,6 +12,8 @@ Deze pagina vraagt naar soort-specifieke details over de vergunningaanvraag. Als
 
 Een vooraankondiging vraagt minder details dan een volledige vergunning. Zodra de organisator "vooraankondiging" kiest, hoeft de soort-stap niet ingevuld te worden en wordt 8n als niet-van-toepassing gemarkeerd.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
 
@@ -21,6 +23,8 @@ Een vooraankondiging vraagt minder details dan een volledige vergunning. Zodra d
 ### ✅ Geen wegafsluiting (Nee) → "Vergunningsaanvraag: soort" wordt doorgestreept
 
 Als het evenement geen wegen of gebiedsontsluiting afsluit, valt het in het melding-regime. De soort-stap is dan niet relevant en wordt in de sidebar doorgestreept.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"

@@ -12,6 +12,8 @@ Voor kenmerken als grote voertuigen op de openbare weg (A48 of A49) verschijnt e
 
 Als de organisator aangeeft objecten op de openbare weg te plaatsen (kenmerk A48), moet het detail-veld "groteVoertuigen" zichtbaar worden om de aanvullende gegevens te kunnen invullen.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}" — "Voertuigen parkeren die langer zijn dan 6 meter en/of hoger dan 2,40 meter" aangevinkt
 
@@ -22,6 +24,8 @@ Als de organisator aangeeft objecten op de openbare weg te plaatsen (kenmerk A48
 ### ✅ Parkeren grote voertuigen (A49) → detail-veld verschijnt
 
 Bij de keuze om grote voertuigen te parkeren op de openbare weg (A49) verschijnt hetzelfde detail-veld voor aanvullende gegevens.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}" — "Voorwerpen op de weg plaatsen" aangevinkt

@@ -12,6 +12,8 @@ Veel velden in het formulier zijn pas relevant als de organisator een specifieke
 
 Gebruiker ingelogd via eHerkenning/KvK heeft de organisatie-gegevens al uit de KvK-koppeling. "Organisatie-informatie" wordt zichtbaar om de opgehaalde gegevens te tonen; "Adresgegevens" wordt verborgen omdat het adres al bekend is.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `eventloketSession.kvk` = "12345678"
 

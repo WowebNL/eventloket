@@ -16,6 +16,8 @@ Elke nieuwe zaak wordt gerouteerd naar één van 45 registratie-backends. Welke 
 
 Voor gemeente GM0882 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend23' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0882"
 - Veld `isVergunningaanvraag` = **ja**
@@ -26,6 +28,8 @@ Voor gemeente GM0882 bij een vergunningaanvraag (volledige evenementenvergunning
 ### ✅ GM0882 + vooraankondiging → backend22
 
 Voor gemeente GM0882 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend22' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0882"
@@ -38,6 +42,8 @@ Voor gemeente GM0882 bij een vooraankondiging (alleen aankondiging, nog geen ver
 
 Voor gemeente GM0882 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend24' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0882"
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"
@@ -48,6 +54,8 @@ Voor gemeente GM0882 bij een melding (lichter regime, geen wegafsluiting) moet h
 ### ✅ GM0888 + vergunning → backend3
 
 Voor gemeente GM0888 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend3' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0888"
@@ -60,6 +68,8 @@ Voor gemeente GM0888 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM0888 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend9' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0888"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -70,6 +80,8 @@ Voor gemeente GM0888 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM0888 + melding → backend8
 
 Voor gemeente GM0888 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend8' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0888"
@@ -82,6 +94,8 @@ Voor gemeente GM0888 bij een melding (lichter regime, geen wegafsluiting) moet h
 
 Voor gemeente GM0899 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend15' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0899"
 - Veld `isVergunningaanvraag` = **ja**
@@ -92,6 +106,8 @@ Voor gemeente GM0899 bij een vergunningaanvraag (volledige evenementenvergunning
 ### ✅ GM0899 + vooraankondiging → backend14
 
 Voor gemeente GM0899 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend14' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0899"
@@ -104,6 +120,8 @@ Voor gemeente GM0899 bij een vooraankondiging (alleen aankondiging, nog geen ver
 
 Voor gemeente GM0899 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend13' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0899"
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"
@@ -114,6 +132,8 @@ Voor gemeente GM0899 bij een melding (lichter regime, geen wegafsluiting) moet h
 ### ✅ GM0917 + vergunning → backend1
 
 Voor gemeente GM0917 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend1' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0917"
@@ -126,6 +146,8 @@ Voor gemeente GM0917 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM0917 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend4' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0917"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -136,6 +158,8 @@ Voor gemeente GM0917 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM0917 + melding → backend6
 
 Voor gemeente GM0917 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend6' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0917"
@@ -148,6 +172,8 @@ Voor gemeente GM0917 bij een melding (lichter regime, geen wegafsluiting) moet h
 
 Voor gemeente GM0928 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend21' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0928"
 - Veld `isVergunningaanvraag` = **ja**
@@ -158,6 +184,8 @@ Voor gemeente GM0928 bij een vergunningaanvraag (volledige evenementenvergunning
 ### ✅ GM0928 + vooraankondiging → backend20
 
 Voor gemeente GM0928 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend20' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0928"
@@ -170,6 +198,8 @@ Voor gemeente GM0928 bij een vooraankondiging (alleen aankondiging, nog geen ver
 
 Voor gemeente GM0928 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend19' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0928"
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"
@@ -180,6 +210,8 @@ Voor gemeente GM0928 bij een melding (lichter regime, geen wegafsluiting) moet h
 ### ✅ GM0938 + vergunning → backend26
 
 Voor gemeente GM0938 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend26' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0938"
@@ -192,6 +224,8 @@ Voor gemeente GM0938 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM0938 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend25' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0938"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -202,6 +236,8 @@ Voor gemeente GM0938 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM0938 + melding → backend27
 
 Voor gemeente GM0938 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend27' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0938"
@@ -214,6 +250,8 @@ Voor gemeente GM0938 bij een melding (lichter regime, geen wegafsluiting) moet h
 
 Voor gemeente GM0965 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend29' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0965"
 - Veld `isVergunningaanvraag` = **ja**
@@ -224,6 +262,8 @@ Voor gemeente GM0965 bij een vergunningaanvraag (volledige evenementenvergunning
 ### ✅ GM0965 + vooraankondiging → backend28
 
 Voor gemeente GM0965 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend28' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0965"
@@ -236,6 +276,8 @@ Voor gemeente GM0965 bij een vooraankondiging (alleen aankondiging, nog geen ver
 
 Voor gemeente GM0965 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend30' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0965"
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"
@@ -246,6 +288,8 @@ Voor gemeente GM0965 bij een melding (lichter regime, geen wegafsluiting) moet h
 ### ✅ GM0971 + vergunning → backend35
 
 Voor gemeente GM0971 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend35' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0971"
@@ -258,6 +302,8 @@ Voor gemeente GM0971 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM0971 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend34' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0971"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -268,6 +314,8 @@ Voor gemeente GM0971 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM0971 + melding → backend36
 
 Voor gemeente GM0971 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend36' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0971"
@@ -280,6 +328,8 @@ Voor gemeente GM0971 bij een melding (lichter regime, geen wegafsluiting) moet h
 
 Voor gemeente GM0981 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend38' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0981"
 - Veld `isVergunningaanvraag` = **ja**
@@ -290,6 +340,8 @@ Voor gemeente GM0981 bij een vergunningaanvraag (volledige evenementenvergunning
 ### ✅ GM0981 + vooraankondiging → backend37
 
 Voor gemeente GM0981 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend37' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0981"
@@ -302,6 +354,8 @@ Voor gemeente GM0981 bij een vooraankondiging (alleen aankondiging, nog geen ver
 
 Voor gemeente GM0981 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend39' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0981"
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"
@@ -312,6 +366,8 @@ Voor gemeente GM0981 bij een melding (lichter regime, geen wegafsluiting) moet h
 ### ✅ GM0986 + vergunning → backend44
 
 Voor gemeente GM0986 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend44' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0986"
@@ -324,6 +380,8 @@ Voor gemeente GM0986 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM0986 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend43' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0986"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -334,6 +392,8 @@ Voor gemeente GM0986 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM0986 + melding → backend45
 
 Voor gemeente GM0986 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend45' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0986"
@@ -346,6 +406,8 @@ Voor gemeente GM0986 bij een melding (lichter regime, geen wegafsluiting) moet h
 
 Voor gemeente GM0994 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend41' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0994"
 - Veld `isVergunningaanvraag` = **ja**
@@ -356,6 +418,8 @@ Voor gemeente GM0994 bij een vergunningaanvraag (volledige evenementenvergunning
 ### ✅ GM0994 + vooraankondiging → backend40
 
 Voor gemeente GM0994 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend40' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0994"
@@ -368,6 +432,8 @@ Voor gemeente GM0994 bij een vooraankondiging (alleen aankondiging, nog geen ver
 
 Voor gemeente GM0994 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend42' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM0994"
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"
@@ -378,6 +444,8 @@ Voor gemeente GM0994 bij een melding (lichter regime, geen wegafsluiting) moet h
 ### ✅ GM1729 + vergunning → backend2
 
 Voor gemeente GM1729 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend2' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1729"
@@ -390,6 +458,8 @@ Voor gemeente GM1729 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM1729 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend5' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1729"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -400,6 +470,8 @@ Voor gemeente GM1729 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM1729 + melding → backend7
 
 Voor gemeente GM1729 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend7' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1729"
@@ -412,6 +484,8 @@ Voor gemeente GM1729 bij een melding (lichter regime, geen wegafsluiting) moet h
 
 Voor gemeente GM1883 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend32' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1883"
 - Veld `isVergunningaanvraag` = **ja**
@@ -422,6 +496,8 @@ Voor gemeente GM1883 bij een vergunningaanvraag (volledige evenementenvergunning
 ### ✅ GM1883 + vooraankondiging → backend31
 
 Voor gemeente GM1883 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend31' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1883"
@@ -434,6 +510,8 @@ Voor gemeente GM1883 bij een vooraankondiging (alleen aankondiging, nog geen ver
 
 Voor gemeente GM1883 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend33' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1883"
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"
@@ -444,6 +522,8 @@ Voor gemeente GM1883 bij een melding (lichter regime, geen wegafsluiting) moet h
 ### ✅ GM1903 + vergunning → backend18
 
 Voor gemeente GM1903 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend18' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1903"
@@ -456,6 +536,8 @@ Voor gemeente GM1903 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM1903 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend17' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1903"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -466,6 +548,8 @@ Voor gemeente GM1903 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM1903 + melding → backend16
 
 Voor gemeente GM1903 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend16' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1903"
@@ -478,6 +562,8 @@ Voor gemeente GM1903 bij een melding (lichter regime, geen wegafsluiting) moet h
 
 Voor gemeente GM1954 bij een vergunningaanvraag (volledige evenementenvergunning) moet het systeem de zaak naar registratie-backend 'backend10' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1954"
 - Veld `isVergunningaanvraag` = **ja**
@@ -489,6 +575,8 @@ Voor gemeente GM1954 bij een vergunningaanvraag (volledige evenementenvergunning
 
 Voor gemeente GM1954 bij een vooraankondiging (alleen aankondiging, nog geen vergunning) moet het systeem de zaak naar registratie-backend 'backend12' routeren.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1954"
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -499,6 +587,8 @@ Voor gemeente GM1954 bij een vooraankondiging (alleen aankondiging, nog geen ver
 ### ✅ GM1954 + melding → backend11
 
 Voor gemeente GM1954 bij een melding (lichter regime, geen wegafsluiting) moet het systeem de zaak naar registratie-backend 'backend11' routeren.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementInGemeente.brk_identification` = "GM1954"

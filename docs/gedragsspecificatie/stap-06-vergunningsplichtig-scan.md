@@ -12,6 +12,8 @@ Op basis van vijf voortschrijdende Ja/Nee-vragen stelt het systeem vast of het e
 
 Als de organisator aangeeft dat geplaatste objecten kleiner zijn dan de gemeente-grens, én de gemeente heeft de eerste aanvullende vraag geconfigureerd (`gemeenteVariabelen.report_question_1`), verschijnt meldingvraag1 als vervolgvraag in het formulier.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Indien er objecten geplaatst worden, zijn deze dan kleiner {{ gemeenteVariabelen.maximale_grootte_objecten_in_m2 }} m2? " = "Ja"
 - Veld `gemeenteVariabelen` — `report_question_1` uit
@@ -22,6 +24,8 @@ Als de organisator aangeeft dat geplaatste objecten kleiner zijn dan de gemeente
 ### ✅ Bij "aantal aanwezigen niet kleiner dan drempel" blijft vergunningsplicht
 
 Zodra de organisator al bij de eerste vraag aangeeft dat het aantal aanwezigen NIET onder de gemeentelijke drempel ligt, stopt de melding-route direct. Het systeem markeert de aanvraag als vergunningsaanvraag en verbergt de content-block die naar melding zou leiden — de organisator wordt doorgestuurd naar de volledige vergunningsprocedure.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Is het aantal aanwezigen bij uw evenement minder dan {% get_value gemeenteVariabelen 'aanwezigen' %} personen?" = "Nee"

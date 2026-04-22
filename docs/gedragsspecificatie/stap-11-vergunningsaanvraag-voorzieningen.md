@@ -12,6 +12,8 @@ Voor elke voorziening die de organisator aankruist (wc's, douches, etc.) moet ee
 
 Als de organisator bij de voorzieningen-checkboxen optie A12 (wc's) aanvinkt, wordt het detail-veld zichtbaar waarin de aantallen wc's kunnen worden ingevuld. De pagina voorzieningen zelf wordt als van toepassing gemarkeerd in de sidebar.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "WC's plaatsen (of bestaande gebruiken) " aangevinkt
 
@@ -22,6 +24,8 @@ Als de organisator bij de voorzieningen-checkboxen optie A12 (wc's) aanvinkt, wo
 ### ✅ Douches aangevinkt → detailveld voor douches verschijnt
 
 Net als bij WCs: als de organisator douches (optie A13) aanvinkt in de voorzieningen-lijst, wordt het douches-detailveld zichtbaar zodat de organisator aantallen/locaties kan doorgeven.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "Douches plaatsen (of bestaande gebruiken) " aangevinkt

@@ -12,6 +12,8 @@ Veel velden in het formulier zijn pas relevant als de organisator een specifieke
 
 Als de organisator aangeeft speeltoestellen te plaatsen (optie A25 in "welke voorwerpen gaat u plaatsen"), moeten "Speeltoestellen" en "voorwerpen" zichtbaar zijn én wordt de stap "Vergunningsaanvraag: voorwerpen" actief.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "Speeltoestellen Attractietoestellen" aangevinkt
 

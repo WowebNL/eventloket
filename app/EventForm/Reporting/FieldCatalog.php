@@ -155,6 +155,15 @@ final class FieldCatalog
                 ];
             }
 
+            // Component-level conditional: `{conditional: {show: true, when: "anderVeld", eq: "waarde"}}`
+            // markeert dat dit component voorwaardelijk getoond wordt op basis
+            // van een ander veld. Dat is ook "dynamisch gedrag" en telt mee,
+            // ook al gaat het niet via een logic-rule.
+            $conditional = $component['conditional'] ?? null;
+            if (is_array($conditional) && ! empty($conditional['when'])) {
+                $this->stepsWithLogic[$stepUuid] = true;
+            }
+
             if (isset($component['components']) && is_array($component['components'])) {
                 /** @var list<array<string, mixed>> $nested */
                 $nested = $component['components'];

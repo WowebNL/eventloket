@@ -1,10 +1,19 @@
 # Gedragsspecificatie evenementformulier
 
-_Automatisch gegenereerd op 22-04-2026 11:12 via `php artisan eventform:gedrags-rapport`._
+_Automatisch gegenereerd op 22-04-2026 11:34 via `php artisan eventform:gedrags-rapport`._
 
 **Samenvatting:** ✅ Alle scenarios slagen — 69 geslaagd, 0 gefaald, 69 totaal.
 
-Dit document is de index op de gedragsspecificatie. Elke pagina van het evenementformulier heeft een eigen bestand waarin de scenarios voor dat gedeelte beschreven staan. ✅ betekent: de Filament-versie reageert exact zoals Open Forms zou doen. ❌ betekent: er is een afwijking die onderzocht moet worden.
+✅ Ook **69 van 69 scenarios bevestigd door de onafhankelijke JsonLogic-spec** (via json-logic-js, de canonieke referentie die Open Forms zelf ook volgt).
+
+Dit document is de index op de gedragsspecificatie. Elke pagina van het evenementformulier heeft een eigen bestand waarin de scenarios voor dat gedeelte beschreven staan.
+
+Elk scenario wordt onafhankelijk gecheckt:
+
+- **PHP (Filament)** — onze getranspileerde RulesEngine draait de rule-logica op een FormState met de gegeven input.
+- **JS-spec (json-logic-js)** — de OF-rules gaan door een onafhankelijke implementatie van de JsonLogic-spec heen. Deze library wordt standaard gebruikt door web-tools die OF-rules evalueren. Als beide paden dezelfde uitkomst geven, is het gedrag byte-equivalent aan wat de spec voorschrijft.
+
+✅ betekent: geslaagd in de betreffende check. ❌ betekent: er is een afwijking die onderzocht moet worden.
 
 ---
 

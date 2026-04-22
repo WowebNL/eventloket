@@ -12,6 +12,8 @@ Als de gemeente heeft gemeld dat er andere evenementen op dezelfde datum staan, 
 
 Zodra evenementenInDeGemeente een (niet-lege) waarde heeft — dat wil zeggen: de service EventsCheckService heeft evenementen teruggekregen voor de gekozen datum — toont de Tijden-pagina een inhoud-blok dat de organisator waarschuwt dat er al andere evenementen gepland staan.
 
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `evenementenInDeGemeente` = "Koningsdag-markt, Kermis Centrum"
 
