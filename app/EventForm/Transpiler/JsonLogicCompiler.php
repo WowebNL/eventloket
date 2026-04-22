@@ -141,17 +141,41 @@ class JsonLogicCompiler
         return '(bool) '.$this->compile($inner);
     }
 
+    /**
+     * JsonLogic's `if` ondersteunt een multi-arm cascade:
+     *   {"if": [cond1, v1, cond2, v2, ..., condN, vN, elseValue]}
+     *
+     * Equivalent in PHP: nested ternaries — `cond1 ? v1 : (cond2 ? v2 : ... : else)`.
+     * De OF-runtime (Python jsonlogic) en de JS-versie werken exact zo.
+     *
+     * Bij een even aantal argumenten zonder expliciete `elseValue` gebruikt
+     * JsonLogic `null` als fallback — we doen hetzelfde.
+     */
     private function compileIf(mixed $args): string
     {
         if (! is_array($args) || count($args) < 2) {
             throw new RuntimeException('`if` expects at least 2 arguments');
         }
         $parts = array_values($args);
-        $cond = $this->compile($parts[0]);
-        $then = $this->compile($parts[1]);
-        $else = isset($parts[2]) ? $this->compile($parts[2]) : 'null';
 
-        return '('.$cond.' ? '.$then.' : '.$else.')';
+        // Split the arms. De laatste "unpaired" tail is de elseValue; als het
+        // aantal argumenten even is dan mist die en vallen we terug op null.
+        $pairs = [];
+        $i = 0;
+        while ($i + 1 < count($parts)) {
+            $pairs[] = [$parts[$i], $parts[$i + 1]];
+            $i += 2;
+        }
+        $elseValue = $i < count($parts) ? $this->compile($parts[$i]) : 'null';
+
+        // Bouw van binnen naar buiten. Laatste pair wordt `(cond ? v : else)`,
+        // daarop stapelen we steeds een nieuwe ternary.
+        $expr = $elseValue;
+        foreach (array_reverse($pairs) as [$cond, $value]) {
+            $expr = '('.$this->compile($cond).' ? '.$this->compile($value).' : '.$expr.')';
+        }
+
+        return $expr;
     }
 
     private function compileMissing(mixed $args): string
