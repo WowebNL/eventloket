@@ -82,3 +82,33 @@
 :is(.dark .fi-fieldset > legend) {
     color: var(--gray-100);
 }
+
+/*
+ * Scheidingslijnen tussen de top-level blokken in een wizard-step. Filament
+ * rendert de step-content als een `.fi-sc.fi-sc-has-gap.fi-grid` met daarin
+ * direct-child `.fi-grid-col`-wrappers per top-level component. Elk volgend
+ * blok krijgt een subtiele border-top + extra whitespace zodat "dit is een
+ * nieuw blok" in één oogopslag leesbaar is.
+ *
+ * Alleen op top-level (direct kind van de wizard-step-container); geneste
+ * components in een grid/fieldset/columns houden hun bestaande spacing.
+ */
+.fi-sc-wizard-step > .fi-sc > .fi-grid-col + .fi-grid-col {
+    border-top: 1px solid var(--gray-200);
+    padding-top: 1.5rem;
+    margin-top: 0.75rem;
+}
+
+:is(.dark .fi-sc-wizard-step > .fi-sc > .fi-grid-col + .fi-grid-col) {
+    border-top-color: var(--gray-800);
+}
+
+/* Fieldsets hebben hun eigen rand + achtergrond — géén extra border-top
+   erboven, anders wordt het dubbel. Idem omgekeerd: direct ná een fieldset
+   hoeft geen lijn, want de fieldset-rand/afstand markeert het al. */
+.fi-sc-wizard-step > .fi-sc > .fi-grid-col:has(> .fi-sc-component > .fi-fieldset) + .fi-grid-col,
+.fi-sc-wizard-step > .fi-sc > .fi-grid-col + .fi-grid-col:has(> .fi-sc-component > .fi-fieldset) {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+}
