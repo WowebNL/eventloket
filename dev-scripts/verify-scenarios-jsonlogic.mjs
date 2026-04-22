@@ -34,18 +34,20 @@ const scenarios = readJson('tests/Feature/EventForm/Equivalence/scenarios.json')
 const logicRaw = readJson('docker/local-data/open-formulier/formLogic.json');
 const logicItems = Array.isArray(logicRaw) ? logicRaw : (logicRaw.results ?? []);
 
-// Index component-level conditionals zodat we voor `field_visible.*`
-// verwachtingen ook een onafhankelijke check kunnen doen. Elke `conditional`
-// op een veld is eigenlijk een mini-rule: "toon/verberg als veld X gelijk
-// is aan Y". Dat kunnen we met json-logic-js net zo evalueren.
+// Index component-level conditionals + veld-types zodat we voor
+// `field_visible.*`-verwachtingen ook een onafhankelijke check kunnen doen.
 const stepsRaw = readJson('docker/local-data/open-formulier/formSteps.json');
 const stepsItems = Array.isArray(stepsRaw) ? stepsRaw : (stepsRaw.results ?? []);
 const componentConditionals = {};
+const fieldTypes = {};
 const walk = (comps) => {
     for (const c of comps || []) {
         const cond = c.conditional;
         if (cond && cond.when && c.key) {
             componentConditionals[c.key] = cond; // {when, eq, show}
+        }
+        if (c.key && c.type) {
+            fieldTypes[c.key] = c.type;
         }
         if (Array.isArray(c.components)) walk(c.components);
         if (Array.isArray(c.columns)) {
@@ -190,13 +192,23 @@ const evaluateScenario = (entry) => {
             //    show=true  + geen   → verborgen
             //    show=false + match  → verborgen
             //    show=false + geen   → zichtbaar
+            //
+            // Voor selectboxes-triggers gebruiken we list-lidmaatschap-check
+            // ipv ===; de state is daar een lijst `['vooraf']` (Filament-
+            // shape) en `eq: 'vooraf'` betekent dan "optie vooraf aangevinkt".
             const key = path.slice('field_visible.'.length);
             const cond = componentConditionals[key];
             if (cond === undefined) {
                 actual = true;
             } else {
                 const triggerValue = jsonLogic.apply({ var: cond.when }, state);
-                const matches = triggerValue === cond.eq;
+                const triggerType = fieldTypes[cond.when];
+                let matches;
+                if (triggerType === 'selectboxes' && Array.isArray(triggerValue)) {
+                    matches = triggerValue.includes(cond.eq);
+                } else {
+                    matches = triggerValue === cond.eq;
+                }
                 actual = cond.show ? matches : ! matches;
             }
         } else {

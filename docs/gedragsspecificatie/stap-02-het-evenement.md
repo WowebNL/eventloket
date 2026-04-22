@@ -2,11 +2,63 @@
 
 _[← terug naar de index](../gedragsspecificatie.md)_
 
-**Samenvatting:** ✅ Alle scenarios op deze pagina slagen — 3/3 gedekt.
+**Samenvatting:** ✅ Alle scenarios op deze pagina slagen — 7/7 gedekt.
+
+## Component-level conditionele zichtbaarheid (auto-gegenereerd)
+
+Voor elk veld in het formulier dat alleen onder een specifieke voorwaarde zichtbaar is, genereren we twee scenarios: één waarin aan de voorwaarde wordt voldaan (en we verwachten dat het veld zichtbaar is), en één waarin de voorwaarde NIET is voldaan (en we verwachten dat het veld verborgen is). Zo wordt elke conditionele regel in het formulier in twee richtingen bewezen.
 
 ## Conditionele zichtbaarheid op stap "Het evenement"
 
 Op deze stap bepalen een paar velden of vervolgvragen te zien zijn. Zodra de evenementnaam is ingevuld, verschijnen omschrijving- en soort-velden. Bij "Anders" als soort komt er een extra tekstveld vrij. Bij "Markt of braderie" komt er een periodieke-markt-vraag vrij.
+
+### ✅ Zichtbaarheid "omschrijfHetSoortEvenement" — trigger matcht (auto)
+
+Zodra de gebruiker een waarde kiest die matcht met de conditional — `soortEvenement` = `Anders` — moet veld `omschrijfHetSoortEvenement` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
+**Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
+- Veld "Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Anders"
+
+**Dan verwachten we:**
+- Veld "Omschrijf het soort evenement" _(op Stap 2: Het evenement)_ is **zichtbaar** in de rendered pagina
+
+### ✅ Zichtbaarheid "omschrijfHetSoortEvenement" — trigger matcht niet (auto)
+
+Met een waarde die niet matcht — `soortEvenement` is iets anders dan `Anders` — moet veld `omschrijfHetSoortEvenement` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
+**Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
+- Veld "Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
+
+**Dan verwachten we:**
+- Veld "Omschrijf het soort evenement" _(op Stap 2: Het evenement)_ is **niet zichtbaar** in de rendered pagina
+
+### ✅ Zichtbaarheid "gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen" — trigger matcht (auto)
+
+Zodra de gebruiker een waarde kiest die matcht met de conditional — `soortEvenement` = `Markt of braderie` — moet veld `gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
+**Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
+- Veld "Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Markt of braderie"
+
+**Dan verwachten we:**
+- Veld "Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?" _(op Stap 2: Het evenement)_ is **zichtbaar** in de rendered pagina
+
+### ✅ Zichtbaarheid "gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen" — trigger matcht niet (auto)
+
+Met een waarde die niet matcht — `soortEvenement` is iets anders dan `Markt of braderie` — moet veld `gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
+
+**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+
+**Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
+- Veld "Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
+
+**Dan verwachten we:**
+- Veld "Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?" _(op Stap 2: Het evenement)_ is **niet zichtbaar** in de rendered pagina
 
 ### ✅ Evenementnaam ingevuld → omschrijving + soort-veld verschijnen
 

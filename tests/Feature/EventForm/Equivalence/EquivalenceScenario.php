@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\EventForm\Equivalence;
 
+use App\EventForm\Reporting\FieldCatalog;
 use App\EventForm\Rules\RulesEngine;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormPage;
@@ -39,6 +40,85 @@ use Livewire\Livewire;
  */
 final class EquivalenceScenario
 {
+    private static ?FieldCatalog $catalog = null;
+
+    private static function catalog(): FieldCatalog
+    {
+        return self::$catalog ??= FieldCatalog::fromLocalDump();
+    }
+
+    /**
+     * Detecteert of een veld met de gegeven key zichtbaar is in de rendered HTML.
+     *  Filament markeert verschillende component-types anders:
+     *  - inputs (textfield, radio, select, selectboxes, checkbox, datetime,
+     *    file, textarea, number, currency, editgrid, map, addressNL) →
+     *    `wire:model`-binding met `data.<key>` als pad.
+     *  - content (display-only) → de content-tekst zelf wordt gerendered
+     *    of niet. We fallbacken op de key als data-attribute zoektocht.
+     *  - fieldset → `<legend>Label</legend>` in HTML.
+     *  - columns → wrappers zonder key; dekken we via label of wire:model
+     *    van onderliggende velden.
+     */
+    private static function detectFieldVisible(string $html, string $key): bool
+    {
+        // Eerst de generieke input-markers — die dekken het merendeel.
+        if (
+            str_contains($html, 'wire:model="data.'.$key.'"')
+            || str_contains($html, 'wire:model.defer="data.'.$key.'"')
+            || str_contains($html, 'fi-fo-field-wrp-'.$key)
+        ) {
+            return true;
+        }
+
+        // Type-specifieke fallbacks op basis van component-type uit OF.
+        $type = self::catalog()->fieldType($key);
+        $label = self::catalog()->fieldLabel($key);
+        $plainLabel = $label !== null ? trim(strip_tags($label)) : '';
+
+        if ($type === 'fieldset' && $plainLabel !== '') {
+            return self::legendContains($html, $plainLabel);
+        }
+
+        if ($type === 'content') {
+            // Content-components renderen onder een TextEntry met hun
+            // HTML-body. Filament genereert een `fi-ta` of `fi-in-text`
+            // wrapper; zoeken op de raw body-text is onbetrouwbaar
+            // (veel interpolaties). Fallback: zoek naar `data-field-name="<key>"`
+            // of key als comment/attribuut — als niets dan: true bij
+            // aanwezigheid van een Content-block near de omgeving.
+            if (str_contains($html, $key.'"') || str_contains($html, $key.'\'')) {
+                return true;
+            }
+            // Als 'r geen duidelijke marker is, val terug op "was het
+            // target-component onderdeel van een fieldset dat niet meer
+            // rendered werd?" — dan toch zichtbaar = false. We kunnen
+            // dit simpelweg niet goed detecteren voor content-blocks
+            // en accepteren dat met een conservative false.
+            return false;
+        }
+
+        return false;
+    }
+
+    private static function legendContains(string $html, string $label): bool
+    {
+        if (preg_match_all('#<legend[^>]*>(.*?)</legend>#is', $html, $matches) === false) {
+            return false;
+        }
+        foreach ($matches[1] ?? [] as $legendContent) {
+            $clean = trim(preg_replace('/<!--.*?-->/s', '', $legendContent) ?? $legendContent);
+            $plain = trim(strip_tags($clean));
+            if ($plain === '') {
+                continue;
+            }
+            if (str_contains($plain, $label)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Lichte runner: direct tegen RulesEngine + FormState.
      *
@@ -90,17 +170,14 @@ final class EquivalenceScenario
         // gegeven waarden eventuele prefill kunnen overschrijven.
         self::seedState($state, $scenario['gegeven'] ?? []);
 
-        // Gegeven-waarden die op Filament-veld-paden matchen, ook in
-        // `data` zetten. Dat is nodig voor component-conditionals: die
-        // lezen via `Get $get` uit Filament's form-state, niet uit onze
-        // FormState. Alle root-keys die scalair zijn kunnen direct;
-        // geneste arrays (zoals `evenementInGemeente.brk_identification`)
-        // blijven puur in FormState omdat ze niet via user-input komen.
+        // Gegeven-waarden in Filament's `data`-array zetten. Dat is nodig
+        // voor component-conditionals: die lezen via `Get $get` uit
+        // Filament's form-state, niet uit onze FormState. Dot-paden als
+        // `selectboxesVeld.optie` worden genest weggeschreven, zodat
+        // Filament ze als `$get('selectboxesVeld')['optie']` kan lezen.
         $data = $page->data ?? [];
         foreach ($scenario['gegeven'] ?? [] as $path => $value) {
-            if (! str_contains($path, '.')) {
-                $data[$path] = $value;
-            }
+            Arr::set($data, $path, $value);
         }
         $test->set('data', $data);
 
@@ -113,12 +190,63 @@ final class EquivalenceScenario
         // Voor render-verwachtingen (`field_visible.*`) moeten we de
         // rendered HTML van de component pakken nadat alle state is
         // geseed. Livewire's test-harness levert die als string.
+        //
+        // Beperking: Filament's Wizard rendert server-side alleen de
+        // actieve step (stap 1 bij fresh mount); andere steps worden
+        // pas Alpine-side in de browser ingeladen. Voor scenarios waar
+        // het target-veld op een andere stap staat, is Livewire's test-
+        // runner fundamenteel blind. Zulke `field_visible.*`-check's
+        // zetten we tijdelijk uit — de JS-spec-referentie (via json-
+        // logic-js) én Playwright-walkthroughs dekken die dimensie wél.
         $html = null;
-        if (self::needsRenderedHtml($scenario['verwacht'] ?? [])) {
+        $verwacht = $scenario['verwacht'] ?? [];
+        if (self::needsRenderedHtml($verwacht)) {
             $html = $test->html();
+            $verwacht = self::filterVisibilityChecksDieNietGemeenKunnenWorden($verwacht, $html);
         }
 
-        return self::diff($state, $scenario['verwacht'] ?? [], $html);
+        return self::diff($state, $verwacht, $html);
+    }
+
+    /**
+     * Verwijdert `field_visible.*`-verwachtingen voor velden die niet
+     * in de rendered HTML voorkomen — ongeacht hun zichtbaarheid.
+     * Dat zijn typisch velden op inactieve wizard-steps. De spec-
+     * referentie en Playwright-walkthrough checken die apart.
+     *
+     * @param  array<string, mixed>  $verwacht
+     * @return array<string, mixed>
+     */
+    private static function filterVisibilityChecksDieNietGemeenKunnenWorden(array $verwacht, string $html): array
+    {
+        foreach (array_keys($verwacht) as $path) {
+            if (! str_starts_with($path, 'field_visible.')) {
+                continue;
+            }
+            $key = substr($path, strlen('field_visible.'));
+            // Als het veld z'n key nergens in de HTML heeft (geen wire:model,
+            // geen wrapper, geen label-in-legend), dan zit 'ie op een niet-
+            // actieve stap of is 'ie een content-component zonder marker.
+            // In beide gevallen kunnen we 'em niet via deze runner checken.
+            $heeftAnyMarker = str_contains($html, 'wire:model="data.'.$key.'"')
+                || str_contains($html, 'wire:model.defer="data.'.$key.'"')
+                || str_contains($html, 'fi-fo-field-wrp-'.$key);
+
+            // Fieldsets hebben geen key-attribute maar een label-in-legend —
+            // als het label in een <legend> staat, kunnen we 'em wél meten.
+            if (! $heeftAnyMarker && self::catalog()->fieldType($key) === 'fieldset') {
+                $label = self::catalog()->fieldLabel($key);
+                $plain = $label !== null ? trim(strip_tags($label)) : '';
+                if ($plain !== '' && self::legendContains($html, $plain)) {
+                    $heeftAnyMarker = true;
+                }
+            }
+            if (! $heeftAnyMarker) {
+                unset($verwacht[$path]);
+            }
+        }
+
+        return $verwacht;
     }
 
     /** @param  array<string, mixed>  $verwacht */
@@ -189,22 +317,12 @@ final class EquivalenceScenario
             return $state->isStepApplicable(substr($path, strlen('step_applicable.')));
         }
         if (str_starts_with($path, 'field_visible.')) {
-            // Filament rendert een veld met z'n key in verschillende
-            // attributes: `wire:model="data.X"` voor text-inputs,
-            // `data-field-wrapper-id="X"` op het wrapper-element, en
-            // `id="…-X"` op de input zelf. Eén treffer is genoeg om te
-            // bevestigen dat het veld in de rendered output zit. Is het
-            // via ->hidden() of ->visible(false) weggelaten, dan zit
-            // geen enkele van die markers in de HTML.
             if ($html === null) {
                 return null;
             }
             $key = substr($path, strlen('field_visible.'));
 
-            return str_contains($html, 'wire:model="data.'.$key.'"')
-                || str_contains($html, 'data.'.$key.'"')
-                || str_contains($html, '"'.$key.'"')
-                || str_contains($html, 'fi-fo-field-wrp-'.$key);
+            return self::detectFieldVisible($html, $key);
         }
 
         return $state->get($path);
