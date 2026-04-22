@@ -206,6 +206,14 @@ const evaluateScenario = (entry) => {
                 let matches;
                 if (triggerType === 'selectboxes' && Array.isArray(triggerValue)) {
                     matches = triggerValue.includes(cond.eq);
+                } else if (cond.eq === '') {
+                    // Formio-semantiek: null / undefined / '' tellen allemaal
+                    // als "leeg" voor conditional-checks. Onze PHP-transpilatie
+                    // volgt hier nu ook, dus de spec-referentie moet exact
+                    // dezelfde interpretatie gebruiken.
+                    matches = triggerValue === null
+                        || triggerValue === undefined
+                        || triggerValue === '';
                 } else {
                     matches = triggerValue === cond.eq;
                 }

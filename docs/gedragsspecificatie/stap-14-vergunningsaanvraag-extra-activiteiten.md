@@ -12,7 +12,7 @@ Voor bijzondere activiteiten als ballonnen oplaten of een lasershow toont het fo
 
 Als de organisator aangeeft ballonnen op te laten (activiteit A37), toont het formulier een inhoud-blok met de regelgeving rond ballon-oplatingen. De pagina "extra activiteiten" wordt daarmee ook van toepassing.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "Ballonnen oplaten" aangevinkt
@@ -25,7 +25,7 @@ Als de organisator aangeeft ballonnen op te laten (activiteit A37), toont het fo
 
 Bij een lasershow (activiteit A38) is er specifieke regelgeving. Het formulier toont een inhoud-blok daarover en markeert deze pagina als van toepassing.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "Lasershow" aangevinkt

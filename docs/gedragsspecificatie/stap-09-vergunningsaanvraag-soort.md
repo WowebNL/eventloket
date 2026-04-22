@@ -16,7 +16,7 @@ Deze pagina vraagt naar soort-specifieke details over de vergunningaanvraag. Als
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoorzieningenZijnAanwezigBijUwEvenement` = `A22` — moet veld `welkeOverigeBouwwerkenGaatUPlaatsen` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — `0` uit
@@ -28,7 +28,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoor
 
 Met een waarde die niet matcht — `welkeVoorzieningenZijnAanwezigBijUwEvenement` is iets anders dan `A22` — moet veld `welkeOverigeBouwwerkenGaatUPlaatsen` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — 
@@ -40,7 +40,7 @@ Met een waarde die niet matcht — `welkeVoorzieningenZijnAanwezigBijUwEvenement
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoorwerpenGaatUPlaatsenBijUwEvenementX` = `A30` — moet veld `welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — `0` uit
@@ -52,7 +52,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoor
 
 Met een waarde die niet matcht — `welkeVoorwerpenGaatUPlaatsenBijUwEvenementX` is iets anders dan `A30` — moet veld `welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — 
@@ -64,7 +64,7 @@ Met een waarde die niet matcht — `welkeVoorwerpenGaatUPlaatsenBijUwEvenementX`
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX` = `A46` — moet veld `welkActiviteitBetreftUwEvenementX` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — `0` uit
@@ -76,7 +76,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVanD
 
 Met een waarde die niet matcht — `welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX` is iets anders dan `A46` — moet veld `welkActiviteitBetreftUwEvenementX` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — 
@@ -88,7 +88,7 @@ Met een waarde die niet matcht — `welkeVanDeOnderstaandeActiviteitenVindenVerd
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoorzieningenZijnAanwezigBijUwEvenement` = `A16` — moet veld `isUwEvenementToegankelijkVoorMensenMetEenBeperking` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — `0` uit
@@ -100,7 +100,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoor
 
 Met een waarde die niet matcht — `welkeVoorzieningenZijnAanwezigBijUwEvenement` is iets anders dan `A16` — moet veld `isUwEvenementToegankelijkVoorMensenMetEenBeperking` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — 
@@ -112,7 +112,7 @@ Met een waarde die niet matcht — `welkeVoorzieningenZijnAanwezigBijUwEvenement
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoorzieningenZijnAanwezigBijUwEvenement` = `A16` — moet veld `voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — `0` uit
@@ -124,7 +124,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `welkeVoor
 
 Met een waarde die niet matcht — `welkeVoorzieningenZijnAanwezigBijUwEvenement` is iets anders dan `A16` — moet veld `voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — 
@@ -136,7 +136,7 @@ Met een waarde die niet matcht — `welkeVoorzieningenZijnAanwezigBijUwEvenement
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `isUwEvenementToegankelijkVoorMensenMetEenBeperking` = `Ja` — moet veld `welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?" = "Ja"
@@ -148,7 +148,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `isUwEvene
 
 Met een waarde die niet matcht — `isUwEvenementToegankelijkVoorMensenMetEenBeperking` is iets anders dan `Ja` — moet veld `welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?" = "___no_match_value_f7e3b2___"
@@ -160,7 +160,7 @@ Met een waarde die niet matcht — `isUwEvenementToegankelijkVoorMensenMetEenBep
 
 Een vooraankondiging vraagt minder details dan een volledige vergunning. Zodra de organisator "vooraankondiging" kiest, hoeft de soort-stap niet ingevuld te worden en wordt 8n als niet-van-toepassing gemarkeerd.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -172,7 +172,7 @@ Een vooraankondiging vraagt minder details dan een volledige vergunning. Zodra d
 
 Als het evenement geen wegen of gebiedsontsluiting afsluit, valt het in het melding-regime. De soort-stap is dan niet relevant en wordt in de sidebar doorgestreept.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?" = "Nee"

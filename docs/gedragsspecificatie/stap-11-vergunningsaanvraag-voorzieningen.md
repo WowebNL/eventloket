@@ -16,7 +16,7 @@ Voor elke voorziening die de organisator aankruist (wc's, douches, etc.) moet ee
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar` = `0` — moet veld `hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar` **verborgen** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Hoeveel tijdelijke chemische toiletten / Dixies zijn er beschikbaar?" = `0`
@@ -28,7 +28,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `hoeveelTi
 
 Met een waarde die niet matcht — `hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar` is iets anders dan `0` — moet veld `hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar` **zichtbaar** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Hoeveel tijdelijke chemische toiletten / Dixies zijn er beschikbaar?" = "___no_match_value_f7e3b2___"
@@ -40,7 +40,7 @@ Met een waarde die niet matcht — `hoeveelTijdelijkeChemischeToilettenZijnErBes
 
 Als de organisator bij de voorzieningen-checkboxen optie A12 (wc's) aanvinkt, wordt het detail-veld zichtbaar waarin de aantallen wc's kunnen worden ingevuld. De pagina voorzieningen zelf wordt als van toepassing gemarkeerd in de sidebar.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "WC's plaatsen (of bestaande gebruiken) " aangevinkt
@@ -53,7 +53,7 @@ Als de organisator bij de voorzieningen-checkboxen optie A12 (wc's) aanvinkt, wo
 
 Net als bij WCs: als de organisator douches (optie A13) aanvinkt in de voorzieningen-lijst, wordt het douches-detailveld zichtbaar zodat de organisator aantallen/locaties kan doorgeven.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "Douches plaatsen (of bestaande gebruiken) " aangevinkt

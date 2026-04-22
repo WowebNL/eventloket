@@ -16,7 +16,7 @@ Voor kenmerken als grote voertuigen op de openbare weg (A48 of A49) verschijnt e
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `voertUDeSchoonmaakZelfUit` = `Ja` — moet veld `uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Voert u de schoonmaak zelf uit? " = "Ja"
@@ -28,7 +28,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `voertUDeS
 
 Met een waarde die niet matcht — `voertUDeSchoonmaakZelfUit` is iets anders dan `Ja` — moet veld `uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Voert u de schoonmaak zelf uit? " = "___no_match_value_f7e3b2___"
@@ -40,7 +40,7 @@ Met een waarde die niet matcht — `voertUDeSchoonmaakZelfUit` is iets anders da
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `wilUGebruikMakenVanGemeentelijkeHulpmiddelen` = `Ja` — moet veld `veldengroep2` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wil U gebruik maken van gemeentelijke hulpmiddelen?" = "Ja"
@@ -52,7 +52,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `wilUGebru
 
 Met een waarde die niet matcht — `wilUGebruikMakenVanGemeentelijkeHulpmiddelen` is iets anders dan `Ja` — moet veld `veldengroep2` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wil U gebruik maken van gemeentelijke hulpmiddelen?" = "___no_match_value_f7e3b2___"
@@ -64,7 +64,7 @@ Met een waarde die niet matcht — `wilUGebruikMakenVanGemeentelijkeHulpmiddelen
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `wenstUTegenBetalingStroomAfTeNemenVanDeGemeente` = `Ja` — moet veld `geefAanOpWelkeLocatieUStroomWilt1` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `wenstUTegenBetalingStroomAfTeNemenVanDeGemeente` = "Ja"
@@ -76,7 +76,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `wenstUTeg
 
 Met een waarde die niet matcht — `wenstUTegenBetalingStroomAfTeNemenVanDeGemeente` is iets anders dan `Ja` — moet veld `geefAanOpWelkeLocatieUStroomWilt1` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `wenstUTegenBetalingStroomAfTeNemenVanDeGemeente` = "___no_match_value_f7e3b2___"
@@ -88,7 +88,7 @@ Met een waarde die niet matcht — `wenstUTegenBetalingStroomAfTeNemenVanDeGemee
 
 Als de organisator aangeeft objecten op de openbare weg te plaatsen (kenmerk A48), moet het detail-veld "groteVoertuigen" zichtbaar worden om de aanvullende gegevens te kunnen invullen.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}" — "Voertuigen parkeren die langer zijn dan 6 meter en/of hoger dan 2,40 meter" aangevinkt
@@ -101,7 +101,7 @@ Als de organisator aangeeft objecten op de openbare weg te plaatsen (kenmerk A48
 
 Bij de keuze om grote voertuigen te parkeren op de openbare weg (A49) verschijnt hetzelfde detail-veld voor aanvullende gegevens.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}" — "Voorwerpen op de weg plaatsen" aangevinkt

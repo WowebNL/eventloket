@@ -16,7 +16,7 @@ Per aangevinkte overige maatregel (bijvoorbeeld "extra afval" of "aanpassen stra
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie` = `Ja` — moet veld `zijnDeInTeZettenPersonenBeroepsmatigeVerkeersregelaarsOfIsErSprakeVanEvenementenverkeersregelaars` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Huurt u de verkeersregelaars in bij een daarin gespecialiseerd bedrijf/organisatie?" = "Ja"
@@ -28,7 +28,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `huurtUDeV
 
 Met een waarde die niet matcht — `huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie` is iets anders dan `Ja` — moet veld `zijnDeInTeZettenPersonenBeroepsmatigeVerkeersregelaarsOfIsErSprakeVanEvenementenverkeersregelaars` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Huurt u de verkeersregelaars in bij een daarin gespecialiseerd bedrijf/organisatie?" = "___no_match_value_f7e3b2___"
@@ -40,7 +40,7 @@ Met een waarde die niet matcht — `huurtUDeVerkeersregelaarsInBijEenDaarinGespe
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs` = `anders` — moet veld `welkeAndereMaatregelenUWiltNemen` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "U heeft aangegeven, dat u extra vervoersmaatregelen wilt nemen voor bezoekers van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Kruis hier aan, wat van toepassing is" — `0` uit
@@ -52,7 +52,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `uHeeftAan
 
 Met een waarde die niet matcht — `uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs` is iets anders dan `anders` — moet veld `welkeAndereMaatregelenUWiltNemen` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "U heeft aangegeven, dat u extra vervoersmaatregelen wilt nemen voor bezoekers van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Kruis hier aan, wat van toepassing is" — 
@@ -64,7 +64,7 @@ Met een waarde die niet matcht — `uHeeftAangegevenDatUExtraVervoersmaatregelen
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `wiltUPromotieMakenVoorUwEvenement` = `Ja` — moet veld `opWelkNiveauWiltUPromotieMaken` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Ja"
@@ -76,7 +76,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `wiltUProm
 
 Met een waarde die niet matcht — `wiltUPromotieMakenVoorUwEvenement` is iets anders dan `Ja` — moet veld `opWelkNiveauWiltUPromotieMaken` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
@@ -88,7 +88,7 @@ Met een waarde die niet matcht — `wiltUPromotieMakenVoorUwEvenement` is iets a
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `wiltUPromotieMakenVoorUwEvenement` = `Ja` — moet veld `hoeWiltUPromotieMakenVoorUwEvenement` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Ja"
@@ -100,7 +100,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `wiltUProm
 
 Met een waarde die niet matcht — `wiltUPromotieMakenVoorUwEvenement` is iets anders dan `Ja` — moet veld `hoeWiltUPromotieMakenVoorUwEvenement` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
@@ -112,7 +112,7 @@ Met een waarde die niet matcht — `wiltUPromotieMakenVoorUwEvenement` is iets a
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `hoeWiltUPromotieMakenVoorUwEvenement` = `anders` — moet veld `opWelkeAndereManierWiltUPromotieMaken` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Hoe wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — `0` uit
@@ -124,7 +124,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `hoeWiltUP
 
 Met een waarde die niet matcht — `hoeWiltUPromotieMakenVoorUwEvenement` is iets anders dan `anders` — moet veld `opWelkeAndereManierWiltUPromotieMaken` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Hoe wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — 
@@ -136,7 +136,7 @@ Met een waarde die niet matcht — `hoeWiltUPromotieMakenVoorUwEvenement` is iet
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX` = `Ja` — moet veld `opWelkeWijzeInformeertUHen` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Geeft u omwonenden en nabijgelegen bedrijven vooraf informatie over uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Ja"
@@ -148,7 +148,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `geeftUOmw
 
 Met een waarde die niet matcht — `geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX` is iets anders dan `Ja` — moet veld `opWelkeWijzeInformeertUHen` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Geeft u omwonenden en nabijgelegen bedrijven vooraf informatie over uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
@@ -160,7 +160,7 @@ Met een waarde die niet matcht — `geeftUOmwonendenEnNabijgelegenBedrijvenVoora
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `organiseertUUwEvenementXVoorDeEersteKeer` = `Nee` — moet veld `welkeErvaringHeeftDeOrganisatorMetHetOrganiserenVanEvenementen` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "Nee"
@@ -172,7 +172,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `organisee
 
 Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is iets anders dan `Nee` — moet veld `welkeErvaringHeeftDeOrganisatorMetHetOrganiserenVanEvenementen` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "___no_match_value_f7e3b2___"
@@ -184,7 +184,7 @@ Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `organiseertUUwEvenementXVoorDeEersteKeer` = `Nee` — moet veld `welkeRelevanteErvaringHeeftHetPersoneelDatDeOrganisatorInhuurtViaIntermediairs` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "Nee"
@@ -196,7 +196,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `organisee
 
 Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is iets anders dan `Nee` — moet veld `welkeRelevanteErvaringHeeftHetPersoneelDatDeOrganisatorInhuurtViaIntermediairs` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "___no_match_value_f7e3b2___"
@@ -208,7 +208,7 @@ Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `organiseertUUwEvenementXVoorDeEersteKeer` = `Nee` — moet veld `welkeRelevanteErvaringHeeftHetPersoneelVanOnderAannemersAanWieDeOrganisatorWerkUitbesteedt` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "Nee"
@@ -220,7 +220,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `organisee
 
 Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is iets anders dan `Nee` — moet veld `welkeRelevanteErvaringHeeftHetPersoneelVanOnderAannemersAanWieDeOrganisatorWerkUitbesteedt` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "___no_match_value_f7e3b2___"
@@ -232,7 +232,7 @@ Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `organiseertUUwEvenementXVoorDeEersteKeer` = `Nee` — moet veld `welkeRelevanteErvaringHebbenDeVrijwilligersDieDeOrganisatorInzet` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "Nee"
@@ -244,7 +244,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `organisee
 
 Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is iets anders dan `Nee` — moet veld `welkeRelevanteErvaringHebbenDeVrijwilligersDieDeOrganisatorInzet` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?" = "___no_match_value_f7e3b2___"
@@ -256,7 +256,7 @@ Met een waarde die niet matcht — `organiseertUUwEvenementXVoorDeEersteKeer` is
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `hanteertUHuisregelsVoorUwEvenementX` = `Ja` — moet veld `uKuntHierHetHuisregelementUploaden` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Ja"
@@ -268,7 +268,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `hanteertU
 
 Met een waarde die niet matcht — `hanteertUHuisregelsVoorUwEvenementX` is iets anders dan `Ja` — moet veld `uKuntHierHetHuisregelementUploaden` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
@@ -280,7 +280,7 @@ Met een waarde die niet matcht — `hanteertUHuisregelsVoorUwEvenementX` is iets
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024` = `Ja` — moet veld `lichtDeSideEventsToe` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Ja"
@@ -292,7 +292,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `organisee
 
 Met een waarde die niet matcht — `organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024` is iets anders dan `Ja` — moet veld `lichtDeSideEventsToe` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
@@ -304,7 +304,7 @@ Met een waarde die niet matcht — `organiseertUOokFlankerendeEvenementenSideEve
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement` = `Ja` — moet veld `uploadDeVerzekeringspolis` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "Ja"
@@ -316,7 +316,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `heeftUEen
 
 Met een waarde die niet matcht — `heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement` is iets anders dan `Ja` — moet veld `uploadDeVerzekeringspolis` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" = "___no_match_value_f7e3b2___"
@@ -328,7 +328,7 @@ Met een waarde die niet matcht — `heeftUEenEvenementenverzekeringAfgeslotenVoo
 
 Als de organisator bij "kruis aan welke overige maatregelen" optie A33 (extra afvalvoorzieningen) aanvinkt, verschijnt het detail-veld waarin de aanpak beschreven kan worden, en wordt de maatregelen-pagina in de sidebar actief.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "Er ontstaat extra afval" aangevinkt
@@ -341,7 +341,7 @@ Als de organisator bij "kruis aan welke overige maatregelen" optie A33 (extra af
 
 Als de organisator kiest om straatmeubilair aan te passen of te verwijderen (optie A32), verschijnt het detail-veld waarin kan worden beschreven welke objecten verplaatst worden.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?" — "(Laten) aanpassen locatie en/of verwijderen straatmeubilair" aangevinkt

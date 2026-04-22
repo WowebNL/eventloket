@@ -16,7 +16,7 @@ Veel velden in het formulier zijn pas relevant als de organisator een specifieke
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `extraContactpersonenToevoegen` = `vooraf` — moet veld `contactpersoonVoorafgaandAanHetEvenement` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Extra contactpersonen toevoegen" — `0` uit
@@ -28,7 +28,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `extraCont
 
 Met een waarde die niet matcht — `extraContactpersonenToevoegen` is iets anders dan `vooraf` — moet veld `contactpersoonVoorafgaandAanHetEvenement` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Extra contactpersonen toevoegen" — 
@@ -40,7 +40,7 @@ Met een waarde die niet matcht — `extraContactpersonenToevoegen` is iets ander
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `extraContactpersonenToevoegen` = `tijdens` — moet veld `contactpersoonVoorafgaandAanHetEvenement1` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Extra contactpersonen toevoegen" — `0` uit
@@ -52,7 +52,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `extraCont
 
 Met een waarde die niet matcht — `extraContactpersonenToevoegen` is iets anders dan `tijdens` — moet veld `contactpersoonVoorafgaandAanHetEvenement1` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Extra contactpersonen toevoegen" — 
@@ -64,7 +64,7 @@ Met een waarde die niet matcht — `extraContactpersonenToevoegen` is iets ander
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `extraContactpersonenToevoegen` = `achteraf` — moet veld `contactpersoonVoorafgaandAanHetEvenement2` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Extra contactpersonen toevoegen" — `0` uit
@@ -76,7 +76,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `extraCont
 
 Met een waarde die niet matcht — `extraContactpersonenToevoegen` is iets anders dan `achteraf` — moet veld `contactpersoonVoorafgaandAanHetEvenement2` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Extra contactpersonen toevoegen" — 
@@ -88,7 +88,7 @@ Met een waarde die niet matcht — `extraContactpersonenToevoegen` is iets ander
 
 Gebruiker ingelogd via eHerkenning/KvK heeft de organisatie-gegevens al uit de KvK-koppeling. "Organisatie-informatie" wordt zichtbaar om de opgehaalde gegevens te tonen; "Adresgegevens" wordt verborgen omdat het adres al bekend is.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld `eventloketSession.kvk` = "12345678"

@@ -1,10 +1,12 @@
 # Gedragsspecificatie evenementformulier
 
-_Automatisch gegenereerd op 22-04-2026 13:41 via `php artisan eventform:gedrags-rapport`._
+_Automatisch gegenereerd op 22-04-2026 14:56 via `php artisan eventform:gedrags-rapport`._
 
-**Samenvatting:** ✅ Alle scenarios slagen — 170 geslaagd, 0 gefaald, 170 totaal.
+**Samenvatting:** ✅ Alle scenarios slagen — 174 geslaagd, 0 gefaald, 174 totaal.
 
-✅ Ook **170 van 170 scenarios bevestigd door de onafhankelijke JsonLogic-spec** (via json-logic-js, de canonieke referentie die Open Forms zelf ook volgt).
+✅ Ook **174 van 174 scenarios bevestigd door de onafhankelijke JsonLogic-spec** (via json-logic-js, de canonieke referentie die Open Forms zelf ook volgt).
+
+**Bewijssterkte:** 🟢 69 scenarios met sterk bewijs (PHP-runtime meet én spec-referentie bevestigt) · 🟡 105 scenarios met gemiddeld bewijs (spec-referentie bevestigt, PHP-runner kan visuele check niet direct meten — typisch velden op niet-actieve wizard-stap)
 
 Dit document is de index op de gedragsspecificatie. Elke pagina van het evenementformulier heeft een eigen bestand waarin de scenarios voor dat gedeelte beschreven staan.
 
@@ -20,7 +22,7 @@ Elk scenario wordt onafhankelijk gecheckt:
 ## Overzicht per pagina
 
 - ✅ **[Stap 1: Contactgegevens](gedragsspecificatie/stap-01-contactgegevens.md)** — 7/7 scenarios
-- ✅ **[Stap 2: Het evenement](gedragsspecificatie/stap-02-het-evenement.md)** — 7/7 scenarios
+- ✅ **[Stap 2: Het evenement](gedragsspecificatie/stap-02-het-evenement.md)** — 11/11 scenarios
 - _⚪ Stap 3: Locatie_ — nog geen scenarios gedekt
 - ✅ **[Stap 4: Tijden](gedragsspecificatie/stap-04-tijden.md)** — 9/9 scenarios
 - ✅ **[Stap 5: Vooraankondiging](gedragsspecificatie/stap-05-vooraankondiging.md)** — 2/2 scenarios

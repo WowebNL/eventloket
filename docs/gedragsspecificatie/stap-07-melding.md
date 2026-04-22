@@ -12,7 +12,7 @@ De Melding-stap in de sidebar moet wegvallen zodra duidelijk wordt dat het geen 
 
 Zodra de organisator bij "waarvoor wilt u Eventloket gebruiken?" kiest voor "vooraankondiging", is de Melding-stap niet relevant. Het systeem markeert de stap als niet-van-toepassing; in de sidebar verschijnt hij doorgestreept.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -24,7 +24,7 @@ Zodra de organisator bij "waarvoor wilt u Eventloket gebruiken?" kiest voor "voo
 
 Als de organisator al op stap 6 aangeeft dat het aantal aanwezigen boven de drempel ligt, start de vergunningsroute. De Melding-stap is dan niet van toepassing en wordt in de sidebar doorgestreept.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Is het aantal aanwezigen bij uw evenement minder dan {% get_value gemeenteVariabelen 'aanwezigen' %} personen?" = "Nee"

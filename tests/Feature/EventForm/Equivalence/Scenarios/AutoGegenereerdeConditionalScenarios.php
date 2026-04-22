@@ -162,13 +162,6 @@ final class AutoGegenereerdeConditionalScenarios implements ScenarioProvider
         $conditional = $component['conditional'] ?? null;
 
         if ($key !== '' && is_array($conditional) && ! empty($conditional['when'])) {
-            // Skip conditionals met eq=''. Semantisch is "veld is exact
-            // lege string" niet hetzelfde als "veld is niet ingevuld"
-            // (null in form-state). Dat geeft onbetrouwbare auto-match
-            // scenarios; die laten we handmatig doen.
-            if (($conditional['eq'] ?? null) === '') {
-                return;
-            }
             // Content-componenten zijn display-only zonder key-marker in
             // de rendered HTML — hun zichtbaarheid is moeilijk betrouwbaar
             // te detecteren via auto-gen. Die laten we handmatig testen

@@ -12,7 +12,7 @@ De Risicoscan kent elke antwoordoptie een numerieke score toe. De som van de 14 
 
 Als een organisator de minst-risicovolle antwoorden geeft op alle 14 vragen (kleine doelgroep, bekende locatie, overdag, geen alcohol/drugs, etc.), dan moet het evenement worden geclassificeerd als A — laag risico. Dat betekent dat de vervolgvragen beperkt blijven en de behandelaar een lichte toets kan uitvoeren.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wat is de aantrekkingskracht van het evenement?" = "0.5" (_Wijk of buurt_)
@@ -37,7 +37,7 @@ Als een organisator de minst-risicovolle antwoorden geeft op alle 14 vragen (kle
 
 Een gemeentelijk evenement met politieke aandacht, risicovolle activiteiten, alcoholgebruik en 150-2000 bezoekers zit in het midden van de risico-range. De som ligt tussen 6 en 9, dus classificatie B — middelhoog risico. De behandelaar stelt dan aanvullende vragen over maatregelen.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wat is de aantrekkingskracht van het evenement?" = "1.5" (_Gemeentelijk_)
@@ -62,7 +62,7 @@ Een gemeentelijk evenement met politieke aandacht, risicovolle activiteiten, alc
 
 Wanneer er meerdere risico-factoren samenkomen — een grote doelgroep met verminderd zelfredzame bezoekers, overnachting buiten een daarvoor ingerichte locatie, en slechte aan- en afvoerwegen — tilt de som het evenement boven de drempel van 9. Classificatie C betekent dat het een hoog-risico evenement is en de volle behandelaar-toets met maximum aan vervolgvragen in werking treedt.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟢 Sterk — beide runtimes bevestigen elke check  ·  **PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Wat is de aantrekkingskracht van het evenement?" = "1.5" (_Gemeentelijk_)

@@ -159,6 +159,20 @@ final class EquivalenceScenario
      */
     public static function runViaLivewire(array $scenario): array
     {
+        return self::runViaLivewireDetailed($scenario)['diffs'];
+    }
+
+    /**
+     * Uitgebreide Livewire-runner die ook teruggeeft welke checks daadwerkelijk
+     * gemeten zijn en welke overgeslagen moesten worden door technische
+     * beperkingen (typisch: velden op niet-actieve wizard-stappen). Hiermee
+     * kan het gedrags-rapport per scenario de bewijssterkte classificeren.
+     *
+     * @param  array<string, mixed>  $scenario
+     * @return array{diffs: array<string, array{expected: mixed, actual: mixed}>, measured: list<string>, skipped: list<string>}
+     */
+    public static function runViaLivewireDetailed(array $scenario): array
+    {
         $test = Livewire::test(EventFormPage::class);
 
         /** @var EventFormPage $page */
@@ -199,26 +213,35 @@ final class EquivalenceScenario
         // zetten we tijdelijk uit — de JS-spec-referentie (via json-
         // logic-js) én Playwright-walkthroughs dekken die dimensie wél.
         $html = null;
-        $verwacht = $scenario['verwacht'] ?? [];
+        $origVerwacht = $scenario['verwacht'] ?? [];
+        $verwacht = $origVerwacht;
+        $skipped = [];
         if (self::needsRenderedHtml($verwacht)) {
             $html = $test->html();
-            $verwacht = self::filterVisibilityChecksDieNietGemeenKunnenWorden($verwacht, $html);
+            [$verwacht, $skipped] = self::partitionVisibilityChecks($verwacht, $html);
         }
 
-        return self::diff($state, $verwacht, $html);
+        $measured = array_keys($verwacht);
+
+        return [
+            'diffs' => self::diff($state, $verwacht, $html),
+            'measured' => array_values($measured),
+            'skipped' => array_values($skipped),
+        ];
     }
 
     /**
-     * Verwijdert `field_visible.*`-verwachtingen voor velden die niet
-     * in de rendered HTML voorkomen — ongeacht hun zichtbaarheid.
-     * Dat zijn typisch velden op inactieve wizard-steps. De spec-
-     * referentie en Playwright-walkthrough checken die apart.
+     * Splitst verwachtingen in twee groepen: die we gemeten kunnen
+     * krijgen in de rendered HTML, en die we moeten overslaan omdat
+     * het betreffende veld server-side niet rendert (typisch velden
+     * op een niet-actieve wizard-stap).
      *
      * @param  array<string, mixed>  $verwacht
-     * @return array<string, mixed>
+     * @return array{0: array<string, mixed>, 1: list<string>}  [meetbaar, overgeslagen-paths]
      */
-    private static function filterVisibilityChecksDieNietGemeenKunnenWorden(array $verwacht, string $html): array
+    private static function partitionVisibilityChecks(array $verwacht, string $html): array
     {
+        $skipped = [];
         foreach (array_keys($verwacht) as $path) {
             if (! str_starts_with($path, 'field_visible.')) {
                 continue;
@@ -243,10 +266,11 @@ final class EquivalenceScenario
             }
             if (! $heeftAnyMarker) {
                 unset($verwacht[$path]);
+                $skipped[] = $path;
             }
         }
 
-        return $verwacht;
+        return [$verwacht, $skipped];
     }
 
     /** @param  array<string, mixed>  $verwacht */

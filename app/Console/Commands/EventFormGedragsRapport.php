@@ -148,12 +148,25 @@ class EventFormGedragsRapport extends Command
                 $diffs = EquivalenceScenario::run($scenario);
                 $jsKey = $provider.'|'.$label;
                 $jsRef = $this->jsReference[$jsKey] ?? null;
+
+                // Bepaal hoeveel van de verwachtingen de lichte runner
+                // überhaupt kan checken. `field_visible.*` vereist een
+                // gerenderde pagina — die overslaan we in deze runner,
+                // en markeren we als "spec-only bewijs" in de badge.
+                $skipped = [];
+                foreach (array_keys($scenario['verwacht'] ?? []) as $path) {
+                    if (str_starts_with($path, 'field_visible.')) {
+                        $skipped[] = $path;
+                    }
+                }
+
                 $results[] = [
                     'provider' => $provider,
                     'scenario' => $scenario,
                     'pass' => $diffs === [],
                     'diffs' => $diffs,
                     'js_ref' => $jsRef,
+                    'skipped_in_report_runner' => $skipped,
                 ];
             }
         }
@@ -274,7 +287,13 @@ class EventFormGedragsRapport extends Command
 
         // Elk scenario
         foreach ($items as $item) {
-            $lines[] = $this->renderScenario($item['scenario'], $item['pass'], $item['diffs'], $item['js_ref'] ?? null);
+            $lines[] = $this->renderScenario(
+                $item['scenario'],
+                $item['pass'],
+                $item['diffs'],
+                $item['js_ref'] ?? null,
+                $item['skipped_in_report_runner'] ?? [],
+            );
         }
 
         return implode("\n", $lines);
@@ -294,11 +313,25 @@ class EventFormGedragsRapport extends Command
         // door de canonieke json-logic-js runtime heen zijn bevestigd.
         $jsVerified = 0;
         $jsMismatch = 0;
+        $sterkCount = 0;
+        $gemiddeldCount = 0;
         foreach ($results as $r) {
             $ref = $r['js_ref'] ?? null;
             if ($ref === null) continue;
             if ($ref['ok']) $jsVerified++;
             else $jsMismatch++;
+
+            $skipInReport = count($r['skipped_in_report_runner'] ?? []);
+            $totalChecks = count($r['scenario']['verwacht'] ?? []);
+            if ($r['pass'] && $ref['ok']) {
+                if ($skipInReport === 0) {
+                    $sterkCount++;
+                } elseif ($skipInReport < $totalChecks) {
+                    $sterkCount++; // deels gemeten = nog steeds sterk voor die delen
+                } else {
+                    $gemiddeldCount++;
+                }
+            }
         }
         $jsLine = '';
         if ($jsVerified > 0 || $jsMismatch > 0) {
@@ -306,6 +339,7 @@ class EventFormGedragsRapport extends Command
                 ? "✅ Ook **{$jsVerified} van {$total} scenarios bevestigd door de onafhankelijke JsonLogic-spec** (via json-logic-js, de canonieke referentie die Open Forms zelf ook volgt)."
                 : "❌ {$jsMismatch} scenarios wijken af volgens de onafhankelijke JsonLogic-spec — dat duidt op een inconsistentie tussen onze PHP en de OF-definitie.";
         }
+        $bewijsLijn = "**Bewijssterkte:** 🟢 {$sterkCount} scenarios met sterk bewijs (PHP-runtime meet én spec-referentie bevestigt) · 🟡 {$gemiddeldCount} scenarios met gemiddeld bewijs (spec-referentie bevestigt, PHP-runner kan visuele check niet direct meten — typisch velden op niet-actieve wizard-stap)";
 
         $lines = [
             '# Gedragsspecificatie evenementformulier',
@@ -320,6 +354,8 @@ class EventFormGedragsRapport extends Command
             $lines[] = $jsLine;
             $lines[] = '';
         }
+        $lines[] = $bewijsLijn;
+        $lines[] = '';
         $lines = array_merge($lines, [
             'Dit document is de index op de gedragsspecificatie. Elke pagina van het '
                 .'evenementformulier heeft een eigen bestand waarin de scenarios voor dat '
@@ -418,8 +454,9 @@ class EventFormGedragsRapport extends Command
      * @param  array<string, mixed>  $scenario
      * @param  array<string, mixed>  $diffs
      * @param  ?array{ok: bool, mismatches: list<array{path: string, expected: mixed, actual: mixed}>}  $jsRef
+     * @param  list<string>  $skippedInReportRunner
      */
-    private function renderScenario(array $scenario, bool $pass, array $diffs, ?array $jsRef): string
+    private function renderScenario(array $scenario, bool $pass, array $diffs, ?array $jsRef, array $skippedInReportRunner = []): string
     {
         $phpIcon = $pass ? '✅' : '❌';
         $lines = [];
@@ -428,12 +465,31 @@ class EventFormGedragsRapport extends Command
         $lines[] = $scenario['omschrijving'];
         $lines[] = '';
 
-        // Bewijs-badges: één voor onze PHP-implementatie, één voor de
-        // onafhankelijke json-logic-js spec-referentie als die beschikbaar is.
-        $badges = ["**PHP (Filament):** {$phpIcon}"];
+        // Bewijssterkte-badges. Classificatie:
+        //   ✅✅  sterk bewijs — beide runtimes bevestigen, alle verwachtingen
+        //         daadwerkelijk gemeten in de PHP-kant
+        //   ✅⚠️  gemiddeld bewijs — de PHP-kant kon sommige visuele checks
+        //         niet meten (typisch velden op niet-actieve wizard-stappen),
+        //         maar de spec-referentie bevestigt ze wel
+        //   ❌    afwijking tussen de runtimes
+        $alleVerwachtingen = $scenario['verwacht'] ?? [];
+        $skipCount = count($skippedInReportRunner);
+        $totaalChecks = count($alleVerwachtingen);
+        $gemetenCount = $totaalChecks - $skipCount;
+
+        $phpLabel = '**PHP (Filament):** '.$phpIcon;
+        if ($skipCount > 0) {
+            $phpLabel .= " _({$gemetenCount}/{$totaalChecks} checks daadwerkelijk gemeten via rendered HTML; {$skipCount} overgeslagen)_";
+        }
+        $badges = [$phpLabel];
         if ($jsRef !== null) {
             $badges[] = '**JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** '.($jsRef['ok'] ? '✅' : '❌');
         }
+
+        // Bewijssterkte-summary — één emoji vooraan.
+        $sterkte = $this->bewijssterkte($pass, $jsRef, $skipCount, $totaalChecks);
+        array_unshift($badges, "**Bewijs:** {$sterkte}");
+
         $lines[] = implode('  ·  ', $badges);
         $lines[] = '';
 
@@ -537,6 +593,34 @@ class EventFormGedragsRapport extends Command
         $veldOmschrijving = $label !== null ? "Veld \"{$label}\"" : "Veld `{$path}`";
 
         return "{$veldOmschrijving} = {$this->formatWaarde($value)}";
+    }
+
+    /**
+     * @param  ?array{ok: bool, mismatches: array}  $jsRef
+     */
+    private function bewijssterkte(bool $phpPass, ?array $jsRef, int $skipCount, int $totalChecks): string
+    {
+        if (! $phpPass) {
+            return '❌ Afwijking gevonden';
+        }
+        if ($jsRef !== null && ! $jsRef['ok']) {
+            return '❌ Spec wijkt af';
+        }
+        if ($totalChecks === 0) {
+            // Geen verwachtingen in scenario — trivially doorgelaten;
+            // zou eigenlijk niet mogen maar dekt een edge-case.
+            return '⚠️ Geen verwachtingen';
+        }
+        if ($skipCount === 0 && $jsRef !== null) {
+            return '🟢 Sterk — beide runtimes bevestigen elke check';
+        }
+        if ($skipCount > 0 && $jsRef !== null) {
+            return "🟡 Gemiddeld — PHP-runner kon {$skipCount} visuele check(s) niet direct meten, spec-referentie bevestigt ze wel";
+        }
+        if ($skipCount === 0) {
+            return '🟢 PHP-runtime bevestigt';
+        }
+        return '🟡 Deels gemeten';
     }
 
     private function formatWaarde(mixed $value): string

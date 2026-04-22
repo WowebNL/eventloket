@@ -12,7 +12,7 @@ Voor elk veld in het formulier dat alleen onder een specifieke voorwaarde zichtb
 
 Zodra de gebruiker een waarde kiest die matcht met de conditional — `waarvoorWiltUEventloketGebruiken` = `vooraankondiging` — moet veld `vooraankondiginggroep` **zichtbaar** worden. Dit scenario test de match-kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "vooraankondiging" (_U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in_)
@@ -24,7 +24,7 @@ Zodra de gebruiker een waarde kiest die matcht met de conditional — `waarvoorW
 
 Met een waarde die niet matcht — `waarvoorWiltUEventloketGebruiken` is iets anders dan `vooraankondiging` — moet veld `vooraankondiginggroep` **verborgen** zijn. Dit scenario test de andere kant van de conditional.
 
-**PHP (Filament):** ✅  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
+**Bewijs:** 🟡 Gemiddeld — PHP-runner kon 1 visuele check(s) niet direct meten, spec-referentie bevestigt ze wel  ·  **PHP (Filament):** ✅ _(0/1 checks daadwerkelijk gemeten via rendered HTML; 1 overgeslagen)_  ·  **JS-spec ([json-logic-js](https://github.com/jwadhams/json-logic-js)):** ✅
 
 **Gegeven (wat de gebruiker heeft ingevuld of wat bekend is):**
 - Veld "Waarvoor wilt u Eventloket gebruiken?" = "___no_match_value_f7e3b2___"
