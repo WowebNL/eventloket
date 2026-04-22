@@ -64,15 +64,12 @@ test('walkthrough: doorloop stap 1 t/m 3 (zichtbaar in browser)', async ({ page 
         await klikVolgende(page);
     });
 
-    // ---------- Stap 3: Locatie (EXPLICIT HALT) --------------------
-    await test.step('Stap 3 — Locatie (halt, wordt later apart gedekt)', async () => {
+    // ---------- Stap 3: Locatie (halt — kaart/repeater-interactie komt apart) ----
+    await test.step('Stap 3 — Locatie (halt, wordt later apart uitgewerkt)', async () => {
         expect(await huidigeStap(page)).toMatch(/Locatie/i);
         await page.screenshot({ path: 'test-results/walkthrough/stap-03-locatie-aangekomen.png', fullPage: true });
-
-        // We stoppen hier bewust. Locatie heeft een kaart-component die
-        // extra interactie vereist (polygon tekenen of adres-lookup),
-        // plus doorkomst-logica bij route-evenementen. Die uitbreiding
-        // komt in een aparte pass.
-        console.log('✅ Walkthrough bereikt stap 3 (Locatie) — verdere stappen nog niet automatisch gedekt.');
+        // Wacht een moment zodat de user in de live-modus de pagina nog even ziet.
+        await page.waitForTimeout(1500);
+        console.log('✅ Walkthrough bereikt stap 3 (Locatie) — verdere stappen wachten op uitwerking van de kaart-interactie.');
     });
 });
