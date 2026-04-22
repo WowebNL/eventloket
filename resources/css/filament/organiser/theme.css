@@ -14,3 +14,71 @@
 .openforms-formio-content table,  .openforms-formio-content .table {
     width: 100%;
 }
+
+/*
+ * Content-blokken in de Filament-form (TextEntry met HtmlString) bevatten
+ * vaak HTML-tabellen (bv. "Overzicht ingevulde tijden"). Filament's default
+ * styling geeft die geen cell-borders of padding, waardoor ze als platte
+ * tekst renderen. Deze regels herstellen een nette tabel-visuele layout.
+ */
+.fi-in-text table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0 1rem 0;
+}
+
+.fi-in-text table th,
+.fi-in-text table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--gray-200);
+    text-align: left;
+    vertical-align: top;
+}
+
+.fi-in-text table thead th {
+    border-bottom: 2px solid var(--gray-300);
+    background: var(--gray-50);
+}
+
+:is(.dark .fi-in-text table th, .dark .fi-in-text table td) {
+    border-bottom-color: var(--gray-800);
+}
+
+:is(.dark .fi-in-text table thead th) {
+    border-bottom-color: var(--gray-700);
+    background: var(--gray-900);
+}
+
+.fi-in-text figure.table {
+    margin: 0;
+    overflow-x: auto;
+}
+
+/*
+ * Duidelijker visuele scheiding tussen fieldsets in het form. Elk fieldset
+ * krijgt een subtiele rand en meer ademruimte, zodat secties als "Contact",
+ * "Organisatie informatie", "Adresgegevens" zichtbaar van elkaar gescheiden
+ * worden en het niet één lange brij wordt.
+ */
+.fi-fieldset {
+    border: 1px solid var(--gray-200);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.25rem 1rem 1.25rem;
+    margin-block: 1rem;
+    background: color-mix(in oklab, var(--gray-50) 60%, transparent);
+}
+
+:is(.dark .fi-fieldset) {
+    border-color: var(--gray-800);
+    background: color-mix(in oklab, var(--gray-900) 40%, transparent);
+}
+
+.fi-fieldset > legend {
+    padding: 0 0.5rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+:is(.dark .fi-fieldset > legend) {
+    color: var(--gray-100);
+}
