@@ -12,19 +12,23 @@ use Tests\Feature\EventForm\Equivalence\EquivalenceScenario;
 use Tests\Feature\EventForm\Equivalence\Scenarios\ScenarioProvider;
 
 /**
- * Genereert `docs/gedragsspecificatie.md` — een leesbare samenvatting van
- * wat het evenementformulier doet, gegroepeerd per pagina/stap waar het
- * gedrag merkbaar is. Bedoeld als oplever-document: iedereen kan op
- * GitHub zien dat de nieuwe Filament-versie zich gedraagt zoals de oude
- * Open Forms-versie.
+ * Genereert de gedragsspecificatie — een leesbare samenvatting van wat
+ * het evenementformulier doet, gegroepeerd per pagina. Output bestaat
+ * uit één index + één bestand per pagina, gelinked vanuit de index.
+ *
+ * Structuur:
+ *   docs/gedragsspecificatie.md                   (index + ✅/❌ overzicht)
+ *   docs/gedragsspecificatie/stap-01-contactgegevens.md
+ *   docs/gedragsspecificatie/stap-02-het-evenement.md
+ *   …
+ *   docs/gedragsspecificatie/pagina-overstijgend.md
  */
 class EventFormGedragsRapport extends Command
 {
     protected $signature = 'eventform:gedrags-rapport
-        {--out=docs/gedragsspecificatie.md : Bestand waar de rapportage naartoe gaat}
-        {--stdout : Print naar stdout in plaats van naar bestand}';
+        {--out=docs/gedragsspecificatie.md : Pad naar het index-bestand. Subbestanden komen in een gelijk-genaamde directory naast de index.}';
 
-    protected $description = 'Genereert een leesbaar rapport van alle equivalentie-scenarios, gegroepeerd per stap';
+    protected $description = 'Genereert de gedragsspecificatie (1 index + 1 bestand per pagina)';
 
     private FieldCatalog $catalog;
 
@@ -40,18 +44,31 @@ class EventFormGedragsRapport extends Command
         }
 
         $results = $this->runAllScenarios($providers);
-        $report = $this->renderReport($results);
 
-        if ($this->option('stdout')) {
-            $this->output->write($report);
+        // Bepaal paths: indexPath = --out, pagesDir = zelfde dirname + basename-zonder-extensie
+        $indexPath = base_path((string) $this->option('out'));
+        $pagesDir = dirname($indexPath).'/'.pathinfo($indexPath, PATHINFO_FILENAME);
 
-            return self::SUCCESS;
+        // Schoon pages-directory voordat we schrijven — stale files van een oudere
+        // run horen weg te zijn (bv. als een stap verdwijnt uit het formulier).
+        if (is_dir($pagesDir)) {
+            foreach (glob($pagesDir.'/*.md') ?: [] as $stale) {
+                @unlink($stale);
+            }
         }
+        @mkdir($pagesDir, 0755, true);
+        @mkdir(dirname($indexPath), 0755, true);
 
-        $out = base_path((string) $this->option('out'));
-        @mkdir(dirname($out), 0755, true);
-        file_put_contents($out, $report);
-        $this->info("Rapport geschreven naar: {$out}");
+        $grouped = $this->groupByStap($results);
+
+        // Eerst per-pagina files schrijven zodat we filename-links kunnen gebruiken in de index
+        $pageFiles = $this->writePageFiles($grouped, $pagesDir);
+
+        // Nu de index met verwijzingen naar de zojuist-geschreven files
+        file_put_contents($indexPath, $this->renderIndex($results, $pageFiles, $pagesDir, $indexPath));
+
+        $this->info("Index: {$indexPath}");
+        $this->info('Pagina-bestanden: '.count($pageFiles).' × in '.$pagesDir);
 
         return self::SUCCESS;
     }
@@ -65,7 +82,6 @@ class EventFormGedragsRapport extends Command
         if (! is_dir($dir)) {
             return [];
         }
-
         $providers = [];
         foreach (glob($dir.'/*.php') ?: [] as $file) {
             $basename = basename($file, '.php');
@@ -87,12 +103,8 @@ class EventFormGedragsRapport extends Command
     }
 
     /**
-     * Run alle scenarios één keer en bewaar de uitkomsten. We groeperen
-     * pas in de render-stap, want de bronsplitsing (routing/visibility)
-     * en de gewenste groepering (per stap) komen niet altijd overeen.
-     *
      * @param  list<class-string<ScenarioProvider>>  $providers
-     * @return list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, array{expected: mixed, actual: mixed}>}>
+     * @return list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>
      */
     private function runAllScenarios(array $providers): array
     {
@@ -114,36 +126,20 @@ class EventFormGedragsRapport extends Command
     }
 
     /**
+     * Groepeer op stap-uuid, in OF-index-volgorde. Cross-cutting (stap=null)
+     * komt als laatste entry.
+     *
      * @param  list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>  $results
+     * @return array<string, list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>>
      */
-    private function renderReport(array $results): string
+    private function groupByStap(array $results): array
     {
-        $total = count($results);
-        $passed = count(array_filter($results, static fn ($r) => $r['pass']));
-        $failed = $total - $passed;
-
-        $header = "# Gedragsspecificatie evenementformulier\n\n"
-            .'_Automatisch gegenereerd op '.now()->format('d-m-Y H:i').' via `php artisan eventform:gedrags-rapport`._'."\n\n"
-            .'**Samenvatting:** '.($failed === 0 ? '✅ Alle scenarios slagen' : "❌ {$failed} van {$total} scenarios faalt")
-            ." — {$passed} geslaagd, {$failed} gefaald, {$total} totaal.\n\n"
-            ."Dit document beschrijft in mensentaal hoe het evenementformulier zich gedraagt, "
-            ."gegroepeerd per pagina. Elke beschrijving is gekoppeld aan een geautomatiseerde "
-            ."test die het gedrag bewijst — ✅ betekent: de Filament-versie reageert exact "
-            ."zoals Open Forms zou doen onder dezelfde omstandigheden. ❌ betekent: er is een "
-            ."afwijking die onderzocht moet worden.\n\n"
-            ."---\n\n"
-            .$this->renderInhoudsopgave($results)
-            ."\n---\n\n";
-
-        // Groepeer op stap-uuid. null = pagina-overstijgend.
         $grouped = [];
         foreach ($results as $result) {
-            $stapUuid = $result['scenario']['stap'] ?? null;
-            $key = $stapUuid ?? '__cross_cutting__';
+            $key = $result['scenario']['stap'] ?? '__cross_cutting__';
             $grouped[$key][] = $result;
         }
 
-        // Rendervolgorde: eerst stappen op OF-index, dan cross-cutting
         $ordered = [];
         foreach ($this->catalog->allSteps() as $uuid => $meta) {
             if (isset($grouped[$uuid])) {
@@ -160,92 +156,189 @@ class EventFormGedragsRapport extends Command
             $ordered['__cross_cutting__'] = $grouped['__cross_cutting__'];
         }
 
-        $sections = [];
-        foreach ($ordered as $stapKey => $items) {
-            $sections[] = $this->renderStapSectie($stapKey, $items);
-        }
-
-        return $header.implode("\n---\n\n", $sections);
+        return $ordered;
     }
 
     /**
-     * @param  list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>  $results
+     * @param  array<string, list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>>  $grouped
+     * @return array<string, string>  stap-key → absolute path naar geschreven file
      */
-    private function renderInhoudsopgave(array $results): string
+    private function writePageFiles(array $grouped, string $pagesDir): array
     {
-        $counts = [];
-        foreach ($results as $result) {
-            $stapUuid = $result['scenario']['stap'] ?? null;
-            $key = $stapUuid ?? '__cross_cutting__';
-            $counts[$key] ??= ['pass' => 0, 'fail' => 0];
-            $counts[$key][$result['pass'] ? 'pass' : 'fail']++;
+        $paths = [];
+        foreach ($grouped as $stapKey => $items) {
+            $slug = $this->slugForStap($stapKey);
+            $path = $pagesDir.'/'.$slug.'.md';
+            file_put_contents($path, $this->renderPage($stapKey, $items));
+            $paths[$stapKey] = $path;
         }
 
-        $lines = ["## Inhoudsopgave\n"];
-        foreach ($this->catalog->allSteps() as $uuid => $meta) {
-            if (! isset($counts[$uuid])) {
-                continue;
-            }
-            $c = $counts[$uuid];
-            $status = $c['fail'] === 0 ? '✅' : '❌';
-            $label = $this->catalog->stepLabel($uuid);
-            $scenarioWoord = $c['pass'] + $c['fail'] === 1 ? 'scenario' : 'scenarios';
-            $lines[] = "- {$status} [{$label}](#".$this->anchor($label).") — {$c['pass']} {$scenarioWoord}".($c['fail'] > 0 ? " ({$c['fail']} gefaald)" : '');
-            unset($counts[$uuid]);
-        }
-        // Onbekende stappen (mogelijk gewist in OF): val terug op uuid
-        foreach ($counts as $key => $c) {
-            if ($key === '__cross_cutting__') {
-                continue;
-            }
-            $status = $c['fail'] === 0 ? '✅' : '❌';
-            $scenarioWoord = $c['pass'] + $c['fail'] === 1 ? 'scenario' : 'scenarios';
-            $lines[] = "- {$status} Stap {$key} — {$c['pass']} {$scenarioWoord}".($c['fail'] > 0 ? " ({$c['fail']} gefaald)" : '');
-            unset($counts[$key]);
-        }
-        if (isset($counts['__cross_cutting__'])) {
-            $c = $counts['__cross_cutting__'];
-            $status = $c['fail'] === 0 ? '✅' : '❌';
-            $scenarioWoord = $c['pass'] + $c['fail'] === 1 ? 'scenario' : 'scenarios';
-            $lines[] = "- {$status} [Pagina-overstijgend gedrag](#pagina-overstijgend-gedrag) — {$c['pass']} {$scenarioWoord}".($c['fail'] > 0 ? " ({$c['fail']} gefaald)" : '');
-        }
+        return $paths;
+    }
 
-        return implode("\n", $lines)."\n";
+    private function slugForStap(string $stapKey): string
+    {
+        if ($stapKey === '__cross_cutting__') {
+            return 'pagina-overstijgend';
+        }
+        $index = $this->catalog->stepIndex($stapKey);
+        $label = $this->catalog->stepLabel($stapKey);
+        if ($index === null || $label === null) {
+            return 'stap-'.substr($stapKey, 0, 8);
+        }
+        // "Stap 1: Contactgegevens" → "contactgegevens"
+        $name = preg_replace('/^Stap \d+: /', '', $label) ?? $label;
+        $slug = Str::slug($name);
+        $paddedIndex = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
+
+        return "stap-{$paddedIndex}-{$slug}";
     }
 
     /**
      * @param  list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>  $items
      */
-    private function renderStapSectie(string $stapKey, array $items): string
+    private function renderPage(string $stapKey, array $items): string
     {
         $titel = $stapKey === '__cross_cutting__'
             ? 'Pagina-overstijgend gedrag'
             : ($this->catalog->stepLabel($stapKey) ?? "Stap {$stapKey}");
 
-        $lines = ["## {$titel}", ''];
+        $pass = count(array_filter($items, static fn ($r) => $r['pass']));
+        $fail = count($items) - $pass;
+        $status = $fail === 0 ? '✅ Alle scenarios op deze pagina slagen' : "❌ {$fail} van ".count($items).' scenarios faalt';
+
+        $lines = [
+            "# {$titel}",
+            '',
+            "_[← terug naar de index](../gedragsspecificatie.md)_",
+            '',
+            "**Samenvatting:** {$status} — {$pass}/".count($items).' gedekt.',
+            '',
+        ];
 
         if ($stapKey === '__cross_cutting__') {
-            $lines[] = 'Gedrag dat niet aan één specifieke pagina gekoppeld is — routering, '
-                .'afgeleide berekeningen, service-uitwisseling met externe systemen.';
+            $lines[] = 'Dit bestand verzamelt gedrag dat niet aan één specifieke pagina gekoppeld is: '
+                .'routering naar registratie-backends, afgeleide berekeningen die van meerdere '
+                .'pagina\'s tegelijk afhangen, en service-uitwisseling met externe systemen.';
             $lines[] = '';
         }
 
-        // Introductie uit de scenario-provider (alleen bij de eerste scenario-provider gebruikt)
+        // Toon inleiding per scenario-provider (1× per provider, ook als er meerdere providers bijdragen aan deze pagina)
         $seenProviders = [];
         foreach ($items as $item) {
             $p = $item['provider'];
             if (! isset($seenProviders[$p])) {
                 $seenProviders[$p] = true;
-                $lines[] = '_'.$p::kop().'_ — '.$p::inleiding();
+                $lines[] = '## '.$p::kop();
+                $lines[] = '';
+                $lines[] = $p::inleiding();
                 $lines[] = '';
             }
         }
 
+        // Elk scenario
         foreach ($items as $item) {
             $lines[] = $this->renderScenario($item['scenario'], $item['pass'], $item['diffs']);
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * @param  list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>  $results
+     * @param  array<string, string>  $pageFiles  stap-key → absolute path
+     */
+    private function renderIndex(array $results, array $pageFiles, string $pagesDir, string $indexPath): string
+    {
+        $total = count($results);
+        $passed = count(array_filter($results, static fn ($r) => $r['pass']));
+        $failed = $total - $passed;
+
+        $lines = [
+            '# Gedragsspecificatie evenementformulier',
+            '',
+            '_Automatisch gegenereerd op '.now()->format('d-m-Y H:i').' via `php artisan eventform:gedrags-rapport`._',
+            '',
+            '**Samenvatting:** '.($failed === 0 ? '✅ Alle scenarios slagen' : "❌ {$failed} van {$total} scenarios faalt")
+                ." — {$passed} geslaagd, {$failed} gefaald, {$total} totaal.",
+            '',
+            'Dit document is de index op de gedragsspecificatie. Elke pagina van het '
+                .'evenementformulier heeft een eigen bestand waarin de scenarios voor dat '
+                .'gedeelte beschreven staan. ✅ betekent: de Filament-versie reageert exact '
+                .'zoals Open Forms zou doen. ❌ betekent: er is een afwijking die '
+                .'onderzocht moet worden.',
+            '',
+            '---',
+            '',
+            '## Overzicht per pagina',
+            '',
+        ];
+
+        // Counts per stap-key
+        $counts = [];
+        foreach ($results as $result) {
+            $key = $result['scenario']['stap'] ?? '__cross_cutting__';
+            $counts[$key] ??= ['pass' => 0, 'fail' => 0];
+            $counts[$key][$result['pass'] ? 'pass' : 'fail']++;
+        }
+
+        $pagesDirRelative = ltrim(str_replace(dirname($indexPath), '', $pagesDir), '/');
+
+        foreach ($this->catalog->allSteps() as $uuid => $meta) {
+            if (! isset($counts[$uuid])) {
+                $titel = $this->catalog->stepLabel($uuid);
+                $lines[] = "- _⚪ {$titel}_ — nog geen scenarios gedekt";
+
+                continue;
+            }
+            $lines[] = $this->renderIndexRow($uuid, $counts[$uuid], $pageFiles[$uuid] ?? null, $pagesDirRelative);
+            unset($counts[$uuid]);
+        }
+        foreach ($counts as $key => $c) {
+            if ($key === '__cross_cutting__') {
+                continue;
+            }
+            // Onbekende stap-uuid (bv. stap inmiddels weg uit OF); val terug op raw
+            $lines[] = $this->renderIndexRow($key, $c, $pageFiles[$key] ?? null, $pagesDirRelative);
+            unset($counts[$key]);
+        }
+        if (isset($counts['__cross_cutting__'])) {
+            $lines[] = '';
+            $lines[] = '## Pagina-overstijgend gedrag';
+            $lines[] = '';
+            $lines[] = $this->renderIndexRow('__cross_cutting__', $counts['__cross_cutting__'], $pageFiles['__cross_cutting__'] ?? null, $pagesDirRelative);
+        }
+
+        $lines[] = '';
+        $lines[] = '---';
+        $lines[] = '';
+        $lines[] = 'Nieuwe scenarios toevoegen kan door een class toe te voegen in `tests/Feature/EventForm/Equivalence/Scenarios/` die `ScenarioProvider` implementeert. Bij de volgende run van `eventform:gedrags-rapport` verschijnt hij automatisch in het juiste paginabestand.';
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * @param  array{pass: int, fail: int}  $c
+     */
+    private function renderIndexRow(string $stapKey, array $c, ?string $pageFile, string $pagesDirRelative): string
+    {
+        $total = $c['pass'] + $c['fail'];
+        $status = $c['fail'] === 0 ? '✅' : '❌';
+        $scenarioWoord = $total === 1 ? 'scenario' : 'scenarios';
+        $countText = "{$c['pass']}/{$total} {$scenarioWoord}".($c['fail'] > 0 ? " ({$c['fail']} gefaald)" : '');
+
+        $titel = $stapKey === '__cross_cutting__'
+            ? 'Pagina-overstijgend gedrag'
+            : ($this->catalog->stepLabel($stapKey) ?? "Stap {$stapKey}");
+
+        if ($pageFile !== null) {
+            $filename = basename($pageFile);
+            $link = $pagesDirRelative.'/'.$filename;
+
+            return "- {$status} **[{$titel}]({$link})** — {$countText}";
+        }
+
+        return "- {$status} **{$titel}** — {$countText}";
     }
 
     /**
@@ -292,7 +385,6 @@ class EventFormGedragsRapport extends Command
     {
         $label = $this->catalog->fieldLabel($key);
 
-        // Multi-select: {A3: true, A1: false} → opsomming met optie-labels
         if (is_array($value)) {
             $checks = [];
             foreach ($value as $optValue => $state) {
@@ -300,13 +392,11 @@ class EventFormGedragsRapport extends Command
                 $omschrijving = $optLabel !== null ? "\"{$optLabel}\"" : "`{$optValue}`";
                 $checks[] = $state === true ? "{$omschrijving} aangevinkt" : "{$omschrijving} uit";
             }
-
             $veldOmschrijving = $label !== null ? "Veld \"{$label}\"" : "Veld `{$key}`";
 
             return $veldOmschrijving.' — '.implode(', ', $checks);
         }
 
-        // Scalar — toon label + waarde (+ eventueel optie-label voor selectjes)
         $optLabel = is_string($value) ? $this->catalog->optionLabel($key, $value) : null;
         $veldOmschrijving = $label !== null ? "Veld \"{$label}\"" : "Veld `{$key}`";
         $waarde = $this->formatWaarde($value);
@@ -358,10 +448,5 @@ class EventFormGedragsRapport extends Command
         }
 
         return '`'.json_encode($value).'`';
-    }
-
-    private function anchor(string $titel): string
-    {
-        return (string) preg_replace('/[^a-z0-9-]+/', '-', strtolower(trim($titel)));
     }
 }
