@@ -41,7 +41,7 @@ final class NaamVanHetEvenementStep
                             return $rule;
                         }
 
-                        return $get('watIsDeNaamVanHetEvenementVergunning') === '';
+                        return $get('watIsDeNaamVanHetEvenementVergunning') === null || $get('watIsDeNaamVanHetEvenementVergunning') === '';
                     }),
                 Select::make('soortEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -73,7 +73,7 @@ final class NaamVanHetEvenementStep
                             return $rule;
                         }
 
-                        return $get('watIsDeNaamVanHetEvenementVergunning') === '';
+                        return $get('watIsDeNaamVanHetEvenementVergunning') === null || $get('watIsDeNaamVanHetEvenementVergunning') === '';
                     })
                     ->live(),
                 Textarea::make('omschrijfHetSoortEvenement')

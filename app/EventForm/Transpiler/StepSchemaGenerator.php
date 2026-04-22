@@ -661,6 +661,13 @@ class StepSchemaGenerator
             // Filament's CheckboxList bewaart state als `['key1', 'key2']` —
             // een vlakke array van geselecteerde values.
             $match = "in_array('".$this->esc((string) $eq)."', (array) \$get('".$this->esc($when)."'), true)";
+        } elseif ($eq === '') {
+            // OF/Formio beschouwt null, undefined én lege string allemaal
+            // als "leeg" voor conditional-checks. Onze $get() kan null
+            // teruggeven voor ongevulde velden; een strict `=== ''` zou
+            // die als niet-leeg tellen en daarmee van Formio afwijken.
+            // Daarom hier een ruimere empty-check.
+            $match = "(\$get('".$this->esc($when)."') === null || \$get('".$this->esc($when)."') === '')";
         } else {
             $eqString = is_scalar($eq) ? (string) $eq : '';
             $match = "\$get('".$this->esc($when)."') === '".$this->esc($eqString)."'";
