@@ -522,6 +522,16 @@ class EventFormGedragsRapport extends Command
 
             return "Systeem-waarde `{$sysKey}` = {$this->formatWaarde($value)}";
         }
+        if (Str::startsWith($path, 'field_visible.')) {
+            $field = Str::after($path, 'field_visible.');
+            $label = $this->catalog->fieldLabel($field);
+            $stap = $this->catalog->fieldStep($field);
+            $stapHint = $stap !== null && $this->catalog->stepLabel($stap) !== null ? ' _(op '.$this->catalog->stepLabel($stap).')_' : '';
+            $veldOmschrijving = $label !== null ? "Veld \"{$label}\"" : "Veld `{$field}`";
+            $action = $value === true ? '**zichtbaar** in de rendered pagina' : '**niet zichtbaar** in de rendered pagina';
+
+            return "{$veldOmschrijving}{$stapHint} is {$action}";
+        }
 
         $label = $this->catalog->fieldLabel($path);
         $veldOmschrijving = $label !== null ? "Veld \"{$label}\"" : "Veld `{$path}`";

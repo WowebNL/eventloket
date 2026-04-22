@@ -1,10 +1,10 @@
 # Gedragsspecificatie evenementformulier
 
-_Automatisch gegenereerd op 22-04-2026 11:34 via `php artisan eventform:gedrags-rapport`._
+_Automatisch gegenereerd op 22-04-2026 12:12 via `php artisan eventform:gedrags-rapport`._
 
-**Samenvatting:** ✅ Alle scenarios slagen — 69 geslaagd, 0 gefaald, 69 totaal.
+**Samenvatting:** ✅ Alle scenarios slagen — 72 geslaagd, 0 gefaald, 72 totaal.
 
-✅ Ook **69 van 69 scenarios bevestigd door de onafhankelijke JsonLogic-spec** (via json-logic-js, de canonieke referentie die Open Forms zelf ook volgt).
+✅ Ook **72 van 72 scenarios bevestigd door de onafhankelijke JsonLogic-spec** (via json-logic-js, de canonieke referentie die Open Forms zelf ook volgt).
 
 Dit document is de index op de gedragsspecificatie. Elke pagina van het evenementformulier heeft een eigen bestand waarin de scenarios voor dat gedeelte beschreven staan.
 
@@ -20,10 +20,10 @@ Elk scenario wordt onafhankelijk gecheckt:
 ## Overzicht per pagina
 
 - ✅ **[Stap 1: Contactgegevens](gedragsspecificatie/stap-01-contactgegevens.md)** — 1/1 scenario
-- 🟢 _Stap 2: Het evenement_ — geen dynamisch gedrag (pure input-/inhoudspagina, niks te testen)
+- ✅ **[Stap 2: Het evenement](gedragsspecificatie/stap-02-het-evenement.md)** — 3/3 scenarios
 - _⚪ Stap 3: Locatie_ — nog geen scenarios gedekt
 - ✅ **[Stap 4: Tijden](gedragsspecificatie/stap-04-tijden.md)** — 1/1 scenario
-- 🟢 _Stap 5: Vooraankondiging_ — geen dynamisch gedrag (pure input-/inhoudspagina, niks te testen)
+- _⚪ Stap 5: Vooraankondiging_ — nog geen scenarios gedekt
 - ✅ **[Stap 6: Vergunningsplichtig scan](gedragsspecificatie/stap-06-vergunningsplichtig-scan.md)** — 2/2 scenarios
 - ✅ **[Stap 7: Melding](gedragsspecificatie/stap-07-melding.md)** — 2/2 scenarios
 - ✅ **[Stap 8: Risicoscan](gedragsspecificatie/stap-08-risicoscan.md)** — 3/3 scenarios

@@ -3,15 +3,30 @@
 declare(strict_types=1);
 
 /**
- * Verzamelt alle ScenarioProvider-classes in deze directory en draait ze.
+ * Verzamelt alle ScenarioProvider-classes in deze directory en draait ze
+ * tegen de echte Livewire EventFormPage — zodat we testen wat de user
+ * daadwerkelijk in z'n browser zou zien, niet alleen een losse RulesEngine-
+ * aanroep.
  *
- * Op deze manier hoef je bij het toevoegen van een nieuwe scenario-provider
- * geen aparte test-file meer te maken: ga naar `Scenarios/`, maak een klasse
- * die `ScenarioProvider` implementeert, en `php artisan test` pakt 'em mee.
+ * Deze aanpak overleeft ook de migratie naar de clean Filament-versie:
+ * straks doen alle velden hun visibility via `->visible(Get $get)`-closures
+ * zonder RulesEngine, maar de scenarios blijven van vorm identiek omdat
+ * ze alleen tegen het user-zichtbare gedrag testen.
  */
 
+use App\Enums\Role;
+use App\Models\Organisation;
+use App\Models\User;
 use Tests\Feature\EventForm\Equivalence\EquivalenceScenario;
 use Tests\Feature\EventForm\Equivalence\Scenarios\ScenarioProvider;
+
+beforeEach(function () {
+    $this->user = User::factory()->create(['role' => Role::Organiser]);
+    $this->organisation = Organisation::factory()->create();
+    $this->user->organisations()->attach($this->organisation->id, ['role' => 'admin']);
+    $this->actingAs($this->user);
+    \Filament\Facades\Filament::setTenant($this->organisation);
+});
 
 /**
  * @return array<string, array<int, array<string, mixed>>>
@@ -34,7 +49,6 @@ function alleScenariosViaProviders(): array
             continue;
         }
         foreach ($fqcn::all() as $label => $entry) {
-            // Unique key per scenario om Pest-dataset-naam-conflicten te vermijden
             $all[$basename.' — '.$label] = $entry;
         }
     }
@@ -43,9 +57,9 @@ function alleScenariosViaProviders(): array
 }
 
 test(
-    'Equivalentie-scenario volgt OF-gedrag: {0.naam}',
+    'Equivalentie-scenario volgt OF-gedrag op de echte Livewire-page: {0.naam}',
     function (array $scenario) {
-        $diffs = EquivalenceScenario::run($scenario);
+        $diffs = EquivalenceScenario::runViaLivewire($scenario);
 
         expect($diffs)->toBe(
             [],

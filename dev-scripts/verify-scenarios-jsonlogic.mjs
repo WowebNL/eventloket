@@ -34,6 +34,27 @@ const scenarios = readJson('tests/Feature/EventForm/Equivalence/scenarios.json')
 const logicRaw = readJson('docker/local-data/open-formulier/formLogic.json');
 const logicItems = Array.isArray(logicRaw) ? logicRaw : (logicRaw.results ?? []);
 
+// Index component-level conditionals zodat we voor `field_visible.*`
+// verwachtingen ook een onafhankelijke check kunnen doen. Elke `conditional`
+// op een veld is eigenlijk een mini-rule: "toon/verberg als veld X gelijk
+// is aan Y". Dat kunnen we met json-logic-js net zo evalueren.
+const stepsRaw = readJson('docker/local-data/open-formulier/formSteps.json');
+const stepsItems = Array.isArray(stepsRaw) ? stepsRaw : (stepsRaw.results ?? []);
+const componentConditionals = {};
+const walk = (comps) => {
+    for (const c of comps || []) {
+        const cond = c.conditional;
+        if (cond && cond.when && c.key) {
+            componentConditionals[c.key] = cond; // {when, eq, show}
+        }
+        if (Array.isArray(c.components)) walk(c.components);
+        if (Array.isArray(c.columns)) {
+            for (const col of c.columns) walk(col.components);
+        }
+    }
+};
+for (const s of stepsItems) walk(s?.configuration?.components);
+
 // OF's Python-runtime gebruikt een lichte variant op JsonLogic waarbij
 // `{"missing": [...]}` checkt op afwezigheid. json-logic-js ondersteunt dat
 // native, maar er zijn een paar OF-specifieke operators: `merge` + `cat`
@@ -161,6 +182,23 @@ const evaluateScenario = (entry) => {
             // we checken dus tegen de variable-bag.
             const key = path.slice('system.'.length);
             actual = out.values[key] ?? null;
+        } else if (path.startsWith('field_visible.')) {
+            // Component-level conditional: zoek het component in onze index.
+            // Een veld zonder conditional is altijd zichtbaar; anders evalueren
+            // we `state[when] == eq` en combineren met `show`:
+            //    show=true  + match  → zichtbaar
+            //    show=true  + geen   → verborgen
+            //    show=false + match  → verborgen
+            //    show=false + geen   → zichtbaar
+            const key = path.slice('field_visible.'.length);
+            const cond = componentConditionals[key];
+            if (cond === undefined) {
+                actual = true;
+            } else {
+                const triggerValue = jsonLogic.apply({ var: cond.when }, state);
+                const matches = triggerValue === cond.eq;
+                actual = cond.show ? matches : ! matches;
+            }
         } else {
             actual = out.values[path] ?? state[path] ?? null;
         }
