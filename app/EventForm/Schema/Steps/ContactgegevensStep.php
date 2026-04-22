@@ -28,9 +28,6 @@ final class ContactgegevensStep
         return Step::make('Contactgegevens')
             ->key(self::UUID)
             ->schema([
-                TextEntry::make('loadUserInformation')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Een ogenblik geduld, uw gegevens worden ingeladen…</p>', $livewire->state()))),
                 TextInput::make('watIsUwVoornaam')
                     ->label('Wat is uw voornaam?')
                     ->required()

@@ -35,6 +35,9 @@ class StepSchemaGenerator
     /** @var array<string, mixed> variable-key → initial_value, voor options-emit */
     private array $variableInitialValues = [];
 
+    /** @var array<string, true> component-keys die bij transpile overgeslagen worden */
+    private array $skipKeys = [];
+
     /**
      * Geef de generator een globale mapping van veld-key → type zodat
      * conditional-emissie correct `$get(key.subkey)` gebruikt voor
@@ -73,6 +76,20 @@ class StepSchemaGenerator
     public function withVariableInitialValues(array $values): self
     {
         $this->variableInitialValues = $values;
+
+        return $this;
+    }
+
+    /**
+     * Component-keys die tijdens transpile helemaal overgeslagen moeten
+     * worden. Typisch OF-componenten die puur als async-loader-placeholder
+     * dienden en in onze sync-prefill-flow geen functie meer hebben.
+     *
+     * @param  list<string>  $keys
+     */
+    public function withSkipKeys(array $keys): self
+    {
+        $this->skipKeys = array_fill_keys($keys, true);
 
         return $this;
     }
@@ -132,6 +149,10 @@ class StepSchemaGenerator
         $key = (string) ($component['key'] ?? '');
         $label = (string) ($component['label'] ?? '');
         $pad = str_repeat(' ', $indent);
+
+        if ($key !== '' && isset($this->skipKeys[$key])) {
+            return null;
+        }
 
         return match ($type) {
             'textfield' => $this->renderTextInput($component, $pad),

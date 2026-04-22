@@ -98,10 +98,19 @@ class TranspileEventForm extends Command
             $this->collectRuleTriggerKeys($raw->logicRules),
         )));
 
+        // Component-keys die niks meer toevoegen in onze sync-prefill-setup
+        // (OF gebruikte ze als placeholder tijdens async fetches) maar wel
+        // altijd in beeld blijven. Weghalen is veiliger dan verbergen —
+        // geen kans dat ze via een stale conditional tóch terugkomen.
+        $skipKeys = [
+            'loadUserInformation',
+        ];
+
         $stepGen = (new StepSchemaGenerator)
             ->withFieldTypeIndex($fieldTypeIndex)
             ->withTriggerKeys($triggerKeys)
-            ->withVariableInitialValues($this->buildVariableInitialValues($raw->variables));
+            ->withVariableInitialValues($this->buildVariableInitialValues($raw->variables))
+            ->withSkipKeys($skipKeys);
         $stepCount = 0;
         foreach ($raw->formSteps as $step) {
             $generated = $stepGen->generate($step);

@@ -15,9 +15,15 @@
 @endphp
 
 <div
-    x-load
-    x-load-src="{{ \Filament\Support\Facades\FilamentAsset::getAlpineComponentSrc('wizard', 'filament/schemas') }}"
-    x-data="wizardSchemaComponent({
+    {{-- verticalWizardComponent is inline gedefinieerd in @push('scripts') onderaan deze view, geen x-load nodig. --}}
+    {{--
+        De `verticalWizardComponent`-factory (zie `<script>` onderaan deze
+        view) wrapt Filament's stock wizardSchemaComponent en voegt
+        `currentStepValid` + `checkValidity()` toe. Functie-aanroep in
+        x-data werkt betrouwbaarder dan spread-syntax binnen een Alpine-
+        expressie, waar de parser soms over { } struikelt.
+    --}}
+    x-data="verticalWizardComponent({
                 isSkippable: @js($isSkippable()),
                 isStepPersistedInQueryString: @js($isStepPersistedInQueryString()),
                 key: @js($key),
@@ -111,10 +117,18 @@
                             'fi-vertical-wizard-step-not-applicable' => ! $isApplicable,
                         ])
                     >
+                        {{--
+                            Forward-skipping via sidebar is geblokkeerd: je kunt alleen
+                            terug naar eerder voltooide stappen of op de huidige stap
+                            blijven staan. Vooruit gaan moet via de "Volgende"-knop,
+                            zodat de validatie van de huidige stap eerst afgaat.
+                            Niet-toepasselijke stappen zijn volledig niet klikbaar.
+                        --}}
                         <button
                             type="button"
                             x-bind:aria-current="getStepIndex(step) === {{ $loop->index }} ? 'step' : null"
-                            x-on:click="step = @js($step->getKey())"
+                            x-bind:disabled="{{ $isApplicable ? 'false' : 'true' }} || getStepIndex(step) < {{ $loop->index }}"
+                            x-on:click="goToStep(@js($step->getKey()))"
                             class="fi-vertical-wizard-step-btn"
                         >
                             <span class="fi-vertical-wizard-step-marker" aria-hidden="true">
@@ -158,6 +172,112 @@
 </div>
 
 @once
+    @push('scripts')
+        <script>
+            /*
+             * Alpine-factory voor onze verticale wizard. Dupliceert bewust de
+             * logica van Filament's `wizardSchemaComponent` (vendor/filament/
+             * schemas/resources/js/components/wizard.js) zodat we niet via
+             * x-load hoeven te wachten op een externe dependency — dat gaf
+             * parser-issues met spread-syntax in Alpine's expression-evaluator.
+             *
+             * Afwijkingen van stock: geen — functioneel identiek aan
+             * Filament's wizardSchemaComponent. We vervangen de factory
+             * alleen om het nesting/laadpad te vereenvoudigen.
+             */
+            window.verticalWizardComponent = function (config) {
+                const { isSkippable, isStepPersistedInQueryString, key, startStep, stepQueryStringKey } = config;
+                return {
+                    step: null,
+
+                    init() {
+                        this.step = this.getSteps().at(startStep - 1);
+                        this.$watch('step', () => {
+                            this.updateQueryString();
+                            this.autofocusFields();
+                        });
+                        this.autofocusFields(true);
+                    },
+
+                    async requestNextStep() {
+                        await this.$wire.callSchemaComponentMethod(key, 'nextStep', {
+                            currentStepIndex: this.getStepIndex(this.step),
+                        });
+                    },
+
+                    goToNextStep() {
+                        const next = this.getStepIndex(this.step) + 1;
+                        if (next >= this.getSteps().length) return;
+                        this.step = this.getSteps()[next];
+                        this.scroll();
+                    },
+
+                    goToPreviousStep() {
+                        const prev = this.getStepIndex(this.step) - 1;
+                        if (prev < 0) return;
+                        this.step = this.getSteps()[prev];
+                        this.scroll();
+                    },
+
+                    goToStep(stepKey) {
+                        const idx = this.getStepIndex(stepKey);
+                        if (idx <= -1) return;
+                        if (!isSkippable && idx > this.getStepIndex(this.step)) return;
+                        this.step = stepKey;
+                        this.scroll();
+                    },
+
+                    scroll() {
+                        this.$nextTick(() => {
+                            this.$refs.header?.children[this.getStepIndex(this.step)]
+                                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        });
+                    },
+
+                    autofocusFields(respectCurrentFocus = false) {
+                        this.$nextTick(() => {
+                            if (
+                                respectCurrentFocus &&
+                                document.activeElement &&
+                                document.activeElement !== document.body &&
+                                this.$el.compareDocumentPosition(document.activeElement) & Node.DOCUMENT_POSITION_PRECEDING
+                            ) return;
+                            const fields = this.$refs[`step-${this.step}`]?.querySelectorAll('[autofocus]') ?? [];
+                            for (const field of fields) {
+                                field.focus();
+                                if (document.activeElement === field) break;
+                            }
+                        });
+                    },
+
+                    getStepIndex(step) {
+                        const idx = this.getSteps().findIndex((s) => s === step);
+                        return idx === -1 ? 0 : idx;
+                    },
+
+                    getSteps() {
+                        return JSON.parse(this.$refs.stepsData.value);
+                    },
+
+                    isFirstStep() { return this.getStepIndex(this.step) <= 0; },
+                    isLastStep()  { return this.getStepIndex(this.step) + 1 >= this.getSteps().length; },
+
+                    isStepAccessible(stepKey) {
+                        return isSkippable || this.getStepIndex(this.step) > this.getStepIndex(stepKey);
+                    },
+
+                    updateQueryString() {
+                        if (!isStepPersistedInQueryString) return;
+                        const url = new URL(window.location.href);
+                        url.searchParams.set(stepQueryStringKey, this.step);
+                        history.replaceState(null, document.title, url.toString());
+                    },
+
+                };
+            };
+        </script>
+    @endpush
+
     @push('styles')
         <style>
             .fi-vertical-wizard-layout {
@@ -224,12 +344,30 @@
                 position: relative;
             }
 
-            .fi-vertical-wizard-step-btn:hover {
+            .fi-vertical-wizard-step-btn:hover:not(:disabled) {
                 background: var(--gray-100);
             }
 
-            :is(.dark .fi-vertical-wizard-step-btn:hover) {
+            :is(.dark .fi-vertical-wizard-step-btn:hover:not(:disabled)) {
                 background: var(--gray-800);
+            }
+
+            /*
+             * Disabled = future step of niet-toepasselijke stap: gebruiker mag
+             * hier niet naartoe klikken. We dimmen de label + maken hover-cursor
+             * niet-klikbaar zodat het ook interactief duidelijk is.
+             */
+            .fi-vertical-wizard-step-btn:disabled {
+                cursor: not-allowed;
+                opacity: 0.7;
+            }
+
+            .fi-vertical-wizard-step-btn:disabled .fi-vertical-wizard-step-label {
+                color: var(--gray-500);
+            }
+
+            :is(.dark .fi-vertical-wizard-step-btn:disabled .fi-vertical-wizard-step-label) {
+                color: var(--gray-500);
             }
 
             /*
@@ -326,6 +464,7 @@
                 font-size: 0.75rem;
                 color: var(--gray-500);
             }
+
         </style>
     @endpush
 @endonce
