@@ -34,10 +34,12 @@ final class TijdenStep
                     ->schema([
                         DateTimePicker::make('EvenementStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->required(),
+                            ->required()
+                            ->live(),
                         DateTimePicker::make('EvenementEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->required(),
+                            ->required()
+                            ->live(),
                     ]),
                 TextEntry::make('evenmentenInDeBuurtContent')
                     ->hiddenLabel()
@@ -63,7 +65,8 @@ final class TijdenStep
                                 }
 
                                 return ! ($get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja');
-                            }),
+                            })
+                            ->live(),
                         DateTimePicker::make('OpbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required()
@@ -74,7 +77,8 @@ final class TijdenStep
                                 }
 
                                 return ! ($get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja');
-                            }),
+                            })
+                            ->live(),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXOpbouwactiviteiten')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))
@@ -103,7 +107,8 @@ final class TijdenStep
                                 }
 
                                 return ! ($get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja');
-                            }),
+                            })
+                            ->live(),
                         DateTimePicker::make('AfbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->required()
@@ -114,7 +119,8 @@ final class TijdenStep
                                 }
 
                                 return ! ($get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja');
-                            }),
+                            })
+                            ->live(),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXAfbouwactiviteiten3')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?', $livewire->state()))

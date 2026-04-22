@@ -88,14 +88,20 @@ class TranspileEventForm extends Command
         // selectboxes-conditionals die naar een veld in een andere step
         // wijzen, correct als dot-access (`$get('X.key')`) worden geëmit.
         $fieldTypeIndex = $this->buildFieldTypeIndex($raw->formSteps);
-        // Set keys die ergens een trigger vormen, komen uit 2 bronnen:
+        // Set keys die ergens een trigger vormen, komen uit 3 bronnen:
         //  - directe `conditional.when` op een ander component
         //  - rule-triggers (JsonLogic leest een veld)
-        // Beide soorten velden moeten `->live()` krijgen zodat Filament bij
-        // state-change zowel z'n visibility-closures als onze rules triggert.
+        //  - template-interpolaties `{{ veld }}` in labels of content-blokken
+        //    (Filament rendert pas opnieuw bij een server-roundtrip, dus
+        //    anders blijft een overzicht met {{ OpbouwStart }} etc. leeg
+        //    tot de user op Volgende drukt).
+        // Al deze velden moeten `->live()` krijgen zodat Filament direct
+        // z'n visibility-closures, onze rules, én de interpolated labels
+        // opnieuw evalueert bij state-change.
         $triggerKeys = array_values(array_unique(array_merge(
             $this->collectTriggerKeys($raw->formSteps),
             $this->collectRuleTriggerKeys($raw->logicRules),
+            $this->collectTemplateInterpolationKeys($raw->formSteps),
         )));
 
         // Component-keys die niks meer toevoegen in onze sync-prefill-setup
@@ -289,6 +295,90 @@ class TranspileEventForm extends Command
         }
 
         return array_keys($keys);
+    }
+
+    /**
+     * Scan alle labels, content-HTML en Jinja-templates in de form-steps
+     * op `{{ veld }}`-interpolaties. Die velden moeten `->live()` krijgen
+     * zodat een overzicht als "OpbouwStart: {{ OpbouwStart }}" reactief
+     * wordt bij het invullen, i.p.v. leeg te blijven tot de user verder
+     * navigeert.
+     *
+     * @param  list<array<string, mixed>>  $steps
+     * @return list<string>
+     */
+    private function collectTemplateInterpolationKeys(array $steps): array
+    {
+        /** @var array<string, true> $keys */
+        $keys = [];
+        foreach ($steps as $step) {
+            $components = $step['configuration']['components'] ?? [];
+            if (is_array($components)) {
+                /** @var list<array<string, mixed>> $components */
+                $this->walkForTemplateVars($components, $keys);
+            }
+        }
+
+        return array_keys($keys);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $components
+     * @param  array<string, true>  $keys
+     */
+    private function walkForTemplateVars(array $components, array &$keys): void
+    {
+        foreach ($components as $component) {
+            // Check alle velden waarin een gebruiker-interpoleerbare
+            // template kan staan. Zowel OF's `label`, het `description`,
+            // als de body van content-components (`html`).
+            foreach (['label', 'description', 'html'] as $field) {
+                $value = $component[$field] ?? null;
+                if (is_string($value) && $value !== '') {
+                    $this->extractInterpolatedKeys($value, $keys);
+                }
+            }
+
+            if (isset($component['components']) && is_array($component['components'])) {
+                /** @var list<array<string, mixed>> $nested */
+                $nested = $component['components'];
+                $this->walkForTemplateVars($nested, $keys);
+            }
+            if (($component['type'] ?? null) === 'columns' && is_array($component['columns'] ?? null)) {
+                foreach ($component['columns'] as $column) {
+                    if (is_array($column) && is_array($column['components'] ?? null)) {
+                        /** @var list<array<string, mixed>> $nested */
+                        $nested = $column['components'];
+                        $this->walkForTemplateVars($nested, $keys);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Haal uit een template-string alle top-level veld-keys uit `{{ … }}`-
+     * expressies. Ondersteunt zowel eenvoudig `{{ naam }}` als dot-access
+     * `{{ evenementInGemeente.brk_identification }}` (we nemen dan de
+     * root-key), plus filters `{{ lijst|join:", " }}` (alleen de key).
+     *
+     * @param  array<string, true>  $keys
+     */
+    private function extractInterpolatedKeys(string $template, array &$keys): void
+    {
+        if (preg_match_all('/\{\{\s*([a-zA-Z_][\w.]*)\s*(?:\|[^}]+)?\}\}/', $template, $matches) === false) {
+            return;
+        }
+        foreach ($matches[1] ?? [] as $varPath) {
+            $root = explode('.', $varPath)[0];
+            // Sommige templates gebruiken systeem-keys die geen form-
+            // veld zijn (bv. eventloketSession). Die staan niet in
+            // ons field-type-index en krijgen geen ->live(). We nemen
+            // ze hier wel mee; de stepgenerator negeert onbekende keys.
+            if ($root !== '' && ! in_array($root, ['True', 'False', 'None'], true)) {
+                $keys[$root] = true;
+            }
+        }
     }
 
     /**
