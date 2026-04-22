@@ -29,6 +29,11 @@ export default defineConfig({
         trace: 'on',
         screenshot: 'on',
         video: 'retain-on-failure',
+        // Slow-mo bij zichtbare browser zodat je het kunt volgen. In headless
+        // CI-runs blijft dit 0 (snelheid = maximaal).
+        launchOptions: {
+            slowMo: process.env.EF_SLOW_MO ? parseInt(process.env.EF_SLOW_MO, 10) : 0,
+        },
     },
     projects: [
         {
