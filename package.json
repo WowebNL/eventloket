@@ -6,7 +6,7 @@
         "build": "vite build",
         "dev": "vite",
         "walkthrough": "playwright test",
-        "walkthrough:live": "./vendor/bin/sail artisan eventform:reset-draft --email=noah.degraaf@example.net && EF_SLOW_MO=500 EF_KEEP_OPEN=1 playwright test --headed --project=chromium tests/Playwright/doorloop-hele-formulier.spec.mjs --workers=1 --timeout=360000",
+        "walkthrough:live": "./vendor/bin/sail artisan eventform:reset-draft --email=noah.degraaf@example.net && EF_SLOW_MO=500 playwright test --headed --project=chromium tests/Playwright/doorloop-hele-formulier.spec.mjs --workers=1",
         "walkthrough:report": "playwright show-report test-results/playwright-report",
         "walkthrough:verify": "node dev-scripts/verify-scenarios-jsonlogic.mjs"
     },

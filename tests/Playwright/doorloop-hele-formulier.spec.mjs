@@ -65,19 +65,12 @@ test('walkthrough: doorloop stap 1 t/m 3 (zichtbaar in browser)', async ({ page 
     });
 
     // ---------- Stap 3: Locatie (halt — kaart/repeater-interactie komt apart) ----
-    await test.step('Stap 3 — Locatie (halt, wordt later apart uitgewerkt)', async () => {
+    await test.step('Stap 3 — Locatie (halt)', async () => {
         expect(await huidigeStap(page)).toMatch(/Locatie/i);
         await page.screenshot({ path: 'test-results/walkthrough/stap-03-locatie-aangekomen.png', fullPage: true });
         console.log('✅ Walkthrough bereikt stap 3 (Locatie) — verdere stappen wachten op uitwerking van de kaart-interactie.');
-
-        // In live-modus (EF_KEEP_OPEN=1): houd de browser open zodat je
-        // kunt rondklikken. Sluit 'em zelf wanneer je klaar bent door de
-        // browser-tab te sluiten of Ctrl+C in de terminal.
-        if (process.env.EF_KEEP_OPEN) {
-            console.log('⏸️  EF_KEEP_OPEN staat aan — browser blijft open. Sluit de tab zelf als je klaar bent.');
-            await page.waitForTimeout(5 * 60_000); // 5 min limiet tegen vastgelopen processen
-        } else {
-            await page.waitForTimeout(2000);
-        }
+        // Korte pauze zodat je in live-modus de Locatie-pagina nog even ziet
+        // staan voor de browser sluit. Geen 5-minuten-wacht meer — test klaar.
+        await page.waitForTimeout(3000);
     });
 });
