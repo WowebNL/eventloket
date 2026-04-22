@@ -1,8 +1,6 @@
-# Versie 0.6.0-beta.1 — Wat is er nieuw?
+# Versie 0.6.0 — Wat is er nieuw?
 
-**Releasedatum:** 9 april 2026
-
-> **Let op:** Dit is een betaversie. De functionaliteit is beschikbaar voor testers. 
+**Releasedatum:** 22 april 2026
 
 ---
 
@@ -28,7 +26,25 @@ Het nieuwe systeem vervangt de aanpak waarbij meldingvragen werden beheerd als g
 
 Standaard staat de toggle uitgeschakeld en gebruikt de gemeente het bestaande systeem. Zodra de toggle wordt ingeschakeld, worden de nieuwe meldingvragen actief en worden de variabelen van het type ReportQuestion automatisch genegeerd om dubbeling te voorkomen.
 
-Het is veilig om de toggle tijdelijk weer uit te schakelen als er iets niet klopt. De gemeente valt dan terug op het oude systeem.å
+Het is veilig om de toggle tijdelijk weer uit te schakelen als er iets niet klopt. De gemeente valt dan terug op het oude systeem.
+
+---
+
+## 🐛 Opgeloste problemen
+
+### Meerdere organisaties mogen hetzelfde KvK-nummer gebruiken
+
+**Voor wie:** Organisatoren
+
+Het was voorheen niet mogelijk om een organisatie te registreren met een KvK-nummer dat al door een andere organisatie in gebruik was. Dit kon problemen geven in situaties waarbij meerdere organisaties onder hetzelfde KvK-nummer opereren. De beperking is opgeheven: hetzelfde KvK-nummer mag nu door meerdere organisaties worden gebruikt.
+
+---
+
+### Maximale bestandsgrootte voor uploads verhoogd naar 30 MB
+
+**Voor wie:** Organisatoren, Gemeentemedewerkers, Behandelaars
+
+Het uploaden van documenten was beperkt tot bestanden van maximaal 20 MB. Deze limiet is verhoogd naar 30 MB, zodat grotere bestanden zoals plattegronden, technische tekeningen of uitgebreide bijlagen zonder problemen kunnen worden geüpload.
 
 ---
 
