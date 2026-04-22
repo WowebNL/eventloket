@@ -287,7 +287,11 @@ class EventFormGedragsRapport extends Command
         foreach ($this->catalog->allSteps() as $uuid => $meta) {
             if (! isset($counts[$uuid])) {
                 $titel = $this->catalog->stepLabel($uuid);
-                $lines[] = "- _⚪ {$titel}_ — nog geen scenarios gedekt";
+                if ($this->catalog->stepHasLogic($uuid)) {
+                    $lines[] = "- _⚪ {$titel}_ — nog geen scenarios gedekt";
+                } else {
+                    $lines[] = "- 🟢 _{$titel}_ — geen dynamisch gedrag (pure input-/inhoudspagina, niks te testen)";
+                }
 
                 continue;
             }

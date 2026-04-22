@@ -312,7 +312,7 @@ class RuleClassGenerator
             return $expr;
         }
 
-        if (str_starts_with($expr, '(bool) ')) {
+        if (str_starts_with($expr, '(bool) ') || str_starts_with($expr, '\\App\\EventForm\\Transpiler\\JsTruthy::of(')) {
             return $expr;
         }
 

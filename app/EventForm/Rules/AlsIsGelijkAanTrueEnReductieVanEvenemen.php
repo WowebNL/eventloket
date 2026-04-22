@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Rules;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Transpiler\JsTruthy;
 
 /**
  * @openforms-rule-uuid be547255-4a1b-4f37-96e8-919d5351e7a5
@@ -30,7 +31,7 @@ final class AlsIsGelijkAanTrueEnReductieVanEvenemen implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) (($s->get('inGemeentenResponse.line.start_end_equal') === 'True') && ((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2) && (bool) $s->get('userSelectGemeente11'));
+        return (bool) (($s->get('inGemeentenResponse.line.start_end_equal') === 'True') && ((is_array($s->get('evenementInGemeentenNamen')) ? count($s->get('evenementInGemeentenNamen')) : 0) >= 2) && JsTruthy::of($s->get('userSelectGemeente11')));
     }
 
     public function apply(FormState $s): void

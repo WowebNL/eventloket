@@ -6,6 +6,7 @@ namespace App\EventForm\Rules;
 
 use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
+use App\EventForm\Transpiler\JsTruthy;
 
 /**
  * @openforms-rule-uuid 3fa0fbf5-9ee1-4c2a-9074-9993e208b010
@@ -31,7 +32,7 @@ final class AlsBoolEnBoolEnBoolEvenementingemeenteBrkIdentificat implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((bool) $s->get('EvenementStart') && (bool) $s->get('EvenementEind') && (bool) $s->get('evenementInGemeente.brk_identification'));
+        return (bool) (JsTruthy::of($s->get('EvenementStart')) && JsTruthy::of($s->get('EvenementEind')) && JsTruthy::of($s->get('evenementInGemeente.brk_identification')));
     }
 
     public function apply(FormState $s): void

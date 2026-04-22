@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Rules;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Transpiler\JsTruthy;
 
 /**
  * @openforms-rule-uuid 00876823-b3f3-44f6-a177-d355c84c0b12
@@ -30,7 +31,7 @@ final class AlsBool00876823 implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) $s->get('evenementenInDeGemeente');
+        return JsTruthy::of($s->get('evenementenInDeGemeente'));
     }
 
     public function apply(FormState $s): void

@@ -135,10 +135,14 @@ class JsonLogicCompiler
             ? $args[0]
             : $args;
 
-        // `(bool)` heeft de hoogste precedence, dus omringende haakjes zijn
-        // niet nodig — de parent-expressie groepeert als dat moet. Scheelt
-        // een dubbele laag haakjes in de geemit-te rule-bodies.
-        return '(bool) '.$this->compile($inner);
+        // JsonLogic's `!!` gebruikt JS-truthy regels en die verschillen van PHP:
+        //  - PHP: `(bool) "0"` → false
+        //  - JS:  `!!"0"`        → true
+        // In OF ligt dat verschil sloom onder de oppervlakte — radio-opties met
+        // waarde "0" bij bv. "Is er overnachting? Nee → 0" werden in OF als
+        // truthy gezien, in een naïeve PHP-cast niet. Daarom emitten we een
+        // helper-call die de JS-semantiek expliciet nabouwt.
+        return '\\App\\EventForm\\Transpiler\\JsTruthy::of('.$this->compile($inner).')';
     }
 
     /**

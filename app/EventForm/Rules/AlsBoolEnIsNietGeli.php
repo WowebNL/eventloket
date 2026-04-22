@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Rules;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Transpiler\JsTruthy;
 
 /**
  * @openforms-rule-uuid 8124340f-cce5-47da-8691-91ad37fd6af0
@@ -30,7 +31,7 @@ final class AlsBoolEnIsNietGeli implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((bool) $s->get('eventloketSession.user_last_name') && ($s->get('eventloketSession.user_last_name') !== 'None') && ($s->get('eventloketSession.user_last_name') !== 'NULL'));
+        return (bool) (JsTruthy::of($s->get('eventloketSession.user_last_name')) && ($s->get('eventloketSession.user_last_name') !== 'None') && ($s->get('eventloketSession.user_last_name') !== 'NULL'));
     }
 
     public function apply(FormState $s): void

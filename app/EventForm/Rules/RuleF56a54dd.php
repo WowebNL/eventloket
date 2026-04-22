@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Rules;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Transpiler\JsTruthy;
 
 /**
  * @openforms-rule-uuid f56a54dd-4af9-452f-8bbd-cee5fba3c79b
@@ -40,6 +41,6 @@ final class RuleF56a54dd implements Rule
         $s->setVariable('watIsUwTelefoonnummer', $s->get('eventloketSession.user_phone'));
         $s->setVariable('watIsHetKamerVanKoophandelNummerVanUwOrganisatie', $s->get('eventloketSession.kvk'));
         $s->setFieldHidden('loadUserInformation', true);
-        $s->setVariable('eventloketPrefill', ((bool) $s->get('eventloketSession.prefill_data') ? $s->get('eventloketSession.prefill_data') : '{}'));
+        $s->setVariable('eventloketPrefill', (JsTruthy::of($s->get('eventloketSession.prefill_data')) ? $s->get('eventloketSession.prefill_data') : '{}'));
     }
 }

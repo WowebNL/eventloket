@@ -6,6 +6,7 @@ namespace App\EventForm\Rules;
 
 use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
+use App\EventForm\Transpiler\JsTruthy;
 
 /**
  * @openforms-rule-uuid 599a6cfd-7ea4-4c68-b011-c1f590286daf
@@ -31,7 +32,7 @@ final class AlsBoolEnIsNietGelijkAanNone599a6cfd implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((bool) $s->get('routesOpKaart') && ($s->get('routesOpKaart') !== 'None'));
+        return (bool) (JsTruthy::of($s->get('routesOpKaart')) && ($s->get('routesOpKaart') !== 'None'));
     }
 
     public function apply(FormState $s): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Rules;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Transpiler\JsTruthy;
 
 /**
  * @openforms-rule-uuid 3247522b-8603-4c7c-ae8d-b92a75fb35d6
@@ -30,7 +31,7 @@ final class AlsBoolEnReductieVan1Accumul implements Rule
 
     public function applies(FormState $s): bool
     {
-        return (bool) ((bool) $s->get('routeDoorGemeentenNamen') && ((is_array($s->get('routeDoorGemeentenNamen')) ? count($s->get('routeDoorGemeentenNamen')) : 0) >= 2) && (bool) $s->get('userSelectGemeente11'));
+        return (bool) (JsTruthy::of($s->get('routeDoorGemeentenNamen')) && ((is_array($s->get('routeDoorGemeentenNamen')) ? count($s->get('routeDoorGemeentenNamen')) : 0) >= 2) && JsTruthy::of($s->get('userSelectGemeente11')));
     }
 
     public function apply(FormState $s): void
