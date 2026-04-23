@@ -1,40 +1,69 @@
-import { expect } from '@playwright/test';
-
 /**
- * Helpers om velden in het Filament-formulier in te vullen. Filament's
- * inputs hebben `wire:model="data.<key>"` als binding, dus we selecteren
- * op dat attribuut i.p.v. op fragiele labels.
+ * Helpers om velden in het Filament-formulier in te vullen. Filament
+ * gebruikt verschillende wire:model-varianten — `wire:model` (standaard),
+ * `wire:model.live` (reactief), `wire:model.blur` (AddressNL postcode
+ * e.d.), `wire:model.defer` (oude form-state-modus). Onze selectoren
+ * proberen ze allemaal in volgorde totdat er één lokaliseert.
  */
 
+const MODIFIERS = ['', '.live', '.defer', '.blur', '.debounce.500ms'];
+
+function selectorVoor(tag, attr) {
+    // Bouw een CSS-selector die één van de wire:model-varianten matcht.
+    return MODIFIERS.map((m) => `${tag}[wire\\:model${m.replace(/\./g, '\\.')}="${attr}"]`).join(', ');
+}
+
+function endsWithSelector(tag, suffix) {
+    // Voor een eind-match (bv. een pad dat eindigt op ".postcode")
+    return MODIFIERS.map((m) => `${tag}[wire\\:model${m.replace(/\./g, '\\.')}$="${suffix}"]`).join(', ');
+}
+
 export async function vulTekst(page, key, waarde) {
-    const input = page.locator(
-        `input[wire\\:model="data.${key}"], input[wire\\:model\\.live="data.${key}"], input[wire\\:model\\.defer="data.${key}"]`
-    ).first();
-    await input.fill(waarde);
+    await page.locator(selectorVoor('input', `data.${key}`)).first().fill(waarde);
 }
 
 export async function vulTextarea(page, key, waarde) {
-    const input = page.locator(
-        `textarea[wire\\:model="data.${key}"], textarea[wire\\:model\\.live="data.${key}"], textarea[wire\\:model\\.defer="data.${key}"]`
-    ).first();
-    await input.fill(waarde);
+    await page.locator(selectorVoor('textarea', `data.${key}`)).first().fill(waarde);
+}
+
+export async function vulEindigendOp(page, tag, suffix, waarde) {
+    await page.locator(endsWithSelector(tag, suffix)).first().fill(waarde);
 }
 
 export async function kiesRadio(page, key, value) {
-    // Radios hebben wire:model op een wrapper; de inputs zelf hebben value=X
     const radio = page.locator(`input[type=radio][name*="${key}"][value="${value}"]`).first();
     await radio.check();
 }
 
+/**
+ * Vinkt een radio alleen aan als het veld bestaat en zichtbaar is. Geen
+ * fout als het veld (nog) niet in de DOM zit — handig voor cascade-stappen
+ * waar pas vragen verschijnen na antwoord op vorige vraag.
+ */
+export async function kiesRadioOptioneel(page, key, value, { timeout = 2500, wachtOpVerschijnen = 2000 } = {}) {
+    const radio = page.locator(`input[type=radio][name*="${key}"][value="${value}"]`).first();
+    // Wacht tot de radio in de DOM verschijnt — bij cascade-velden duurt
+    // het een Livewire-roundtrip voordat ze getoond worden na een klik op
+    // de vorige vraag. `count() === 0` was te vroeg; `waitFor` met een
+    // korte timeout vangt die vertraging op. Niet gevonden? → stil skip.
+    try {
+        await radio.waitFor({ state: 'attached', timeout: wachtOpVerschijnen });
+    } catch {
+        return false;
+    }
+    try {
+        await radio.check({ timeout });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export async function kiesSelect(page, key, value) {
-    const select = page.locator(
-        `select[wire\\:model="data.${key}"], select[wire\\:model\\.live="data.${key}"]`
-    ).first();
-    await select.selectOption(value);
+    await page.locator(selectorVoor('select', `data.${key}`)).first().selectOption(value);
 }
 
 export async function vinkCheckboxAan(page, key, optie) {
-    // Selectboxes/CheckboxList in Filament: input type=checkbox met value=optie
     const cb = page.locator(`input[type=checkbox][value="${optie}"]`).first();
     await cb.check();
 }
@@ -42,10 +71,7 @@ export async function vinkCheckboxAan(page, key, optie) {
 export async function klikVolgende(page) {
     const btn = page.getByRole('button', { name: /^volgende$/i }).first();
     await btn.click();
-    // Wacht op livewire-update + re-render
     await page.waitForTimeout(1200);
-    // Als validatie faalt, blijft de Volgende-knop zichtbaar en is er een
-    // veld met rode rand / fout-tekst. Check op error-meldingen.
     const errors = await page.locator('.fi-fo-field-wrp-error-message').count();
     if (errors > 0) {
         const teksten = await page.locator('.fi-fo-field-wrp-error-message').allTextContents();
