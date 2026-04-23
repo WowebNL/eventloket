@@ -36,7 +36,7 @@ final class AanvraagOfMeldingStep
                 Fieldset::make('Algemene vragen')
                     ->schema([
                         Radio::make('isHetAantalAanwezigenBijUwEvenementMinderDanSdf')
-                            ->label('Is het aantal aanwezigen bij uw evenement minder dan {% get_value gemeenteVariabelen \'aanwezigen\' %} personen?')
+                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is het aantal aanwezigen bij uw evenement minder dan {% get_value gemeenteVariabelen \'aanwezigen\' %} personen?', $livewire->state()))
                             ->options([
                                 'Ja' => 'Ja',
                                 'Nee' => 'Nee',

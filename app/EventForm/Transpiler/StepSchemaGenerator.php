@@ -222,13 +222,13 @@ class StepSchemaGenerator
     }
 
     /**
-     * Emit `->label(...)`. Labels met `{{ var }}` krijgen een closure die
-     * de Livewire-state op render-tijd oplost via LabelRenderer. Statische
-     * labels krijgen een simpele string-vorm.
+     * Emit `->label(...)`. Labels met `{{ var }}` of `{% tag %}` krijgen
+     * een closure die de Livewire-state op render-tijd oplost via
+     * LabelRenderer. Statische labels krijgen een simpele string-vorm.
      */
     private function labelModifier(string $label, string $pad): string
     {
-        if (! str_contains($label, '{{')) {
+        if (! str_contains($label, '{{') && ! str_contains($label, '{%')) {
             return "->label('{$this->esc($label)}')";
         }
 

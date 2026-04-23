@@ -56,7 +56,7 @@ return $__result;
             } $__result = [];
             foreach ($__items as $__item) {
                 $__result[] = (function ($s) {
-                    return array_merge(($s->get('brk_identification') ?? []), ($s->get('name') ?? []));
+                    return array_merge(((array) ($s->get('brk_identification') ?? [])), ((array) ($s->get('name') ?? [])));
                 })(MapContext::from($s, $__item));
             }
 

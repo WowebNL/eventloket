@@ -297,7 +297,7 @@ class JsonLogicCompiler
         if (! is_array($args)) {
             return '[]';
         }
-        $parts = array_map(fn ($v): string => '('.$this->compile($v).' ?? [])', array_values($args));
+        $parts = array_map(fn ($v): string => '((array) ('.$this->compile($v).' ?? []))', array_values($args));
 
         return 'array_merge('.implode(', ', $parts).')';
     }
