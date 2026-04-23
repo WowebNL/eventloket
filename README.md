@@ -44,13 +44,17 @@ This platform streamlines the entire permit application process for events in th
    ```bash
    cp .env.example .env
    ```
+3. Install Sail:
+   ```bash
+   composer require laravel/sail --dev
+   ``` 
 
-3. Start the application using Sail:
+5. Start the application using Sail:
    ```bash
    ./vendor/bin/sail up -d
    ```
 
-4. Generate an app key, run migrations and install dependencies:
+6. Generate an app key, run migrations and install dependencies:
    ```bash
    ./vendor/bin/sail artisan key:generate
    ./vendor/bin/sail artisan migrate
