@@ -7,6 +7,7 @@
     "license": "EUPL-1.2",
     "require": {
         "php": "^8.4",
+        "barryvdh/laravel-dompdf": "^3.1",
         "brick/geo": "^0.13.1",
         "dotswan/filament-map-picker": "dev-master",
         "filament/filament": "^4.0",

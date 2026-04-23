@@ -49,6 +49,14 @@ return [
         'base_url' => env('KADASTER_BASE_URL', 'https://api.pdok.nl/kadaster'),
     ],
 
+    'openzaak' => [
+        // RSIN van Veiligheidsregio Zuid-Limburg — bronorganisatie bij elke
+        // nieuwe zaak in OpenZaak. In de oude OF-flow stond dit in alle 45
+        // registratie-backends hardcoded op dezelfde waarde (820151130),
+        // dus we repliceren dat hier in één plek.
+        'bronorganisatie_rsin' => env('OPENZAAK_BRONORGANISATIE_RSIN', '820151130'),
+    ],
+
     'locatieserver' => [
         'base_url' => env('LOCATIESERVER_BASE_URL', 'https://api.pdok.nl/bzk/locatieserver'),
     ],

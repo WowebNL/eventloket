@@ -11,12 +11,16 @@ use App\EventForm\Rules\RulesEngine;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\SubmitEventForm;
+use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Users\OrganiserUser;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Locked;
@@ -73,7 +77,7 @@ class EventFormPage extends Page implements HasForms
         $tenant = Filament::getTenant();
 
         $prefill = app(PrefillLoader::class)->load(
-            request()->query('initial_data_reference'),
+            request()->query('prefill_from_zaak'),
             $user,
             $tenant,
         );
@@ -180,22 +184,46 @@ class EventFormPage extends Page implements HasForms
         return is_string($step) && $step !== '' ? $step : null;
     }
 
-
     public function submit(): void
     {
-        // Stap 7 (CreateZaakFromFormState) vult de daadwerkelijke submit-flow
-        // in. Voor nu alleen de draft-clear zodat we end-to-end kunnen testen.
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
-        if ($user instanceof User && $org instanceof Organisation) {
-            app(DraftStore::class)->clear($user, $org);
+
+        if (! $user instanceof OrganiserUser || ! $org instanceof Organisation) {
+            Notification::make()
+                ->danger()
+                ->title('Aanvraag niet ingediend')
+                ->body('We konden uw gebruiker of organisatie niet terugvinden. Log opnieuw in en probeer het nog eens.')
+                ->send();
+
+            return;
         }
 
-        \Filament\Notifications\Notification::make()
+        try {
+            $zaak = app(SubmitEventForm::class)->execute($this->state, $user, $org);
+        } catch (\Throwable $e) {
+            report($e);
+
+            Notification::make()
+                ->danger()
+                ->title('Aanvraag niet ingediend')
+                ->body('Er ging iets mis bij het indienen: '.$e->getMessage())
+                ->persistent()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
             ->success()
-            ->title('Aanvraag (test) ingediend')
-            ->body('Submit-flow wordt in stap 7 volledig aangesloten.')
+            ->title('Aanvraag ingediend')
+            ->body(sprintf('Uw aanvraag is aangemaakt met zaaknummer %s.', $zaak->public_id))
             ->send();
+
+        $this->redirect(
+            ZaakResource::getUrl('view', ['record' => $zaak]),
+            navigate: true,
+        );
     }
 
     public function getTitle(): string
