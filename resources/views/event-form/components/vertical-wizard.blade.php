@@ -229,6 +229,10 @@
 
                     scroll() {
                         this.$nextTick(() => {
+                            // Scroll de body naar boven zodat de nieuwe stap vanaf
+                            // het begin leesbaar is, niet halverwege vanaf waar
+                            // de vorige stap eindigde.
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
                             this.$refs.header?.children[this.getStepIndex(this.step)]
                                 ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         });
