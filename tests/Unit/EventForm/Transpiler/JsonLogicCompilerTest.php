@@ -131,8 +131,17 @@ describe('JsonLogicCompiler arithmetic', function () {
 
 describe('JsonLogicCompiler reduce (count pattern)', function () {
     test('reduce with accumulator+1 compiles to count()', function () {
-        $state = FormState::empty();
-        $state->setVariable('evenementInGemeentenNamen', ['Maastricht', 'Heerlen', 'Kerkrade']);
+        // Setup via `inGemeentenResponse.all.items` omdat
+        // `evenementInGemeentenNamen` sinds de FormDerivedState-migratie
+        // gemigreerd is naar pure-functioneel — direct `setVariable`
+        // werkt niet meer (FormDerivedState overruled).
+        $state = new FormState(values: [
+            'inGemeentenResponse' => ['all' => ['items' => [
+                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+                ['brk_identification' => 'GM0928', 'name' => 'Kerkrade'],
+            ]]],
+        ]);
 
         $expr = [
             'reduce' => [
@@ -253,8 +262,12 @@ describe('JsonLogicCompiler nested combinations', function () {
     });
 
     test('reduce result compared with >=', function () {
-        $state = FormState::empty();
-        $state->setVariable('evenementInGemeentenNamen', ['A', 'B']);
+        $state = new FormState(values: [
+            'inGemeentenResponse' => ['all' => ['items' => [
+                ['brk_identification' => 'X', 'name' => 'A'],
+                ['brk_identification' => 'Y', 'name' => 'B'],
+            ]]],
+        ]);
 
         $expr = [
             '>=' => [
