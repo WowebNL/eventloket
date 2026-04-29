@@ -148,6 +148,15 @@ class EventFormPage extends Page implements HasForms
                     ->submitAction(
                         Action::make('submit')
                             ->label('Aanvraag indienen')
+                            // UI-niveau guard: knop blijft uitgeschakeld zodra
+                            // submit() is gestart, óók nadat de Livewire-
+                            // roundtrip klaar is en vóór de redirect heeft
+                            // plaatsgevonden. Filament's eigen
+                            // wire:loading.attr=disabled dekt alleen het
+                            // request-in-flight-moment; daarna zou de knop
+                            // weer klikbaar zijn voordat de pagina
+                            // doorlinkt naar de zojuist aangemaakte zaak.
+                            ->disabled(fn () => $this->submitting)
                             ->action('submit'),
                     ),
             ])
