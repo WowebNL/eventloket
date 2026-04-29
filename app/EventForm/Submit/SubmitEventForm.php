@@ -11,6 +11,7 @@ use App\EventForm\Submit\Steps\CreateLocalZaak;
 use App\EventForm\Submit\Steps\CreateZaakInZGW;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\HashIdentifyingAttributes;
+use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
@@ -118,7 +119,17 @@ final class SubmitEventForm
         // PDF + email + privacy-hash komen als losse (niet-ketende) jobs
         // zodat ze onafhankelijk kunnen falen/retrien. De Mailable
         // hangt aan de PDF-job (die dispatched 'm nadat de PDF klaar is).
+        // De PDF-job dispatcht óók UploadSubmissionPdfToZGW, dus daar
+        // hoeven we hier niets voor te regelen.
         GenerateSubmissionPdf::dispatch($zaak)->onQueue('high');
+
+        // Upload alle FileUpload-bijlagen die de organisator heeft
+        // toegevoegd als zaakinformatieobject naar OpenZaak. Apart van
+        // de PDF-job omdat hier geen volgorde-afhankelijkheid is — de
+        // bijlagen liggen al op disk vanaf het moment dat de organisator
+        // ze uploadde tijdens het invullen.
+        UploadFormBijlagenToZGW::dispatch($zaak);
+
         HashIdentifyingAttributes::dispatch($zaak);
     }
 }

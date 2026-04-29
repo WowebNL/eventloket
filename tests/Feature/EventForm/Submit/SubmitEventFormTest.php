@@ -30,6 +30,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\SubmitEventForm;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\HashIdentifyingAttributes;
+use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
@@ -170,10 +171,15 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
         CreateDoorkomstZaken::class,
     ]);
 
-    // 6. PDF en hash draaien onafhankelijk (niet in de ketting) zodat ze
-    //    bij een faal van een ZGW-job niet mee-vallen.
+    // 6. PDF, bijlagen-upload, hash draaien onafhankelijk (niet in de
+    //    ketting) zodat ze bij een faal van een ZGW-job niet mee-vallen.
+    //    De PDF-job dispatcht zelf UploadSubmissionPdfToZGW na de write,
+    //    dus die toetsen we daar.
     Bus::assertDispatched(GenerateSubmissionPdf::class,
         fn (GenerateSubmissionPdf $job) => $job->zaak->is($zaak)
+    );
+    Bus::assertDispatched(UploadFormBijlagenToZGW::class,
+        fn (UploadFormBijlagenToZGW $job) => $job->zaak->is($zaak)
     );
     Bus::assertDispatched(HashIdentifyingAttributes::class,
         fn (HashIdentifyingAttributes $job) => $job->zaak->is($zaak)

@@ -51,5 +51,10 @@ final class GenerateSubmissionPdf implements ShouldQueue
         // Pas bevestigingsmail dispatchen nadat de PDF klaar staat, zodat
         // we 'm meteen als bijlage mee kunnen sturen.
         SendSubmissionConfirmationEmail::dispatch($this->zaak);
+
+        // Upload de PDF nu pas naar OpenZaak — vóór deze job is er nog
+        // niets om te uploaden. Losse dispatch zodat een ZGW-fout deze
+        // PDF-write niet retried.
+        UploadSubmissionPdfToZGW::dispatch($this->zaak);
     }
 }
