@@ -73,8 +73,12 @@ foreach ($files as $file) {
         $reasons[] = 'fetch-from-service — nog niet gemigreerd';
         $hasActions = true;
     }
-    if (str_contains($applyBody, 'setSystem')) {
-        $reasons[] = 'setSystem — nog niet gemigreerd';
+    if (str_contains($applyBody, "setSystem('registration_backend'")) {
+        // Gemigreerd naar FormSystemDerivedState::registrationBackend()
+        // — engine-write redundant, FormState delegeert via system.X-pad.
+        $hasActions = true;
+    } elseif (str_contains($applyBody, 'setSystem')) {
+        $reasons[] = 'setSystem (anders dan registration_backend) — nog niet gemigreerd';
         $hasActions = true;
     }
 

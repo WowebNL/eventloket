@@ -330,9 +330,11 @@ final class EquivalenceScenario
     private static function readExpectation(FormState $state, string $path, ?string $html = null): mixed
     {
         if (str_starts_with($path, 'system.')) {
-            $systemBag = $state->toSnapshot()['system'] ?? [];
-
-            return Arr::get($systemBag, substr($path, strlen('system.')));
+            // Sinds de FormSystemDerivedState-migratie kunnen
+            // system-keys ook pure-functioneel afgeleid zijn (bv.
+            // `registration_backend`). FormState::get() handelt dat
+            // af; we gebruiken die i.p.v. de raw snapshot-bag.
+            return $state->get($path);
         }
         if (str_starts_with($path, 'field_hidden.')) {
             return $state->isFieldHidden(substr($path, strlen('field_hidden.')));

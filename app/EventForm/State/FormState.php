@@ -78,6 +78,19 @@ class FormState implements Arrayable
             }
         }
 
+        // System-bag-paden (`system.X`): gemigreerde keys komen uit
+        // FormSystemDerivedState. Ook hier: bij `null` valt 't door
+        // naar de oude system-bag (die de engine nog kan vullen).
+        if ($head === 'system' && $rest !== '') {
+            [$systemKey, $systemRest] = $this->splitPath($rest);
+            if (isset(FormSystemDerivedState::COMPUTED_KEYS[$systemKey])) {
+                $derived = (new FormSystemDerivedState($this))->get($systemKey);
+                if ($derived !== null) {
+                    return $systemRest === '' ? $derived : $this->descend($derived, $systemRest);
+                }
+            }
+        }
+
         if (array_key_exists($path, $this->values)) {
             return $this->values[$path];
         }
