@@ -3,179 +3,141 @@
 declare(strict_types=1);
 
 /**
- * Equivalence-test voor de rules-engine-refactor: vergelijkt voor elke
- * gemigreerde afgeleide variabele de output van de oude RulesEngine
- * (die de variabele via `setVariable` schreef) met de nieuwe
- * `FormDerivedState`-methode (die 'm pure-functioneel berekent).
+ * Unit-tests voor de gemigreerde derivaties in `FormDerivedState`.
+ * Per scenario: een raw FormState-snapshot + een verwachte
+ * computed-waarde, gebaseerd op de oorspronkelijke OF-rule-logica.
  *
- * Bedoeld om regressie te vangen tijdens de migratie. Per nieuwe
- * gemigreerde variabele voegen we hier een scenario toe.
+ * Was vroeger een directe vergelijking tussen oude RulesEngine en
+ * nieuwe FormDerivedState; sinds de gemigreerde rules door de engine
+ * worden overgeslagen heeft die vergelijking geen zin meer — we
+ * checken nu rechtstreeks of de pure-functionele methodes het
+ * verwachte resultaat opleveren.
  */
 
-use App\EventForm\Rules\RulesEngine;
 use App\EventForm\State\FormDerivedState;
 use App\EventForm\State\FormState;
 
-/**
- * Voor een gegeven raw FormState-snapshot:
- *   1) draai de oude RulesEngine en haal `setVariable`-resultaat
- *   2) bouw een verse FormState met dezelfde input en haal via
- *      `FormDerivedState::get()` het gemigreerde resultaat
- *   3) assert: identiek
- */
-function assertDerivationEquivalent(string $variable, array $rawValues): void
+function derive(string $key, array $rawValues): mixed
 {
-    // Pad oud: laat de engine de variabele schrijven.
-    $stateOud = new FormState(values: $rawValues);
-    app(RulesEngine::class)->evaluate($stateOud);
-    // Pak de waarde rechtstreeks uit de values-bag, NIET via get()
-    // (die gaat namelijk al via FormDerivedState delegeren).
-    $oudeWaarde = $stateOud->fields()[$variable] ?? null;
-
-    // Pad nieuw: skip de engine, laat FormDerivedState rekenen.
-    $stateNieuw = new FormState(values: $rawValues);
-    $nieuweWaarde = (new FormDerivedState($stateNieuw))->get($variable);
-
-    expect($nieuweWaarde)->toEqual(
-        $oudeWaarde,
-        "FormDerivedState::{$variable}() levert ander resultaat dan de oude engine voor: ".json_encode($rawValues, JSON_PRETTY_PRINT)
-    );
+    return (new FormDerivedState(new FormState(values: $rawValues)))->get($key);
 }
 
 test('evenementInGemeentenNamen — geen gemeenten gevonden → lege lijst', function () {
-    assertDerivationEquivalent('evenementInGemeentenNamen', [
+    expect(derive('evenementInGemeentenNamen', [
         'inGemeentenResponse' => ['all' => ['items' => []]],
-    ]);
+    ]))->toBe([]);
 });
 
 test('evenementInGemeentenNamen — één gemeente in items → lijst met één naam', function () {
-    assertDerivationEquivalent('evenementInGemeentenNamen', [
-        'inGemeentenResponse' => [
-            'all' => ['items' => [
-                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-            ]],
-        ],
-    ]);
+    expect(derive('evenementInGemeentenNamen', [
+        'inGemeentenResponse' => ['all' => ['items' => [
+            ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+        ]]],
+    ]))->toBe(['Maastricht']);
 });
 
 test('evenementInGemeentenNamen — meerdere gemeenten → alle namen in volgorde', function () {
-    assertDerivationEquivalent('evenementInGemeentenNamen', [
-        'inGemeentenResponse' => [
-            'all' => ['items' => [
-                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-                ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
-                ['brk_identification' => 'GM1903', 'name' => 'Eijsden-Margraten'],
-            ]],
-        ],
-    ]);
+    expect(derive('evenementInGemeentenNamen', [
+        'inGemeentenResponse' => ['all' => ['items' => [
+            ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+            ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+            ['brk_identification' => 'GM1903', 'name' => 'Eijsden-Margraten'],
+        ]]],
+    ]))->toBe(['Maastricht', 'Heerlen', 'Eijsden-Margraten']);
 });
 
-test('evenementInGemeentenNamen — geen inGemeentenResponse aanwezig → lege lijst', function () {
-    assertDerivationEquivalent('evenementInGemeentenNamen', []);
+test('evenementInGemeentenNamen — geen inGemeentenResponse → lege lijst', function () {
+    expect(derive('evenementInGemeentenNamen', []))->toBe([]);
 });
 
-test('binnenVeiligheidsregio — pakt all.within door', function () {
+test('binnenVeiligheidsregio — pakt all.within door (true/false/null)', function () {
     foreach ([true, false, null] as $within) {
-        assertDerivationEquivalent('binnenVeiligheidsregio', [
+        expect(derive('binnenVeiligheidsregio', [
             'inGemeentenResponse' => ['all' => ['within' => $within, 'items' => []]],
-        ]);
+        ]))->toBe($within);
     }
 });
 
 test('gemeenten — pakt all.object door', function () {
-    assertDerivationEquivalent('gemeenten', [
-        'inGemeentenResponse' => [
-            'all' => [
-                'items' => [['brk_identification' => 'GM0935', 'name' => 'Maastricht']],
-                'object' => ['GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht']],
-            ],
-        ],
-    ]);
+    expect(derive('gemeenten', [
+        'inGemeentenResponse' => ['all' => [
+            'items' => [['brk_identification' => 'GM0935', 'name' => 'Maastricht']],
+            'object' => ['GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht']],
+        ]],
+    ]))->toBe(['GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht']]);
 });
 
 test('routeDoorGemeentenNamen — namen uit line.items', function () {
-    assertDerivationEquivalent('routeDoorGemeentenNamen', [
-        'inGemeentenResponse' => [
-            'line' => ['items' => [
-                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-                ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
-            ]],
-        ],
-    ]);
+    expect(derive('routeDoorGemeentenNamen', [
+        'inGemeentenResponse' => ['line' => ['items' => [
+            ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+            ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+        ]]],
+    ]))->toBe(['Maastricht', 'Heerlen']);
 });
 
 test('evenementInGemeente — auto-pick bij precies één gevonden gemeente', function () {
-    assertDerivationEquivalent('evenementInGemeente', [
-        'inGemeentenResponse' => [
-            'all' => ['items' => [['brk_identification' => 'GM0935', 'name' => 'Maastricht']]],
-        ],
-    ]);
+    expect(derive('evenementInGemeente', [
+        'inGemeentenResponse' => ['all' => ['items' => [
+            ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+        ]]],
+    ]))->toBe(['brk_identification' => 'GM0935', 'name' => 'Maastricht']);
 });
 
 test('evenementInGemeente — userSelectGemeente wint bij ≥2 gevonden', function () {
-    assertDerivationEquivalent('evenementInGemeente', [
+    expect(derive('evenementInGemeente', [
         'userSelectGemeente' => 'GM0917',
-        'inGemeentenResponse' => [
-            'all' => [
-                'items' => [
-                    ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-                    ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
-                ],
-                'object' => [
-                    'GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-                    'GM0917' => ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
-                ],
+        'inGemeentenResponse' => ['all' => [
+            'items' => [
+                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
             ],
-        ],
-    ]);
+            'object' => [
+                'GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                'GM0917' => ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+            ],
+        ]],
+    ]))->toBe(['brk_identification' => 'GM0917', 'name' => 'Heerlen']);
 });
 
 test('evenementInGemeente — niets gevonden, niets gekozen → null', function () {
-    assertDerivationEquivalent('evenementInGemeente', [
+    expect(derive('evenementInGemeente', [
         'inGemeentenResponse' => ['all' => ['items' => []]],
-    ]);
+    ]))->toBeNull();
 });
 
-test('alcoholvergunning — A5-checkbox aan → Ja', function () {
-    assertDerivationEquivalent('alcoholvergunning', [
+test('alcoholvergunning — A5 aan → Ja, anders null', function () {
+    expect(derive('alcoholvergunning', [
         'kruisAanWatVanToepassingIsVoorUwEvenementX' => ['A5' => true],
-    ]);
-});
-
-test('alcoholvergunning — A5 uit of afwezig → null', function () {
-    assertDerivationEquivalent('alcoholvergunning', []);
-    assertDerivationEquivalent('alcoholvergunning', [
+    ]))->toBe('Ja');
+    expect(derive('alcoholvergunning', []))->toBeNull();
+    expect(derive('alcoholvergunning', [
         'kruisAanWatVanToepassingIsVoorUwEvenementX' => ['A5' => false],
-    ]);
+    ]))->toBeNull();
 });
 
 test('isVergunningaanvraag — Nee op één scan-vraag → true', function () {
-    foreach ([
-        'isHetAantalAanwezigenBijUwEvenementMinderDanSdf',
-        'meldingvraag1',
-        'meldingvraag5',
-    ] as $vraag) {
-        assertDerivationEquivalent('isVergunningaanvraag', [$vraag => 'Nee']);
+    foreach (['isHetAantalAanwezigenBijUwEvenementMinderDanSdf', 'meldingvraag1', 'meldingvraag5'] as $vraag) {
+        expect(derive('isVergunningaanvraag', [$vraag => 'Nee']))->toBeTrue();
     }
 });
 
 test('isVergunningaanvraag — wegen-afsluiten Ja → true', function () {
-    assertDerivationEquivalent('isVergunningaanvraag', [
+    expect(derive('isVergunningaanvraag', [
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
-    ]);
+    ]))->toBeTrue();
 });
 
 test('isVergunningaanvraag — alle scan-vragen Ja, wegen Nee → null (= geen vergunning)', function () {
-    assertDerivationEquivalent('isVergunningaanvraag', [
+    expect(derive('isVergunningaanvraag', [
         'isHetAantalAanwezigenBijUwEvenementMinderDanSdf' => 'Ja',
         'meldingvraag1' => 'Ja',
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
-    ]);
+    ]))->toBeNull();
 });
 
 test('risicoClassificatie — som ≤ 6 → A', function () {
-    // 14 vragen, allemaal score 0 → som 0 → A.
-    assertDerivationEquivalent('risicoClassificatie', [
+    expect(derive('risicoClassificatie', [
         'watIsDeAantrekkingskrachtVanHetEvenement' => '0.5',
         'watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep' => '0.5',
         'isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid' => '0',
@@ -190,19 +152,19 @@ test('risicoClassificatie — som ≤ 6 → A', function () {
         'opWelkSoortOndergrondVindtHetEvenementPlaats' => '0.25',
         'watIsDeTijdsduurVanHetEvenement' => '0.5',
         'welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing' => '0',
-    ]);
+    ]))->toBe('A');
 });
 
 test('confirmationtext — vooraankondiging → lege string', function () {
-    assertDerivationEquivalent('confirmationtext', [
+    expect(derive('confirmationtext', [
         'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
-    ]);
+    ]))->toBe('');
 });
 
 test('confirmationtext — wegen Nee → meldings-bedankt', function () {
-    assertDerivationEquivalent('confirmationtext', [
+    expect(derive('confirmationtext', [
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
-    ]);
+    ]))->toBe('Bedankt voor het invullen van de details voor de melding van uw evenement.');
 });
 
 test('FormState::get() pakt de gemigreerde waarde uit FormDerivedState, niet uit values-bag', function () {
@@ -210,11 +172,9 @@ test('FormState::get() pakt de gemigreerde waarde uit FormDerivedState, niet uit
     // FormDerivedState winnen — dat is het hele punt van de migratie.
     $state = new FormState(values: [
         'evenementInGemeentenNamen' => ['oude-waarde-uit-engine'],
-        'inGemeentenResponse' => [
-            'all' => ['items' => [
-                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-            ]],
-        ],
+        'inGemeentenResponse' => ['all' => ['items' => [
+            ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+        ]]],
     ]);
 
     expect($state->get('evenementInGemeentenNamen'))->toBe(['Maastricht']);
