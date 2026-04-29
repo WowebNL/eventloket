@@ -117,6 +117,57 @@ test('ingetekende lijn over twee gemeenten → beide gemeenten komen in response
         ->and($brkIds)->toContain('GM0002');
 });
 
+test('nieuwe shape: één Map met meerdere polygonen → alle gemeenten erin', function () {
+    // Repeater-eruit-fix: locatieSOpKaart is nu een single Map-state,
+    // geen lijst van rijen. De Map kan zelf meerdere features bevatten.
+    Municipality::factory()->create([
+        'brk_identification' => 'GM0001',
+        'name' => 'GemeenteWest',
+        'geometry' => '{"type":"MultiPolygon","coordinates":[[[[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]]]]}',
+    ]);
+    Municipality::factory()->create([
+        'brk_identification' => 'GM0002',
+        'name' => 'GemeenteOost',
+        'geometry' => '{"type":"MultiPolygon","coordinates":[[[[5,-1],[7,-1],[7,1],[5,1],[5,-1]]]]}',
+    ]);
+
+    $state = new FormState(values: [
+        'locatieSOpKaart' => [
+            'lat' => 0.0,
+            'lng' => 0.0,
+            'geojson' => [
+                'type' => 'FeatureCollection',
+                'features' => [
+                    // Polygon binnen GemeenteWest
+                    [
+                        'type' => 'Feature',
+                        'properties' => new stdClass,
+                        'geometry' => [
+                            'type' => 'Polygon',
+                            'coordinates' => [[[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]]],
+                        ],
+                    ],
+                    // Polygon binnen GemeenteOost
+                    [
+                        'type' => 'Feature',
+                        'properties' => new stdClass,
+                        'geometry' => [
+                            'type' => 'Polygon',
+                            'coordinates' => [[[5.5, -0.5], [6.5, -0.5], [6.5, 0.5], [5.5, 0.5], [5.5, -0.5]]],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    app(ServiceFetcher::class)->fetch('inGemeentenResponse', $state);
+
+    $brkIds = collect($state->get('inGemeentenResponse.all.items'))->pluck('brk_identification')->toArray();
+    expect($brkIds)->toContain('GM0001')
+        ->and($brkIds)->toContain('GM0002');
+});
+
 test('lege locatieSOpKaart en routesOpKaart → geen response, geen exception', function () {
     $state = new FormState(values: [
         'locatieSOpKaart' => [],

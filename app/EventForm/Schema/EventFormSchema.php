@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema;
 
+use App\EventForm\Schema\Patches\LocatiePolygonsPatch;
 use App\EventForm\Schema\Steps\AanvraagOfMeldingStep;
 use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
@@ -38,7 +39,7 @@ class EventFormSchema
         return [
             ContactgegevensStep::make(),
             NaamVanHetEvenementStep::make(),
-            LocatieVanHetEvenement2Step::make(),
+            LocatiePolygonsPatch::apply(LocatieVanHetEvenement2Step::make()),
             TijdenStep::make(),
             WaarvoorWiltUHetEventloketGebruikenStep::make(),
             AanvraagOfMeldingStep::make(),

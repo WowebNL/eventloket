@@ -135,51 +135,81 @@ class ServiceFetcher
     }
 
     /**
-     * Pak alle GeoJSON-polygon-geometrieën uit de `locatieSOpKaart`-
-     * Repeater. Elke rij heeft een `buitenLocatieVanHetEvenement` Map-
-     * state in het formaat `{lat, lng, geojson: {features: [...]}}`. We
-     * pakken `features[].geometry`-objecten die zelf al GeoJSON-shapes
-     * (Polygon/MultiPolygon) zijn, en geven 'm zo door aan
-     * LocationServerCheckService.
+     * Pak alle GeoJSON-polygon-geometrieën uit `locatieSOpKaart`. We
+     * ondersteunen twee shapes:
+     *
+     *   1. Nieuw (sinds Repeater-eruit): één Map-state direct,
+     *      `{lat, lng, geojson: {features: [...]}}`. Map ondersteunt
+     *      multi-feature; alle polygonen zitten in één state.
+     *   2. Oud (Repeater-rows): `[{naamVanDeLocatieKaart, buitenLocatieVanHetEvenement: {...}}, ...]`.
+     *      Backward-compat voor bestaande drafts die met de oude shape
+     *      zijn opgeslagen.
+     *
+     * In beide gevallen pakken we `features[].geometry`-objecten — die
+     * zijn zelf al GeoJSON-shapes (Polygon/MultiPolygon) die
+     * `GeoJsonReader::read()` direct kan parsen.
      *
      * @return list<array<string, mixed>>|null
      */
-    private function collectPolygonsFromEditgrid(mixed $rows): ?array
+    private function collectPolygonsFromEditgrid(mixed $value): ?array
     {
-        if (! is_array($rows) || $rows === []) {
+        if (! is_array($value) || $value === []) {
             return null;
         }
 
+        // Nieuwe shape: één Map-state-object met geojson direct erin.
+        if (isset($value['geojson'])) {
+            return $this->extractFeatureGeometries($value) ?: null;
+        }
+
+        // Oude shape: Repeater-rows. Per rij ofwel direct een geojson
+        // (zonder wrapper-key) of via `buitenLocatieVanHetEvenement`.
         $polygons = [];
-        foreach ($rows as $row) {
+        foreach ($value as $row) {
             if (! is_array($row)) {
                 continue;
             }
-            $map = $row['buitenLocatieVanHetEvenement'] ?? null;
-            if (! is_array($map)) {
-                continue;
-            }
-            $geojson = $map['geojson'] ?? null;
-            if (! is_array($geojson)) {
-                continue;
-            }
-            $features = $geojson['features'] ?? null;
-            if (! is_array($features)) {
-                continue;
-            }
-            foreach ($features as $feature) {
-                if (! is_array($feature)) {
-                    continue;
-                }
-                $geometry = $feature['geometry'] ?? null;
-                if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
-                    continue;
-                }
-                $polygons[] = $geometry;
+            $map = $row['buitenLocatieVanHetEvenement'] ?? $row;
+            if (is_array($map)) {
+                array_push($polygons, ...$this->extractFeatureGeometries($map));
             }
         }
 
         return $polygons === [] ? null : $polygons;
+    }
+
+    /**
+     * Pak `features[].geometry` uit een Map-state-object met shape
+     * `{lat, lng, geojson: {features: [{geometry: {...}}, ...]}}`.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function extractFeatureGeometries(mixed $mapState): array
+    {
+        if (! is_array($mapState)) {
+            return [];
+        }
+        $geojson = $mapState['geojson'] ?? null;
+        if (! is_array($geojson)) {
+            return [];
+        }
+        $features = $geojson['features'] ?? null;
+        if (! is_array($features)) {
+            return [];
+        }
+        $out = [];
+        foreach ($features as $feature) {
+            if (! is_array($feature)) {
+                continue;
+            }
+            $geometry = $feature['geometry'] ?? null;
+            if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
+                continue;
+            }
+            $out[] = $geometry;
+        }
+
+        return $out;
     }
 
     /**

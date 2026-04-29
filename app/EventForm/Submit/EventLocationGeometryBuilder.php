@@ -97,6 +97,19 @@ final class EventLocationGeometryBuilder
     }
 
     /**
+     * Pak ALLE polygon-geometrieën uit de input. Twee shapes mogelijk:
+     *
+     *  1. Nieuw: één Map-state-object `{lat, lng, geojson: {features: [...]}}`.
+     *     Map ondersteunt multi-feature, dus features[] kan N polygonen
+     *     bevatten — die we allemaal teruggeven.
+     *  2. Oud (Repeater-rows): `[{...}, {...}]` met per rij een
+     *     `buitenLocatieVanHetEvenement` Map-state. Backward-compat
+     *     voor bestaande drafts.
+     *
+     * In beide gevallen pakken we `features[].geometry` — dat zijn
+     * losstaande GeoJSON-shapes die `GeoJsonReader::read()` direct
+     * inleest.
+     *
      * @return list<Geometry>
      */
     private function parseMultipolygons(mixed $multipolygons): array
@@ -107,13 +120,37 @@ final class EventLocationGeometryBuilder
             return [];
         }
 
+        // Verzamel alle Map-states die we tegenkomen (één in nieuwe shape,
+        // N in de oude shape).
+        $mapStates = isset($decoded['geojson'])
+            ? [$decoded]
+            : array_values(array_filter($decoded, static fn ($row) => is_array($row)));
+
         $out = [];
-        foreach ($decoded as $entry) {
-            $array = is_array($entry) ? ArrayHelper::findElementWithKey($entry, 'coordinates') : null;
-            if (! $array) {
+        foreach ($mapStates as $mapState) {
+            $candidate = is_array($mapState) ? ($mapState['buitenLocatieVanHetEvenement'] ?? $mapState) : null;
+            if (! is_array($candidate)) {
                 continue;
             }
-            $out[] = (new GeoJsonReader)->read((string) json_encode($array));
+            $features = $candidate['geojson']['features'] ?? null;
+            if (! is_array($features)) {
+                // Fallback: oude flow waar de FormSubmissionObject hier al
+                // genormaliseerde geometrieën leverde — recursief zoeken
+                // naar coordinates, exact zoals de oorspronkelijke code.
+                $array = ArrayHelper::findElementWithKey($candidate, 'coordinates');
+                if ($array) {
+                    $out[] = (new GeoJsonReader)->read((string) json_encode($array));
+                }
+
+                continue;
+            }
+            foreach ($features as $feature) {
+                $geometry = is_array($feature) ? ($feature['geometry'] ?? null) : null;
+                if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
+                    continue;
+                }
+                $out[] = (new GeoJsonReader)->read((string) json_encode($geometry));
+            }
         }
 
         return $out;
