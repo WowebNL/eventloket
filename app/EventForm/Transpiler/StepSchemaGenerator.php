@@ -38,6 +38,9 @@ class StepSchemaGenerator
     /** @var array<string, true> component-keys die bij transpile overgeslagen worden */
     private array $skipKeys = [];
 
+    /** @var array<string, list<string>> veld-key → list van extra modifier-statements */
+    private array $fieldExtraModifiers = [];
+
     /**
      * Geef de generator een globale mapping van veld-key → type zodat
      * conditional-emissie correct `$get(key.subkey)` gebruikt voor
@@ -90,6 +93,22 @@ class StepSchemaGenerator
     public function withSkipKeys(array $keys): self
     {
         $this->skipKeys = array_fill_keys($keys, true);
+
+        return $this;
+    }
+
+    /**
+     * Hand-getypte modifiers per veld-key. Worden achter de basis-`make()`
+     * geplakt, na de type-specifieke extra-modifiers (zoals `->seconds(false)`
+     * op DateTimePicker) maar vóór de label/required-keten. Bedoeld voor
+     * cross-veld-validatie zoals `->afterOrEqual('EvenementStart')` op
+     * EvenementEind, die we niet uit OF kunnen afleiden.
+     *
+     * @param  array<string, list<string>>  $byKey  veld-key → list modifier-statements
+     */
+    public function withFieldExtraModifiers(array $byKey): self
+    {
+        $this->fieldExtraModifiers = $byKey;
 
         return $this;
     }
@@ -189,6 +208,9 @@ class StepSchemaGenerator
         if ($extra !== '') {
             $chain .= "\n{$pad}    {$extra}";
         }
+        foreach ($this->fieldExtraModifiers[$key] ?? [] as $modifier) {
+            $chain .= "\n{$pad}    {$modifier}";
+        }
         $chain .= $this->commonModifiers($component, $pad);
 
         return $chain;
@@ -211,6 +233,9 @@ class StepSchemaGenerator
         }
         foreach ($extraModifiers as $modifier) {
             $chain .= "\n{$pad}    ".$modifier;
+        }
+        foreach ($this->fieldExtraModifiers[$key] ?? [] as $modifier) {
+            $chain .= "\n{$pad}    {$modifier}";
         }
         $chain .= $this->commonModifiers($component, $pad);
 
