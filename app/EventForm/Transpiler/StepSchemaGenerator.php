@@ -457,6 +457,11 @@ class StepSchemaGenerator
         $chain .= "\n{$pad}    ->cutPolygon(false)";
         $chain .= "\n{$pad}    ->dragMode(false)";
         $chain .= "\n{$pad}    ->rotateMode(false)";
+        // Standaard staat er een blauwe pin op het map-centrum. Die pin
+        // koppelt aan een lat/lng-veld wat we niet gebruiken — alle
+        // input loopt via `geojson.features[]` (de getekende polygonen
+        // of lijnen). De pin is dus alleen visueel ruis.
+        $chain .= "\n{$pad}    ->showMarker(false)";
         // Zonder min-height renderd Leaflet in een 0px container en blijft
         // de kaart onzichtbaar. Ook columnSpanFull zodat de kaart de hele
         // breedte benut in Repeater-rows en Fieldsets.

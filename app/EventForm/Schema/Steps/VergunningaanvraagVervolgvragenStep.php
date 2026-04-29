@@ -475,6 +475,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->cutPolygon(false)
                                     ->dragMode(false)
                                     ->rotateMode(false)
+                                    ->showMarker(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
                                     ->required(),
