@@ -266,10 +266,14 @@ class EventFormPage extends Page implements HasForms
                     if ($user instanceof User && $org instanceof Organisation) {
                         app(DraftStore::class)->clear($user, $org);
                     }
-                    // Volledige page-reload zorgt dat mount() opnieuw draait
-                    // en alle session/state opnieuw wordt opgebouwd zonder
-                    // resten van de oude wizard.
-                    $this->redirect(request()->url(), navigate: false);
+                    // Volledige page-reload zodat mount() opnieuw draait en
+                    // alle session/state opnieuw wordt opgebouwd zonder resten
+                    // van de oude wizard. NB: `request()->url()` werkt hier
+                    // niet — tijdens een Livewire-action wijst die naar
+                    // `/livewire/update` (de POST-endpoint), niet naar de
+                    // browser-URL. Reconstrueer de aanvraag-URL via Filament's
+                    // eigen route-resolver.
+                    $this->redirect(static::getUrl(['tenant' => Filament::getTenant()]), navigate: false);
                 }),
         ];
     }

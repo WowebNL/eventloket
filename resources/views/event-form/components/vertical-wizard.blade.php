@@ -251,12 +251,13 @@
 
                     scroll() {
                         this.$nextTick(() => {
-                            // Scroll de body naar boven zodat de nieuwe stap vanaf
-                            // het begin leesbaar is, niet halverwege vanaf waar
-                            // de vorige stap eindigde.
+                            // Scroll de body helemaal naar de top zodat de
+                            // nieuwe stap vanaf het begin leesbaar is. We
+                            // vermijden hier bewust een tweede scrollIntoView
+                            // op de sidebar-step-header — die overruled de
+                            // window.scrollTo waardoor de pagina halverwege
+                            // bleef hangen.
                             window.scrollTo({ top: 0, behavior: 'smooth' });
-                            this.$refs.header?.children[this.getStepIndex(this.step)]
-                                ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         });
                     },
 
