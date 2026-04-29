@@ -240,4 +240,37 @@ class EventFormPage extends Page implements HasForms
     {
         return null;
     }
+
+    /**
+     * Header-actions op de aanvraag-pagina. "Begin opnieuw" leegt de
+     * draft + state zodat de organisator een halfingevuld formulier
+     * weg kan gooien en met een schoon formulier kan starten — handig
+     * bij testen, bij wijziging van plan, of na een gedeelde sessie.
+     *
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('beginOpnieuw')
+                ->label('Begin opnieuw')
+                ->icon('heroicon-o-trash')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading('Begin opnieuw met een leeg formulier')
+                ->modalDescription('Hierdoor verdwijnen alle ingevulde gegevens van deze aanvraag en begint u met een leeg formulier. Dit kan niet ongedaan gemaakt worden.')
+                ->modalSubmitActionLabel('Ja, begin opnieuw')
+                ->action(function () {
+                    $user = $this->state->get('authUser');
+                    $org = $this->state->get('authOrganisation');
+                    if ($user instanceof User && $org instanceof Organisation) {
+                        app(DraftStore::class)->clear($user, $org);
+                    }
+                    // Volledige page-reload zorgt dat mount() opnieuw draait
+                    // en alle session/state opnieuw wordt opgebouwd zonder
+                    // resten van de oude wizard.
+                    $this->redirect(request()->url(), navigate: false);
+                }),
+        ];
+    }
 }
