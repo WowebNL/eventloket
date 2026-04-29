@@ -70,7 +70,11 @@ final class LocatieVanHetEvenement2Step
                             ->drawPolyline(false)
                             ->drawMarker(false)
                             ->drawCircle(false)
+                            ->drawCircleMarker(false)
                             ->drawRectangle(false)
+                            ->cutPolygon(false)
+                            ->dragMode(false)
+                            ->rotateMode(false)
                             ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                             ->columnSpanFull()
                             ->required(),
@@ -94,7 +98,11 @@ final class LocatieVanHetEvenement2Step
                                     ->drawPolyline(true)
                                     ->drawMarker(false)
                                     ->drawCircle(false)
+                                    ->drawCircleMarker(false)
                                     ->drawRectangle(false)
+                                    ->cutPolygon(false)
+                                    ->dragMode(false)
+                                    ->rotateMode(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
                                     ->required(),

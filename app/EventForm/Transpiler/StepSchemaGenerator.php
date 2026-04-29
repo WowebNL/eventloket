@@ -444,7 +444,16 @@ class StepSchemaGenerator
         $chain .= "\n{$pad}    ->drawPolyline(".($allowPolyline ? 'true' : 'false').')';
         $chain .= "\n{$pad}    ->drawMarker(".($allowMarker ? 'true' : 'false').')';
         $chain .= "\n{$pad}    ->drawCircle(false)";
+        $chain .= "\n{$pad}    ->drawCircleMarker(false)";
         $chain .= "\n{$pad}    ->drawRectangle(false)";
+        // Geo-Man knoppen die alleen verwarren: knippen polygon-stukken,
+        // hele kaart slepen los van de polygon (we hebben pan al via
+        // standaard Leaflet-drag), en een polygon roteren past niet bij
+        // wat een organisator nodig heeft. We laten alleen
+        // tekenen + bewerken + verwijderen over.
+        $chain .= "\n{$pad}    ->cutPolygon(false)";
+        $chain .= "\n{$pad}    ->dragMode(false)";
+        $chain .= "\n{$pad}    ->rotateMode(false)";
         // Zonder min-height renderd Leaflet in een 0px container en blijft
         // de kaart onzichtbaar. Ook columnSpanFull zodat de kaart de hele
         // breedte benut in Repeater-rows en Fieldsets.

@@ -470,7 +470,11 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->drawPolyline(false)
                                     ->drawMarker(true)
                                     ->drawCircle(false)
+                                    ->drawCircleMarker(false)
                                     ->drawRectangle(false)
+                                    ->cutPolygon(false)
+                                    ->dragMode(false)
+                                    ->rotateMode(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
                                     ->required(),
