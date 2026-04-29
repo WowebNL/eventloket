@@ -51,6 +51,19 @@
                 map.on('pm:remove', flushNu);
                 map.on('pm:update', flushNu);
             }
+
+            // Onderdruk dotswan's `setMarkerRange`: zonder een
+            // `rangeSelectField` met daadwerkelijke afstand tekent 'ie
+            // bij elke moveend een 1-pixel rode/blauwe dot in het midden
+            // van het venster. Wij gebruiken die feature niet — alle
+            // input loopt via geojson.features[]. Vervang de methode door
+            // een no-op en ruim een eventueel al getekende rangeCircle
+            // op.
+            this.setMarkerRange = () => {};
+            if (this.rangeCircle && this.rangeCircle.remove) {
+                this.rangeCircle.remove();
+                this.rangeCircle = null;
+            }
         }"
             wire:ignore
     >
