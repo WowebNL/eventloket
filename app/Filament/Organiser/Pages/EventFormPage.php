@@ -54,6 +54,18 @@ class EventFormPage extends Page implements HasForms
     #[Locked]
     public int $lastDraftSaveAt = 0;
 
+    /**
+     * Idempotency-guard: zodra een submit-poging start, gaat deze op true.
+     * Een tweede submit-call binnen dezelfde Livewire-component-lifetime
+     * doet dan niets en voorkomt dat een zaak twee keer wordt aangemaakt
+     * als de gebruiker dubbelklikt of een tab refresht tijdens submit.
+     * Filament's button heeft `wire:loading.attr=disabled` ingebakken,
+     * maar dat dekt alleen de "browser-knop is even bevroren"-flow —
+     * niet bv. een netwerkglitch waardoor twee POSTs binnenkomen.
+     */
+    #[Locked]
+    public bool $submitting = false;
+
     protected FormState $state;
 
     public function state(): FormState
@@ -194,10 +206,21 @@ class EventFormPage extends Page implements HasForms
 
     public function submit(): void
     {
+        // Idempotency-guard: een tweede submit-aanroep binnen dezelfde
+        // component-lifetime is altijd een dubbele-klik of race, nooit
+        // een legitieme actie — een succesvolle submit redirect immers
+        // direct weg van deze pagina.
+        if ($this->submitting) {
+            return;
+        }
+        $this->submitting = true;
+
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
 
         if (! $user instanceof OrganiserUser || ! $org instanceof Organisation) {
+            $this->submitting = false;
+
             Notification::make()
                 ->danger()
                 ->title('Aanvraag niet ingediend')
@@ -211,6 +234,9 @@ class EventFormPage extends Page implements HasForms
             $zaak = app(SubmitEventForm::class)->execute($this->state, $user, $org);
         } catch (\Throwable $e) {
             report($e);
+            // Reset zodat de gebruiker kan retry'en nu de fout zichtbaar is —
+            // anders zit hij vast op een doodlopend formulier.
+            $this->submitting = false;
 
             Notification::make()
                 ->danger()
