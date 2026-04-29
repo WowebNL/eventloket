@@ -64,11 +64,18 @@ class FormState implements Arrayable
         // FormDerivedState i.p.v. de values-bag. We checken de root-
         // segment-key zodat zowel `'evenementInGemeentenNamen'` als
         // `'evenementInGemeentenNamen.0'` (dot-descend) werkt.
+        //
+        // Belangrijk: als de berekening `null` oplevert (geen primitieve
+        // input om uit af te leiden), vallen we door naar de values-bag.
+        // Daarmee blijven legacy-tests + niet-gemigreerde rules die de
+        // variabele direct seedden gewoon werken — pas wanneer er een
+        // echte computed-value is, schaduwt FormDerivedState 'm.
         [$head, $rest] = $this->splitPath($path);
         if (isset(FormDerivedState::COMPUTED_KEYS[$head])) {
             $derived = (new FormDerivedState($this))->get($head);
-
-            return $rest === '' ? $derived : $this->descend($derived, $rest);
+            if ($derived !== null) {
+                return $rest === '' ? $derived : $this->descend($derived, $rest);
+            }
         }
 
         if (array_key_exists($path, $this->values)) {

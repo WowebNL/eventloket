@@ -44,9 +44,18 @@ describe('LabelRenderer', function () {
     });
 
     test('join filter with separator works on arrays', function () {
+        // `routeDoorGemeentenNamen` is sinds de FormDerivedState-migratie
+        // pure-functioneel afgeleid uit `inGemeentenResponse.line.items`.
+        // We seedden eerder direct via `setVariable`, dat werkt niet meer
+        // — vandaar nu seeden via de primitieve bron.
         $renderer = new LabelRenderer;
-        $state = FormState::empty();
-        $state->setVariable('routeDoorGemeentenNamen', ['Maastricht', 'Heerlen', 'Kerkrade']);
+        $state = new FormState(values: [
+            'inGemeentenResponse' => ['line' => ['items' => [
+                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+                ['brk_identification' => 'GM0928', 'name' => 'Kerkrade'],
+            ]]],
+        ]);
 
         $template = 'Route door: {{ routeDoorGemeentenNamen|join:", " }}';
 
@@ -131,7 +140,7 @@ describe('LabelRenderer Jinja control-flow', function () {
             "{% if x == 'a' %}A"
             ."{% elif x == 'b' %}B"
             ."{% elif x == 'c' %}C"
-            ."{% else %}ANDERS"
+            .'{% else %}ANDERS'
             .'{% endif %}';
 
         foreach (['a' => 'A', 'b' => 'B', 'c' => 'C', 'z' => 'ANDERS'] as $val => $expected) {

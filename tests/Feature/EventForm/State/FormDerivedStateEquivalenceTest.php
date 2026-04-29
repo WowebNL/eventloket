@@ -74,6 +74,81 @@ test('evenementInGemeentenNamen — geen inGemeentenResponse aanwezig → lege l
     assertDerivationEquivalent('evenementInGemeentenNamen', []);
 });
 
+test('binnenVeiligheidsregio — pakt all.within door', function () {
+    foreach ([true, false, null] as $within) {
+        assertDerivationEquivalent('binnenVeiligheidsregio', [
+            'inGemeentenResponse' => ['all' => ['within' => $within, 'items' => []]],
+        ]);
+    }
+});
+
+test('gemeenten — pakt all.object door', function () {
+    assertDerivationEquivalent('gemeenten', [
+        'inGemeentenResponse' => [
+            'all' => [
+                'items' => [['brk_identification' => 'GM0935', 'name' => 'Maastricht']],
+                'object' => ['GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht']],
+            ],
+        ],
+    ]);
+});
+
+test('routeDoorGemeentenNamen — namen uit line.items', function () {
+    assertDerivationEquivalent('routeDoorGemeentenNamen', [
+        'inGemeentenResponse' => [
+            'line' => ['items' => [
+                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+            ]],
+        ],
+    ]);
+});
+
+test('evenementInGemeente — auto-pick bij precies één gevonden gemeente', function () {
+    assertDerivationEquivalent('evenementInGemeente', [
+        'inGemeentenResponse' => [
+            'all' => ['items' => [['brk_identification' => 'GM0935', 'name' => 'Maastricht']]],
+        ],
+    ]);
+});
+
+test('evenementInGemeente — userSelectGemeente wint bij ≥2 gevonden', function () {
+    assertDerivationEquivalent('evenementInGemeente', [
+        'userSelectGemeente' => 'GM0917',
+        'inGemeentenResponse' => [
+            'all' => [
+                'items' => [
+                    ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                    ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+                ],
+                'object' => [
+                    'GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                    'GM0917' => ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+                ],
+            ],
+        ],
+    ]);
+});
+
+test('evenementInGemeente — niets gevonden, niets gekozen → null', function () {
+    assertDerivationEquivalent('evenementInGemeente', [
+        'inGemeentenResponse' => ['all' => ['items' => []]],
+    ]);
+});
+
+test('alcoholvergunning — A5-checkbox aan → Ja', function () {
+    assertDerivationEquivalent('alcoholvergunning', [
+        'kruisAanWatVanToepassingIsVoorUwEvenementX' => ['A5' => true],
+    ]);
+});
+
+test('alcoholvergunning — A5 uit of afwezig → null', function () {
+    assertDerivationEquivalent('alcoholvergunning', []);
+    assertDerivationEquivalent('alcoholvergunning', [
+        'kruisAanWatVanToepassingIsVoorUwEvenementX' => ['A5' => false],
+    ]);
+});
+
 test('FormState::get() pakt de gemigreerde waarde uit FormDerivedState, niet uit values-bag', function () {
     // Zelfs wanneer de values-bag een (oude) waarde bevat, moet
     // FormDerivedState winnen — dat is het hele punt van de migratie.
