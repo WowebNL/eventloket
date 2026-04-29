@@ -5,9 +5,23 @@
     $nextAction = $getAction('next');
     $steps = $getChildSchema()->getComponents();
     $isHeaderHidden = $isHeaderHidden();
+    // Resolver-keten: in de blade is `$this` de host-Livewire-component
+    // (de Page), niet de Wizard zelf. We proberen daarom in volgorde:
+    //  1. State op de Page (FormState::isStepApplicable) — directe bron
+    //     voor onze rules. Step-keys uit Filament dragen een `form.`-
+    //     prefix die we eerst strippen.
+    //  2. `isStepApplicable` op een hogere component (Wizard) — fallback
+    //     voor configuraties zonder $this->state.
+    //  3. Default true.
     $applicabilityResolver = function (\Filament\Schemas\Components\Wizard\Step $step) {
-        if (method_exists($this, 'isStepApplicable')) {
-            return $this->isStepApplicable($step->getKey());
+        $rawKey = $step->getKey();
+        $stepUuid = str_starts_with($rawKey, 'form.') ? substr($rawKey, 5) : $rawKey;
+
+        if (isset($this) && property_exists($this, 'state') && $this->state instanceof \App\EventForm\State\FormState) {
+            return $this->state->isStepApplicable($stepUuid);
+        }
+        if (isset($this) && method_exists($this, 'isStepApplicable')) {
+            return $this->isStepApplicable($stepUuid);
         }
 
         return true;

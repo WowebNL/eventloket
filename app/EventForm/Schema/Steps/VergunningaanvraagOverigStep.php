@@ -61,9 +61,11 @@ final class VergunningaanvraagOverigStep
                                     ->required(),
                                 DateTimePicker::make('startTijdstipVoorwerp')
                                     ->label('Start tijdstip')
+                                    ->seconds(false)
                                     ->required(),
                                 DateTimePicker::make('eindTijdstipVoorwerp')
                                     ->label('Eind tijdstip')
+                                    ->seconds(false)
                                     ->required(),
                             ]),
                         Textarea::make('vulHierEventueelInformatieInOverHetPlaatsenVanVoorwerpenOpDeOpenbareWegOfHetParkerenVanGroteVoertuigen')

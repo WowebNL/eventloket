@@ -162,7 +162,7 @@ class StepSchemaGenerator
             'number' => $this->renderTextInput($component, $pad, extra: '->numeric()'),
             'currency' => $this->renderTextInput($component, $pad, extra: "->numeric()->prefix('€')"),
             'date' => $this->renderCallChain($pad, 'DatePicker', $key, $label, $component),
-            'datetime' => $this->renderCallChain($pad, 'DateTimePicker', $key, $label, $component),
+            'datetime' => $this->renderCallChain($pad, 'DateTimePicker', $key, $label, $component, ['->seconds(false)']),
             'radio' => $this->renderWithOptions($pad, 'Radio', $component),
             'select' => $this->renderWithOptions($pad, 'Select', $component),
             'selectboxes' => $this->renderWithOptions($pad, 'CheckboxList', $component),
@@ -195,11 +195,22 @@ class StepSchemaGenerator
     }
 
     /** @param  array<string, mixed>  $component */
-    private function renderCallChain(string $pad, string $class, string $key, string $label, array $component): string
+    /**
+     * @param  list<string>  $extraModifiers  Extra fluent-modifier-statements
+     *                                        die direct na `make()` worden ge-appended,
+     *                                        bijvoorbeeld `'->seconds(false)'` op
+     *                                        DateTimePicker. Gebruik als de
+     *                                        component-config geen optie heeft maar
+     *                                        we wel een vaste UI-keuze willen forceren.
+     */
+    private function renderCallChain(string $pad, string $class, string $key, string $label, array $component, array $extraModifiers = []): string
     {
         $chain = "{$pad}{$class}::make('{$this->esc($key)}')";
         if ($label !== '') {
             $chain .= "\n{$pad}    ".$this->labelModifier($label, $pad);
+        }
+        foreach ($extraModifiers as $modifier) {
+            $chain .= "\n{$pad}    ".$modifier;
         }
         $chain .= $this->commonModifiers($component, $pad);
 
@@ -450,8 +461,6 @@ class StepSchemaGenerator
     /**
      * Detecteert de "lege placeholder" die OF vaak laat staan
      * (`[{label:'', value:''}]`) als legitieme options.
-     *
-     * @param  mixed  $values
      */
     private function isUsableValuesList(mixed $values): bool
     {

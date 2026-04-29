@@ -60,9 +60,11 @@ final class VergunningaanvraagMaatregelenStep
                                     ->maxLength(1000),
                                 DateTimePicker::make('starttijdSchoonmaak')
                                     ->label('Starttijd schoonmaak')
+                                    ->seconds(false)
                                     ->required(),
                                 DateTimePicker::make('eindtijdSchoonmaak')
                                     ->label('Eindtijd schoonmaak')
+                                    ->seconds(false)
                                     ->required(),
                             ]),
                         TextInput::make('hoeveelExtraAfvalinzamelpuntenGaatUOpLocatieEvenementXPlaatsen')

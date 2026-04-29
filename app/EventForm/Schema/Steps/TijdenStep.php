@@ -34,10 +34,12 @@ final class TijdenStep
                     ->schema([
                         DateTimePicker::make('EvenementStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->seconds(false)
                             ->required()
                             ->live(),
                         DateTimePicker::make('EvenementEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->seconds(false)
                             ->required()
                             ->live(),
                     ]),
@@ -57,6 +59,7 @@ final class TijdenStep
                     ->schema([
                         DateTimePicker::make('OpbouwStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->seconds(false)
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('OpbouwStart');
@@ -69,6 +72,7 @@ final class TijdenStep
                             ->live(),
                         DateTimePicker::make('OpbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->seconds(false)
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('OpbouwEind');
@@ -99,6 +103,7 @@ final class TijdenStep
                     ->schema([
                         DateTimePicker::make('AfbouwStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->seconds(false)
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('AfbouwStart');
@@ -111,6 +116,7 @@ final class TijdenStep
                             ->live(),
                         DateTimePicker::make('AfbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->seconds(false)
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('AfbouwEind');

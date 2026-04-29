@@ -480,9 +480,11 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->maxLength(1000),
                                 DateTimePicker::make('startVanDeAfsluiting')
                                     ->label('Start van de afsluiting')
+                                    ->seconds(false)
                                     ->required(),
                                 DateTimePicker::make('eindVanDeAfsluiting')
                                     ->label('Eind van de afsluiting')
+                                    ->seconds(false)
                                     ->required(),
                             ]),
                     ])

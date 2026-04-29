@@ -179,9 +179,17 @@ class EventFormPage extends Page implements HasForms
 
     private function currentStepUuid(): ?string
     {
+        // Filament's wizard zet `?step=form.<step-uuid>` in de URL — de
+        // `form.`-prefix is hun interne encoding voor "dit is een step-key
+        // van de Wizard-component". Onze rules verwachten alleen de pure
+        // step-UUID in `triggerStepUuids()`, dus strippen we 'm hier af
+        // voor we 'm aan RulesEngine::evaluateForStep doorgeven.
         $step = request()->query('step');
+        if (! is_string($step) || $step === '') {
+            return null;
+        }
 
-        return is_string($step) && $step !== '' ? $step : null;
+        return str_starts_with($step, 'form.') ? substr($step, 5) : $step;
     }
 
     public function submit(): void
