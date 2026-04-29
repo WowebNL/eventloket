@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventForm\State;
 
+use App\EventForm\Transpiler\JsTruthy;
+
 /**
  * Pure-functions-class voor afgeleide variabelen. Vervangt stuk voor
  * stuk de `setVariable`-acties uit de gegenereerde rule-classes door
@@ -36,6 +38,54 @@ final class FormDerivedState
         'routeDoorGemeentenNamen' => true,
         'evenementInGemeente' => true,
         'alcoholvergunning' => true,
+        'isVergunningaanvraag' => true,
+        'risicoClassificatie' => true,
+        'confirmationtext' => true,
+    ];
+
+    /**
+     * Velden van de vergunningsplichtig-scan. Als één van deze 'Nee' is
+     * (of wegen-afsluiten 'Ja') wordt de aanvraag een vergunning i.p.v.
+     * een melding.
+     *
+     * @var list<string>
+     */
+    private const SCAN_VRAGEN_NEE = [
+        'isHetAantalAanwezigenBijUwEvenementMinderDanSdf',
+        'vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen',
+        'WordtErAlleenMuziekGeluidGeproduceerdTussen',
+        'IsdeGeluidsproductieLagerDan',
+        'erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten',
+        'wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst',
+        'indienErObjectenGeplaatstWordenZijnDezeDanKleiner',
+        'meldingvraag1',
+        'meldingvraag2',
+        'meldingvraag3',
+        'meldingvraag4',
+        'meldingvraag5',
+    ];
+
+    /**
+     * Risicoscan-vragen waarvan de scores opgeteld worden om de
+     * A/B/C-classificatie te bepalen.
+     *
+     * @var list<string>
+     */
+    private const RISICOSCAN_VELDEN = [
+        'watIsDeAantrekkingskrachtVanHetEvenement',
+        'watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep',
+        'isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid',
+        'isEenDeelVanDeDoelgroepVerminderdZelfredzaam',
+        'isErSprakeVanAanwezigheidVanRisicovolleActiviteiten',
+        'watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep',
+        'isErSprakeVanOvernachten',
+        'isErGebruikVanAlcoholEnDrugs',
+        'watIsHetAantalGelijktijdigAanwezigPersonen',
+        'inWelkSeizoenVindtHetEvenementPlaats',
+        'inWelkeLocatieVindtHetEvenementPlaats',
+        'opWelkSoortOndergrondVindtHetEvenementPlaats',
+        'watIsDeTijdsduurVanHetEvenement',
+        'welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing',
     ];
 
     public function __construct(private readonly FormState $state) {}
@@ -193,6 +243,91 @@ final class FormDerivedState
     }
 
     /**
+     * Aanvraag wordt een vergunning (i.p.v. een lichtere melding) als de
+     * organisator op één van de 12 scan-vragen "Nee" antwoordt OF
+     * "wegen afsluiten" op "Ja" zet. OF gebruikte een rule die deze
+     * vlag zette; wij maken er een pure-functionele afgeleide van.
+     *
+     * OF-rule 87482f34-1e1f-4853-b2da-312c9b2cebf0
+     * → `setVariable('isVergunningaanvraag', true)` als één van de
+     *   scan-vragen 'Nee' is OF wegen-afsluiten 'Ja' is.
+     *
+     * Originele return-type was bool|null (true bij match, null als
+     * niets matched). We houden 't 1-op-1 — `null` zorgt ervoor dat
+     * `JsTruthy` 't als false interpreteert.
+     */
+    public function isVergunningaanvraag(): ?bool
+    {
+        foreach (self::SCAN_VRAGEN_NEE as $key) {
+            if ($this->state->get($key) === 'Nee') {
+                return true;
+            }
+        }
+        if ($this->state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Ja') {
+            return true;
+        }
+
+        return null; // door-fall naar values-bag
+    }
+
+    /**
+     * Risico-classificatie A/B/C op basis van de som van 14 risicoscan-
+     * scores. Som ≤ 6 = A, ≤ 9 = B, anders = C. Velden zijn pas
+     * "scoorbaar" als ze allemaal een waarde hebben — voorkomt dat
+     * partial input een te-lage classificatie geeft.
+     *
+     * OF-rule 55ce8acd-f972-417d-8920-64c8b0744e14
+     * → `setVariable('risicoClassificatie', sum(14 fields) → A/B/C)`
+     */
+    public function risicoClassificatie(): ?string
+    {
+        $sum = 0.0;
+        foreach (self::RISICOSCAN_VELDEN as $key) {
+            $value = $this->state->get($key);
+            if (! JsTruthy::of($value)) {
+                // Eén veld nog niet ingevuld → geen classificatie. Door-fall
+                // zodat een eventueel handmatig gezette waarde wint.
+                return null;
+            }
+            $sum += (float) $value;
+        }
+
+        return match (true) {
+            $sum <= 6.0 => 'A',
+            $sum <= 9.0 => 'B',
+            default => 'C',
+        };
+    }
+
+    /**
+     * Bedankt-tekst die op de bevestigingspagina verschijnt. Twee
+     * mogelijke bronnen:
+     *
+     *   - Bij vooraankondiging: lege string (= geen bedankt-tekst,
+     *     OF-rule 4e724924-... toonde geen succesbericht voor
+     *     vooraankondiging).
+     *   - Bij melding (wegen-afsluiten === 'Nee'): expliciete tekst.
+     *
+     * OF-rules in last-write-wins-volgorde:
+     *   - 3a1ac5f3-... — meldingstekst bij wegen=Nee
+     *   - 4e724924-... — leeg bij vooraankondiging
+     *
+     * Vooraankondiging wint omdat in OF die rule alfabetisch later
+     * stond en dus laatste schreef. Hier expliciet als volgorde-test.
+     */
+    public function confirmationtext(): ?string
+    {
+        if ($this->state->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging') {
+            return '';
+        }
+        if ($this->state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') {
+            return 'Bedankt voor het invullen van de details voor de melding van uw evenement.';
+        }
+
+        return null; // door-fall naar values-bag
+    }
+
+    /**
      * Roept de juiste methode aan voor een gemigreerde key. Leeg
      * resultaat als de key (nog) niet gemigreerd is.
      */
@@ -206,6 +341,9 @@ final class FormDerivedState
             'routeDoorGemeentenNamen' => $this->routeDoorGemeentenNamen(),
             'evenementInGemeente' => $this->evenementInGemeente(),
             'alcoholvergunning' => $this->alcoholvergunning(),
+            'isVergunningaanvraag' => $this->isVergunningaanvraag(),
+            'risicoClassificatie' => $this->risicoClassificatie(),
+            'confirmationtext' => $this->confirmationtext(),
             default => null,
         };
     }

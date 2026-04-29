@@ -149,6 +149,62 @@ test('alcoholvergunning — A5 uit of afwezig → null', function () {
     ]);
 });
 
+test('isVergunningaanvraag — Nee op één scan-vraag → true', function () {
+    foreach ([
+        'isHetAantalAanwezigenBijUwEvenementMinderDanSdf',
+        'meldingvraag1',
+        'meldingvraag5',
+    ] as $vraag) {
+        assertDerivationEquivalent('isVergunningaanvraag', [$vraag => 'Nee']);
+    }
+});
+
+test('isVergunningaanvraag — wegen-afsluiten Ja → true', function () {
+    assertDerivationEquivalent('isVergunningaanvraag', [
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+});
+
+test('isVergunningaanvraag — alle scan-vragen Ja, wegen Nee → null (= geen vergunning)', function () {
+    assertDerivationEquivalent('isVergunningaanvraag', [
+        'isHetAantalAanwezigenBijUwEvenementMinderDanSdf' => 'Ja',
+        'meldingvraag1' => 'Ja',
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+    ]);
+});
+
+test('risicoClassificatie — som ≤ 6 → A', function () {
+    // 14 vragen, allemaal score 0 → som 0 → A.
+    assertDerivationEquivalent('risicoClassificatie', [
+        'watIsDeAantrekkingskrachtVanHetEvenement' => '0.5',
+        'watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep' => '0.5',
+        'isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid' => '0',
+        'isEenDeelVanDeDoelgroepVerminderdZelfredzaam' => '0',
+        'isErSprakeVanAanwezigheidVanRisicovolleActiviteiten' => '0',
+        'watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep' => '0.5',
+        'isErSprakeVanOvernachten' => '0',
+        'isErGebruikVanAlcoholEnDrugs' => '0',
+        'watIsHetAantalGelijktijdigAanwezigPersonen' => '0',
+        'inWelkSeizoenVindtHetEvenementPlaats' => '0.5',
+        'inWelkeLocatieVindtHetEvenementPlaats' => '0.25',
+        'opWelkSoortOndergrondVindtHetEvenementPlaats' => '0.25',
+        'watIsDeTijdsduurVanHetEvenement' => '0.5',
+        'welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing' => '0',
+    ]);
+});
+
+test('confirmationtext — vooraankondiging → lege string', function () {
+    assertDerivationEquivalent('confirmationtext', [
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+    ]);
+});
+
+test('confirmationtext — wegen Nee → meldings-bedankt', function () {
+    assertDerivationEquivalent('confirmationtext', [
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+    ]);
+});
+
 test('FormState::get() pakt de gemigreerde waarde uit FormDerivedState, niet uit values-bag', function () {
     // Zelfs wanneer de values-bag een (oude) waarde bevat, moet
     // FormDerivedState winnen — dat is het hele punt van de migratie.
