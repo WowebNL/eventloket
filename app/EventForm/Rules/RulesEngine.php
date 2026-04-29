@@ -20,6 +20,16 @@ use RuntimeException;
  */
 class RulesEngine
 {
+    /**
+     * Cache van per-stap gefilterde rules. RulesEngine is in de
+     * container een singleton (zie EventFormServiceProvider), dus deze
+     * map blijft levenlang van het proces hangen — opnieuw filteren bij
+     * elke keystroke kost onnodig 144 iteraties.
+     *
+     * @var array<string, list<Rule>>
+     */
+    private array $rulesByStep = [];
+
     /** @param  iterable<Rule>  $rules */
     public function __construct(
         private readonly iterable $rules,
@@ -43,6 +53,17 @@ class RulesEngine
     public function evaluateForStep(FormState $state, string $stepUuid): void
     {
         $state->resetFieldHiddenOverrides();
+        $this->evaluateSet($state, $this->scopedRulesFor($stepUuid));
+    }
+
+    /**
+     * @return list<Rule>
+     */
+    private function scopedRulesFor(string $stepUuid): array
+    {
+        if (isset($this->rulesByStep[$stepUuid])) {
+            return $this->rulesByStep[$stepUuid];
+        }
 
         $scoped = [];
         foreach ($this->rules as $rule) {
@@ -52,7 +73,8 @@ class RulesEngine
                 $scoped[] = $rule;
             }
         }
-        $this->evaluateSet($state, $scoped);
+
+        return $this->rulesByStep[$stepUuid] = $scoped;
     }
 
     /** @param  iterable<Rule>  $rules */
@@ -81,43 +103,23 @@ class RulesEngine
     }
 
     /**
-     * Stable serialisation van de state-aspects die rules kunnen beïnvloeden.
-     * Gebruikt voor fixpoint-detectie.
+     * Snapshot voor fixpoint-detectie. Eerder een json_encode +
+     * recursieve deepSort, maar dat was de duurste operatie per
+     * keystroke (1-3× per `updated()`-call). Twee observaties laten ons
+     * dat terugbrengen naar één `serialize()`-call:
+     *
+     *   1. Onze FormState-mutators (`setField`, `setVariable`,
+     *      `setStepApplicable`, `setFieldHidden`) overschrijven
+     *      bestaande keys in-place en appenden nieuwe — PHP-arrays
+     *      behouden insertion-order, dus tussen twee passes blijft de
+     *      key-volgorde stabiel.
+     *   2. Voor `===`-vergelijking hoeft de output niet
+     *      menselijk-leesbaar te zijn. `serialize()` is ~3× sneller
+     *      dan `json_encode()` en honoreert PHP-array-order zonder
+     *      sortering.
      */
     private function snapshot(FormState $state): string
     {
-        $snap = $state->toSnapshot();
-        // Sort keys op alle niveaus zodat de vergelijking deterministisch is.
-        $sorted = $this->deepSort($snap);
-
-        return (string) json_encode($sorted, JSON_THROW_ON_ERROR);
-    }
-
-    private function deepSort(mixed $value): mixed
-    {
-        if (! is_array($value)) {
-            return $value;
-        }
-
-        if ($this->isList($value)) {
-            return array_map(fn ($v) => $this->deepSort($v), $value);
-        }
-
-        ksort($value);
-        foreach ($value as $k => $v) {
-            $value[$k] = $this->deepSort($v);
-        }
-
-        return $value;
-    }
-
-    /** @param  array<int|string, mixed>  $arr */
-    private function isList(array $arr): bool
-    {
-        if ($arr === []) {
-            return true;
-        }
-
-        return array_keys($arr) === range(0, count($arr) - 1);
+        return serialize($state->toSnapshot());
     }
 }
