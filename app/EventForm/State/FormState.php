@@ -161,6 +161,16 @@ class FormState implements Arrayable
 
     public function isStepApplicable(string $stepKey): bool
     {
+        // Migratie-stap: gemigreerde stappen komen uit FormStepApplicability
+        // (pure-functioneel). Bij `null` valt 't door naar de oude
+        // bag (die de engine + handgeschreven rules nog kunnen vullen).
+        if (isset(FormStepApplicability::COMPUTED_STEPS[$stepKey])) {
+            $derived = (new FormStepApplicability($this))->get($stepKey);
+            if ($derived !== null) {
+                return $derived;
+            }
+        }
+
         return $this->stepApplicable[$stepKey] ?? true;
     }
 
