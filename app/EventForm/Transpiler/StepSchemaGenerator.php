@@ -252,6 +252,9 @@ class StepSchemaGenerator
             $chain .= "\n{$pad}    ".$this->labelModifier($label, $pad);
         }
         $chain .= $this->renderOptionsBlock($component, $pad);
+        foreach ($this->fieldExtraModifiers[$key] ?? [] as $modifier) {
+            $chain .= "\n{$pad}    {$modifier}";
+        }
         $chain .= $this->commonModifiers($component, $pad);
 
         return $chain;

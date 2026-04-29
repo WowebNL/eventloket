@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\EventForm\Transpiler\RuleClassGenerator;
 use App\EventForm\Transpiler\RuleDependencyAnalyzer;
 use App\EventForm\Transpiler\StepSchemaGenerator;
+use App\EventForm\Validation\LocatieFieldRules;
 use App\EventForm\Validation\TijdenFieldRules;
 use App\Services\OpenForms\Veldenkaart\Loaders\ApiLoader;
 use App\Services\OpenForms\Veldenkaart\Loaders\LoaderInterface;
@@ -125,7 +126,10 @@ class TranspileEventForm extends Command
             ->withTriggerKeys($triggerKeys)
             ->withVariableInitialValues($this->buildVariableInitialValues($raw->variables))
             ->withSkipKeys($skipKeys)
-            ->withFieldExtraModifiers(TijdenFieldRules::PER_FIELD);
+            ->withFieldExtraModifiers(array_merge(
+                TijdenFieldRules::PER_FIELD,
+                LocatieFieldRules::PER_FIELD,
+            ));
         $stepCount = 0;
         foreach ($raw->formSteps as $step) {
             $generated = $stepGen->generate($step);

@@ -211,6 +211,7 @@ final class LocatieVanHetEvenement2Step
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('NotWithin') !== false),
                 Radio::make('userSelectGemeente')
                     ->label('De ingevoerde locatie(s) of route valt binnen of doorkruist meerdere gemeenten, wat is de gemeente waarbinnen u de aanvraag wilt doen?')
+                    ->options(fn ($livewire): array => collect((array) $livewire->state()->get('inGemeentenResponse.all.items'))->mapWithKeys(fn ($item) => [(string) ($item['brk_identification'] ?? '') => (string) ($item['name'] ?? '')])->all())
                     ->required()
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('userSelectGemeente') !== false)
                     ->live(),
