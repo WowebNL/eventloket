@@ -14,6 +14,11 @@ namespace App\EventForm\Rules;
  *    gemarkeerd worden.
  *  - `EventFormServiceProvider` bouwt z'n RulesEngine vanuit deze
  *    deterministische lijst i.p.v. een filesystem-scan.
+ *
+ * De lijst bevat zowel de getranspileerde JsonLogic-rules als een aantal
+ * handgeschreven aanvullingen voor gedrag dat in OF in de form-config
+ * zat (niet in de logic-rules) — zie de `HANDGESCHREVEN_RULES`-constante
+ * in `TranspileEventForm`.
  */
 final class RuleRegistry
 {
@@ -165,11 +170,13 @@ final class RuleRegistry
             RuleF5363d0b::class,
             RuleF56a54dd::class,
             RuleFaa5fae6::class,
+            VergunningSchakeltMeldingUit::class,
+            MeldingSchakeltVergunningstappenUit::class,
         ];
     }
 
     public static function count(): int
     {
-        return 144;
+        return 146;
     }
 }

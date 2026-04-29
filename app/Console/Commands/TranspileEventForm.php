@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\EventForm\Transpiler\RuleClassGenerator;
+use App\EventForm\Transpiler\RuleDependencyAnalyzer;
 use App\EventForm\Transpiler\StepSchemaGenerator;
 use App\Services\OpenForms\Veldenkaart\Loaders\ApiLoader;
 use App\Services\OpenForms\Veldenkaart\Loaders\LoaderInterface;
@@ -51,11 +52,17 @@ class TranspileEventForm extends Command
 
         $this->info('Transpiling '.count($raw->logicRules).' rules + '.count($raw->formSteps).' steps...');
 
-        // Regenerate rules-folder: wipe generated files, keep handwritten Rule.php + RulesEngine.php.
-        // RuleRegistry.php is gegenereerd, dus die mag mee in de wipe.
+        // Regenerate rules-folder: wipe generated files, keep handwritten Rule.php +
+        // RulesEngine.php én alle handgeschreven aanvullingen (zie de
+        // HANDGESCHREVEN_RULES-constante hieronder). RuleRegistry.php is wel
+        // gegenereerd en mag mee in de wipe.
+        $behoudenFiles = array_merge(
+            ['Rule.php', 'RulesEngine.php'],
+            array_map(static fn ($cls): string => "{$cls}.php", self::HANDGESCHREVEN_RULES),
+        );
         File::ensureDirectoryExists($rulesDir);
         foreach (File::files($rulesDir) as $file) {
-            if (! in_array($file->getFilename(), ['Rule.php', 'RulesEngine.php'], true)) {
+            if (! in_array($file->getFilename(), $behoudenFiles, true)) {
                 File::delete($file->getRealPath());
             }
         }
@@ -208,7 +215,7 @@ class TranspileEventForm extends Command
 
     /**
      * @param  list<array<string, mixed>>  $variables
-     * @return array<string, mixed>  key → initial_value
+     * @return array<string, mixed> key → initial_value
      */
     private function buildVariableInitialValues(array $variables): array
     {
@@ -286,7 +293,7 @@ class TranspileEventForm extends Command
      */
     private function collectRuleTriggerKeys(array $rules): array
     {
-        $analyzer = new \App\EventForm\Transpiler\RuleDependencyAnalyzer;
+        $analyzer = new RuleDependencyAnalyzer;
         $keys = [];
         foreach ($rules as $rule) {
             foreach ($analyzer->readKeys($rule['json_logic_trigger'] ?? null) as $k) {
@@ -429,16 +436,32 @@ class TranspileEventForm extends Command
     }
 
     /**
+     * Handgeschreven Rule-classes die NIET door de transpiler worden
+     * gegenereerd, maar wel altijd in de RuleRegistry moeten staan
+     * zodat de RulesEngine ze ook draait. Wanneer je hier een nieuwe
+     * regel toevoegt: zorg dat de class-naam de hele path heeft (zonder
+     * `::class`) en commit deze command-wijziging samen met de Rule
+     * zelf, anders gooit een volgende transpile-run 'm uit het registry.
+     *
+     * @var list<string>
+     */
+    private const HANDGESCHREVEN_RULES = [
+        'VergunningSchakeltMeldingUit',
+        'MeldingSchakeltVergunningstappenUit',
+    ];
+
+    /**
      * @param  list<string>  $classNames
      */
     private function renderRuleRegistry(array $classNames): string
     {
+        $alle = array_merge($classNames, self::HANDGESCHREVEN_RULES);
         $lines = array_map(
             static fn (string $name): string => "            {$name}::class,",
-            $classNames,
+            $alle,
         );
         $body = implode("\n", $lines);
-        $count = count($classNames);
+        $count = count($alle);
 
         return <<<PHP
         <?php
@@ -457,6 +480,11 @@ class TranspileEventForm extends Command
          *    gemarkeerd worden.
          *  - `EventFormServiceProvider` bouwt z'n RulesEngine vanuit deze
          *    deterministische lijst i.p.v. een filesystem-scan.
+         *
+         * De lijst bevat zowel de getranspileerde JsonLogic-rules als een aantal
+         * handgeschreven aanvullingen voor gedrag dat in OF in de form-config
+         * zat (niet in de logic-rules) — zie de `HANDGESCHREVEN_RULES`-constante
+         * in `TranspileEventForm`.
          */
         final class RuleRegistry
         {

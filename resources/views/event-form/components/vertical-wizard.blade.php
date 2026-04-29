@@ -49,10 +49,18 @@
 >
     <input
         type="hidden"
+        {{-- Steps-data: per zichtbare stap een tuple {key, applicable}.
+             De `applicable`-vlag wordt door Alpine's goToNextStep /
+             goToPreviousStep gebruikt om niet-applicable stappen
+             automatisch over te slaan (zoals melding-stap bij een
+             vergunning, of vergunning-stappen bij een melding). --}}
         value="{{
             collect($steps)
                 ->filter(static fn (\Filament\Schemas\Components\Wizard\Step $step): bool => $step->isVisible())
-                ->map(static fn (\Filament\Schemas\Components\Wizard\Step $step): ?string => $step->getKey())
+                ->map(fn (\Filament\Schemas\Components\Wizard\Step $step): array => [
+                    'key' => $step->getKey(),
+                    'applicable' => $applicabilityResolver($step),
+                ])
                 ->values()
                 ->toJson()
         }}"
@@ -191,7 +199,9 @@
                     step: null,
 
                     init() {
-                        this.step = this.getSteps().at(startStep - 1);
+                        // Steps-data is nu {key, applicable}-tupels — stap-key is
+                        // het identificerende veld voor `this.step`.
+                        this.step = this.getSteps().at(startStep - 1)?.key;
                         this.$watch('step', () => {
                             this.updateQueryString();
                             this.autofocusFields();
@@ -206,16 +216,28 @@
                     },
 
                     goToNextStep() {
-                        const next = this.getStepIndex(this.step) + 1;
-                        if (next >= this.getSteps().length) return;
-                        this.step = this.getSteps()[next];
+                        // Spring voorbij niet-applicable stappen, zodat de
+                        // organisator nooit op een doorgestreepte "n.v.t."-stap
+                        // landt. Stop pas op de eerstvolgende applicable, of
+                        // helemaal aan het einde.
+                        const steps = this.getSteps();
+                        let next = this.getStepIndex(this.step) + 1;
+                        while (next < steps.length && steps[next].applicable === false) {
+                            next++;
+                        }
+                        if (next >= steps.length) return;
+                        this.step = steps[next].key;
                         this.scroll();
                     },
 
                     goToPreviousStep() {
-                        const prev = this.getStepIndex(this.step) - 1;
+                        const steps = this.getSteps();
+                        let prev = this.getStepIndex(this.step) - 1;
+                        while (prev >= 0 && steps[prev].applicable === false) {
+                            prev--;
+                        }
                         if (prev < 0) return;
-                        this.step = this.getSteps()[prev];
+                        this.step = steps[prev].key;
                         this.scroll();
                     },
 
@@ -254,8 +276,8 @@
                         });
                     },
 
-                    getStepIndex(step) {
-                        const idx = this.getSteps().findIndex((s) => s === step);
+                    getStepIndex(stepKey) {
+                        const idx = this.getSteps().findIndex((s) => s.key === stepKey);
                         return idx === -1 ? 0 : idx;
                     },
 
@@ -264,7 +286,17 @@
                     },
 
                     isFirstStep() { return this.getStepIndex(this.step) <= 0; },
-                    isLastStep()  { return this.getStepIndex(this.step) + 1 >= this.getSteps().length; },
+                    isLastStep()  {
+                        // "Last" = na deze stap zijn alleen nog niet-applicable
+                        // stappen over. Anders zou de Indienen-knop verschijnen
+                        // op een stap die niet de echte laatste is.
+                        const steps = this.getSteps();
+                        const idx = this.getStepIndex(this.step);
+                        for (let i = idx + 1; i < steps.length; i++) {
+                            if (steps[i].applicable !== false) return false;
+                        }
+                        return true;
+                    },
 
                     isStepAccessible(stepKey) {
                         return isSkippable || this.getStepIndex(this.step) > this.getStepIndex(stepKey);

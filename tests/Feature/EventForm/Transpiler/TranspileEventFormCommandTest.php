@@ -2,7 +2,22 @@
 
 declare(strict_types=1);
 
+use App\EventForm\Rules\Rule;
+use App\EventForm\Rules\RuleRegistry;
 use Illuminate\Support\Facades\File;
+
+/**
+ * Bestanden die NIET door de transpiler worden gegenereerd, maar wél in
+ * `app/EventForm/Rules/` leven en bij elke test-run + transpile-run
+ * behouden moeten blijven. Synchroon met de constante
+ * `TranspileEventForm::HANDGESCHREVEN_RULES`.
+ */
+const BEHOUDEN_BESTANDEN = [
+    'Rule.php',
+    'RulesEngine.php',
+    'VergunningSchakeltMeldingUit.php',
+    'MeldingSchakeltVergunningstappenUit.php',
+];
 
 beforeEach(function () {
     // Target-directories opschonen zodat we een schone re-run testen.
@@ -10,7 +25,7 @@ beforeEach(function () {
     $this->stepsDir = base_path('app/EventForm/Schema/Steps');
 
     foreach (File::files($this->rulesDir) as $file) {
-        if (! in_array($file->getFilename(), ['Rule.php', 'RulesEngine.php'], true)) {
+        if (! in_array($file->getFilename(), BEHOUDEN_BESTANDEN, true)) {
             File::delete($file->getRealPath());
         }
     }
@@ -24,7 +39,7 @@ test('transpile:event-form generates 144 rule classes + 17 step classes from loc
         ->assertSuccessful();
 
     $ruleFiles = collect(File::files(base_path('app/EventForm/Rules')))
-        ->reject(fn ($f) => in_array($f->getFilename(), ['Rule.php', 'RulesEngine.php', 'RuleRegistry.php'], true))
+        ->reject(fn ($f) => in_array($f->getFilename(), [...BEHOUDEN_BESTANDEN, 'RuleRegistry.php'], true))
         ->count();
 
     $stepFiles = File::isDirectory(base_path('app/EventForm/Schema/Steps'))
@@ -35,7 +50,7 @@ test('transpile:event-form generates 144 rule classes + 17 step classes from loc
         ->and($stepFiles)->toBe(17);
 });
 
-test('RuleRegistry is generated and lists all rule classes', function () {
+test('RuleRegistry is generated and lists all rule classes (144 transpiled + 2 handgeschreven)', function () {
     $this->artisan('transpile:event-form', ['--source' => 'local', '--force' => true])
         ->assertSuccessful();
 
@@ -46,20 +61,21 @@ test('RuleRegistry is generated and lists all rule classes', function () {
     // verse class-list testen, niet een eventueel eerder geladen versie.
     require_once $registryPath;
 
-    $registered = \App\EventForm\Rules\RuleRegistry::all();
+    $registered = RuleRegistry::all();
 
+    // 144 getranspileerde + 2 handgeschreven (Vergunning/Melding-step-applicability).
     expect($registered)
-        ->toHaveCount(144)
+        ->toHaveCount(146)
         ->each->toBeString();
 
     foreach ($registered as $fqcn) {
         expect(class_exists($fqcn))->toBeTrue("RuleRegistry references missing class: {$fqcn}");
         $reflection = new ReflectionClass($fqcn);
-        expect($reflection->implementsInterface(\App\EventForm\Rules\Rule::class))
+        expect($reflection->implementsInterface(Rule::class))
             ->toBeTrue("RuleRegistry-class {$fqcn} implements Rule niet");
     }
 
-    expect(\App\EventForm\Rules\RuleRegistry::count())->toBe(144);
+    expect(RuleRegistry::count())->toBe(146);
 });
 
 test('generated files are syntactically valid PHP', function () {
@@ -77,7 +93,7 @@ test('generated files are syntactically valid PHP', function () {
             continue;
         }
         foreach (File::files($dir) as $file) {
-            if (in_array($file->getFilename(), ['Rule.php', 'RulesEngine.php'], true)) {
+            if (in_array($file->getFilename(), BEHOUDEN_BESTANDEN, true)) {
                 continue;
             }
             $output = [];
