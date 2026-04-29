@@ -16,6 +16,7 @@ use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Wizard\Step;
 
 /**
@@ -73,4 +74,29 @@ test('andere componenten op de stap (bv. waarVindtHetEvenementPlaats) blijven ge
     expect($namen)->toContain('waarVindtHetEvenementPlaats')
         ->and($namen)->toContain('adresVanDeGebouwEn')
         ->and($namen)->toContain('userSelectGemeente');
+});
+
+test('binnen de Route-Fieldset is de Repeater op routesOpKaart vervangen door één Map', function () {
+    $patched = LocatiePolygonsPatch::apply(LocatieVanHetEvenement2Step::make());
+    $children = locatieChildComponents($patched);
+
+    $routeFieldset = collect($children)
+        ->first(fn ($c) => $c instanceof Fieldset && $c->getLabel() === 'Route');
+    expect($routeFieldset)->not->toBeNull();
+
+    // Pak de child-components van de Fieldset via dezelfde reflection-trick.
+    $ref = new ReflectionObject($routeFieldset);
+    $prop = $ref->getProperty('childComponents');
+    $prop->setAccessible(true);
+    $kids = $prop->getValue($routeFieldset)['default'] ?? [];
+
+    $heeftRouteMap = collect($kids)->contains(
+        fn ($c) => $c instanceof Map && $c->getName() === 'routesOpKaart'
+    );
+    $heeftRepeater = collect($kids)->contains(
+        fn ($c) => $c instanceof Repeater && $c->getName() === 'routesOpKaart'
+    );
+
+    expect($heeftRouteMap)->toBeTrue('Map routesOpKaart ontbreekt')
+        ->and($heeftRepeater)->toBeFalse('Repeater op routesOpKaart had weg moeten zijn');
 });

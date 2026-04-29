@@ -223,18 +223,25 @@ class ServiceFetcher
      *
      * @return list<array<string, mixed>>|null
      */
-    private function collectLinesFromEditgrid(mixed $rows): ?array
+    private function collectLinesFromEditgrid(mixed $value): ?array
     {
-        if (! is_array($rows) || $rows === []) {
+        if (! is_array($value) || $value === []) {
             return null;
         }
 
+        // Nieuwe shape (sinds Route-Repeater eruit): direct een Map-state.
+        if (isset($value['geojson'])) {
+            return $this->extractFeatureGeometries($value) ?: null;
+        }
+
+        // Oude shape: Repeater-rows. Per rij óf een wrapper-key
+        // `routeVanHetEvenement`, óf direct een Map-state.
         $lines = [];
-        foreach ($rows as $row) {
+        foreach ($value as $row) {
             if (! is_array($row)) {
                 continue;
             }
-            $route = $row['routeVanHetEvenement'] ?? null;
+            $route = $row['routeVanHetEvenement'] ?? $row;
             if (! is_array($route)) {
                 continue;
             }
