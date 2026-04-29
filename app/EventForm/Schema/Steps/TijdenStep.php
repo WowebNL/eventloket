@@ -30,7 +30,7 @@ final class TijdenStep
                 TextEntry::make('content2')
                     ->hiddenLabel()
                     ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><span >Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</span></p>', $livewire->state()))),
-                Grid::make(2)
+                Grid::make(1)
                     ->schema([
                         DateTimePicker::make('EvenementStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -57,7 +57,7 @@ final class TijdenStep
                     ])
                     ->required()
                     ->live(),
-                Grid::make(2)
+                Grid::make(1)
                     ->schema([
                         DateTimePicker::make('OpbouwStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -103,7 +103,7 @@ final class TijdenStep
                     ])
                     ->required()
                     ->live(),
-                Grid::make(2)
+                Grid::make(1)
                     ->schema([
                         DateTimePicker::make('AfbouwStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))

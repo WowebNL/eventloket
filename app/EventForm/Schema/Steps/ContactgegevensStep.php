@@ -54,7 +54,7 @@ final class ContactgegevensStep
                             ->label('Wat is de naam van uw organisatie?')
                             ->required()
                             ->maxLength(1000),
-                        Grid::make(2)
+                        Grid::make(1)
                             ->schema([
                                 TextInput::make('postcode1')
                                     ->label('Postcode')
@@ -94,7 +94,7 @@ final class ContactgegevensStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('waarschuwingGeenKvk') !== false),
                 Fieldset::make('Adresgegevens')
                     ->schema([
-                        Grid::make(2)
+                        Grid::make(1)
                             ->schema([
                                 TextInput::make('postcode')
                                     ->label('Postcode')

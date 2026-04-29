@@ -371,7 +371,6 @@ class StepSchemaGenerator
         if (! is_array($columns)) {
             $columns = [];
         }
-        $count = count($columns);
         $allInner = [];
         foreach ($columns as $col) {
             if (is_array($col) && is_array($col['components'] ?? null)) {
@@ -382,9 +381,16 @@ class StepSchemaGenerator
                 }
             }
         }
+        // Forceer 1-kolom layout. OF's 2-koloms layout maakt onze
+        // 700px-brede content-area onnodig krap (lange Nederlandse
+        // labels passen niet binnen 340px en lopen weg in twee
+        // regels). De feedback van de opdrachtgever was expliciet:
+        // "zoveel mogelijk 100% uitlijnen ipv 50%". Filament's Grid
+        // met 1 kolom is functioneel hetzelfde als de velden zonder
+        // wrapper, maar we houden de wrapper voor spacing-consistency.
         $body = $this->renderComponents($allInner, indent: strlen($pad) + 8);
 
-        return "{$pad}Grid::make({$count})\n"
+        return "{$pad}Grid::make(1)\n"
             ."{$pad}    ->schema([\n{$body}\n{$pad}    ])"
             .$this->visibilityModifiers($component, $pad);
     }

@@ -282,7 +282,10 @@ describe('StepSchemaGenerator nesting', function () {
             ->and($content)->toContain("TextInput::make('naam')");
     });
 
-    test('columns wraps its children in Grid', function () {
+    test('columns wraps its children in Grid::make(1) ongeacht het OF-aantal kolommen', function () {
+        // Sinds G.1 forceren we 1-koloms layout omdat 2-koloms in onze
+        // 700px-content-area onleesbaar smal werd. De velden zelf zitten
+        // wel gewoon allemaal in de wrapper.
         $step = [
             'uuid' => 'x', 'slug' => 'stap', 'name' => 'S',
             'configuration' => ['components' => [
@@ -299,7 +302,8 @@ describe('StepSchemaGenerator nesting', function () {
 
         $content = generateStep($step);
 
-        expect($content)->toContain('Grid::make(2)')
+        expect($content)->toContain('Grid::make(1)')
+            ->and($content)->not->toContain('Grid::make(2)')
             ->and($content)->toContain("TextInput::make('a')")
             ->and($content)->toContain("TextInput::make('b')");
     });
