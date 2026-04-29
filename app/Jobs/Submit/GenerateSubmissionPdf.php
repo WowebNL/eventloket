@@ -37,7 +37,7 @@ final class GenerateSubmissionPdf implements ShouldQueue
         // Bouw het overzicht via SubmissionReport: walkt elke stap, pakt
         // alle ingevulde velden + hun labels, groepeert per stap. Lege
         // stappen vallen weg zodat de PDF niet vol staat met "—".
-        $sections = app(SubmissionReport::class)->build($state, EventFormSchema::steps());
+        $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
 
         $pdf = Pdf::loadView('pdf.submission-report', [
             'zaak' => $this->zaak->loadMissing(['zaaktype', 'organisation']),
