@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { execSync } from 'node:child_process';
 import { loginAlsOrganiser, openFormulier } from './helpers/login.mjs';
 import {
     vulTekst,
@@ -17,6 +18,17 @@ import {
  */
 test('walkthrough: doorloop het hele formulier', async ({ page }) => {
     test.setTimeout(180_000);
+
+    // Schoon startpunt: oude drafts (van eerdere walkthrough-runs of
+    // handmatig testen) zorgen voor pre-fills die de handlers hier
+    // niet verwachten — typisch validation-issues op de Locatie-stap
+    // waar de Repeater al rijen had. We tikken even de DB leeg via
+    // `artisan tinker --execute=...` zodat elke run met een lege state
+    // begint.
+    execSync('./vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::truncate();\'', {
+        stdio: 'pipe',
+        timeout: 30_000,
+    });
 
     await loginAlsOrganiser(page);
     await openFormulier(page);
@@ -201,6 +213,17 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
             await kiesRadioOptioneel(page, 'wilUGebruikMakenVanGemeentelijkeHulpmiddelen', 'Nee');
             await page.waitForTimeout(400);
         },
+        // Stap 17 (sinds E): Samenvatting met verplichte AVG-akkoord-checkbox.
+        // Zonder vinkje blokkeert validation de overgang naar Type-aanvraag.
+        'samenvatting': async () => {
+            const akkoord = page.locator('input[type="checkbox"][wire\\:model$="akkoordVerwerkingGegevens"], input[type="checkbox"][name*="akkoordVerwerkingGegevens"]').first();
+            await akkoord.check().catch(async () => {
+                // Filament's checkbox kan een aangepaste markup hebben — fallback
+                // op een label-klik die de echte checkbox toggelt.
+                await page.getByLabel(/Ik ga akkoord dat mijn gegevens/i).check();
+            });
+            await page.waitForTimeout(500);
+        },
         // Stap 15: overig — ~6 Ja/Nee radios, allemaal Nee voor buurtfeest
         'overig': async () => {
             const velden = [
@@ -218,7 +241,9 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
         },
     };
 
-    for (let i = 10; i <= 17; i++) {
+    // Sinds E.1 is er een Samenvatting-stap (#17) toegevoegd vóór
+    // Type-aanvraag, dus we lopen nu tot en met stap 18.
+    for (let i = 10; i <= 18; i++) {
         const stap = await huidigeStap(page);
         if (!stap) break;
         const slug = stap.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 50);
