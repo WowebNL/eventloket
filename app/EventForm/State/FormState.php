@@ -140,6 +140,17 @@ class FormState implements Arrayable
 
     public function isFieldHidden(string $fieldKey): ?bool
     {
+        // Migratie-stap: gemigreerde velden komen uit FormFieldVisibility
+        // (pure-functioneel afgeleid uit primitieven). Bij `null` valt
+        // 't door naar de oude rule-driven bag — handig zolang niet
+        // alle rules gemigreerd zijn.
+        if (isset(FormFieldVisibility::COMPUTED_KEYS[$fieldKey])) {
+            $derived = (new FormFieldVisibility($this))->get($fieldKey);
+            if ($derived !== null) {
+                return $derived;
+            }
+        }
+
         return $this->fieldHiddenOverrides[$fieldKey] ?? null;
     }
 
