@@ -42,6 +42,7 @@ class RulesEngine
         // niet-meer-triggerende rule op `hidden=false` stonden, terugvallen
         // op hun default (component.hidden + conditional).
         $state->resetFieldHiddenOverrides();
+        $state->resetStepApplicable();
         $this->evaluateSet($state, $this->rules);
     }
 
@@ -53,6 +54,7 @@ class RulesEngine
     public function evaluateForStep(FormState $state, string $stepUuid): void
     {
         $state->resetFieldHiddenOverrides();
+        $state->resetStepApplicable();
         $this->evaluateSet($state, $this->scopedRulesFor($stepUuid));
     }
 

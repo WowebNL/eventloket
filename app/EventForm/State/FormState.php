@@ -124,6 +124,20 @@ class FormState implements Arrayable
         $this->fieldHiddenOverrides = [];
     }
 
+    /**
+     * Leeg alle rule-driven step-applicability. Net als bij
+     * `resetFieldHiddenOverrides()` is dit nodig om "rule was true,
+     * is nu niet meer"-overgangen op te vangen — anders zou een stap
+     * die ooit op niet-applicable gezet werd, dat blijven óók nadat
+     * de gebruiker z'n keuze heeft veranderd. Defaults uit het schema
+     * (alle stappen applicable) nemen het opnieuw over zodat alleen
+     * rules die nu wél matchen 'm bijstellen.
+     */
+    public function resetStepApplicable(): void
+    {
+        $this->stepApplicable = [];
+    }
+
     public function isFieldHidden(string $fieldKey): ?bool
     {
         return $this->fieldHiddenOverrides[$fieldKey] ?? null;
