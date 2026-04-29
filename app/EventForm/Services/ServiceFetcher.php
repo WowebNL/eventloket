@@ -89,7 +89,7 @@ class ServiceFetcher
     private function fetchInGemeentenResponse(FormState $state): void
     {
         $input = new LocationServerCheckInput(
-            polygons: null,
+            polygons: $this->collectPolygonsFromEditgrid($state->get('locatieSOpKaart')),
             line: null,
             lines: $this->collectLinesFromEditgrid($state->get('routesOpKaart')),
             addresses: $this->collectAddressesFromEditgrid($state->get('adresVanDeGebouwEn')),
@@ -135,6 +135,62 @@ class ServiceFetcher
     }
 
     /**
+     * Pak alle GeoJSON-polygon-geometrieën uit de `locatieSOpKaart`-
+     * Repeater. Elke rij heeft een `buitenLocatieVanHetEvenement` Map-
+     * state in het formaat `{lat, lng, geojson: {features: [...]}}`. We
+     * pakken `features[].geometry`-objecten die zelf al GeoJSON-shapes
+     * (Polygon/MultiPolygon) zijn, en geven 'm zo door aan
+     * LocationServerCheckService.
+     *
+     * @return list<array<string, mixed>>|null
+     */
+    private function collectPolygonsFromEditgrid(mixed $rows): ?array
+    {
+        if (! is_array($rows) || $rows === []) {
+            return null;
+        }
+
+        $polygons = [];
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $map = $row['buitenLocatieVanHetEvenement'] ?? null;
+            if (! is_array($map)) {
+                continue;
+            }
+            $geojson = $map['geojson'] ?? null;
+            if (! is_array($geojson)) {
+                continue;
+            }
+            $features = $geojson['features'] ?? null;
+            if (! is_array($features)) {
+                continue;
+            }
+            foreach ($features as $feature) {
+                if (! is_array($feature)) {
+                    continue;
+                }
+                $geometry = $feature['geometry'] ?? null;
+                if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
+                    continue;
+                }
+                $polygons[] = $geometry;
+            }
+        }
+
+        return $polygons === [] ? null : $polygons;
+    }
+
+    /**
+     * Pak alle GeoJSON-line-geometrieën uit de `routesOpKaart`-Repeater.
+     * Zelfde patroon als `collectPolygonsFromEditgrid()`: dotswan/
+     * filament-map-picker schrijft Map-state als
+     * `{lat, lng, geojson: {features: [...]}}` en
+     * LocationServerCheckService verwacht GeoJSON-geometry-objecten
+     * (Geometry, niet de Map-wrapper). We pakken `features[].geometry`
+     * eruit zodat `GeoJsonReader::read()` 'm direct kan lezen.
+     *
      * @return list<array<string, mixed>>|null
      */
     private function collectLinesFromEditgrid(mixed $rows): ?array
@@ -149,9 +205,26 @@ class ServiceFetcher
                 continue;
             }
             $route = $row['routeVanHetEvenement'] ?? null;
-            if (is_array($route)) {
-                /** @var array<string, mixed> $route */
-                $lines[] = $route;
+            if (! is_array($route)) {
+                continue;
+            }
+            $geojson = $route['geojson'] ?? null;
+            if (! is_array($geojson)) {
+                continue;
+            }
+            $features = $geojson['features'] ?? null;
+            if (! is_array($features)) {
+                continue;
+            }
+            foreach ($features as $feature) {
+                if (! is_array($feature)) {
+                    continue;
+                }
+                $geometry = $feature['geometry'] ?? null;
+                if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
+                    continue;
+                }
+                $lines[] = $geometry;
             }
         }
 
