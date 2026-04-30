@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Auth\CaseInsensitiveUserProvider;
 use App\Console\Commands\SyncZaaktypen;
+use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
 use App\Models\Export;
@@ -51,6 +52,12 @@ class AppServiceProvider extends ServiceProvider
             \Filament\Actions\Imports\Models\Import::class,
             Import::class
         );
+
+        // LabelRenderer cachet template-output per FormState-version.
+        // Singleton zodat dezelfde instance gebruikt wordt over ALLE
+        // schema-component-renders — anders zou de WeakMap-cache leeg
+        // zijn bij elke Filament-resolution.
+        $this->app->singleton(LabelRenderer::class);
     }
 
     /**

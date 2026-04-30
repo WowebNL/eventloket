@@ -10,6 +10,10 @@ use App\Models\ReportQuestion;
 
 beforeEach(function () {
     $this->municipality = Municipality::factory()->create(['brk_identification' => 'GM0882']);
+    // De MunicipalityObserver seedt 8 default-variabelen bij `created`
+    // (aanwezigen, muziektijden, etc.). Voor deze service-unit-tests
+    // wissen we ze zodat de assertions over een schone state werken.
+    $this->municipality->variables()->forceDelete();
     $this->service = new MunicipalityVariablesService;
 });
 

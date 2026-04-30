@@ -140,16 +140,23 @@ test('na adres-invul → gemeenteVariabelen wordt automatisch gefetched (label-p
     // inGemeentenResponse-fetch ook gemeenteVariabelen + evenementen-
     // overlap fetchen.
 
+    // Municipality::factory triggert de Observer die default-variabelen
+    // seedt (incl. `aanwezigen=500`) zodat we 'm niet handmatig hoeven
+    // toe te voegen — als 't toch nog niet bestaat (edge case in legacy
+    // tests) zorgen we ervoor dat de waarde gezet is.
     $muni = Municipality::firstOrCreate(
         ['brk_identification' => 'GM0917'],
         ['name' => 'Heerlen'],
     );
-    MunicipalityVariable::factory()->create([
-        'municipality_id' => $muni->id,
-        'key' => 'aanwezigen',
-        'value' => 500,
-        'type' => MunicipalityVariableType::Number,
-    ]);
+    MunicipalityVariable::updateOrCreate(
+        ['municipality_id' => $muni->id, 'key' => 'aanwezigen'],
+        [
+            'name' => 'Aanwezigen',
+            'type' => MunicipalityVariableType::Number,
+            'value' => 500,
+            'is_default' => true,
+        ],
+    );
 
     $component = Livewire::test(EventFormPage::class);
 

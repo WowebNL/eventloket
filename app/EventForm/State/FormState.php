@@ -41,6 +41,19 @@ class FormState implements Arrayable
     ) {}
 
     /**
+     * Monotone version-counter. Wordt door elke mutator (setField,
+     * setVariable, setSystem, absorbFields, absorbVariables) opgehoogd
+     * zodat cache-laagjes (LabelRenderer) op `version()` kunnen
+     * invalidaten zonder een hash van de hele values-bag te berekenen.
+     */
+    private int $version = 0;
+
+    public function version(): int
+    {
+        return $this->version;
+    }
+
+    /**
      * Memoization-cache voor `get()`-resultaten. Per state-instantie
      * wordt een gegeven dot-pad maar één keer gecomputed; mutators
      * (`setField`/`setVariable`/etc.) leegmaken de cache. In een typisch
@@ -135,18 +148,21 @@ class FormState implements Arrayable
     {
         $this->values[$key] = $value;
         $this->getCache = [];
+        $this->version++;
     }
 
     public function setVariable(string $key, mixed $value): void
     {
         $this->values[$key] = $value;
         $this->getCache = [];
+        $this->version++;
     }
 
     public function setSystem(string $key, mixed $value): void
     {
         $this->system[$key] = $value;
         $this->getCache = [];
+        $this->version++;
     }
 
     public function isFieldHidden(string $fieldKey): ?bool

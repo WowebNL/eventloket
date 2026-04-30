@@ -107,8 +107,46 @@ class EventFormPage extends Page implements HasForms
         // één keer bij mount zodat user-edits niet overschreven worden.
         $this->applySessionPrefill();
 
+        // Een gehydrateerde draft kan al een ingevulde locatie hebben
+        // (gebruiker keert terug naar een halve aanvraag). In dat geval
+        // moeten we `inGemeentenResponse`, `gemeenteVariabelen` en
+        // `evenementenInDeGemeente` proactief fetchen — anders blijven
+        // labels als "Is het aantal aanwezigen minder dan {{ aanwezigen }}
+        // personen?" leeg tot de gebruiker een veld aanraakt.
+        $this->refreshFetchesFromExistingState();
+
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
         $this->form->fill($this->state->fields());
+    }
+
+    /**
+     * Triggert de service-fetches op basis van wat al in de state staat
+     * (uit draft of prefill). Idempotent: ServiceFetcher's interne
+     * input-hash-cache zorgt dat een ongewijzigde input niets opnieuw
+     * doet.
+     */
+    private function refreshFetchesFromExistingState(): void
+    {
+        $fetcher = app(ServiceFetcher::class);
+
+        // Heeft de state al een locatie / route / adres ingetekend?
+        // Dan opnieuw door BAG-lookup zodat `inGemeentenResponse`
+        // beschikbaar is voor de afgeleiden.
+        $heeftLocatieInput = ! empty($this->state->get('locatieSOpKaart'))
+            || ! empty($this->state->get('routesOpKaart'))
+            || ! empty($this->state->get('adresVanDeGebouwEn'));
+        if ($heeftLocatieInput) {
+            $fetcher->fetch('inGemeentenResponse', $this->state);
+        }
+
+        // Een geselecteerde gemeente betekent dat we
+        // `gemeenteVariabelen` + `evenementenInDeGemeente` kunnen
+        // fetchen. Werkt ook zonder eerdere BAG-lookup als de gemeente
+        // al via prefill bekend is.
+        if (! empty($this->state->get('evenementInGemeente.brk_identification'))) {
+            $fetcher->fetch('gemeenteVariabelen', $this->state);
+            $fetcher->fetch('evenementenInDeGemeente', $this->state);
+        }
     }
 
     /**

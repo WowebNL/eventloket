@@ -81,22 +81,11 @@ return new class extends Migration
     {
         $defaults = $this->defaults();
 
-        // 1. Template-rijen (`municipality_id = NULL`) zodat de
-        //    MunicipalityObserver ze bij toekomstige gemeenten kopieert.
-        foreach ($defaults as $entry) {
-            MunicipalityVariable::firstOrCreate(
-                ['municipality_id' => null, 'key' => $entry['key']],
-                [
-                    'name' => $entry['name'],
-                    'type' => $entry['type'],
-                    'value' => $entry['value'],
-                    'is_default' => true,
-                ],
-            );
-        }
-
-        // 2. Voor elke BESTAANDE gemeente die nog geen MunicipalityVariables
-        //    heeft, kopieer de defaults zodat het formulier meteen werkt.
+        // Voor elke BESTAANDE gemeente: kopieer de defaults zodat het
+        // formulier meteen werkt zonder dat de gemeentebeheerder elke
+        // variabele handmatig hoeft in te voeren. Geen NULL-template-
+        // rijen — die zouden de bestaande tests breken die zelf
+        // NULL-templates aanmaken voor de Observer-flow.
         Municipality::all()->each(function (Municipality $municipality) use ($defaults): void {
             foreach ($defaults as $entry) {
                 MunicipalityVariable::firstOrCreate(

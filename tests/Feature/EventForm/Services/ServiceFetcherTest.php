@@ -56,6 +56,9 @@ describe('ServiceFetcher eventloketSession', function () {
 describe('ServiceFetcher gemeenteVariabelen', function () {
     test('fetches variables for the municipality stored in evenementInGemeente.brk_identification', function () {
         $municipality = Municipality::factory()->create(['brk_identification' => 'GM0882']);
+        // Observer seedt defaults — wis ze zodat we exacte asserties
+        // over de fixture-data kunnen doen.
+        $municipality->variables()->forceDelete();
         MunicipalityVariable::factory()->create([
             'municipality_id' => $municipality->id,
             'key' => 'aanwezigen',
