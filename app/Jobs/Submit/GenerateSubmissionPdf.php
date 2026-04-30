@@ -39,10 +39,18 @@ final class GenerateSubmissionPdf implements ShouldQueue
         // stappen vallen weg zodat de PDF niet vol staat met "—".
         $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
 
+        // Afgeleide variabelen voor de meta-header (FormDerivedState
+        // berekent ze on-the-fly uit de state).
+        $evenementInGemeente = $state->get('evenementInGemeente');
+        $gemeenteNaam = is_array($evenementInGemeente) ? ($evenementInGemeente['name'] ?? null) : null;
+        $risicoClassificatie = $state->get('risicoClassificatie');
+
         $pdf = Pdf::loadView('pdf.submission-report', [
             'zaak' => $this->zaak->loadMissing(['zaaktype', 'organisation']),
             'state' => $state,
             'sections' => $sections,
+            'gemeenteNaam' => $gemeenteNaam,
+            'risicoClassificatie' => $risicoClassificatie,
         ])->setPaper('a4');
 
         $path = sprintf('zaken/%s/submission-report.pdf', $this->zaak->id);
