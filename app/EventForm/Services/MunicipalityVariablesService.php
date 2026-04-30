@@ -64,6 +64,10 @@ class MunicipalityVariablesService
     {
         $map = [];
         foreach ($this->forMunicipality($municipality) as $entry) {
+            // TimeRange/DateRange/DateTimeRange worden door de Filament-
+            // admin-form als `{start, end}`-object opgeslagen — direct
+            // bruikbaar voor labels die `gemeenteVariabelen.muziektijden.start`
+            // verwachten. Geen shape-conversie nodig.
             $map[$entry['key']] = $entry['value'];
         }
 

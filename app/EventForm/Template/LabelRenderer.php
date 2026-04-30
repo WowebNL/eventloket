@@ -233,6 +233,9 @@ class LabelRenderer
         if (is_bool($value)) {
             return $value ? 'true' : 'false';
         }
+        if (is_string($value) && $this->looksLikeIsoDateTime($value)) {
+            return $this->humanizeIsoDateTime($value);
+        }
         if (is_scalar($value)) {
             return (string) $value;
         }
@@ -240,6 +243,27 @@ class LabelRenderer
         $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return $encoded === false ? '' : $encoded;
+    }
+
+    /**
+     * Detecteer een ISO-8601-style datum/tijd-string zoals
+     * `2026-04-30T12:00` of `2026-04-30T12:00:00+02:00`. Filament's
+     * DateTimePicker slaat z'n waarde in dit format op; in templates
+     * willen we dat menselijk getoond zien.
+     */
+    private function looksLikeIsoDateTime(string $value): bool
+    {
+        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/', $value);
+    }
+
+    private function humanizeIsoDateTime(string $value): string
+    {
+        try {
+            return \Carbon\Carbon::parse($value, 'Europe/Amsterdam')
+                ->translatedFormat('j F Y · H:i');
+        } catch (\Throwable) {
+            return $value;
+        }
     }
 
     private function stripQuotes(string $value): string

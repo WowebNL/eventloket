@@ -39,17 +39,13 @@ final class AanvraagOfMeldingStep
                     ->schema([
                         // === NIEUW PAD: ReportQuestion-systeem ===
                         //
-                        // 10 vaste slots `reportQuestion_1..10`. Per slot zoeken
-                        // we de bijbehorende vraag op in `gemeenteVariabelen.
-                        // report_questions` (gesorteerd op `order`) en tonen
-                        // 'm cascade-stijl: vraag N pas zichtbaar als alle
-                        // voorgaande N-1 op 'Ja' staan. Een 'Nee' op één
-                        // vraag → vergunningstap volgt; alle 'Ja' → melding.
-                        //
-                        // Het hele blok is hidden wanneer de gemeente nog
-                        // niet naar het nieuwe systeem is overgeschakeld
-                        // (`use_new_report_questions === false`).
-                        ...self::reportQuestionRadios(),
+                        // 10 vaste slots `reportQuestion_1..10` in een Group
+                        // wrapper. De Group is hidden wanneer de gemeente
+                        // nog niet naar het nieuwe systeem is overgeschakeld
+                        // — zo nemen die slots geen ruimte in op de pagina
+                        // voor gemeenten die nog op het oude systeem zitten.
+                        Group::make(self::reportQuestionRadios())
+                            ->hidden(fn ($livewire): bool => $livewire->state()->get('gemeenteVariabelen.use_new_report_questions') !== true),
 
                         // === LEGACY PAD: hardcoded vragen ===
                         // Hele blok verbergen wanneer de gemeente naar het

@@ -24,6 +24,30 @@ describe('LabelRenderer', function () {
             ->toBe('Wat voor soort evenement is Koningsdag 2026?');
     });
 
+    test('ISO-datetime-strings worden human-readable geformatteerd', function () {
+        // DateTimePicker slaat waardes op als ISO (`2026-04-30T12:00`).
+        // In het Tijden-overzicht (en andere placeholder-templates)
+        // willen we ze als `30 april 2026 · 12:00` zien — niet de ruwe T.
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setField('EvenementStart', '2026-04-30T12:00');
+        $state->setField('OpbouwEind', '2026-08-15T15:30:00+02:00');
+
+        expect($renderer->render('Start: {{ EvenementStart }}', $state))
+            ->toBe('Start: 30 april 2026 · 12:00')
+            ->and($renderer->render('Eind opbouw: {{ OpbouwEind }}', $state))
+            ->toBe('Eind opbouw: 15 augustus 2026 · 15:30');
+    });
+
+    test('strings die NIET op ISO-datum lijken blijven onaangeraakt', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setField('willekeurig', '2026 was een goed jaar');
+
+        expect($renderer->render('Tekst: {{ willekeurig }}', $state))
+            ->toBe('Tekst: 2026 was een goed jaar');
+    });
+
     test('substitutes nested variable via dot notation', function () {
         $renderer = new LabelRenderer;
         $state = FormState::empty();
