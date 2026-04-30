@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 /**
  * Tests voor `FormFieldVisibility` — de pure-functionele tegenhanger
- * van de oude `setFieldHidden`-rules. Twee assertion-stijlen:
- *
- *   - **Equivalence**: oude engine + values-bag vs nieuwe pure-class
- *     leveren dezelfde uitkomst voor representatieve scenarios.
- *   - **Toggle**: state heen-en-weer wisselen leidt na elke wijziging
- *     tot het juiste antwoord. Vangt het type bug op dat we onlangs
- *     in stepApplicable hadden ("rule fired, conditie weg, state
- *     bleef hangen") — een toggle-test had 'm direct gevonden.
+ * van de oude `setFieldHidden`-rules. Toggle-stijl: state heen-en-weer
+ * wisselen leidt na elke wijziging tot het juiste antwoord. Vangt het
+ * type bug op dat we vroeger in stepApplicable hadden ("rule fired,
+ * conditie weg, state bleef hangen") — pure-functioneel is by
+ * construction toggle-veilig, dus dit is een regression-net.
  */
 
 use App\EventForm\State\FormState;
@@ -42,18 +39,4 @@ test('NotWithin: zonder inGemeentenResponse → null (= default hidden)', functi
     $state = new FormState;
 
     expect($state->isFieldHidden('NotWithin'))->toBeNull();
-});
-
-test('FormState::isFieldHidden delegeert naar FormFieldVisibility wanneer beschikbaar', function () {
-    // Zelfs als de oude engine `setFieldHidden('NotWithin', true)` had
-    // gedaan, moet FormFieldVisibility's `false`-decisie winnen wanneer
-    // de primitieve toestand dat zegt. Dat is het migratie-mechanisme:
-    // pure-class > legacy-bag.
-    $state = new FormState;
-    $state->setFieldHidden('NotWithin', true); // oude engine had 'm verstopt
-    $state->setVariable('inGemeentenResponse', ['all' => ['within' => false, 'items' => []]]);
-
-    expect($state->isFieldHidden('NotWithin'))->toBeFalse(
-        'FormFieldVisibility moet de oude bag-waarde overrulen — false (show) wint'
-    );
 });

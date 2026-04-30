@@ -5,7 +5,6 @@
  *
  *   FormState + ingelogde user + organisation
  *          ↓  SubmitEventForm::execute()
- *   - RulesEngine.evaluate()
  *   - ResolveZaaktype (gemeente × aard)
  *   - CreateZaakInZGW   (HTTP POST naar OpenZaak — gefaked)
  *   - CreateLocalZaak   (rij in `zaken`-tabel)
@@ -18,9 +17,9 @@
  * helpers doen de rest.
  *
  * Waarom deze test: unit-tests dekken de individuele stukjes, maar de
- * lijm tussen RulesEngine → resolveZaaktype → CreateZaakInZGW →
- * CreateLocalZaak → dispatch gaat pas echt fout als je 'm als geheel
- * probeert. Deze test waarschuwt zodra iemand iets in de keten breekt.
+ * lijm tussen ResolveZaaktype → CreateZaakInZGW → CreateLocalZaak →
+ * dispatch gaat pas echt fout als je 'm als geheel probeert. Deze
+ * test waarschuwt zodra iemand iets in de keten breekt.
  */
 
 use App\Enums\OrganisationRole;

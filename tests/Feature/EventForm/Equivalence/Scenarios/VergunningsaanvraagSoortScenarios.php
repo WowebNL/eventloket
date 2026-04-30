@@ -37,8 +37,7 @@ final class VergunningsaanvraagSoortScenarios implements ScenarioProvider
         return [
             'Soort-stap niet van toepassing bij vooraankondiging' => [[
                 'naam' => 'Vooraankondiging → "Vergunningsaanvraag: soort" wordt doorgestreept',
-                'omschrijving' =>
-                    'Een vooraankondiging vraagt minder details dan een volledige vergunning. '
+                'omschrijving' => 'Een vooraankondiging vraagt minder details dan een volledige vergunning. '
                     .'Zodra de organisator "vooraankondiging" kiest, hoeft de soort-stap niet '
                     .'ingevuld te worden en wordt 8n als niet-van-toepassing gemarkeerd.',
                 'categorie' => 'visibility',
@@ -54,8 +53,7 @@ final class VergunningsaanvraagSoortScenarios implements ScenarioProvider
 
             'Soort-stap niet van toepassing bij melding-route' => [[
                 'naam' => 'Geen wegafsluiting (Nee) → "Vergunningsaanvraag: soort" wordt doorgestreept',
-                'omschrijving' =>
-                    'Als het evenement geen wegen of gebiedsontsluiting afsluit, valt het in '
+                'omschrijving' => 'Als het evenement geen wegen of gebiedsontsluiting afsluit, valt het in '
                     .'het melding-regime. De soort-stap is dan niet relevant en wordt in de '
                     .'sidebar doorgestreept.',
                 'categorie' => 'visibility',

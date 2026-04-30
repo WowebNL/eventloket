@@ -46,8 +46,7 @@ final class VeldZichtbaarheidScenarios implements ScenarioProvider
         return [
             'Bouwsels groter dan 10 m² — velden en stap zichtbaar na aanvinken' => [[
                 'naam' => 'Bouwsels >10 m² — velden en stap zichtbaar na aanvinken',
-                'omschrijving' =>
-                    'Als de organisator bij "wat is van toepassing voor uw evenement" de optie A3 '
+                'omschrijving' => 'Als de organisator bij "wat is van toepassing voor uw evenement" de optie A3 '
                     .'(bouwsels groter dan 10 m²) aanvinkt, moeten de vervolg-velden zichtbaar worden '
                     .'en wordt de stap "Vergunningsaanvraag: extra activiteiten" in de sidebar '
                     .'actief.',
@@ -66,8 +65,7 @@ final class VeldZichtbaarheidScenarios implements ScenarioProvider
 
             'Speeltoestellen — voorwerpen-stap van toepassing na A25' => [[
                 'naam' => 'Speeltoestellen — voorwerpen-stap van toepassing na A25',
-                'omschrijving' =>
-                    'Als de organisator aangeeft speeltoestellen te plaatsen (optie A25 in '
+                'omschrijving' => 'Als de organisator aangeeft speeltoestellen te plaatsen (optie A25 in '
                     .'"welke voorwerpen gaat u plaatsen"), moeten "Speeltoestellen" en "voorwerpen" '
                     .'zichtbaar zijn én wordt de stap "Vergunningsaanvraag: voorwerpen" actief.',
                 'categorie' => 'visibility',
@@ -85,8 +83,7 @@ final class VeldZichtbaarheidScenarios implements ScenarioProvider
 
             'KvK-gebruiker — adresgegevens verborgen' => [[
                 'naam' => 'KvK-gebruiker — adresgegevens verborgen',
-                'omschrijving' =>
-                    'Gebruiker ingelogd via eHerkenning/KvK heeft de organisatie-gegevens '
+                'omschrijving' => 'Gebruiker ingelogd via eHerkenning/KvK heeft de organisatie-gegevens '
                     .'al uit de KvK-koppeling. "Organisatie-informatie" wordt zichtbaar om '
                     .'de opgehaalde gegevens te tonen; "Adresgegevens" wordt verborgen omdat '
                     .'het adres al bekend is.',

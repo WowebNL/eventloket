@@ -29,3 +29,4 @@ Thumbs.db
 tests/Feature/EventForm/Equivalence/scenarios.json
 tests/Feature/EventForm/Equivalence/jsonlogic-verification.json
 test-results/
+.claude/

@@ -12,13 +12,14 @@ use Illuminate\Contracts\Support\Arrayable;
  * Bevat:
  *  - velden: de antwoorden van de gebruiker, keyed op veld-key (bv. "soortEvenement"
  *    of "watZijnDeLocatiesWaarUDrankenEnOfVoedselGaatVerstrekken")
- *  - variables: runtime-state die niet door een veld wordt beheerd maar door rules
- *    of service-calls (bv. "evenementInGemeente", "gemeenteVariabelen")
+ *  - variables: runtime-state die niet door een veld wordt beheerd maar door
+ *    afgeleide-state (FormDerivedState) of service-calls
+ *    (bv. "evenementInGemeente", "gemeenteVariabelen")
  *  - system: externe context (submission_id, auth_bsn, auth_kvk, etc.)
  *
- * Daarnaast houdt FormState per-veld hidden-overrides bij (gezet door
- * `property`-rules) en per-stap applicable-flags (gezet door
- * `step-(not-)applicable`-rules).
+ * Veld-zichtbaarheid en stap-applicability worden volledig pure-functioneel
+ * berekend door FormFieldVisibility en FormStepApplicability. FormState
+ * delegeert daar naartoe; er is geen rule-driven override-bag meer.
  *
  * Lookups gebruiken dot-notation: `$s->get('gemeenteVariabelen.aanwezigen')`
  * werkt voor geneste arrays / objects. Onbekende paden geven `null` terug.
@@ -33,14 +34,10 @@ class FormState implements Arrayable
      *                                        doet vult daarmee ook het Filament-
      *                                        veld met die key.
      * @param  array<string, mixed>  $system  authUser, authOrganisation, submission_id etc.
-     * @param  array<string, bool>  $fieldHiddenOverrides  veld-key → forced hidden
-     * @param  array<string, bool>  $stepApplicable  step-key → applicable (default true)
      */
     public function __construct(
         private array $values = [],
         private array $system = [],
-        private array $fieldHiddenOverrides = [],
-        private array $stepApplicable = [],
     ) {}
 
     /**
@@ -94,13 +91,12 @@ class FormState implements Arrayable
 
     private function resolve(string $path): mixed
     {
-        // Migratie-stap: gemigreerde afgeleide variabelen komen uit
-        // FormDerivedState i.p.v. de values-bag. We checken de root-
-        // segment-key zodat zowel `'evenementInGemeentenNamen'` als
-        // `'evenementInGemeentenNamen.0'` (dot-descend) werkt.
-        //
-        // Belangrijk: als de berekening `null` oplevert (geen primitieve
-        // input om uit af te leiden), vallen we door naar de values-bag.
+        // Afgeleide variabelen (FormDerivedState) krijgen voorrang. We
+        // checken op de root-segment-key zodat zowel `'evenementInGemeente'`
+        // als `'evenementInGemeente.brk_identification'` (dot-descend) werkt.
+        // Levert de berekening `null` op (geen primitieve input om uit
+        // af te leiden), dan valt 't door naar de values-bag — handig
+        // voor service-fetched waarden zoals `inGemeentenResponse`.
         [$head, $rest] = $this->splitPath($path);
         if (isset(FormDerivedState::COMPUTED_KEYS[$head])) {
             $derived = ($this->derivedState ??= new FormDerivedState($this))->get($head);
@@ -110,8 +106,8 @@ class FormState implements Arrayable
         }
 
         // System-bag-paden (`system.X`): gemigreerde keys komen uit
-        // FormSystemDerivedState. Ook hier: bij `null` valt 't door
-        // naar de oude system-bag (die de engine nog kan vullen).
+        // FormSystemDerivedState. Bij `null` valt 't door naar de
+        // gewone system-bag.
         if ($head === 'system' && $rest !== '') {
             [$systemKey, $systemRest] = $this->splitPath($rest);
             if (isset(FormSystemDerivedState::COMPUTED_KEYS[$systemKey])) {
@@ -153,86 +149,26 @@ class FormState implements Arrayable
         $this->getCache = [];
     }
 
-    public function setFieldHidden(string $fieldKey, bool $hidden): void
-    {
-        $this->fieldHiddenOverrides[$fieldKey] = $hidden;
-    }
-
-    /**
-     * Leeg alle rule-driven visibility-overrides. Wordt door de
-     * RulesEngine aangeroepen vóór elke pass — anders zou een rule die
-     * ooit eens `hidden=false` heeft gezet die waarde voor altijd
-     * behouden, ook nadat z'n trigger niet meer waar is. Defaults
-     * (component.hidden uit OF + conditional.show/when/eq) nemen het
-     * opnieuw over.
-     */
-    public function resetFieldHiddenOverrides(): void
-    {
-        $this->fieldHiddenOverrides = [];
-    }
-
-    /**
-     * Leeg alle rule-driven step-applicability. Net als bij
-     * `resetFieldHiddenOverrides()` is dit nodig om "rule was true,
-     * is nu niet meer"-overgangen op te vangen — anders zou een stap
-     * die ooit op niet-applicable gezet werd, dat blijven óók nadat
-     * de gebruiker z'n keuze heeft veranderd. Defaults uit het schema
-     * (alle stappen applicable) nemen het opnieuw over zodat alleen
-     * rules die nu wél matchen 'm bijstellen.
-     */
-    public function resetStepApplicable(): void
-    {
-        $this->stepApplicable = [];
-    }
-
     public function isFieldHidden(string $fieldKey): ?bool
     {
-        // Migratie-stap: gemigreerde velden komen uit FormFieldVisibility
-        // (pure-functioneel afgeleid uit primitieven). Bij `null` valt
-        // 't door naar de oude rule-driven bag — handig zolang niet
-        // alle rules gemigreerd zijn.
-        if (isset(FormFieldVisibility::COMPUTED_KEYS[$fieldKey])) {
-            $derived = (new FormFieldVisibility($this))->get($fieldKey);
-            if ($derived !== null) {
-                return $derived;
-            }
+        if (! isset(FormFieldVisibility::COMPUTED_KEYS[$fieldKey])) {
+            return null; // geen mening → caller valt terug op step-default
         }
 
-        return $this->fieldHiddenOverrides[$fieldKey] ?? null;
-    }
-
-    public function setStepApplicable(string $stepKey, bool $applicable): void
-    {
-        $this->stepApplicable[$stepKey] = $applicable;
+        return (new FormFieldVisibility($this))->get($fieldKey);
     }
 
     private ?FormStepApplicability $stepApplicabilityHelper = null;
 
     public function isStepApplicable(string $stepKey): bool
     {
-        // Migratie-stap: gemigreerde stappen komen uit FormStepApplicability
-        // (pure-functioneel). Bij `null` valt 't door naar de oude
-        // bag (die de engine + handgeschreven rules nog kunnen vullen).
-        if (isset(FormStepApplicability::COMPUTED_STEPS[$stepKey])) {
-            $derived = ($this->stepApplicabilityHelper ??= new FormStepApplicability($this))->get($stepKey);
-            if ($derived !== null) {
-                return $derived;
-            }
+        if (! isset(FormStepApplicability::COMPUTED_STEPS[$stepKey])) {
+            return true; // geen rules → default applicable
         }
 
-        return $this->stepApplicable[$stepKey] ?? true;
-    }
+        $derived = ($this->stepApplicabilityHelper ??= new FormStepApplicability($this))->get($stepKey);
 
-    /** @return array<string, bool> */
-    public function stepApplicableMap(): array
-    {
-        return $this->stepApplicable;
-    }
-
-    /** @return array<string, bool> */
-    public function fieldHiddenMap(): array
-    {
-        return $this->fieldHiddenOverrides;
+        return $derived ?? true; // null uit get() = geen mening = default applicable
     }
 
     /** @return array<string, mixed> */
@@ -275,8 +211,6 @@ class FormState implements Arrayable
         return [
             'values' => $this->values,
             'system' => $this->system,
-            'field_hidden' => $this->fieldHiddenOverrides,
-            'step_applicable' => $this->stepApplicable,
         ];
     }
 
@@ -293,8 +227,6 @@ class FormState implements Arrayable
         return new self(
             values: $values,
             system: self::arrayFrom($snapshot, 'system'),
-            fieldHiddenOverrides: self::boolMapFrom($snapshot, 'field_hidden'),
-            stepApplicable: self::boolMapFrom($snapshot, 'step_applicable'),
         );
     }
 
@@ -377,27 +309,6 @@ class FormState implements Arrayable
 
         /** @var array<string, mixed> $result */
         $result = is_array($value) ? $value : [];
-
-        return $result;
-    }
-
-    /**
-     * @param  array<string, mixed>  $snapshot
-     * @return array<string, bool>
-     */
-    private static function boolMapFrom(array $snapshot, string $key): array
-    {
-        $value = $snapshot[$key] ?? [];
-        if (! is_array($value)) {
-            return [];
-        }
-
-        $result = [];
-        foreach ($value as $k => $v) {
-            if (is_string($k)) {
-                $result[$k] = (bool) $v;
-            }
-        }
 
         return $result;
     }

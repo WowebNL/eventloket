@@ -42,8 +42,7 @@ final class BijlagenScenarios implements ScenarioProvider
         return [
             'Veiligheidsplan verplicht bij classificatie B' => [[
                 'naam' => 'Classificatie B → upload-veld veiligheidsplan verschijnt',
-                'omschrijving' =>
-                    'Bij een middelhoog risico (classificatie B) is de organisator verplicht een '
+                'omschrijving' => 'Bij een middelhoog risico (classificatie B) is de organisator verplicht een '
                     .'veiligheidsplan te uploaden. Het veiligheidsplan-veld wordt zichtbaar, samen '
                     .'met de bijbehorende uitleg-teksten.',
                 'categorie' => 'visibility',
@@ -60,8 +59,7 @@ final class BijlagenScenarios implements ScenarioProvider
 
             'Veiligheidsplan verplicht bij classificatie C' => [[
                 'naam' => 'Classificatie C → upload-veld veiligheidsplan verschijnt',
-                'omschrijving' =>
-                    'Hoog-risico evenementen (classificatie C) vragen om hetzelfde veiligheidsplan '
+                'omschrijving' => 'Hoog-risico evenementen (classificatie C) vragen om hetzelfde veiligheidsplan '
                     .'als B. Het upload-veld en de uitleg-tekst worden zichtbaar.',
                 'categorie' => 'visibility',
                 'stap' => self::STAP_BIJLAGEN,
@@ -77,8 +75,7 @@ final class BijlagenScenarios implements ScenarioProvider
 
             'Bebordingsplan verplicht bij kenmerk A50' => [[
                 'naam' => 'Verkeersmaatregelen (A50) → upload-veld bebordingsplan verschijnt',
-                'omschrijving' =>
-                    'Als de organisator aangeeft verkeersmaatregelen te treffen (kenmerk A50), '
+                'omschrijving' => 'Als de organisator aangeeft verkeersmaatregelen te treffen (kenmerk A50), '
                     .'moet er een bebordings- en bewegwijzeringsplan bijgevoegd worden. Het '
                     .'upload-veld daarvoor wordt zichtbaar.',
                 'categorie' => 'visibility',

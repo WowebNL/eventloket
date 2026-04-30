@@ -14,13 +14,10 @@ namespace App\EventForm\State;
  *   - `false` → stap is niet applicable (sidebar doorgestreept,
  *               wizard skipt 'm)
  *   - `null`  → geen mening; FormState valt terug op default
- *               (alle stappen applicable) of op een bag-entry van
- *               de oude engine (zolang die nog draait)
+ *               (alle stappen applicable)
  *
- * `FormState::isStepApplicable()` raadpleegt deze class eerst.
- *
- * Pure-functioneel = toggle-veilig: switch-back werkt automatisch
- * correct zonder dat we `resetStepApplicable()` nodig hebben.
+ * `FormState::isStepApplicable()` raadpleegt deze class direct.
+ * Pure-functioneel = toggle-veilig: switch-back werkt automatisch correct.
  */
 final class FormStepApplicability
 {

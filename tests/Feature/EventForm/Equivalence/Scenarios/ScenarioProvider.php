@@ -44,7 +44,7 @@ interface ScenarioProvider
     /**
      * Alle scenarios van deze provider.
      *
-     * @return array<string, array<int, array<string, mixed>>>  naam → [scenario-shape]
+     * @return array<string, array<int, array<string, mixed>>> naam → [scenario-shape]
      */
     public static function all(): array;
 }

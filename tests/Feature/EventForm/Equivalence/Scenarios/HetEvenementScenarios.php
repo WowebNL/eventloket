@@ -47,8 +47,7 @@ final class HetEvenementScenarios implements ScenarioProvider
         return [
             'Evenementnaam ingevuld → omschrijving + soort zichtbaar' => [[
                 'naam' => 'Evenementnaam ingevuld → omschrijving + soort-veld verschijnen',
-                'omschrijving' =>
-                    'Zolang "Wat is de naam van het evenement?" leeg is, hoeven de '
+                'omschrijving' => 'Zolang "Wat is de naam van het evenement?" leeg is, hoeven de '
                     .'vervolgvelden niet in beeld. Zodra de gebruiker een naam heeft '
                     .'ingevuld, komen "Geef een korte omschrijving" en "Wat voor soort '
                     .'evenement is het?" tevoorschijn.',
@@ -66,8 +65,7 @@ final class HetEvenementScenarios implements ScenarioProvider
 
             'Soort = Anders → omschrijving-veld verschijnt' => [[
                 'naam' => 'Soort evenement "Anders" → omschrijf-veld verschijnt',
-                'omschrijving' =>
-                    'Als de gebruiker bij "Wat voor soort evenement?" kiest voor '
+                'omschrijving' => 'Als de gebruiker bij "Wat voor soort evenement?" kiest voor '
                     .'"Anders", komt een extra tekstveld "Omschrijf het soort '
                     .'evenement" tevoorschijn waar een eigen omschrijving gevraagd '
                     .'wordt.',
@@ -85,8 +83,7 @@ final class HetEvenementScenarios implements ScenarioProvider
 
             'Soort = Markt → periodieke-markt-vraag verschijnt' => [[
                 'naam' => 'Soort evenement "Markt of braderie" → periodiciteit-vraag verschijnt',
-                'omschrijving' =>
-                    'Bij een markt of braderie moet de organisator aangeven of het '
+                'omschrijving' => 'Bij een markt of braderie moet de organisator aangeven of het '
                     .'gaat om een periodiek terugkerende markt (jaar/week-markt) '
                     .'waarvoor de gemeente al een regulier besluit heeft.',
                 'categorie' => 'visibility',

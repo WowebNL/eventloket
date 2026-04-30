@@ -1,6 +1,6 @@
 # Gedragsspecificatie evenementformulier
 
-_Automatisch gegenereerd op 22-04-2026 14:56 via `php artisan eventform:gedrags-rapport`._
+_Automatisch gegenereerd op 30-04-2026 11:10 via `php artisan eventform:gedrags-rapport`._
 
 **Samenvatting:** ✅ Alle scenarios slagen — 174 geslaagd, 0 gefaald, 174 totaal.
 
@@ -12,7 +12,7 @@ Dit document is de index op de gedragsspecificatie. Elke pagina van het evenemen
 
 Elk scenario wordt onafhankelijk gecheckt:
 
-- **PHP (Filament)** — onze getranspileerde RulesEngine draait de rule-logica op een FormState met de gegeven input.
+- **PHP (Filament)** — onze pure-functionele afgeleide-state (FormDerivedState/FormFieldVisibility/FormStepApplicability) leest live uit een FormState met de gegeven input.
 - **JS-spec (json-logic-js)** — de OF-rules gaan door een onafhankelijke implementatie van de JsonLogic-spec heen. Deze library wordt standaard gebruikt door web-tools die OF-rules evalueren. Als beide paden dezelfde uitkomst geven, is het gedrag byte-equivalent aan wat de spec voorschrijft.
 
 ✅ betekent: geslaagd in de betreffende check. ❌ betekent: er is een afwijking die onderzocht moet worden.

@@ -105,8 +105,7 @@ final class RisicoscanScenarios implements ScenarioProvider
         return [
             'Laag risico — alle antwoorden gunstig → classificatie A' => [[
                 'naam' => 'Laag risico (A): minimale-risico-antwoorden bij elke vraag',
-                'omschrijving' =>
-                    'Als een organisator de minst-risicovolle antwoorden geeft op alle 14 vragen '
+                'omschrijving' => 'Als een organisator de minst-risicovolle antwoorden geeft op alle 14 vragen '
                     .'(kleine doelgroep, bekende locatie, overdag, geen alcohol/drugs, etc.), dan '
                     .'moet het evenement worden geclassificeerd als A — laag risico. Dat betekent '
                     .'dat de vervolgvragen beperkt blijven en de behandelaar een lichte toets kan '
@@ -122,8 +121,7 @@ final class RisicoscanScenarios implements ScenarioProvider
 
             'Middelhoog risico — mix van ja/nee-risicos → classificatie B' => [[
                 'naam' => 'Middelhoog risico (B): gemeentelijk evenement met alcohol en risicovolle activiteiten',
-                'omschrijving' =>
-                    'Een gemeentelijk evenement met politieke aandacht, risicovolle activiteiten, '
+                'omschrijving' => 'Een gemeentelijk evenement met politieke aandacht, risicovolle activiteiten, '
                     .'alcoholgebruik en 150-2000 bezoekers zit in het midden van de risico-range. '
                     .'De som ligt tussen 6 en 9, dus classificatie B — middelhoog risico. De '
                     .'behandelaar stelt dan aanvullende vragen over maatregelen.',
@@ -138,8 +136,7 @@ final class RisicoscanScenarios implements ScenarioProvider
 
             'Hoog risico — veel gevaarfactoren → classificatie C' => [[
                 'naam' => 'Hoog risico (C): grote doelgroep met verminderd-zelfredzame bezoekers en overnachting',
-                'omschrijving' =>
-                    'Wanneer er meerdere risico-factoren samenkomen — een grote doelgroep met '
+                'omschrijving' => 'Wanneer er meerdere risico-factoren samenkomen — een grote doelgroep met '
                     .'verminderd zelfredzame bezoekers, overnachting buiten een daarvoor ingerichte '
                     .'locatie, en slechte aan- en afvoerwegen — tilt de som het evenement boven de '
                     .'drempel van 9. Classificatie C betekent dat het een hoog-risico evenement is '

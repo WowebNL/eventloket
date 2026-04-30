@@ -12,9 +12,10 @@ use App\Models\User;
 /**
  * Dispatcher voor de 4 OF `fetch-from-service`-calls. In plaats van HTTP-
  * calls naar onze eigen Passport-endpoints roepen we rechtstreeks de
- * service-klassen aan (die dezelfde logica bevatten), schrijven we de
- * response terug naar de FormState-variabele en triggeren we zo de
- * volgende RulesEngine-pass.
+ * service-klassen aan (die dezelfde logica bevatten) en schrijven we de
+ * response terug naar de FormState-variabele. EventFormPage::updated()
+ * roept dit per relevant veld aan; FormDerivedState pikt de nieuwe
+ * waarden vanzelf op via `$state->get()`.
  */
 class ServiceFetcher
 {

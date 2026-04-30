@@ -87,20 +87,6 @@ test('laadt FormState uit form_state_snapshot als die aanwezig is', function () 
         ->and($state->get('EvenementStart'))->toBe('2027-06-14T14:00');
 });
 
-test('afgeleide state (field_hidden + step_applicable) uit vorige submit wordt niet meegeprefill', function () {
-    // Als we "vorige" rules-uitkomsten meenemen, ziet een nieuwe aanvraag
-    // er raar uit (velden verborgen die nu weer zichtbaar moeten zijn).
-    $sc = scenarioZaakMetSnapshot([
-        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest 2027',
-    ]);
-
-    $state = $this->loader->load($sc['zaak']->id, $sc['user'], $sc['org']);
-    $snap = $state->toSnapshot();
-
-    expect($snap['field_hidden'])->toBe([])
-        ->and($snap['step_applicable'])->toBe([]);
-});
-
 test('zaak zonder snapshot → fallback naar reference_data-mapping', function () {
     $org = Organisation::factory()->create();
     /** @var OrganiserUser $user */

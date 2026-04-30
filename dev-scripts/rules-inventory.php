@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Contracts\Console\Kernel;
 
 /**
  * Inventaris-script: scant alle 144 transpiled rules + de 2 handgeschreven
@@ -27,7 +28,7 @@ declare(strict_types=1);
 
 require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Kernel::class)->bootstrap();
 
 $dir = __DIR__.'/../app/EventForm/Rules';
 $files = glob("$dir/*.php");
@@ -152,7 +153,7 @@ foreach ($byVariable as $name => $entries) {
 echo "## Velden die door rules verborgen worden\n\n";
 ksort($byFieldHidden);
 foreach ($byFieldHidden as $field => $entries) {
-    echo "### `{$field}` (".count($entries)." rule".(count($entries) === 1 ? '' : 's').")\n\n";
+    echo "### `{$field}` (".count($entries).' rule'.(count($entries) === 1 ? '' : 's').")\n\n";
     foreach ($entries as $e) {
         $direction = $e['value'] ? 'hide' : 'show';
         echo '- **'.$e['class'].'** (`'.$e['uuid']."`) → {$direction}\n";
@@ -170,14 +171,14 @@ foreach ($byStepApplicable as $stepUuid => $entries) {
     if ($applicable !== []) {
         echo "**Wordt applicable door:**\n";
         foreach ($applicable as $e) {
-            echo '- '.$e['class']." — `".preg_replace('/\s+/', ' ', $e['condition'])."`\n";
+            echo '- '.$e['class'].' — `'.preg_replace('/\s+/', ' ', $e['condition'])."`\n";
         }
         echo "\n";
     }
     if ($notApplicable !== []) {
         echo "**Wordt non-applicable door:**\n";
         foreach ($notApplicable as $e) {
-            echo '- '.$e['class']." — `".preg_replace('/\s+/', ' ', $e['condition'])."`\n";
+            echo '- '.$e['class'].' — `'.preg_replace('/\s+/', ' ', $e['condition'])."`\n";
         }
         echo "\n";
     }

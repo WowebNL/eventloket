@@ -61,7 +61,7 @@ final class AutoGegenereerdeConditionalScenarios implements ScenarioProvider
      * @return array<string, array<int, array<string, mixed>>>
      */
     /**
-     * @var array<string, string>  veld-key → component-type, globaal over alle stappen
+     * @var array<string, string> veld-key → component-type, globaal over alle stappen
      */
     private static array $fieldTypeCache = [];
 
@@ -88,7 +88,9 @@ final class AutoGegenereerdeConditionalScenarios implements ScenarioProvider
         // data-shape genereren (`{optie: true}` i.p.v. string).
         self::$fieldTypeCache = [];
         foreach ($steps as $step) {
-            if (! is_array($step)) continue;
+            if (! is_array($step)) {
+                continue;
+            }
             $components = $step['configuration']['components'] ?? [];
             if (is_array($components)) {
                 /** @var list<array<string, mixed>> $components */
@@ -219,8 +221,7 @@ final class AutoGegenereerdeConditionalScenarios implements ScenarioProvider
         return [
             "[auto] {$target}: {$situatie} (match)" => [[
                 'naam' => "Zichtbaarheid \"{$target}\" — trigger matcht (auto)",
-                'omschrijving' =>
-                    "Zodra de gebruiker een waarde kiest die matcht met de conditional — ".
+                'omschrijving' => 'Zodra de gebruiker een waarde kiest die matcht met de conditional — '.
                     "`{$triggerVeld}` = `".self::printable($matchWaarde).'` — moet veld '.
                     "`{$target}` ".($zichtbaarBijMatch ? '**zichtbaar** worden' : '**verborgen** worden').
                     '. Dit scenario test de match-kant van de conditional.',
@@ -235,9 +236,8 @@ final class AutoGegenereerdeConditionalScenarios implements ScenarioProvider
 
             "[auto] {$target}: {$situatie} (no-match)" => [[
                 'naam' => "Zichtbaarheid \"{$target}\" — trigger matcht niet (auto)",
-                'omschrijving' =>
-                    "Met een waarde die niet matcht — `{$triggerVeld}` is iets anders dan ".
-                    "`".self::printable($matchWaarde).'` — moet veld '.
+                'omschrijving' => "Met een waarde die niet matcht — `{$triggerVeld}` is iets anders dan ".
+                    '`'.self::printable($matchWaarde).'` — moet veld '.
                     "`{$target}` ".($zichtbaarBijGeenMatch ? '**zichtbaar** zijn' : '**verborgen** zijn').
                     '. Dit scenario test de andere kant van de conditional.',
                 'categorie' => 'visibility',

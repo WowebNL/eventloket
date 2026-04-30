@@ -22,8 +22,9 @@ use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\Models\Municipality;
 use App\Models\Zaaktype;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
-uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->resolve = new ResolveZaaktype(new DetermineAanvraagType);

@@ -20,38 +20,3 @@ parameters:
             identifier: property.notFound
             path: app/Filament/Organiser/Pages/*
             message: '#Access to an undefined property [^:]+::\$form\.#'
-        # Gegenereerde rule-klassen: triggers zijn 1-op-1 gecompileerde
-        # JsonLogic-expressies op FormState::get() (mixed). PHPStan kan de
-        # dynamische types niet bewijzen, waardoor sommige comparisons
-        # 'always true/false' worden gemarkeerd. Dat is een false positive
-        # inherent aan de codegen — we vertrouwen op OF's rule-semantiek.
-        -
-            identifier: identical.alwaysTrue
-            path: app/EventForm/Rules/*
-        -
-            identifier: identical.alwaysFalse
-            path: app/EventForm/Rules/*
-        -
-            identifier: notIdentical.alwaysTrue
-            path: app/EventForm/Rules/*
-        -
-            identifier: notIdentical.alwaysFalse
-            path: app/EventForm/Rules/*
-        -
-            identifier: booleanAnd.alwaysFalse
-            path: app/EventForm/Rules/*
-        -
-            identifier: booleanAnd.alwaysTrue
-            path: app/EventForm/Rules/*
-        -
-            identifier: booleanOr.alwaysFalse
-            path: app/EventForm/Rules/*
-        -
-            identifier: booleanOr.alwaysTrue
-            path: app/EventForm/Rules/*
-        -
-            identifier: ternary.alwaysTrue
-            path: app/EventForm/Rules/*
-        -
-            identifier: ternary.alwaysFalse
-            path: app/EventForm/Rules/*

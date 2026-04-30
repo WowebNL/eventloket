@@ -39,7 +39,7 @@ final class RegistrationBackendScenarios implements ScenarioProvider
     /**
      * De pivot uit Open Forms (22 april 2026). Wijzig bij verandering in OF.
      *
-     * @return array<string, array<string, string>>  brk → aanvraagsoort → backend
+     * @return array<string, array<string, string>> brk → aanvraagsoort → backend
      */
     public static function pivot(): array
     {

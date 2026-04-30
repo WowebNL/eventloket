@@ -43,8 +43,7 @@ final class MeldingStapScenarios implements ScenarioProvider
         return [
             'Melding-stap niet van toepassing bij vooraankondiging' => [[
                 'naam' => 'Vooraankondiging → Melding-stap wordt doorgestreept',
-                'omschrijving' =>
-                    'Zodra de organisator bij "waarvoor wilt u Eventloket gebruiken?" kiest voor '
+                'omschrijving' => 'Zodra de organisator bij "waarvoor wilt u Eventloket gebruiken?" kiest voor '
                     .'"vooraankondiging", is de Melding-stap niet relevant. Het systeem markeert '
                     .'de stap als niet-van-toepassing; in de sidebar verschijnt hij doorgestreept.',
                 'categorie' => 'visibility',
@@ -60,8 +59,7 @@ final class MeldingStapScenarios implements ScenarioProvider
 
             'Melding-stap niet van toepassing bij vergunningsroute' => [[
                 'naam' => 'Groot evenement (> drempel aanwezigen) → Melding-stap wordt doorgestreept',
-                'omschrijving' =>
-                    'Als de organisator al op stap 6 aangeeft dat het aantal aanwezigen boven de '
+                'omschrijving' => 'Als de organisator al op stap 6 aangeeft dat het aantal aanwezigen boven de '
                     .'drempel ligt, start de vergunningsroute. De Melding-stap is dan niet van '
                     .'toepassing en wordt in de sidebar doorgestreept.',
                 'categorie' => 'visibility',

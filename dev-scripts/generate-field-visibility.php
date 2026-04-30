@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Contracts\Console\Kernel;
 
 /**
  * One-shot migratie-script: leest alle transpiled rule-files en bouwt
@@ -15,7 +16,7 @@ declare(strict_types=1);
 
 require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Kernel::class)->bootstrap();
 
 $dir = __DIR__.'/../app/EventForm/Rules';
 $files = glob("$dir/*.php");
@@ -65,7 +66,7 @@ foreach ($files as $file) {
 ksort($byField);
 
 echo "// === GEGENEREERD via dev-scripts/generate-field-visibility.php ===\n";
-echo "// Aantal velden: ".count($byField)."\n\n";
+echo '// Aantal velden: '.count($byField)."\n\n";
 
 echo "/** @var array<string, true> */\n";
 echo "public const COMPUTED_KEYS = [\n";

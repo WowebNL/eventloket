@@ -183,7 +183,7 @@ final class FieldCatalog
 
     /**
      * @param  array<string, mixed>  $component
-     * @return array<string, string>  value → label
+     * @return array<string, string> value → label
      */
     private function extractValues(array $component): array
     {
@@ -226,7 +226,7 @@ final class FieldCatalog
     }
 
     /**
-     * @return array<string, array{index: int, naam: string}>  uuid → meta, gesorteerd op index
+     * @return array<string, array{index: int, naam: string}> uuid → meta, gesorteerd op index
      */
     public function allSteps(): array
     {

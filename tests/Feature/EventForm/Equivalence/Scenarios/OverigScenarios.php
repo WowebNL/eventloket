@@ -39,8 +39,7 @@ final class OverigScenarios implements ScenarioProvider
         return [
             'Grote voertuigen op openbare weg — detail-veld zichtbaar' => [[
                 'naam' => 'Plaatsen object op openbare weg (A48) → detail-veld verschijnt',
-                'omschrijving' =>
-                    'Als de organisator aangeeft objecten op de openbare weg te plaatsen '
+                'omschrijving' => 'Als de organisator aangeeft objecten op de openbare weg te plaatsen '
                     .'(kenmerk A48), moet het detail-veld "groteVoertuigen" zichtbaar worden '
                     .'om de aanvullende gegevens te kunnen invullen.',
                 'categorie' => 'visibility',
@@ -57,8 +56,7 @@ final class OverigScenarios implements ScenarioProvider
 
             'Parkeerontheffing — detail-veld zichtbaar' => [[
                 'naam' => 'Parkeren grote voertuigen (A49) → detail-veld verschijnt',
-                'omschrijving' =>
-                    'Bij de keuze om grote voertuigen te parkeren op de openbare weg (A49) '
+                'omschrijving' => 'Bij de keuze om grote voertuigen te parkeren op de openbare weg (A49) '
                     .'verschijnt hetzelfde detail-veld voor aanvullende gegevens.',
                 'categorie' => 'visibility',
                 'stap' => self::STAP_OVERIG,

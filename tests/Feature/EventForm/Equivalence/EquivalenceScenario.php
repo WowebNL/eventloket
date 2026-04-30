@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature\EventForm\Equivalence;
 
 use App\EventForm\Reporting\FieldCatalog;
-use App\EventForm\Rules\RulesEngine;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormPage;
 use Illuminate\Support\Arr;
@@ -17,14 +16,17 @@ use Livewire\Livewire;
  * (diff-array). Welke je kiest hangt ervan af wat je wilt testen:
  *
  *  - `run($scenario)`
- *    Lichte mode. Bouwt een losse FormState, draait de RulesEngine, checkt
- *    de state. Snel, geen DB of user-context nodig. Dekt rule-level gedrag.
+ *    Lichte mode. Bouwt een losse FormState, leest direct uit
+ *    FormDerivedState/FormFieldVisibility/FormStepApplicability/
+ *    FormSystemDerivedState (alle pure-functioneel — geen evaluate-call
+ *    meer nodig sinds de RulesEngine weg is). Snel, geen DB of user-
+ *    context nodig.
  *
  *  - `runViaLivewire($scenario)`
  *    Volledige mode. Mount de echte EventFormPage via Livewire (user + tenant
  *    moeten aanwezig zijn in de test-setup), past scenario-waarden toe, en
  *    laat de hele lifecycle draaien inclusief Filament's `->visible()`-
- *    closures op componenten. Dekt zowel rule-level als component-level
+ *    closures op componenten. Dekt zowel state-level als component-level
  *    conditionele zichtbaarheid — dat is waar het formulier echt gedrag
  *    vandaan haalt in de browser.
  *
@@ -89,6 +91,7 @@ final class EquivalenceScenario
             if (str_contains($html, $key.'"') || str_contains($html, $key.'\'')) {
                 return true;
             }
+
             // Als 'r geen duidelijke marker is, val terug op "was het
             // target-component onderdeel van een fieldset dat niet meer
             // rendered werd?" — dan toch zichtbaar = false. We kunnen
@@ -120,7 +123,8 @@ final class EquivalenceScenario
     }
 
     /**
-     * Lichte runner: direct tegen RulesEngine + FormState.
+     * Lichte runner: scenario-waarden in een verse FormState zetten en
+     * direct uitlezen via de pure-functionele afgeleide-classes.
      *
      * @param  array<string, mixed>  $scenario
      * @return array<string, array{expected: mixed, actual: mixed}>
@@ -129,7 +133,6 @@ final class EquivalenceScenario
     {
         $state = FormState::empty();
         self::seedState($state, $scenario['gegeven'] ?? []);
-        app(RulesEngine::class)->evaluate($state);
 
         // `field_visible.*`-verwachtingen vereisen rendered HTML, wat deze
         // lichte runner niet levert. We filteren ze weg en laten ze over
@@ -195,11 +198,8 @@ final class EquivalenceScenario
         }
         $test->set('data', $data);
 
-        // Run de rules-engine expliciet na de overrides. In productie
-        // gebeurt dat via `updated()`-hook bij form-wijzigingen; hier
-        // forceren we 'em direct zodat de state reflecteert wat er zou
-        // gebeuren als de user deze waarden live had ingevuld.
-        app(RulesEngine::class)->evaluate($state);
+        // Pure-functionele afgeleide-state leest live uit FormState bij
+        // elke `get()`-call — geen explicite evaluate-pass nodig.
 
         // Voor render-verwachtingen (`field_visible.*`) moeten we de
         // rendered HTML van de component pakken nadat alle state is
@@ -237,7 +237,7 @@ final class EquivalenceScenario
      * op een niet-actieve wizard-stap).
      *
      * @param  array<string, mixed>  $verwacht
-     * @return array{0: array<string, mixed>, 1: list<string>}  [meetbaar, overgeslagen-paths]
+     * @return array{0: array<string, mixed>, 1: list<string>} [meetbaar, overgeslagen-paths]
      */
     private static function partitionVisibilityChecks(array $verwacht, string $html): array
     {

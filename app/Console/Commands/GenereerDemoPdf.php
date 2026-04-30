@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace App\Console\Commands;
 
 use App\EventForm\State\FormState;
+use App\Models\Organisation;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 /**
  * Dev-command dat een voorbeeld-inzendingsbewijs PDF genereert zonder
@@ -66,12 +69,12 @@ class GenereerDemoPdf extends Command
             'public_id' => 'DEMO-PDF-'.substr(uniqid(), -6),
             'zgw_zaak_url' => 'https://example.com/demo/'.uniqid(),
         ]);
-        $zaak->id = (string) \Illuminate\Support\Str::uuid();
+        $zaak->id = (string) Str::uuid();
         $zaak->reference_data = $refData;
         $zaak->form_state_snapshot = $state->toSnapshot();
         $zaak->created_at = now();
         $zaak->setRelation('zaaktype', new Zaaktype(['name' => 'Evenementenvergunning gemeente Maastricht']));
-        $zaak->setRelation('organisation', new \App\Models\Organisation(['name' => 'Media Tuin']));
+        $zaak->setRelation('organisation', new Organisation(['name' => 'Media Tuin']));
 
         $rows = [
             'Naam evenement' => $refData->naam_evenement,
@@ -116,7 +119,7 @@ class GenereerDemoPdf extends Command
         }
 
         try {
-            return \Carbon\Carbon::parse($iso, 'Europe/Amsterdam')->translatedFormat('j F Y · H:i');
+            return Carbon::parse($iso, 'Europe/Amsterdam')->translatedFormat('j F Y · H:i');
         } catch (\Throwable) {
             return $iso;
         }

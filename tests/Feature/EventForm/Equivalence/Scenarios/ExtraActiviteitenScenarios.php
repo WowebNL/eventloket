@@ -41,8 +41,7 @@ final class ExtraActiviteitenScenarios implements ScenarioProvider
         return [
             'Ballonnen-activiteit toont regelgeving-blok' => [[
                 'naam' => 'Ballonnen oplaten (A37) → contentBalon-blok + stap actief',
-                'omschrijving' =>
-                    'Als de organisator aangeeft ballonnen op te laten (activiteit A37), toont '
+                'omschrijving' => 'Als de organisator aangeeft ballonnen op te laten (activiteit A37), toont '
                     .'het formulier een inhoud-blok met de regelgeving rond ballon-oplatingen. De '
                     .'pagina "extra activiteiten" wordt daarmee ook van toepassing.',
                 'categorie' => 'visibility',
@@ -59,8 +58,7 @@ final class ExtraActiviteitenScenarios implements ScenarioProvider
 
             'Lasershow toont specifiek inhoud-blok' => [[
                 'naam' => 'Lasershow (A38) → contentLasershow-blok + stap actief',
-                'omschrijving' =>
-                    'Bij een lasershow (activiteit A38) is er specifieke regelgeving. Het '
+                'omschrijving' => 'Bij een lasershow (activiteit A38) is er specifieke regelgeving. Het '
                     .'formulier toont een inhoud-blok daarover en markeert deze pagina als '
                     .'van toepassing.',
                 'categorie' => 'visibility',

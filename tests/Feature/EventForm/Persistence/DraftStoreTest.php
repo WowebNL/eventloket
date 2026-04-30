@@ -25,8 +25,6 @@ test('save persists a FormState that load can restore', function () {
     $state = FormState::empty();
     $state->setField('soortEvenement', 'Markt of braderie');
     $state->setVariable('gemeenteVariabelen', ['aanwezigen' => 500]);
-    $state->setFieldHidden('locatieSOpKaart', false);
-    $state->setStepApplicable('melding', false);
 
     $this->store->save($this->user, $this->organisation, $state, currentStepKey: 'stap-2-locatie');
 
@@ -34,9 +32,7 @@ test('save persists a FormState that load can restore', function () {
 
     expect($loaded)->not->toBeNull()
         ->and($loaded->get('soortEvenement'))->toBe('Markt of braderie')
-        ->and($loaded->get('gemeenteVariabelen.aanwezigen'))->toBe(500)
-        ->and($loaded->isFieldHidden('locatieSOpKaart'))->toBeFalse()
-        ->and($loaded->isStepApplicable('melding'))->toBeFalse();
+        ->and($loaded->get('gemeenteVariabelen.aanwezigen'))->toBe(500);
 });
 
 test('save stores the current step key so resume starts at the right place', function () {

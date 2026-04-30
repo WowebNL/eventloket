@@ -210,7 +210,7 @@ class EventFormGedragsRapport extends Command
 
     /**
      * @param  array<string, list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>>  $grouped
-     * @return array<string, string>  stap-key → absolute path naar geschreven file
+     * @return array<string, string> stap-key → absolute path naar geschreven file
      */
     private function writePageFiles(array $grouped, string $pagesDir): array
     {
@@ -259,7 +259,7 @@ class EventFormGedragsRapport extends Command
         $lines = [
             "# {$titel}",
             '',
-            "_[← terug naar de index](../gedragsspecificatie.md)_",
+            '_[← terug naar de index](../gedragsspecificatie.md)_',
             '',
             "**Samenvatting:** {$status} — {$pass}/".count($items).' gedekt.',
             '',
@@ -317,9 +317,14 @@ class EventFormGedragsRapport extends Command
         $gemiddeldCount = 0;
         foreach ($results as $r) {
             $ref = $r['js_ref'] ?? null;
-            if ($ref === null) continue;
-            if ($ref['ok']) $jsVerified++;
-            else $jsMismatch++;
+            if ($ref === null) {
+                continue;
+            }
+            if ($ref['ok']) {
+                $jsVerified++;
+            } else {
+                $jsMismatch++;
+            }
 
             $skipInReport = count($r['skipped_in_report_runner'] ?? []);
             $totalChecks = count($r['scenario']['verwacht'] ?? []);
@@ -363,8 +368,9 @@ class EventFormGedragsRapport extends Command
             '',
             'Elk scenario wordt onafhankelijk gecheckt:',
             '',
-            '- **PHP (Filament)** — onze getranspileerde RulesEngine draait de rule-logica '
-                .'op een FormState met de gegeven input.',
+            '- **PHP (Filament)** — onze pure-functionele afgeleide-state '
+                .'(FormDerivedState/FormFieldVisibility/FormStepApplicability) leest live '
+                .'uit een FormState met de gegeven input.',
             '- **JS-spec (json-logic-js)** — de OF-rules gaan door een onafhankelijke '
                 .'implementatie van de JsonLogic-spec heen. Deze library wordt standaard '
                 .'gebruikt door web-tools die OF-rules evalueren. Als beide paden dezelfde '
@@ -620,6 +626,7 @@ class EventFormGedragsRapport extends Command
         if ($skipCount === 0) {
             return '🟢 PHP-runtime bevestigt';
         }
+
         return '🟡 Deels gemeten';
     }
 

@@ -58,8 +58,8 @@ final class FormSystemDerivedState
      * Naam van de OF-registratiebackend waar deze zaak heen geroute't
      * wordt. Vervangt 45 OF-rules (één per gemeente×type-combinatie).
      *
-     * @return string|null  null wanneer (a) gemeente onbekend, of
-     *                      (b) onvoldoende state om type te bepalen.
+     * @return string|null null wanneer (a) gemeente onbekend, of
+     *                     (b) onvoldoende state om type te bepalen.
      */
     public function registrationBackend(): ?string
     {

@@ -42,8 +42,7 @@ final class TijdenScenarios implements ScenarioProvider
         return [
             'Waarschuwing zichtbaar als er andere evenementen zijn' => [[
                 'naam' => 'Waarschuwing over gelijktijdige evenementen verschijnt als er andere evenementen bekend zijn',
-                'omschrijving' =>
-                    'Zodra evenementenInDeGemeente een (niet-lege) waarde heeft — dat wil zeggen: '
+                'omschrijving' => 'Zodra evenementenInDeGemeente een (niet-lege) waarde heeft — dat wil zeggen: '
                     .'de service EventsCheckService heeft evenementen teruggekregen voor de gekozen '
                     .'datum — toont de Tijden-pagina een inhoud-blok dat de organisator waarschuwt '
                     .'dat er al andere evenementen gepland staan.',

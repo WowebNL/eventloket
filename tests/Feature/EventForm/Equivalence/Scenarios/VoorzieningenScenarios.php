@@ -42,8 +42,7 @@ final class VoorzieningenScenarios implements ScenarioProvider
         return [
             'WCs-detailveld zichtbaar na aanvinken van WCs' => [[
                 'naam' => 'WCs aangevinkt → detailveld voor aantallen verschijnt',
-                'omschrijving' =>
-                    'Als de organisator bij de voorzieningen-checkboxen optie A12 (wc\'s) '
+                'omschrijving' => 'Als de organisator bij de voorzieningen-checkboxen optie A12 (wc\'s) '
                     .'aanvinkt, wordt het detail-veld zichtbaar waarin de aantallen wc\'s kunnen '
                     .'worden ingevuld. De pagina voorzieningen zelf wordt als van toepassing '
                     .'gemarkeerd in de sidebar.',
@@ -61,8 +60,7 @@ final class VoorzieningenScenarios implements ScenarioProvider
 
             'Douches-detailveld zichtbaar na aanvinken' => [[
                 'naam' => 'Douches aangevinkt → detailveld voor douches verschijnt',
-                'omschrijving' =>
-                    'Net als bij WCs: als de organisator douches (optie A13) aanvinkt in de '
+                'omschrijving' => 'Net als bij WCs: als de organisator douches (optie A13) aanvinkt in de '
                     .'voorzieningen-lijst, wordt het douches-detailveld zichtbaar zodat de '
                     .'organisator aantallen/locaties kan doorgeven.',
                 'categorie' => 'visibility',

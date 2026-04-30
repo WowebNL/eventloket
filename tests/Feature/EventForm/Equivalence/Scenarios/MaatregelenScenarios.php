@@ -42,8 +42,7 @@ final class MaatregelenScenarios implements ScenarioProvider
         return [
             'Extra afvalvoorzieningen activeren detail-veld' => [[
                 'naam' => 'Extra afval aangevinkt → detail-veld + maatregelen-stap actief',
-                'omschrijving' =>
-                    'Als de organisator bij "kruis aan welke overige maatregelen" optie A33 '
+                'omschrijving' => 'Als de organisator bij "kruis aan welke overige maatregelen" optie A33 '
                     .'(extra afvalvoorzieningen) aanvinkt, verschijnt het detail-veld waarin '
                     .'de aanpak beschreven kan worden, en wordt de maatregelen-pagina in de '
                     .'sidebar actief.',
@@ -61,8 +60,7 @@ final class MaatregelenScenarios implements ScenarioProvider
 
             'Aanpassen straatmeubilair activeert detail-veld' => [[
                 'naam' => 'Straatmeubilair aangevinkt → detail-veld + maatregelen-stap actief',
-                'omschrijving' =>
-                    'Als de organisator kiest om straatmeubilair aan te passen of te verwijderen '
+                'omschrijving' => 'Als de organisator kiest om straatmeubilair aan te passen of te verwijderen '
                     .'(optie A32), verschijnt het detail-veld waarin kan worden beschreven welke '
                     .'objecten verplaatst worden.',
                 'categorie' => 'visibility',

@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Contracts\Console\Kernel;
 
 /**
  * Genereert FormStepApplicability-snippet uit alle setStepApplicable-
@@ -14,7 +15,7 @@ declare(strict_types=1);
 
 require __DIR__.'/../vendor/autoload.php';
 $app = require __DIR__.'/../bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Kernel::class)->bootstrap();
 
 $dir = __DIR__.'/../app/EventForm/Rules';
 $files = glob("$dir/*.php");
@@ -62,7 +63,7 @@ foreach ($files as $file) {
 ksort($byStep);
 
 echo "// === GEGENEREERD via dev-scripts/generate-step-applicability.php ===\n";
-echo "// Aantal stappen met applicability-rules: ".count($byStep)."\n\n";
+echo '// Aantal stappen met applicability-rules: '.count($byStep)."\n\n";
 
 echo "/** @var array<string, true> */\n";
 echo "public const COMPUTED_STEPS = [\n";

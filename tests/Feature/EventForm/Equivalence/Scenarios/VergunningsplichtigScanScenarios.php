@@ -44,8 +44,7 @@ final class VergunningsplichtigScanScenarios implements ScenarioProvider
         return [
             'Eerste meldingsvraag verschijnt bij klein evenement met kleine objecten' => [[
                 'naam' => 'Eerste meldingsvraag komt vrij als objecten klein én gemeente heeft report_question_1',
-                'omschrijving' =>
-                    'Als de organisator aangeeft dat geplaatste objecten kleiner zijn dan de '
+                'omschrijving' => 'Als de organisator aangeeft dat geplaatste objecten kleiner zijn dan de '
                     .'gemeente-grens, én de gemeente heeft de eerste aanvullende vraag '
                     .'geconfigureerd (`gemeenteVariabelen.report_question_1`), verschijnt '
                     .'meldingvraag1 als vervolgvraag in het formulier.',
@@ -68,8 +67,7 @@ final class VergunningsplichtigScanScenarios implements ScenarioProvider
 
             'Groot evenement — direct naar vergunningsplichtig' => [[
                 'naam' => 'Bij "aantal aanwezigen niet kleiner dan drempel" blijft vergunningsplicht',
-                'omschrijving' =>
-                    'Zodra de organisator al bij de eerste vraag aangeeft dat het aantal aanwezigen '
+                'omschrijving' => 'Zodra de organisator al bij de eerste vraag aangeeft dat het aantal aanwezigen '
                     .'NIET onder de gemeentelijke drempel ligt, stopt de melding-route direct. '
                     .'Het systeem markeert de aanvraag als vergunningsaanvraag en verbergt de '
                     .'content-block die naar melding zou leiden — de organisator wordt '

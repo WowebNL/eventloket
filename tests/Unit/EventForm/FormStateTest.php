@@ -68,25 +68,20 @@ describe('FormState', function () {
         expect($state->get('x.y'))->toBe('exact');
     });
 
-    test('field hidden override is stored and retrieved', function () {
+    test('isFieldHidden returns null voor niet-gemigreerde velden', function () {
+        // Niet-gemigreerde velden vallen onder de step-default visibility.
+        // FormState heeft daar geen mening over.
         $state = FormState::empty();
 
-        expect($state->isFieldHidden('locatieSOpKaart'))->toBeNull();
-
-        $state->setFieldHidden('locatieSOpKaart', false);
-        expect($state->isFieldHidden('locatieSOpKaart'))->toBeFalse();
-
-        $state->setFieldHidden('locatieSOpKaart', true);
-        expect($state->isFieldHidden('locatieSOpKaart'))->toBeTrue();
+        expect($state->isFieldHidden('eenWillekeurigVeldZonderRules'))->toBeNull();
     });
 
-    test('step applicable defaults to true when not set', function () {
+    test('step applicable defaults to true zonder rules', function () {
+        // Stap-UUID die niet in FormStepApplicability::COMPUTED_STEPS staat
+        // → default applicable.
         $state = FormState::empty();
 
         expect($state->isStepApplicable('risicoscan'))->toBeTrue();
-
-        $state->setStepApplicable('risicoscan', false);
-        expect($state->isStepApplicable('risicoscan'))->toBeFalse();
     });
 
     test('snapshot round-trips through fromSnapshot', function () {
@@ -94,17 +89,13 @@ describe('FormState', function () {
         $state->setField('soortEvenement', 'Markt of braderie');
         $state->setVariable('gemeenteVariabelen', ['aanwezigen' => 100]);
         $state->setSystem('submission_id', 'abc-123');
-        $state->setFieldHidden('locatieSOpKaart', false);
-        $state->setStepApplicable('melding', false);
 
         $snapshot = $state->toSnapshot();
         $restored = FormState::fromSnapshot($snapshot);
 
         expect($restored->get('soortEvenement'))->toBe('Markt of braderie')
             ->and($restored->get('gemeenteVariabelen.aanwezigen'))->toBe(100)
-            ->and($restored->get('submission_id'))->toBe('abc-123')
-            ->and($restored->isFieldHidden('locatieSOpKaart'))->toBeFalse()
-            ->and($restored->isStepApplicable('melding'))->toBeFalse();
+            ->and($restored->get('submission_id'))->toBe('abc-123');
     });
 
     test('absorbFields merges without clearing existing', function () {

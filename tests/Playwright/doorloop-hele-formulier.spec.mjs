@@ -11,6 +11,8 @@ import {
     klikVolgende,
     huidigeStap,
 } from './helpers/form-invullen.mjs';
+import { leesPdfContent, vindSectie, vindEntryWaarde } from './helpers/pdf-content.mjs';
+import { skipAlsOpenZaakOffline } from './helpers/openzaak-check.mjs';
 
 /**
  * Volledige walkthrough: één scenario dat door alle stappen klikt.
@@ -18,6 +20,7 @@ import {
  */
 test('walkthrough: doorloop het hele formulier', async ({ page }) => {
     test.setTimeout(180_000);
+    skipAlsOpenZaakOffline(test);
 
     // Schoon startpunt: oude drafts (van eerdere walkthrough-runs of
     // handmatig testen) zorgen voor pre-fills die de handlers hier
@@ -320,6 +323,36 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
     // Bewaar de zojuist aangemaakte zaak-URL (ViewZaak) voor de prefill-
     // stap — anders overschrijft de 'Draft is geleegd'-check hieronder 'm.
     const ingediende_zaak_url = page.url();
+    const publicId = ingediende_zaak_url.match(/\/zaken\/([^/?#]+)/)?.[1];
+    expect(publicId, 'kon public_id niet uit ViewZaak-URL halen').toBeTruthy();
+
+    // ---------- PDF-content: zaaktype + kernvelden ---------------------
+    //
+    // Geen PDF-binary parsen; we vragen de SubmissionReport-builder direct
+    // via een Artisan-command de sections + entries op die de Blade-template
+    // straks rendert. Dat dekt: zaaktype, sectie-structuur, en alle
+    // ingevulde velden uit de melding-walkthrough.
+    await test.step('PDF-content (sections + entries) klopt voor melding-pad', async () => {
+        const pdf = leesPdfContent(publicId);
+
+        expect(pdf.zaak.public_id).toBe(publicId);
+        expect(pdf.zaak.zaaktype, 'melding-pad eindigt op Melding-zaaktype').toMatch(/melding/i);
+        expect(pdf.sections.length, 'PDF moet meerdere secties tonen').toBeGreaterThan(3);
+
+        // Kernvelden op stap 2 moeten in de sectie 'Het evenement' staan.
+        const evenement = vindSectie(pdf, 'evenement');
+        expect(evenement, 'sectie "evenement" gevonden').not.toBeNull();
+        expect(vindEntryWaarde(evenement, 'naam')).toMatch(/Buurtfeest Testlaan/i);
+
+        // Kernveld op stap 4 (tijden) — datum moet in een sectie staan.
+        const tijden = vindSectie(pdf, 'tijd');
+        expect(tijden, 'sectie "tijden" gevonden').not.toBeNull();
+        // Eén van de entries moet onze starttijd bevatten — Filament's
+        // DateTimePicker-renderer kan 'm formatteren, dus we checken
+        // alleen op de jaar-kern.
+        const alleTijdWaarden = (tijden?.entries ?? []).map((e) => e.value).join(' ');
+        expect(alleTijdWaarden).toMatch(/2026/);
+    });
 
     // ---------- Draft leeg: opnieuw naar /aanvraag = vers formulier --
     await test.step('Draft is geleegd na submit', async () => {
