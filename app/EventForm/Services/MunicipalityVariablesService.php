@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace App\EventForm\Services;
 
+use App\Enums\MunicipalityVariableType;
 use App\Models\Municipality;
 
 /**
  * Levert de gemeente-variabelen die in het formulier gebruikt worden
  * (thresholds, gemeente-specifieke labels). Oorspronkelijk OF's
  * `fetch-from-service` naar /api/municipality-variables/{brk_id}.
+ *
+ * Wanneer een gemeente migrated is naar het ReportQuestion-systeem
+ * (`use_new_report_questions === true`) filteren we de
+ * `report_question`-typed variabelen weg — die worden dan via de
+ * aparte `ReportQuestion`-tabel + ReportQuestionController geserveerd.
  */
 class MunicipalityVariablesService
 {
@@ -18,10 +24,18 @@ class MunicipalityVariablesService
      */
     public function forMunicipality(Municipality $municipality): array
     {
-        return $municipality
+        $variables = $municipality
             ->variables()
             ->withTrashed()
-            ->get()
+            ->get();
+
+        if ($municipality->use_new_report_questions) {
+            $variables = $variables->reject(
+                fn ($variable): bool => $variable->type === MunicipalityVariableType::ReportQuestion,
+            );
+        }
+
+        return $variables
             ->map(fn ($variable): array => [
                 'id' => $variable->id,
                 'name' => $variable->name,

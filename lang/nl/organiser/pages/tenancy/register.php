@@ -12,9 +12,6 @@ return [
 
         'coc_number' => [
             'label' => 'KVK-nummer',
-            'validation' => [
-                'unique' => 'Er bestaat al een organisatie met dit :Attribute in ons systeem. Neem contact op met deze organisatie om toegang te krijgen.',
-            ],
         ],
 
         'address' => [

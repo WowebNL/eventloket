@@ -42,7 +42,7 @@ test('admin can create organisation', function () {
     livewire(CreateOrganisation::class)
         ->fillForm([
             'name' => fake()->company,
-            'coc_number' => fake()->numerify('########'),
+            'coc_number' => (string) fake()->numberBetween(10000000, 99999999),
             'address' => fake()->address,
             'email' => 'test@domain.com',
             'phone' => fake()->phoneNumber,
@@ -55,7 +55,7 @@ test('admin can edit organisation', function () {
     $record = Organisation::factory(['type' => OrganisationType::Business])->create();
     $formData = [
         'name' => fake()->company,
-        'coc_number' => fake()->numerify('########'),
+        'coc_number' => (string) fake()->numberBetween(10000000, 99999999),
         'address' => fake()->address,
         'email' => 'test@domain.com',
         'phone' => fake()->phoneNumber,
@@ -122,4 +122,25 @@ test('admin can invite organisation user for organisation', function () {
     Mail::assertSent(OrganisationInviteMail::class, function ($mail) use ($email) {
         return $mail->hasTo($email);
     });
+});
+
+test('two organisations can share the same coc_number', function () {
+    $cocNumber = '12345678';
+
+    Organisation::factory(['type' => OrganisationType::Business])->create([
+        'coc_number' => $cocNumber,
+    ]);
+
+    livewire(CreateOrganisation::class)
+        ->fillForm([
+            'name' => fake()->company,
+            'coc_number' => $cocNumber,
+            'address' => fake()->address,
+            'email' => 'second@domain.com',
+            'phone' => fake()->phoneNumber,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Organisation::where('coc_number', $cocNumber)->count())->toBe(2);
 });

@@ -96,6 +96,23 @@ test('admin can edit location through relation manager', function () {
         'house_number' => $location->house_number,
         'street_name' => $location->street_name,
         'active' => false,
+        'geometry' => [
+            'lat' => 51.41319724,
+            'lng' => 5.43674043,
+            'geojson' => [
+                'features' => [
+                    [
+                        'properties' => [],
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'coordinates' => [5.43674043, 51.41319724],
+                            'type' => 'Point',
+                        ],
+                    ],
+                ],
+                'type' => 'FeatureCollection',
+            ],
+        ],
     ];
 
     livewire(LocationsRelationManager::class, [

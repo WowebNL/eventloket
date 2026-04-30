@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.6.0 - 2026-04-22
+
+### What's Changed
+
+#### ✨ New feautures
+
+* Implement new ReportQuestion system (#327) @LorensoD
+
+#### 🐛 Bug Fixes
+
+* Updated max file upload from 20mb to 30mb (#355) @Michel-Verhoeven
+* Option to create doorkomst zaken for existing zaken (#351) @Michel-Verhoeven
+* Removed uniqueness check on coc_number of an organisation (#350) @Michel-Verhoeven
+
+#### Other changes
+
+* Chore: added v0.6.0 release notes (#356) @Michel-Verhoeven
+* Npm deps bump (#344) @Michel-Verhoeven
+* Composer deps update 2026-5 (#343) @Michel-Verhoeven
+* Chore: bump open forms version to 3.3.13 (#342) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.5.1...v0.6.0
+
+## v0.5.1 - 2026-04-08
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix: Advisory workingstock should only contain advicetrheads in an active status (#337) @Michel-Verhoeven
+* Fix: Make coc_number input numeric (#332) @LorensoD
+* Fix: max 1000 characters for result / besluit toelichting (#339) @Michel-Verhoeven
+
+#### Other changes
+
+* Chore: update npm deps (#338) @Michel-Verhoeven
+* Chore: release notes v0.5.1 (#341) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.5.0...v0.5.1
+
 ## v0.5.0 - 2026-04-01
 
 ### What's Changed
@@ -127,6 +167,8 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
+
 
 
 

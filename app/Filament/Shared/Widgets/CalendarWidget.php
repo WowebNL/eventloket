@@ -416,7 +416,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             $query->whereBetween('reference_data->start_evenement', [$info->start, $info->end]);
         }
 
-        $filters = $this->filters ?? [];
+        $filters = $this->filters;
 
         $this->applyMunicipalitiesFilter($query, $filters);
 
