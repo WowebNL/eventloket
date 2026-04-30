@@ -43,6 +43,28 @@ class FormState implements Arrayable
         private array $stepApplicable = [],
     ) {}
 
+    /**
+     * Memoization-cache voor `get()`-resultaten. Per state-instantie
+     * wordt een gegeven dot-pad maar één keer gecomputed; mutators
+     * (`setField`/`setVariable`/etc.) leegmaken de cache. In een typisch
+     * EventFormPage-render wordt `get('inGemeentenResponse.all.items')`
+     * door tien hidden-closures + templates aangeroepen — zonder cache
+     * is dat tien keer een dot-walk + delegatie naar FormDerivedState,
+     * elke keer met een nieuwe instantie.
+     *
+     * @var array<string, mixed>
+     */
+    private array $getCache = [];
+
+    /**
+     * Helper-instances die FormState als input nemen. We hergebruiken
+     * één instance per state-lifetime i.p.v. een nieuwe te maken bij
+     * elke `get()`-call.
+     */
+    private ?FormDerivedState $derivedState = null;
+
+    private ?FormSystemDerivedState $systemDerivedState = null;
+
     public static function empty(): self
     {
         return new self;
@@ -59,7 +81,19 @@ class FormState implements Arrayable
         if ($path === '') {
             return null;
         }
+        // Memoize: cache-hit op identiek pad → direct return.
+        if (array_key_exists($path, $this->getCache)) {
+            return $this->getCache[$path];
+        }
 
+        $value = $this->resolve($path);
+        $this->getCache[$path] = $value;
+
+        return $value;
+    }
+
+    private function resolve(string $path): mixed
+    {
         // Migratie-stap: gemigreerde afgeleide variabelen komen uit
         // FormDerivedState i.p.v. de values-bag. We checken de root-
         // segment-key zodat zowel `'evenementInGemeentenNamen'` als
@@ -67,12 +101,9 @@ class FormState implements Arrayable
         //
         // Belangrijk: als de berekening `null` oplevert (geen primitieve
         // input om uit af te leiden), vallen we door naar de values-bag.
-        // Daarmee blijven legacy-tests + niet-gemigreerde rules die de
-        // variabele direct seedden gewoon werken — pas wanneer er een
-        // echte computed-value is, schaduwt FormDerivedState 'm.
         [$head, $rest] = $this->splitPath($path);
         if (isset(FormDerivedState::COMPUTED_KEYS[$head])) {
-            $derived = (new FormDerivedState($this))->get($head);
+            $derived = ($this->derivedState ??= new FormDerivedState($this))->get($head);
             if ($derived !== null) {
                 return $rest === '' ? $derived : $this->descend($derived, $rest);
             }
@@ -84,7 +115,7 @@ class FormState implements Arrayable
         if ($head === 'system' && $rest !== '') {
             [$systemKey, $systemRest] = $this->splitPath($rest);
             if (isset(FormSystemDerivedState::COMPUTED_KEYS[$systemKey])) {
-                $derived = (new FormSystemDerivedState($this))->get($systemKey);
+                $derived = ($this->systemDerivedState ??= new FormSystemDerivedState($this))->get($systemKey);
                 if ($derived !== null) {
                     return $systemRest === '' ? $derived : $this->descend($derived, $systemRest);
                 }
@@ -107,16 +138,19 @@ class FormState implements Arrayable
     public function setField(string $key, mixed $value): void
     {
         $this->values[$key] = $value;
+        $this->getCache = [];
     }
 
     public function setVariable(string $key, mixed $value): void
     {
         $this->values[$key] = $value;
+        $this->getCache = [];
     }
 
     public function setSystem(string $key, mixed $value): void
     {
         $this->system[$key] = $value;
+        $this->getCache = [];
     }
 
     public function setFieldHidden(string $fieldKey, bool $hidden): void
@@ -172,13 +206,15 @@ class FormState implements Arrayable
         $this->stepApplicable[$stepKey] = $applicable;
     }
 
+    private ?FormStepApplicability $stepApplicabilityHelper = null;
+
     public function isStepApplicable(string $stepKey): bool
     {
         // Migratie-stap: gemigreerde stappen komen uit FormStepApplicability
         // (pure-functioneel). Bij `null` valt 't door naar de oude
         // bag (die de engine + handgeschreven rules nog kunnen vullen).
         if (isset(FormStepApplicability::COMPUTED_STEPS[$stepKey])) {
-            $derived = (new FormStepApplicability($this))->get($stepKey);
+            $derived = ($this->stepApplicabilityHelper ??= new FormStepApplicability($this))->get($stepKey);
             if ($derived !== null) {
                 return $derived;
             }
@@ -219,6 +255,7 @@ class FormState implements Arrayable
     public function absorbFields(array $data): void
     {
         $this->values = array_replace($this->values, $data);
+        $this->getCache = [];
     }
 
     /**
@@ -229,6 +266,7 @@ class FormState implements Arrayable
     public function absorbVariables(array $values): void
     {
         $this->values = array_replace($this->values, $values);
+        $this->getCache = [];
     }
 
     /** @return array<string, mixed> */
