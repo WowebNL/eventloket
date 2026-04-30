@@ -169,7 +169,9 @@ class EventFormPage extends Page implements HasForms
             return;
         }
 
+        $t0 = microtime(true);
         $this->state->absorbFields($this->data ?? []);
+        $t1 = microtime(true);
 
         // Scoped evaluatie: run alleen rules die triggers hebben op de
         // huidige stap. Van ~144 naar typisch <10 rules per klik.
@@ -180,11 +182,21 @@ class EventFormPage extends Page implements HasForms
             // Fallback bij onbekende step (eerste load): globale pass.
             app(RulesEngine::class)->evaluate($this->state);
         }
+        $t2 = microtime(true);
 
         // Throttle draft-save: minimaal 10s tussen schrijfacties. Sla altijd
         // de in-memory snapshot op zodat hydratie werkt; de DB-write gaat
         // throttled.
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
+        $t3 = microtime(true);
+
+        \Log::debug('updated() timing', [
+            'property' => $propertyName,
+            'absorb_ms' => round(($t1 - $t0) * 1000, 1),
+            'rules_ms' => round(($t2 - $t1) * 1000, 1),
+            'snapshot_ms' => round(($t3 - $t2) * 1000, 1),
+            'total_ms' => round(($t3 - $t0) * 1000, 1),
+        ]);
 
         $now = time();
         if ($now - $this->lastDraftSaveAt < 10) {

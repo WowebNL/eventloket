@@ -25,13 +25,59 @@ class ServiceFetcher
         private readonly EventsCheckService $eventsService,
     ) {}
 
+    /**
+     * Per-state cache: voorkomt dat de fetch-rules bij elke
+     * Livewire-roundtrip opnieuw dezelfde DB-queries +
+     * intersect-calculations doen. Gekenmerkt op een hash van de
+     * relevante input — verandert input → cache-miss → opnieuw fetchen.
+     *
+     * @var \WeakMap<FormState, array<string, string>>
+     */
+    private \WeakMap $inputHashByState;
+
     public function fetch(string $variable, FormState $state): void
     {
+        $this->inputHashByState ??= new \WeakMap;
+        $hashes = $this->inputHashByState[$state] ?? [];
+
+        $newHash = $this->inputHashFor($variable, $state);
+        if ($newHash !== null && ($hashes[$variable] ?? null) === $newHash) {
+            return; // input ongewijzigd → resultaat staat al in state
+        }
+
         match ($variable) {
             'eventloketSession' => $this->fetchEventloketSession($state),
             'gemeenteVariabelen' => $this->fetchGemeenteVariabelen($state),
             'evenementenInDeGemeente' => $this->fetchEvenementenInDeGemeente($state),
             'inGemeentenResponse' => $this->fetchInGemeentenResponse($state),
+            default => null,
+        };
+
+        if ($newHash !== null) {
+            $hashes[$variable] = $newHash;
+            $this->inputHashByState[$state] = $hashes;
+        }
+    }
+
+    /**
+     * Hash van de inputs die deze fetch-variant beïnvloeden. Twee
+     * roundtrips met dezelfde hash hoeven niet opnieuw te fetchen.
+     */
+    private function inputHashFor(string $variable, FormState $state): ?string
+    {
+        return match ($variable) {
+            'eventloketSession' => null, // gebeurt 1× bij mount, geen cache nodig
+            'gemeenteVariabelen' => sha1((string) $state->get('evenementInGemeente.brk_identification')),
+            'evenementenInDeGemeente' => sha1(implode('|', [
+                (string) $state->get('EvenementStart'),
+                (string) $state->get('EvenementEind'),
+                (string) $state->get('evenementInGemeente.brk_identification'),
+            ])),
+            'inGemeentenResponse' => sha1((string) json_encode([
+                'p' => $state->get('locatieSOpKaart'),
+                'l' => $state->get('routesOpKaart'),
+                'a' => $state->get('adresVanDeGebouwEn'),
+            ])),
             default => null,
         };
     }
