@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\EventForm\Transpiler;
+namespace App\EventForm\Support;
 
 use App\EventForm\State\FormState;
 

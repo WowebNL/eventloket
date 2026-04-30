@@ -6,7 +6,7 @@ namespace App\EventForm\Rules;
 
 use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
-use App\EventForm\Transpiler\JsTruthy;
+use App\EventForm\Support\JsTruthy;
 
 /**
  * @openforms-rule-uuid 599a6cfd-7ea4-4c68-b011-c1f590286daf

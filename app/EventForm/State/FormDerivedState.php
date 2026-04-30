@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\State;
 
-use App\EventForm\Transpiler\JsTruthy;
+use App\EventForm\Support\JsTruthy;
 
 /**
  * Pure-functions-class voor afgeleide variabelen. Vervangt stuk voor

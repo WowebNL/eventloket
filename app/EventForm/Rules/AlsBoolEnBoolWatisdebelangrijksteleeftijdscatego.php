@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Rules;
 
 use App\EventForm\State\FormState;
-use App\EventForm\Transpiler\JsTruthy;
+use App\EventForm\Support\JsTruthy;
 
 /**
  * @openforms-rule-uuid 55ce8acd-f972-417d-8920-64c8b0744e14

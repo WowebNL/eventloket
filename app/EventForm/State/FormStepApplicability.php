@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\EventForm\State;
 
-use App\EventForm\Transpiler\JsTruthy;
-use App\EventForm\Transpiler\MapContext;
-
 /**
  * Pure-functions-class voor stap-zichtbaarheid. Gegenereerd uit de
  * 144 transpiled rule-files via dev-scripts/generate-step-applicability.php.
@@ -31,7 +28,7 @@ final class FormStepApplicability
 
     // === GEGENEREERD via dev-scripts/generate-step-applicability.php ===
     // Aantal stappen met applicability-rules: 10
-    
+
     /** @var array<string, true> */
     public const COMPUTED_STEPS = [
         '5f986f16-6a3a-4066-9383-d71f09877f47' => true,
@@ -45,11 +42,11 @@ final class FormStepApplicability
         'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e' => true,
         'f4e91db5-fd74-4eba-b818-96ed2cc07d84' => true,
     ];
-    
+
     public function get(string $stepUuid): ?bool
     {
         $s = $this->state;
-    
+
         return match ($stepUuid) {
             '5f986f16-6a3a-4066-9383-d71f09877f47' => (function () use ($s): ?bool {
                 // OF-rules:
@@ -58,6 +55,7 @@ final class FormStepApplicability
                 if ((($s->get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Nee') || ($s->get('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen') === 'Nee') || ($s->get('WordtErAlleenMuziekGeluidGeproduceerdTussen') === 'Nee') || ($s->get('IsdeGeluidsproductieLagerDan') === 'Nee') || ($s->get('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten') === 'Nee') || ($s->get('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst') === 'Nee') || ($s->get('indienErObjectenGeplaatstWordenZijnDezeDanKleiner') === 'Nee') || ($s->get('meldingvraag1') === 'Nee') || ($s->get('meldingvraag2') === 'Nee') || ($s->get('meldingvraag3') === 'Nee') || ($s->get('meldingvraag4') === 'Nee') || ($s->get('meldingvraag5') === 'Nee') || ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Ja')) || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             '661aabb7-e927-4a75-8d95-0a665c5d83fe' => (function () use ($s): ?bool {
@@ -82,6 +80,7 @@ final class FormStepApplicability
                 if (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging') || ($s->get('kruisAanWatVanToepassingIsVoorUwEvenementX.') === true)) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             '6e285ace-f891-4324-b54e-639c1cfff9fa' => (function () use ($s): ?bool {
@@ -103,6 +102,7 @@ final class FormStepApplicability
                 if (($s->get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A45') === true) || ($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99' => (function () use ($s): ?bool {
@@ -117,6 +117,7 @@ final class FormStepApplicability
                 if (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             'ae44ab5b-c068-4ceb-b121-6e6907f78ef9' => (function () use ($s): ?bool {
@@ -126,6 +127,7 @@ final class FormStepApplicability
                 if (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             'c75cc256-6729-4684-9f9b-ede6265b3e72' => (function () use ($s): ?bool {
@@ -135,6 +137,7 @@ final class FormStepApplicability
                 if (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             'd790edb5-712a-4f83-87a8-1a86e4831455' => (function () use ($s): ?bool {
@@ -155,6 +158,7 @@ final class FormStepApplicability
                 if (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             'd87c01ce-8387-43b0-a8c8-e6cf5abb6da1' => (function () use ($s): ?bool {
@@ -163,6 +167,7 @@ final class FormStepApplicability
                 if (($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e' => (function () use ($s): ?bool {
@@ -179,6 +184,7 @@ final class FormStepApplicability
                 if (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             'f4e91db5-fd74-4eba-b818-96ed2cc07d84' => (function () use ($s): ?bool {
@@ -201,6 +207,7 @@ final class FormStepApplicability
                 if (($s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') || ($s->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging')) {
                     return false; // not applicable
                 }
+
                 return null; // door-fall: default applicable
             })(),
             default => null,

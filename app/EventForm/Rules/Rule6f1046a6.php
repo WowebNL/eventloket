@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Rules;
 
 use App\EventForm\State\FormState;
-use App\EventForm\Transpiler\MapContext;
+use App\EventForm\Support\MapContext;
 
 /**
  * @openforms-rule-uuid 6f1046a6-7866-491b-b87d-65bd67aade6f
@@ -47,7 +47,7 @@ final class Rule6f1046a6 implements Rule
                 })(MapContext::from($s, $__item));
             }
 
-return $__result;
+            return $__result;
         })()));
         $s->setVariable('evenementInGemeentenLijst', ((function () use ($s) {
             $__items = $s->get('inGemeentenResponse.all.items');
@@ -60,7 +60,7 @@ return $__result;
                 })(MapContext::from($s, $__item));
             }
 
-return $__result;
+            return $__result;
         })()));
         $s->setVariable('binnenVeiligheidsregio', $s->get('inGemeentenResponse.all.within'));
         $s->setVariable('gemeenten', $s->get('inGemeentenResponse.all.object'));
@@ -75,7 +75,7 @@ return $__result;
                 })(MapContext::from($s, $__item));
             }
 
-return $__result;
+            return $__result;
         })()));
     }
 }
