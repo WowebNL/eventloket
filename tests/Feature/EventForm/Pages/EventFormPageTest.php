@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormPage;
+use App\Models\Municipality;
+use App\Models\MunicipalityVariable;
 use App\Models\Organisation;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -137,15 +140,15 @@ test('na adres-invul → gemeenteVariabelen wordt automatisch gefetched (label-p
     // inGemeentenResponse-fetch ook gemeenteVariabelen + evenementen-
     // overlap fetchen.
 
-    $muni = \App\Models\Municipality::firstOrCreate(
+    $muni = Municipality::firstOrCreate(
         ['brk_identification' => 'GM0917'],
         ['name' => 'Heerlen'],
     );
-    \App\Models\MunicipalityVariable::factory()->create([
+    MunicipalityVariable::factory()->create([
         'municipality_id' => $muni->id,
         'key' => 'aanwezigen',
         'value' => 500,
-        'type' => \App\Enums\MunicipalityVariableType::Number,
+        'type' => MunicipalityVariableType::Number,
     ]);
 
     $component = Livewire::test(EventFormPage::class);

@@ -136,6 +136,54 @@ test('isVergunningaanvraag — alle scan-vragen Ja, wegen Nee → null (= geen v
     ]))->toBeNull();
 });
 
+test('isVergunningaanvraag — nieuw systeem: één Nee op actieve reportQuestion → vergunning', function () {
+    expect(derive('isVergunningaanvraag', [
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                ['id' => 2, 'order' => 2, 'question' => 'Vraag 2'],
+                ['id' => 3, 'order' => 3, 'question' => 'Vraag 3'],
+            ],
+        ],
+        'reportQuestion_1' => 'Ja',
+        'reportQuestion_2' => 'Nee', // → vergunning
+        'reportQuestion_3' => 'Ja',
+    ]))->toBeTrue();
+});
+
+test('isVergunningaanvraag — nieuw systeem: alle actieve reportQuestions Ja → null (= melding)', function () {
+    expect(derive('isVergunningaanvraag', [
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                ['id' => 2, 'order' => 2, 'question' => 'Vraag 2'],
+            ],
+        ],
+        'reportQuestion_1' => 'Ja',
+        'reportQuestion_2' => 'Ja',
+    ]))->toBeNull();
+});
+
+test('isVergunningaanvraag — nieuw systeem actief negeert legacy keys', function () {
+    // Bewijst dat 't oude pad echt niet aanslaat zodra het nieuwe systeem
+    // actief is — anders zou een latente legacy-veldwaarde alsnog
+    // vergunningaanvraag triggeren.
+    expect(derive('isVergunningaanvraag', [
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+            ],
+        ],
+        'reportQuestion_1' => 'Ja',
+        // Legacy-velden nog gevuld uit een eerdere flow:
+        'meldingvraag1' => 'Nee',
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]))->toBeNull();
+});
+
 test('risicoClassificatie — som ≤ 6 → A', function () {
     expect(derive('risicoClassificatie', [
         'watIsDeAantrekkingskrachtVanHetEvenement' => '0.5',

@@ -244,9 +244,16 @@ final class FormDerivedState
 
     /**
      * Aanvraag wordt een vergunning (i.p.v. een lichtere melding) als de
-     * organisator op één van de 12 scan-vragen "Nee" antwoordt OF
-     * "wegen afsluiten" op "Ja" zet. OF gebruikte een rule die deze
-     * vlag zette; wij maken er een pure-functionele afgeleide van.
+     * organisator op één van de scan-vragen "Nee" antwoordt OF op de
+     * wegen-afsluiten-vraag "Ja". Twee paden door dezelfde semantiek:
+     *
+     *   - Oud systeem (`use_new_report_questions === false`):
+     *     12 hardcoded `SCAN_VRAGEN_NEE`-keys + de aparte
+     *     `wordenErGebiedsontsluitingswegen…`-radio.
+     *
+     *   - Nieuw ReportQuestion-systeem (origin/main PR #327):
+     *     dynamische `reportQuestion_1..N`-radios. Eén 'Nee' op een
+     *     actieve vraag → vergunning.
      *
      * OF-rule 87482f34-1e1f-4853-b2da-312c9b2cebf0
      * → `setVariable('isVergunningaanvraag', true)` als één van de
@@ -258,6 +265,23 @@ final class FormDerivedState
      */
     public function isVergunningaanvraag(): ?bool
     {
+        // Nieuw systeem heeft voorrang wanneer de gemeente er naar
+        // overgeschakeld is.
+        if ($this->state->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            $questions = $this->state->get('gemeenteVariabelen.report_questions');
+            if (is_array($questions)) {
+                foreach ($questions as $index => $_question) {
+                    $position = (int) $index + 1;
+                    if ($this->state->get(sprintf('reportQuestion_%d', $position)) === 'Nee') {
+                        return true;
+                    }
+                }
+            }
+
+            return null; // geen 'Nee' → val door, JsTruthy = false
+        }
+
+        // Oud systeem: hardcoded scan-vragen + aparte wegen-vraag.
         foreach (self::SCAN_VRAGEN_NEE as $key) {
             if ($this->state->get($key) === 'Nee') {
                 return true;

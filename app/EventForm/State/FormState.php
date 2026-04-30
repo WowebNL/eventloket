@@ -166,6 +166,33 @@ class FormState implements Arrayable
             return true; // geen rules → default applicable
         }
 
+        // Nieuw ReportQuestion-systeem: de bestaande FormStepApplicability-
+        // logica leunt op legacy-keys (`wordenErGebiedsontsluitings…`,
+        // `meldingvraag1..5` etc.) die in het nieuwe systeem niet
+        // ingevuld worden. Voor de melding-stap + de 10 vergunning-
+        // stappen overrulen we 't via de afgeleide `isVergunningaanvraag`.
+        if ($this->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            $isVergunning = $this->get('isVergunningaanvraag') === true;
+
+            if ($stepKey === '5f986f16-6a3a-4066-9383-d71f09877f47') {
+                // MeldingStep: niet applicable bij vergunning-aanvraag.
+                return ! $isVergunning;
+            }
+
+            if (in_array($stepKey, [
+                '661aabb7-e927-4a75-8d95-0a665c5d83fe', // VergunningaanvraagVervolgvragenStep
+                '6e285ace-f891-4324-b54e-639c1cfff9fa', // VergunningsaanvraagExtraActiviteitenStep
+                '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99', // VergunningaanvraagMaatregelenStep
+                'ae44ab5b-c068-4ceb-b121-6e6907f78ef9', // Vragenboom2Step
+                'c75cc256-6729-4684-9f9b-ede6265b3e72', // RisicoscanStep
+                'd790edb5-712a-4f83-87a8-1a86e4831455', // VergunningsaanvraagVoorwerpenStep
+                'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e', // VergunningaanvraagOverigStep
+                'f4e91db5-fd74-4eba-b818-96ed2cc07d84', // VergunningsaanvraagVoorzieningenStep
+            ], true) && ! $isVergunning) {
+                return false; // melding-pad: vergunning-stappen niet applicable
+            }
+        }
+
         $derived = ($this->stepApplicabilityHelper ??= new FormStepApplicability($this))->get($stepKey);
 
         return $derived ?? true; // null uit get() = geen mening = default applicable

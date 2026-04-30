@@ -84,6 +84,59 @@ describe('FormState', function () {
         expect($state->isStepApplicable('risicoscan'))->toBeTrue();
     });
 
+    test('nieuw ReportQuestion-systeem: MeldingStep niet applicable bij vergunning-aanvraag', function () {
+        // Eén Nee op een actieve reportQuestion → isVergunningaanvraag = true
+        // → MeldingStep mag niet getoond worden.
+        $state = new FormState(values: [
+            'gemeenteVariabelen' => [
+                'use_new_report_questions' => true,
+                'report_questions' => [
+                    ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                ],
+            ],
+            'reportQuestion_1' => 'Nee',
+        ]);
+
+        // 5f986f16-… = MeldingStep::UUID
+        expect($state->isStepApplicable('5f986f16-6a3a-4066-9383-d71f09877f47'))->toBeFalse();
+    });
+
+    test('nieuw ReportQuestion-systeem: vergunning-stappen niet applicable bij melding', function () {
+        // Alle reportQuestions Ja → melding → vergunning-stappen overslaan.
+        $state = new FormState(values: [
+            'gemeenteVariabelen' => [
+                'use_new_report_questions' => true,
+                'report_questions' => [
+                    ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                    ['id' => 2, 'order' => 2, 'question' => 'Vraag 2'],
+                ],
+            ],
+            'reportQuestion_1' => 'Ja',
+            'reportQuestion_2' => 'Ja',
+        ]);
+
+        // 661aabb7-… = VergunningaanvraagVervolgvragenStep
+        expect($state->isStepApplicable('661aabb7-e927-4a75-8d95-0a665c5d83fe'))->toBeFalse()
+            // 5f986f16-… = MeldingStep is wél applicable (melding-pad)
+            ->and($state->isStepApplicable('5f986f16-6a3a-4066-9383-d71f09877f47'))->toBeTrue();
+    });
+
+    test('nieuw ReportQuestion-systeem: zonder antwoorden zijn alle stappen applicable', function () {
+        // Gebruiker heeft nog niets ingevuld op de scan → niets gespecified
+        // → val terug op default applicable.
+        $state = new FormState(values: [
+            'gemeenteVariabelen' => [
+                'use_new_report_questions' => true,
+                'report_questions' => [
+                    ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                ],
+            ],
+        ]);
+
+        expect($state->isStepApplicable('5f986f16-6a3a-4066-9383-d71f09877f47'))->toBeTrue()
+            ->and($state->isStepApplicable('661aabb7-e927-4a75-8d95-0a665c5d83fe'))->toBeFalse();
+    });
+
     test('snapshot round-trips through fromSnapshot', function () {
         $state = FormState::empty();
         $state->setField('soortEvenement', 'Markt of braderie');

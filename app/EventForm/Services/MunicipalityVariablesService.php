@@ -52,6 +52,12 @@ class MunicipalityVariablesService
      * Dezelfde set, maar geplat als key → value map — handig voor direct
      * gebruik als `gemeenteVariabelen` variable in de FormState.
      *
+     * Wanneer `use_new_report_questions === true` voegen we ook de
+     * actieve ReportQuestion-records toe onder `report_questions`
+     * (gesorteerd op `order`), plus de toggle zelf zodat het formulier
+     * kan beslissen welke variant van de meldingvragen-cascade 'ie
+     * rendert.
+     *
      * @return array<string, mixed>
      */
     public function forMunicipalityAsKeyValue(Municipality $municipality): array
@@ -59,6 +65,23 @@ class MunicipalityVariablesService
         $map = [];
         foreach ($this->forMunicipality($municipality) as $entry) {
             $map[$entry['key']] = $entry['value'];
+        }
+
+        $map['use_new_report_questions'] = (bool) $municipality->use_new_report_questions;
+        if ($municipality->use_new_report_questions) {
+            $map['report_questions'] = $municipality
+                ->reportQuestions()
+                ->where('is_active', true)
+                ->orderBy('order')
+                ->get()
+                ->map(fn ($q): array => [
+                    'id' => (int) $q->id,
+                    'order' => (int) $q->order,
+                    'question' => (string) $q->question,
+                ])
+                ->all();
+        } else {
+            $map['report_questions'] = [];
         }
 
         return $map;
