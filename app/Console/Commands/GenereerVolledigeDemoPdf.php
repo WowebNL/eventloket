@@ -222,17 +222,13 @@ class GenereerVolledigeDemoPdf extends Command
 
         return match (true) {
             // E-mail-velden krijgen een geldig adres
-            str_contains(strtolower($key), 'email') || str_contains(strtolower($key), 'mailadres')
-                => 'eva@stadsfestival.nl',
+            str_contains(strtolower($key), 'email') || str_contains(strtolower($key), 'mailadres') => 'eva@stadsfestival.nl',
             // Telefoon
-            str_contains(strtolower($key), 'telefoon') || str_contains(strtolower($key), 'phone')
-                => '06-12345678',
+            str_contains(strtolower($key), 'telefoon') || str_contains(strtolower($key), 'phone') => '06-12345678',
             // KvK
-            str_contains(strtolower($key), 'kamervankoophandel') || str_contains(strtolower($key), 'kvk')
-                => '12345678',
+            str_contains(strtolower($key), 'kamervankoophandel') || str_contains(strtolower($key), 'kvk') => '12345678',
             // Postcode
-            str_ends_with($key, 'postcode') || str_contains(strtolower($key), 'postcode')
-                => '6411CD',
+            str_ends_with($key, 'postcode') || str_contains(strtolower($key), 'postcode') => '6411CD',
             // Huisnummer
             str_ends_with($key, 'huisnummer') => '1',
             $component instanceof DateTimePicker => '2026-08-15T16:00',

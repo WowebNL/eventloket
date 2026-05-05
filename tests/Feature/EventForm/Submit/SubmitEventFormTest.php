@@ -161,17 +161,19 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     // 4. Draft is leeggemaakt.
     expect(Draft::where('user_id', $sc['user']->id)->count())->toBe(0);
 
-    // 5. De 5 ZGW-jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    // 5. De 6 jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    //    Hash staat als laatste zodat ZGW-jobs nooit op gehashte data draaien.
     Bus::assertChained([
         AddZaakeigenschappenZGW::class,
         AddEinddatumZGW::class,
         UpdateInitiatorZGW::class,
         AddGeometryZGW::class,
         CreateDoorkomstZaken::class,
+        HashIdentifyingAttributes::class,
     ]);
 
-    // 6. PDF, bijlagen-upload, hash draaien onafhankelijk (niet in de
-    //    ketting) zodat ze bij een faal van een ZGW-job niet mee-vallen.
+    // 6. PDF en bijlagen-upload draaien onafhankelijk (niet in de ketting)
+    //    zodat ze bij een faal van een ZGW-job niet mee-vallen.
     //    De PDF-job dispatcht zelf UploadSubmissionPdfToZGW na de write,
     //    dus die toetsen we daar.
     Bus::assertDispatched(GenerateSubmissionPdf::class,
@@ -180,9 +182,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     Bus::assertDispatched(UploadFormBijlagenToZGW::class,
         fn (UploadFormBijlagenToZGW $job) => $job->zaak->is($zaak)
     );
-    Bus::assertDispatched(HashIdentifyingAttributes::class,
-        fn (HashIdentifyingAttributes $job) => $job->zaak->is($zaak)
-    );
+    Bus::assertNotDispatched(HashIdentifyingAttributes::class);
 });
 
 test('geen gemeente in state → runtime-exception, géén lokale Zaak aangemaakt', function () {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Template;
 
 use App\EventForm\State\FormState;
+use Carbon\Carbon;
 
 /**
  * Rendert labels en content-blokken met Jinja2-achtige syntax uit OF:
@@ -308,7 +309,7 @@ class LabelRenderer
     private function humanizeIsoDateTime(string $value): string
     {
         try {
-            return \Carbon\Carbon::parse($value, 'Europe/Amsterdam')
+            return Carbon::parse($value, 'Europe/Amsterdam')
                 ->translatedFormat('j F Y · H:i');
         } catch (\Throwable) {
             return $value;

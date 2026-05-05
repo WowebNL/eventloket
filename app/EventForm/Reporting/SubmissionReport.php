@@ -18,6 +18,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use ReflectionObject;
 
 /**
@@ -357,9 +359,9 @@ final class SubmissionReport
         // op dezelfde tegel niet 2× downloadt.
         $cacheKey = 'osm-tile:'.sha1($url);
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 3600, function () use ($url): ?string {
+        return Cache::remember($cacheKey, 3600, function () use ($url): ?string {
             try {
-                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                $response = Http::withHeaders([
                     'User-Agent' => 'Eventloket/1.0 (PDF-render; admin@veiligheidsregiozl.nl)',
                 ])->timeout(8)->get($url);
 
