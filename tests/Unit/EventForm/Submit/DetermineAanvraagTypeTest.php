@@ -66,3 +66,69 @@ test('volledig lege FormState → evenementenvergunning (OF-default)', function 
 
     expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
 });
+
+test('nieuw systeem: alle vragen "Ja" → melding', function () {
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['question' => 'Vraag 1'],
+                ['question' => 'Vraag 2'],
+            ],
+        ],
+        'reportQuestion_1' => 'Ja',
+        'reportQuestion_2' => 'Ja',
+    ]);
+
+    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::MELDING);
+});
+
+test('nieuw systeem: één vraag "Nee" → vergunning', function () {
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['question' => 'Vraag 1'],
+                ['question' => 'Vraag 2'],
+            ],
+        ],
+        'reportQuestion_1' => 'Ja',
+        'reportQuestion_2' => 'Nee',
+    ]);
+
+    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+});
+
+test('nieuw systeem: niet alle vragen beantwoord → vergunning (veilige default)', function () {
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['question' => 'Vraag 1'],
+                ['question' => 'Vraag 2'],
+            ],
+        ],
+        'reportQuestion_1' => 'Ja',
+        // reportQuestion_2 niet ingevuld
+    ]);
+
+    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+});
+
+test('nieuw systeem: vooraankondiging wint ook boven alle "Ja" antwoorden', function () {
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['question' => 'Vraag 1'],
+            ],
+        ],
+        'reportQuestion_1' => 'Ja',
+    ]);
+
+    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VOORAANKONDIGING);
+});

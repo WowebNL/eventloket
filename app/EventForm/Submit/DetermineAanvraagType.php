@@ -43,6 +43,23 @@ final class DetermineAanvraagType
             return self::VOORAANKONDIGING;
         }
 
+        // Nieuw ReportQuestion-systeem: alle actieve vragen met 'Ja' beantwoord → melding.
+        if ($state->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            $questions = $state->get('gemeenteVariabelen.report_questions');
+            if (is_array($questions) && count($questions) > 0) {
+                foreach ($questions as $index => $_question) {
+                    $position = (int) $index + 1;
+                    if ($state->get(sprintf('reportQuestion_%d', $position)) !== 'Ja') {
+                        return self::VERGUNNING;
+                    }
+                }
+
+                return self::MELDING;
+            }
+
+            return self::VERGUNNING;
+        }
+
         if ($state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') {
             return self::MELDING;
         }

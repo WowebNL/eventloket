@@ -99,6 +99,22 @@ final class FormSystemDerivedState
         if ($this->state->get('isVergunningaanvraag') === true) {
             return 'vergunning';
         }
+        // Nieuw ReportQuestion-systeem: alle actieve vragen met 'Ja' beantwoord → melding.
+        if ($this->state->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            $questions = $this->state->get('gemeenteVariabelen.report_questions');
+            if (is_array($questions) && count($questions) > 0) {
+                foreach ($questions as $index => $_question) {
+                    $position = (int) $index + 1;
+                    if ($this->state->get(sprintf('reportQuestion_%d', $position)) !== 'Ja') {
+                        return null; // niet alle vragen beantwoord
+                    }
+                }
+
+                return 'melding';
+            }
+
+            return null;
+        }
         if ($this->state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') {
             return 'melding';
         }
