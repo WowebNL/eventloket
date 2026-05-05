@@ -35,6 +35,12 @@ class AddGeometryZGW implements ShouldQueue
         ZaakeigenschappenMap $map,
         EventLocationGeometryBuilder $geometryBuilder,
     ): void {
+
+        if(str_contains($this->zaak->zgw_zaak_url, 'https://zaken.preprod-rx-services.nl/')) {
+            // rx mission gives a http 500 response when patch the zaak witch geometryCollection as zaakgeometrie, skip this for now
+            return;
+        }
+
         if (! $this->zaak->zgw_zaak_url) {
             return;
         }
