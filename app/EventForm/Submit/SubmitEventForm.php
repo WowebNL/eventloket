@@ -15,6 +15,7 @@ use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
+use App\Jobs\Zaak\SetInitialStatusZGW;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
@@ -36,6 +37,7 @@ use Illuminate\Support\Facades\Log;
  *   5. Audit-log-entry
  *
  * Async (queue, in dispatch-volgorde):
+ *   - SetInitialStatusZGW  (statustype volgnummer 1 zetten)
  *   - AddZaakeigenschappenZGW
  *   - AddEinddatumZGW
  *   - UpdateInitiatorZGW
@@ -104,6 +106,7 @@ final class SubmitEventForm
     private function dispatchAsyncChain(Zaak $zaak): void
     {
         Bus::chain([
+            new SetInitialStatusZGW($zaak),
             new AddZaakeigenschappenZGW($zaak),
             new AddEinddatumZGW($zaak),
             new UpdateInitiatorZGW($zaak),

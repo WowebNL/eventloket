@@ -10,7 +10,7 @@
  *   - CreateLocalZaak   (rij in `zaken`-tabel)
  *   - DraftStore::clear()
  *   - Audit-log regel
- *   - Async dispatch van 5 ZGW-jobs + PDF + hash
+ *   - Async dispatch van 6 ZGW-jobs + PDF + bijlagen
  *
  * De test fake't alle HTTP-calls naar OpenZaak zodat er geen echte
  * OpenZaak-container nodig is. Laravel's Bus/Queue/Log/Http/Storage
@@ -34,6 +34,7 @@ use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
+use App\Jobs\Zaak\SetInitialStatusZGW;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Models\Municipality;
 use App\Models\Organisation;
@@ -161,9 +162,11 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     // 4. Draft is leeggemaakt.
     expect(Draft::where('user_id', $sc['user']->id)->count())->toBe(0);
 
-    // 5. De 6 jobs zitten samen in één Bus::chain() in de juiste volgorde.
-    //    Hash staat als laatste zodat ZGW-jobs nooit op gehashte data draaien.
+    // 5. De 7 jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    //    SetInitialStatusZGW staat als eerste; Hash als laatste zodat ZGW-jobs
+    //    nooit op gehashte data draaien.
     Bus::assertChained([
+        SetInitialStatusZGW::class,
         AddZaakeigenschappenZGW::class,
         AddEinddatumZGW::class,
         UpdateInitiatorZGW::class,
