@@ -5,14 +5,9 @@ namespace App\Providers;
 use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Auth\CaseInsensitiveUserProvider;
 use App\Console\Commands\SyncZaaktypen;
+use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
-use App\Jobs\Zaak\AddEinddatumZGW;
-use App\Jobs\Zaak\AddGeometryZGW;
-use App\Jobs\Zaak\AddZaakeigenschappenZGW;
-use App\Jobs\Zaak\CreateDoorkomstZaken;
-use App\Jobs\Zaak\CreateZaak;
-use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Models\Export;
 use App\Models\Import;
 use App\Support\CarbonBusinessDaysMixin;
@@ -31,7 +26,6 @@ use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
-use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
 
 class AppServiceProvider extends ServiceProvider
@@ -58,6 +52,12 @@ class AppServiceProvider extends ServiceProvider
             \Filament\Actions\Imports\Models\Import::class,
             Import::class
         );
+
+        // LabelRenderer cachet template-output per FormState-version.
+        // Singleton zodat dezelfde instance gebruikt wordt over ALLE
+        // schema-component-renders — anders zou de WeakMap-cache leeg
+        // zijn bij elke Filament-resolution.
+        $this->app->singleton(LabelRenderer::class);
     }
 
     /**
@@ -112,13 +112,12 @@ class AppServiceProvider extends ServiceProvider
 
     private function bindCustomMethods(): void
     {
+        // ProcessOpenNotification blijft voor OpenZaak-notificaties (status,
+        // besluit, document). De ZGW-jobs hieronder lezen in de nieuwe flow
+        // hun input uit de lokale `Zaak` (via Laravel's SerializesModels),
+        // dus ze hebben geen ObjectsApi-argument meer nodig; de container
+        // regelt de Openzaak-injection via standaard method-resolution.
         $this->app->bindMethod([ProcessOpenNotification::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), typeProcessor: app(GetIncommingNotificationType::class)));
-        $this->app->bindMethod([AddZaakeigenschappenZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
-        $this->app->bindMethod([UpdateInitiatorZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
-        $this->app->bindMethod([CreateZaak::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
-        $this->app->bindMethod([CreateDoorkomstZaken::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
-        $this->app->bindMethod([AddGeometryZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), objectsapi: app(ObjectsApi::class)));
-        $this->app->bindMethod([AddEinddatumZGW::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class)));
 
         $this->app->bindMethod([SyncZaaktypen::class, 'handle'], fn ($command) => $command->handle(app(Openzaak::class)));
     }

@@ -1,64 +1,76 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs\Zaak;
 
-use App\ValueObjects\ObjectsApi\FormSubmissionObject;
+use App\EventForm\State\FormState;
+use App\EventForm\Submit\EventLocationGeometryBuilder;
+use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Models\Zaak;
 use App\ValueObjects\OzZaak;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\ObjectsApi;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Woweb\Openzaak\Openzaak;
 
+/**
+ * Schrijft de zaakgeometrie (line/polygons/adres-punten) op de ZGW-zaak
+ * en registreert BAG-adressen als zaakobjecten type=`adres`.
+ *
+ * Input is nu de lokale `Zaak`; de event_location-array komt uit
+ * `form_state_snapshot` via `ZaakeigenschappenMap`. Als er al een
+ * geometrie op de ZGW-zaak staat, doen we niets.
+ */
 class AddGeometryZGW implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(private string $zaakUrlZGW) {}
+    public function __construct(public readonly Zaak $zaak) {}
 
-    /**
-     * Execute the job.
-     */
-    public function handle(Openzaak $openzaak, ObjectsApi $objectsapi): void
-    {
-        $zaak = new OzZaak(...$openzaak->get($this->zaakUrlZGW.'?expand=zaakobjecten,eigenschappen')->toArray());
-        if ($zaak->zaakgeometrie) {
-            return; // geometry already exists
+    public function handle(
+        Openzaak $openzaak,
+        ZaakeigenschappenMap $map,
+        EventLocationGeometryBuilder $geometryBuilder,
+    ): void {
+        if (! $this->zaak->zgw_zaak_url) {
+            return;
         }
 
-        $formSubmissionObject = new FormSubmissionObject(...$objectsapi->get(basename($zaak->data_object_url))->toArray());
-        $geoJson = $formSubmissionObject->getFormattedEventLocation();
-        $zaakEventAddresses = $formSubmissionObject->zaakEventAddresses; // note this needs refactoring, variable zaakEventAddresses is filled in previous called method getFormattedEventLocation()
+        $ozZaak = new OzZaak(...$openzaak->get($this->zaak->zgw_zaak_url)->toArray());
+        if ($ozZaak->zaakgeometrie) {
+            return;
+        }
 
+        $state = FormState::fromSnapshot($this->zaak->form_state_snapshot ?? []);
+        $eventLocation = $map->buildEventLocation($state);
+        if ($eventLocation === []) {
+            return;
+        }
+
+        $geoJson = $geometryBuilder->buildGeoJson($eventLocation);
         if ($geoJson) {
-            $openzaak->zaken()->zaken()->patch($zaak->uuid, [
-                'zaakgeometrie' => json_decode($geoJson, true),
+            $openzaak->zaken()->zaken()->patch($ozZaak->uuid, [
+                'zaakgeometrie' => $geoJson,
             ]);
         }
 
-        // save the adresses as zaakobjecten
-        if ($zaakEventAddresses) {
-            foreach ($zaakEventAddresses as $bagObject) {
-                $data = [
-                    'zaak' => $zaak->url,
-                    'objectType' => 'adres',
-                    'relatieomschrijving' => 'Adres van het evenement',
-                    'objectIdentificatie' => [
-                        'wplWoonplaatsNaam' => $bagObject->woonplaatsnaam,
-                        'gorOpenbareRuimteNaam' => $bagObject->id,
-                        'huisnummer' => $bagObject->huisnummer,
-                        'huisletter' => $bagObject->huisletter,
-                        'huisnummertoevoeging' => $bagObject->huisnummertoevoeging,
-                        'postcode' => $bagObject->postcode,
-                    ],
-                ];
-
-                $openzaak->zaken()->zaakobjecten()->store($data);
-            }
+        foreach ($geometryBuilder->collectedAddresses() as $bagObject) {
+            $openzaak->zaken()->zaakobjecten()->store([
+                'zaak' => $ozZaak->url,
+                'objectType' => 'adres',
+                'relatieomschrijving' => 'Adres van het evenement',
+                'objectIdentificatie' => [
+                    'wplWoonplaatsNaam' => $bagObject->woonplaatsnaam,
+                    'gorOpenbareRuimteNaam' => $bagObject->id,
+                    'huisnummer' => $bagObject->huisnummer,
+                    'huisletter' => $bagObject->huisletter,
+                    'huisnummertoevoeging' => $bagObject->huisnummertoevoeging,
+                    'postcode' => $bagObject->postcode,
+                ],
+            ]);
         }
-
     }
 }

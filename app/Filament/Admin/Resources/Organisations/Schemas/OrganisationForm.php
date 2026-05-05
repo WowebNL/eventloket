@@ -17,11 +17,7 @@ class OrganisationForm
                     ->maxLength(255),
                 TextInput::make('coc_number')
                     ->label(__('admin/resources/organisation.form.coc_number.label'))
-                    ->unique()
                     ->numeric()
-                    ->validationMessages([
-                        'unique' => __('admin/resources/organisation.form.coc_number.validation.unique'),
-                    ])
                     ->required()
                     ->length(8),
                 TextInput::make('address')

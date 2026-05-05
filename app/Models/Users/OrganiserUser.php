@@ -4,7 +4,6 @@ namespace App\Models\Users;
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
-use App\Models\FormsubmissionSession;
 use App\Models\Organisation;
 use App\Models\Traits\ScopesByRole;
 use App\Models\User;
@@ -13,7 +12,6 @@ use Filament\Models\Contracts\HasTenants;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 class OrganiserUser extends User implements FilamentUser, HasTenants
@@ -63,10 +61,5 @@ class OrganiserUser extends User implements FilamentUser, HasTenants
     public static function getRoleKey(): string
     {
         return 'users.role';
-    }
-
-    public function formsubmissionSessions(): HasMany
-    {
-        return $this->hasMany(FormsubmissionSession::class);
     }
 }
