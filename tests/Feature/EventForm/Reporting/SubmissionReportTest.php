@@ -23,6 +23,7 @@ declare(strict_types=1);
 use App\EventForm\Reporting\SubmissionReport;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
+use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\State\FormState;
 
@@ -89,7 +90,7 @@ test('Repeater-rijen worden uitgeklapt naar sub-entries in plaats van samengevat
 
     $sections = app(SubmissionReport::class)->build(
         $state,
-        [\App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step::make()],
+        [LocatieVanHetEvenement2Step::make()],
     );
 
     expect($sections)->toHaveCount(1);
@@ -138,7 +139,7 @@ test('Map-state met geojson levert een SVG mee in de entry', function () {
 
     $sections = app(SubmissionReport::class)->build(
         $state,
-        [\App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step::make()],
+        [LocatieVanHetEvenement2Step::make()],
     );
 
     // Verzamel alle sub-entries (uit Repeater-rijen) + top-level entries.
