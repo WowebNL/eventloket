@@ -57,7 +57,7 @@ class OzZaak implements Arrayable
         private readonly array $_expand = [],
         ...$otherParams
     ) {
-        $this->initiator = Arr::has($this->_expand, 'rollen')
+        $this->initiator = Arr::has($this->_expand, 'rollen') && is_array($this->_expand['rollen']) && ! empty($this->_expand['rollen'])
             ? new Rol(...Arr::mapWithKeys(
                 Arr::first(Arr::where($this->_expand['rollen'], fn ($item) => strtolower($item['omschrijvingGeneriek']) === 'initiator')),
                 fn ($value, $key) => [lcfirst($key) => $value]
