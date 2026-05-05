@@ -38,6 +38,10 @@ class ZaakStatusNotificationReceived implements ShouldQueue
                 return;
             }
 
+            if ($zaak->statustype?->isReceived()) {
+                return;
+            }
+
             foreach ($zaak->organisation->users as $user) {
                 /** @var OrganiserUser $user */
                 $user->notify(new ZaakStatusChanged($zaak, $oldStatus));
