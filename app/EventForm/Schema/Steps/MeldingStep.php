@@ -6,6 +6,7 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
+use App\EventForm\State\FormState;
 use Filament\Forms\Components\Radio;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
@@ -30,7 +31,9 @@ final class MeldingStep
                     ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->live(),
-                InfoText::info('content9', '<p>{% if gemeenteVariabelen.melding_alcohol_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_alcohol_ontheffing_tekst|urlize }}</p><p>{% endif %}</p>')
+                InfoText::info('content9', fn (FormState $state) => self::renderOntheffingTekst(
+                    $state->get('gemeenteVariabelen.melding_alcohol_ontheffing_tekst'),
+                ))
                     ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('content9');
                         if ($rule !== null) {
@@ -44,7 +47,9 @@ final class MeldingStep
                     ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->live(),
-                InfoText::info('content10', '<p>{% if gemeenteVariabelen.melding_drone_ontheffing_tekst %}</p><p>{{ gemeenteVariabelen.melding_drone_ontheffing_tekst }}</p><p>{% endif %}</p>')
+                InfoText::info('content10', fn (FormState $state) => self::renderOntheffingTekst(
+                    $state->get('gemeenteVariabelen.melding_drone_ontheffing_tekst'),
+                ))
                     ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('content10');
                         if ($rule !== null) {
@@ -67,5 +72,21 @@ final class MeldingStep
                         return ! ($get('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden') === 'Ja');
                     }),
             ]);
+    }
+
+    /**
+     * Toon de gemeente-specifieke ontheffings-tekst (alcohol of drones)
+     * uit `gemeenteVariabelen` zodra die ingevuld is. Lege/null waarde →
+     * lege string zodat de alert-wrapper niet rondom een leeg blok komt.
+     * De tekst is municipality-config (geen user-input rechtstreeks),
+     * maar `e()` is gratis en dekt 't toch af.
+     */
+    private static function renderOntheffingTekst(mixed $tekst): string
+    {
+        if (! is_string($tekst) || trim($tekst) === '') {
+            return '';
+        }
+
+        return '<p>'.e($tekst).'</p>';
     }
 }

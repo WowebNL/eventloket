@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\EventForm\Components;
 
+use App\EventForm\State\FormState;
 use App\EventForm\Template\LabelRenderer;
+use Closure;
 use Filament\Infolists\Components\TextEntry;
 use Illuminate\Support\HtmlString;
 
@@ -27,27 +29,51 @@ use Illuminate\Support\HtmlString;
  */
 final class InfoText
 {
-    public static function info(string $name, string $html): TextEntry
+    /**
+     * @param  string|Closure(FormState): string  $html
+     *                                                   Statische string → wordt door LabelRenderer geïnterpoleerd
+     *                                                   (`{{ veldnaam }}`, `{% if %}`, etc.). Closure → ontvangt de
+     *                                                   FormState en moet zelf de HTML-body bouwen. Gebruik de Closure-
+     *                                                   variant zodra je conditionele lijsten / takken hebt — anders
+     *                                                   propt je hele if-elif-else-cascade als template-syntax in een
+     *                                                   string en wordt 't onleesbaar.
+     */
+    public static function info(string $name, string|Closure $html): TextEntry
     {
         return self::build($name, $html, 'info');
     }
 
-    public static function warning(string $name, string $html): TextEntry
+    /**
+     * @param  string|Closure(FormState): string  $html
+     */
+    public static function warning(string $name, string|Closure $html): TextEntry
     {
         return self::build($name, $html, 'warning');
     }
 
-    private static function build(string $name, string $html, string $variant): TextEntry
+    /**
+     * @param  string|Closure(FormState): string  $html
+     */
+    private static function build(string $name, string|Closure $html, string $variant): TextEntry
     {
         return TextEntry::make($name)
             ->hiddenLabel()
-            ->state(fn ($livewire) => new HtmlString(sprintf(
-                '<div class="eventform-alert eventform-alert-%s">%s</div>',
-                $variant,
-                // `renderHtml()` (niet `render()`) zodat geïnterpoleerde
-                // user-input — bv. `naam_evenement = "<script>"` — als
-                // platte tekst verschijnt en niet als executerende HTML.
-                app(LabelRenderer::class)->renderHtml($html, $livewire->state()),
-            )));
+            ->state(function ($livewire) use ($html, $variant): HtmlString {
+                $body = $html instanceof Closure
+                    // Closure-pad: de developer bouwt de HTML zelf en is
+                    // verantwoordelijk voor escape van eventuele user-input
+                    // (gebruik `e()` rondom state-waarden).
+                    ? (string) $html($livewire->state())
+                    // String-pad: LabelRenderer interpoleert + escape't
+                    // automatisch via `renderHtml()` zodat user-input als
+                    // platte tekst verschijnt.
+                    : app(LabelRenderer::class)->renderHtml($html, $livewire->state());
+
+                return new HtmlString(sprintf(
+                    '<div class="eventform-alert eventform-alert-%s">%s</div>',
+                    $variant,
+                    $body,
+                ));
+            });
     }
 }

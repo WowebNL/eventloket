@@ -6,6 +6,7 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\AddressNL;
 use App\EventForm\Components\InfoText;
+use App\EventForm\State\FormState;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
@@ -186,11 +187,11 @@ final class LocatieVanHetEvenement2Step
                             }),
                         // Pas tonen zodra `inGemeentenResponse.line` daadwerkelijk
                         // gevuld is (dus na een ingetekende route + lookup van de
-                        // doorkruiste gemeenten). Anders zou de "nog geen route
-                        // ingetekend"-tak van het template altijd zichtbaar zijn,
-                        // ook al heeft de organisator nog niet eens met de Route-
-                        // fieldset gewerkt.
-                        InfoText::info('routeStartEndContent2', '<p>{% if inGemeentenResponse.line.start_end_equal == False %}</p><p>De route start in de gemeente <strong>{{ inGemeentenResponse.line.start.name }}</strong> en eindigt in de gemeente <strong>{{ inGemeentenResponse.line.end.name }}</strong>, hierdoor kan het zijn dat u bij beide gemeenten een vergunningaanvraag moet doen. U dient vult dit formulier helemaal in voor 1 gemeente, als u de aanvraag vervolgens heeft gedaan kunt u binnen de aanvraag in Eventloket de knop “Nieuwe aanvraag” gebruiken om een nieuw aanvraag te starten waarbij (een deel van) het formulier al vooraf ingevuld is.</p><p>{% elif inGemeentenResponse.line.start_end_equal == True %}</p><p>De route start en eindigt binnen de gemeente <strong>{{ inGemeentenResponse.line.start.name }}.</strong></p><p>{% endif %}</p>')
+                        // doorkruiste gemeenten). De if/elif-cascade die voorheen
+                        // in een template-string zat, is nu als gewone PHP-method
+                        // — leesbaarder en bevat de gemeente-namen via `e()` zodat
+                        // ze veilig in HtmlString belanden.
+                        InfoText::info('routeStartEndContent2', fn (FormState $state) => self::renderRouteStatus($state))
                             ->hidden(function ($livewire): bool {
                                 $line = $livewire->state()->get('inGemeentenResponse.line');
 
@@ -218,5 +219,33 @@ final class LocatieVanHetEvenement2Step
                 InfoText::info('content200', '<p>U gaat verder met deze aanraag voor de gemeente:<strong> {% get_value evenementInGemeente \'name\' %}</strong></p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('content200') !== false),
             ]);
+    }
+
+    /**
+     * Statustekst onder de Route-fieldset: één gemeente of twee
+     * verschillende. Wordt alleen gerenderd zodra `inGemeentenResponse.line`
+     * gevuld is (zie de `->hidden(...)` op de bijbehorende InfoText).
+     */
+    private static function renderRouteStatus(FormState $state): string
+    {
+        $line = $state->get('inGemeentenResponse.line');
+        if (! is_array($line)) {
+            return '';
+        }
+
+        $startNaam = (string) ($line['start']['name'] ?? '');
+        $eindNaam = (string) ($line['end']['name'] ?? '');
+
+        if (($line['start_end_equal'] ?? null) === true) {
+            return '<p>De route start en eindigt binnen de gemeente <strong>'.e($startNaam).'</strong>.</p>';
+        }
+
+        return '<p>De route start in de gemeente <strong>'.e($startNaam).'</strong> '
+            .'en eindigt in de gemeente <strong>'.e($eindNaam).'</strong>, '
+            .'hierdoor kan het zijn dat u bij beide gemeenten een vergunningaanvraag moet doen. '
+            .'U vult dit formulier helemaal in voor 1 gemeente; als u de aanvraag vervolgens '
+            .'heeft gedaan kunt u binnen de aanvraag in Eventloket de knop "Nieuwe aanvraag" '
+            .'gebruiken om een nieuwe aanvraag te starten waarbij (een deel van) het formulier '
+            .'al vooraf ingevuld is.</p>';
     }
 }
