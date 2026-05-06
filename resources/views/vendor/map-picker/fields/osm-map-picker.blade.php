@@ -16,6 +16,11 @@
     `AlsBoolEnIsNietGelijkAanNone` rule) de getekende polygon door de
     intersect-check haalt en `inGemeentenResponse` bijwerkt.
 
+    Daarnaast zetten we GeoMan op Nederlands via `map.pm.setLang('nl')`
+    zodat de toolbar-tooltips ("Klik om eerste hoekpunt te plaatsen",
+    "Klaar", "Annuleren" etc.) niet in het Engels staan. Dotswan biedt
+    daar geen config voor, vandaar de directe instance-aanroep.
+
     Verder is de markup identiek aan upstream zodat we automatisch
     profiteren van toekomstige fixes — alleen de extra @{} `init`-stap
     is van ons.
@@ -50,6 +55,17 @@
                 map.on('pm:edit', flushNu);
                 map.on('pm:remove', flushNu);
                 map.on('pm:update', flushNu);
+            }
+
+            // GeoMan-toolbar in het Nederlands. De vertaling zit al in de
+            // dotswan-bundle (geoman 2.18.x); we hoeven 'm alleen te
+            // activeren op deze map-instance. Wachten tot pm beschikbaar
+            // is omdat dotswan 'm pas in een tweede tick toevoegt.
+            do {
+                await (new Promise(resolve => setTimeout(resolve, 50)));
+            } while (map && !map.pm);
+            if (map && map.pm && typeof map.pm.setLang === 'function') {
+                map.pm.setLang('nl');
             }
 
             // Onderdruk dotswan's `setMarkerRange`: zonder een
