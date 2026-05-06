@@ -40,7 +40,8 @@ class CreateDoorkomstZaken implements ShouldQueue
             return;
         }
 
-        $lineArray = $formSubmissionObject->getLineGeoJsonArray();
+        $lineArray = $formSubmissionObject->getLineGeoJsonArray()
+            ?? $this->extractLineArrayFromZaakgeometrie($ozZaak->zaakgeometrie);
 
         if (! $lineArray) {
             return;
@@ -248,5 +249,26 @@ class CreateDoorkomstZaken implements ShouldQueue
             'statustype' => $initiaalStatustype['url'],
             'datumStatusGezet' => now()->toIso8601String(),
         ]);
+    }
+
+    private function extractLineArrayFromZaakgeometrie(?array $zaakgeometrie): ?array
+    {
+        if (! $zaakgeometrie) {
+            return null;
+        }
+
+        if (($zaakgeometrie['type'] ?? '') === 'LineString') {
+            return $zaakgeometrie;
+        }
+
+        if (($zaakgeometrie['type'] ?? '') === 'GeometryCollection') {
+            foreach ($zaakgeometrie['geometries'] ?? [] as $subGeom) {
+                if (($subGeom['type'] ?? '') === 'LineString') {
+                    return $subGeom;
+                }
+            }
+        }
+
+        return null;
     }
 }
