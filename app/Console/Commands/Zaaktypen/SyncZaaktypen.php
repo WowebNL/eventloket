@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Zaaktypen;
 
 use App\Models\Municipality;
 use App\Models\Zaaktype;

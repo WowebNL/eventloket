@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Reporting;
 
 use App\EventForm\Reporting\FieldCatalog;
 use Illuminate\Console\Command;

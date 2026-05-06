@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Demo;
 
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\State\FormState;

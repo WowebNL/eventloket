@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\Doorkomst;
 
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Models\Zaak;
