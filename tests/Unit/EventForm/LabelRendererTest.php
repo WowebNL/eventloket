@@ -215,3 +215,68 @@ describe('LabelRenderer Jinja control-flow', function () {
         expect($renderer->render($template, $state))->toBe('');
     });
 });
+
+describe('LabelRenderer XSS-bescherming via renderHtml()', function () {
+    test('renderHtml() escape\'t HTML in geïnterpoleerde waarden', function () {
+        // Een organisator vult een gevaarlijke string in als evenement-
+        // naam. Wanneer de output in HtmlString-context terechtkomt,
+        // moet die string als platte tekst verschijnen — niet als
+        // executerend script.
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setField('naam_evenement', '<script>alert(1)</script>');
+
+        $output = $renderer->renderHtml(
+            '<p>Welkom bij {{ naam_evenement }}</p>',
+            $state,
+        );
+
+        expect($output)->toContain('&lt;script&gt;')
+            ->and($output)->not->toContain('<script>alert(1)</script>')
+            // Het template-frame zelf wordt NIET geescaped — onze eigen
+            // <p>-tag moet behouden blijven.
+            ->and($output)->toStartWith('<p>')
+            ->and($output)->toEndWith('</p>');
+    });
+
+    test('render() laat HTML in waarden ongeschonden voor blade-auto-escape-pipelines', function () {
+        // Filament-component-labels gaan na deze render alsnog door
+        // Blade `{{ }}` heen, dat doet de escape. `render()` moet dus
+        // GEEN escape doen, anders krijg je dubbel-geëscapeerde output.
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setField('naam_evenement', '<script>alert(1)</script>');
+
+        $output = $renderer->render(
+            'Wat is de start van {{ naam_evenement }}?',
+            $state,
+        );
+
+        expect($output)->toContain('<script>alert(1)</script>');
+    });
+
+    test('renderHtml() escape\'t ook quotes en ampersands', function () {
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setField('naam', 'Patat & Friet "Special"');
+
+        $output = $renderer->renderHtml('<p>{{ naam }}</p>', $state);
+
+        expect($output)->toContain('&amp;')
+            ->and($output)->toContain('&quot;');
+    });
+
+    test('render() en renderHtml() hebben aparte cache-buckets', function () {
+        // Anders zou een render()-call eerst raw cachen en daarna een
+        // renderHtml()-call de raw output uit cache opvissen → no-escape.
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setField('x', '<b>hi</b>');
+
+        $raw = $renderer->render('{{ x }}', $state);
+        $html = $renderer->renderHtml('{{ x }}', $state);
+
+        expect($raw)->toBe('<b>hi</b>')
+            ->and($html)->toBe('&lt;b&gt;hi&lt;/b&gt;');
+    });
+});

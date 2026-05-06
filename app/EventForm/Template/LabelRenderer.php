@@ -44,12 +44,45 @@ class LabelRenderer
      */
     private \WeakMap $perStateCache;
 
+    /**
+     * Voor de duur van een `renderHtml()`-call wordt elke geïnterpoleerde
+     * waarde door `stringify()` geëscapet via `htmlspecialchars()`. Bij
+     * `render()` blijft 'ie false zodat de output rauw is — bedoeld voor
+     * Filament-component-labels die later door Blade alsnog geescaped
+     * worden (anders zou je dubbel escapen krijgen).
+     */
+    private bool $escapeForHtml = false;
+
     public function __construct()
     {
         $this->perStateCache = new \WeakMap;
     }
 
+    /**
+     * Rendert het template met geïnterpoleerde state-waarden, ZONDER
+     * de waarden HTML-te-escapen. Gebruik dit voor strings die nog
+     * door Blade `{{ … }}` of een ander escape-mechanisme gaan —
+     * anders krijg je `&amp;lt;` ipv een goed-gerenderd `&lt;`.
+     */
     public function render(string $template, FormState $state): string
+    {
+        return $this->renderInternal($template, $state, escapeForHtml: false);
+    }
+
+    /**
+     * Rendert het template en escape't de geïnterpoleerde state-waarden
+     * met `htmlspecialchars()`. Gebruik dit als de output 1-op-1 naar de
+     * browser gaat (`HtmlString`-wrappers, raw-HTML-states), anders
+     * kan een veld als `naam_evenement = "<script>alert(1)</script>"`
+     * tot self-XSS leiden. Het template-frame zelf wordt NIET geëscapet
+     * — we mogen onze eigen `<p>`/`<ul>`-tags blijven gebruiken.
+     */
+    public function renderHtml(string $template, FormState $state): string
+    {
+        return $this->renderInternal($template, $state, escapeForHtml: true);
+    }
+
+    private function renderInternal(string $template, FormState $state, bool $escapeForHtml): string
     {
         if ($template === '') {
             return $template;
@@ -60,22 +93,29 @@ class LabelRenderer
             return $template;
         }
 
+        // Cache-key prefix met mode zodat dezelfde template in beide
+        // modi onafhankelijk gecachet wordt.
+        $cacheKey = ($escapeForHtml ? 'html:' : 'raw:').$template;
         $version = $state->version();
         $bucket = $this->perStateCache[$state] ?? null;
 
-        // Bucket bestaat én version klopt → directe hit
-        if ($bucket !== null && $bucket['version'] === $version && isset($bucket['entries'][$template])) {
-            return $bucket['entries'][$template];
+        if ($bucket !== null && $bucket['version'] === $version && isset($bucket['entries'][$cacheKey])) {
+            return $bucket['entries'][$cacheKey];
         }
 
-        // Stale bucket (state is gemuteerd) → opnieuw beginnen.
         if ($bucket === null || $bucket['version'] !== $version) {
             $bucket = ['version' => $version, 'entries' => []];
         }
 
-        $result = $this->renderUncached($template, $state);
+        $previous = $this->escapeForHtml;
+        $this->escapeForHtml = $escapeForHtml;
+        try {
+            $result = $this->renderUncached($template, $state);
+        } finally {
+            $this->escapeForHtml = $previous;
+        }
 
-        $bucket['entries'][$template] = $result;
+        $bucket['entries'][$cacheKey] = $result;
         $this->perStateCache[$state] = $bucket;
 
         return $result;
@@ -287,12 +327,21 @@ class LabelRenderer
             return $this->humanizeIsoDateTime($value);
         }
         if (is_scalar($value)) {
-            return (string) $value;
+            $stringValue = (string) $value;
+
+            return $this->escapeForHtml
+                ? htmlspecialchars($stringValue, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8')
+                : $stringValue;
         }
 
         $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($encoded === false) {
+            return '';
+        }
 
-        return $encoded === false ? '' : $encoded;
+        return $this->escapeForHtml
+            ? htmlspecialchars($encoded, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML5, 'UTF-8')
+            : $encoded;
     }
 
     /**

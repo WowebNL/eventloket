@@ -80,6 +80,23 @@ test('output is een HtmlString zodat Filament de HTML niet escape\'t', function 
     expect($closure($stub))->toBeInstanceOf(HtmlString::class);
 });
 
+test('XSS-payload in geïnterpoleerd veld wordt geëscapet — geen rauwe <script> in de output', function () {
+    // Een organisator vult `<script>alert(1)</script>` in als
+    // `naam_evenement`. Filament rendert de InfoText-state via
+    // HtmlString rauw in de DOM; zonder escape zou dat tot self-XSS
+    // leiden. Deze test bewijst dat de waarde nu als platte tekst
+    // verschijnt.
+    $state = new FormState(values: [
+        'watIsDeNaamVanHetEvenementVergunning' => '<script>alert(1)</script>',
+    ]);
+
+    $entry = InfoText::info('xss', '<p>Voor {{ watIsDeNaamVanHetEvenementVergunning }} geldt dit.</p>');
+    $output = infoTextRender($entry, $state);
+
+    expect($output)->toContain('&lt;script&gt;')
+        ->and($output)->not->toContain('<script>alert(1)</script>');
+});
+
 test('label is verborgen — anders verschijnt de field-name als kop', function () {
     $entry = InfoText::info('intern_key_nooit_zichtbaar', '<p>tekst</p>');
 

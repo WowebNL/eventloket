@@ -56,7 +56,7 @@
                              een label-rij gevolgd door een echte
                              tabel met header en rijen. --}}
                         <tr>
-                            <th colspan="2" class="row-label">{!! strip_tags((string) $entry['label']) !!}</th>
+                            <th colspan="2" class="row-label">{{ strip_tags((string) $entry['label']) }}</th>
                         </tr>
                         <tr>
                             <td colspan="2" style="padding: 0;">
@@ -89,14 +89,14 @@
                              locatie of route). Toon de label-rij als kop
                              en daaronder een sub-tabel met alle velden. --}}
                         <tr>
-                            <th colspan="2" class="row-label">{!! strip_tags((string) $entry['label']) !!}</th>
+                            <th colspan="2" class="row-label">{{ strip_tags((string) $entry['label']) }}</th>
                         </tr>
                         <tr>
                             <td colspan="2" style="padding: 0;">
                                 <table class="sub">
                                     @foreach ($entry['sub'] as $subEntry)
                                         <tr>
-                                            <th>{!! strip_tags((string) $subEntry['label']) !!}</th>
+                                            <th>{{ strip_tags((string) $subEntry['label']) }}</th>
                                             <td>
                                                 @if (! empty($subEntry['svg']))
                                                     {!! $subEntry['svg'] !!}
@@ -111,7 +111,7 @@
                         </tr>
                     @else
                         <tr>
-                            <th>{!! strip_tags((string) $entry['label']) !!}</th>
+                            <th>{{ strip_tags((string) $entry['label']) }}</th>
                             <td>
                                 @if (! empty($entry['svg']))
                                     {!! $entry['svg'] !!}

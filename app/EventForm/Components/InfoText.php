@@ -44,7 +44,10 @@ final class InfoText
             ->state(fn ($livewire) => new HtmlString(sprintf(
                 '<div class="eventform-alert eventform-alert-%s">%s</div>',
                 $variant,
-                app(LabelRenderer::class)->render($html, $livewire->state()),
+                // `renderHtml()` (niet `render()`) zodat geïnterpoleerde
+                // user-input — bv. `naam_evenement = "<script>"` — als
+                // platte tekst verschijnt en niet als executerende HTML.
+                app(LabelRenderer::class)->renderHtml($html, $livewire->state()),
             )));
     }
 }
