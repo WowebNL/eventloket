@@ -15,7 +15,7 @@ class Informatieobject implements Arrayable
         public readonly string $titel,
         public readonly string $vertrouwelijkheidaanduiding,
         public readonly string $auteur,
-        public readonly string $versie,
+        public readonly string|int $versie,
         public readonly string $bestandsnaam,
         public readonly string $inhoud,
         public readonly string $beschrijving,

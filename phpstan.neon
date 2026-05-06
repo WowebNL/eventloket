@@ -11,8 +11,12 @@ parameters:
     # Level 10 is the highest level
     level: 5
 
-#    ignoreErrors:
-#        - '#PHPDoc tag @var#'
-#
-#    excludePaths:
-#        - ./*/*/FileToBeExcluded.php
+    reportUnmatchedIgnoredErrors: false
+
+    ignoreErrors:
+        # Filament Pages exposen $this->form via een trait (InteractsWithForms)
+        # die PHPStan niet traceert. Pre-existing issue dat met de POC al bestond.
+        -
+            identifier: property.notFound
+            path: app/Filament/Organiser/Pages/*
+            message: '#Access to an undefined property [^:]+::\$form\.#'

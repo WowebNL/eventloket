@@ -15,9 +15,7 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Bus;
-use Woweb\Openzaak\ObjectsApi;
 
 class ViewZaak extends ViewRecord
 {
@@ -26,59 +24,18 @@ class ViewZaak extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            // "Herhaal aanvraag" — start een nieuwe aanvraag voorgevuld met de
+            // gegevens van deze zaak. PrefillLoader valt stil terug op lege
+            // waarden voor velden die inmiddels uit het schema zijn.
             Action::make('prefil_new_request')
-                ->hidden()
-                ->label('Nieuwe aanvraag')
-                ->tooltip('Start een nieuwe aanvraag waarbij de gegevens uit het aanvraagformulier van deze zaak vooraf ingevuld zijn.')
+                ->label('Nieuwe aanvraag met deze gegevens')
+                ->icon('heroicon-o-arrow-path-rounded-square')
+                ->tooltip('Start een nieuwe aanvraag waarbij de ingevulde gegevens uit deze zaak vooraf zijn ingevuld. U kunt alles aanpassen voordat u opnieuw indient.')
                 ->action(function (Zaak $record) {
-                    $failed = false;
-                    if (isset($record->zaakdata->record['data']['data']) && $data = $record->zaakdata->record['data']['data']) {
-                        $withOutSections = [];
-                        foreach ($data as $item) {
-                            $withOutSections = is_array($item) ? array_merge($withOutSections, $item) : array_merge($withOutSections, [$item]);
-                        }
-
-                        $withOutSections['user_uuid'] = auth()->user()->uuid;
-                        $withOutSections['organiser_uuid'] = $record->organisation->uuid;
-
-                        if ($objectTypeUrl = config('services.open_forms.prefill_object_type_url')) {
-                            $record = array_filter($withOutSections);
-
-                            $resp = (new ObjectsApi)->create([
-                                'type' => $objectTypeUrl,
-                                'record' => [
-                                    'typeVersion' => config('services.open_forms.prefill_object_type_version'),
-                                    'data' => $record,
-                                    'startAt' => now()->format('Y-m-d'),
-                                ],
-                            ])->toArray();
-
-                            // dd($resp);
-
-                            if (Arr::has($resp, 'uuid')) {
-                                $this->redirect(route('filament.organiser.pages.new-request.{openform?}', ['tenant' => Filament::getTenant(), 'initial_data_reference' => Arr::get($resp, 'uuid')]));
-                                Notification::make()
-                                    ->success()
-                                    ->title('Het aanvraag formulier is vooraf ingevuld')
-                                    ->body('De gegevens uit het aanvraagformulier van de zaak zijn vooraf ingevuld in het formulier.')
-                                    ->send();
-                            } else {
-                                $failed = true;
-                            }
-                        } else {
-                            $failed = true;
-                        }
-                    } else {
-                        $failed = true;
-                    }
-
-                    if ($failed) {
-                        Notification::make()
-                            ->warning()
-                            ->title('Er is iets misgegaan bij het aanmaken van een nieuwe aanvraag.')
-                            ->body('Het vooraf invullen van het formulier is mislukt. Probeer het nogmaals of start een nieuwe aanvraag zonder vooraf ingevulde gegevens.')
-                            ->send();
-                    }
+                    $this->redirect(route('filament.organiser.pages.aanvraag', [
+                        'tenant' => Filament::getTenant(),
+                        'prefill_from_zaak' => $record->id,
+                    ]));
                 }),
             Action::make('withdraw')
                 ->tooltip(__('Wanneer u een aanvraag intrekt, wordt deze niet verder in behandeling genomen. De behandelaar ontvangt hiervan een melding. Het is niet mogelijk om het intrekken ongedaan te maken.'))

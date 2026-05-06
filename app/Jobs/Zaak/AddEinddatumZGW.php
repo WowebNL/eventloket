@@ -1,41 +1,51 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs\Zaak;
 
+use App\Models\Zaak;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\OzZaaktype;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
+use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
 use Woweb\Openzaak\Openzaak;
 
+/**
+ * Vult `einddatumGepland` + `uiterlijkeEinddatumAfdoening` op de ZGW-zaak
+ * op basis van de `servicenorm` en `doorlooptijd` van het zaaktype.
+ * Geen FormState nodig — puur een berekening op bestaande ZGW-data.
+ */
 class AddEinddatumZGW implements ShouldQueue
 {
-    use Queueable;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(private string $zaakUrlZGW) {}
+    public function __construct(public readonly Zaak $zaak) {}
 
-    /**
-     * Execute the job.
-     */
     public function handle(Openzaak $openzaak): void
     {
-        $zaak = new OzZaak(...$openzaak->get($this->zaakUrlZGW)->toArray());
-
-        if (! $zaak->uiterlijkeEinddatumAfdoening && ! $zaak->einddatumGepland) {
-            $zaaktype = new OzZaaktype(...$openzaak->get($zaak->zaaktype)->toArray());
-            $uiterlijkeEinddatumAfdoeningInterval = new CarbonInterval($zaaktype->doorlooptijd);
-            $einddatumGeplandInterval = new CarbonInterval($zaaktype->servicenorm);
-
-            $resp = $openzaak->zaken()->zaken()->patch($zaak->uuid, [
-                'einddatumGepland' => Carbon::parse($zaak->startdatum)->add($einddatumGeplandInterval)->format('Y-m-d'),
-                'uiterlijkeEinddatumAfdoening' => Carbon::parse($zaak->startdatum)->add($uiterlijkeEinddatumAfdoeningInterval)->format('Y-m-d'),
-            ]);
+        if (! $this->zaak->zgw_zaak_url) {
+            return;
         }
 
+        $ozZaak = new OzZaak(...$openzaak->get($this->zaak->zgw_zaak_url)->toArray());
+
+        if ($ozZaak->uiterlijkeEinddatumAfdoening || $ozZaak->einddatumGepland) {
+            return;
+        }
+
+        $zaaktype = new OzZaaktype(...$openzaak->get($ozZaak->zaaktype)->toArray());
+        $doorlooptijd = new CarbonInterval($zaaktype->doorlooptijd);
+        $servicenorm = new CarbonInterval($zaaktype->servicenorm);
+
+        $openzaak->zaken()->zaken()->patch($ozZaak->uuid, [
+            'einddatumGepland' => Carbon::parse($ozZaak->startdatum)->add($servicenorm)->format('Y-m-d'),
+            'uiterlijkeEinddatumAfdoening' => Carbon::parse($ozZaak->startdatum)->add($doorlooptijd)->format('Y-m-d'),
+        ]);
     }
 }

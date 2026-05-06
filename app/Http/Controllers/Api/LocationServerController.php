@@ -2,260 +2,74 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Actions\Geospatial\CheckIntersects;
-use App\Actions\Geospatial\CheckWithin;
+use App\EventForm\Services\LocationServerCheckInput;
+use App\EventForm\Services\LocationServerCheckService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\LocationServerCheckRequest;
-use App\Models\Municipality;
-use App\Services\LocatieserverService;
-use Brick\Geo\Engine\PdoEngine;
-use Brick\Geo\Io\GeoJsonReader;
-use Brick\Geo\LineString;
-use Brick\Geo\Polygon;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
 
 class LocationServerController extends Controller
 {
-    public function check(LocationServerCheckRequest $request)
+    public function __construct(
+        private readonly LocationServerCheckService $service,
+    ) {}
+
+    public function check(LocationServerCheckRequest $request): JsonResponse
     {
         $data = $request->validated();
 
-        $responseData = [
-            'all' => [
-                'items' => collect(),
-                'within' => null,
-                'object' => null,
-            ],
-            'polygons' => [
-                'items' => collect(),
-                'within' => null,
-            ],
-            'line' => [
-                'items' => collect(),
-                'within' => null,
-                'start' => null,
-                'end' => null,
-                'start_end_equal' => null,
-                'passing' => collect(),
-            ],
-            'lines' => [],
-            'addresses' => [
-                'items' => collect(),
-                'within' => null,
-            ],
-        ];
+        $input = new LocationServerCheckInput(
+            polygons: $this->decodeAsList($data['polygons'] ?? null),
+            line: $this->decodeAsObject($data['line'] ?? null),
+            lines: $this->decodeAsList($data['lines'] ?? null),
+            addresses: $this->decodeAsList($data['addresses'] ?? null),
+            address: $this->decodeAsObject($data['address'] ?? null),
+        );
 
-        $geometryEngine = null;
-        $checkIntersects = null;
-        $checkWithin = null;
-
-        if (isset($data['polygons'])) {
-            $polygons = json_decode($data['polygons']);
-            $geometryEngine = new PdoEngine(DB::connection()->getPdo());
-            $checkIntersects = new CheckIntersects($geometryEngine);
-            $checkWithin = new CheckWithin($geometryEngine);
-
-            foreach ($polygons as $object) {
-                // dd($object);
-                /** @var Polygon $polygon */
-                $polygon = (new GeoJsonReader)->read(json_encode($object));
-
-                /** @var Collection<Municipality> $items */
-                $items = $checkIntersects->checkIntersectsWithModels($polygon);
-
-                $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items', 'polygons.items']);
-                $responseData = $this->updateResponseDataWithin($responseData, fn () => $checkWithin->checkWithinAllGeometriesFromModels($polygon), ['polygons.within', 'all.within']);
-            }
-        }
-
-        if (isset($data['line'])) {
-            /** @var LineString $line */
-            $line = (new GeoJsonReader)->read($data['line']);
-            $geometryEngine = $geometryEngine ?? new PdoEngine(DB::connection()->getPdo());
-            $checkIntersects = $checkIntersects ?? new CheckIntersects($geometryEngine);
-            $checkWithin = $checkWithin ?? new CheckWithin($geometryEngine);
-
-            /** @var Collection<Municipality> $items */
-            $items = $checkIntersects->checkIntersectsWithModels($line);
-            $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
-            $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());
-
-            $excludedBrkIds = $startModel->pluck('brk_identification')
-                ->merge($endModel->pluck('brk_identification'))
-                ->unique()
-                ->toArray();
-
-            $responseData['line']['passing'] = $items
-                ->reject(fn ($item) => in_array($item->brk_identification, $excludedBrkIds))
-                ->select(['brk_identification', 'name'])
-                ->values();
-
-            $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items', 'line.items']);
-
-            if ($start = $startModel->first()) {
-                $responseData['line']['start'] = [
-                    'brk_identification' => $start->brk_identification,
-                    'name' => $start->name,
-                ];
-            }
-            if ($end = $endModel->first()) {
-                $responseData['line']['end'] = [
-                    'brk_identification' => $end->brk_identification,
-                    'name' => $end->name,
-                ];
-            }
-            $responseData = $this->updateResponseDataWithin($responseData, fn () => $checkWithin->checkWithinAllGeometriesFromModels($line), ['line.within', 'all.within']);
-            if (! $startModel->isEmpty() && ! $endModel->isEmpty()) {
-                $responseData['line']['start_end_equal'] = $startModel->first()->id == $endModel->first()->id;
-            }
-        }
-
-        if (isset($data['lines'])) {
-            $lines = json_decode($data['lines']);
-            $geometryEngine = $geometryEngine ?? new PdoEngine(DB::connection()->getPdo());
-            $checkIntersects = $checkIntersects ?? new CheckIntersects($geometryEngine);
-            $checkWithin = $checkWithin ?? new CheckWithin($geometryEngine);
-
-            foreach ($lines as $lineObject) {
-                /** @var LineString $line */
-                $line = (new GeoJsonReader)->read(json_encode($lineObject));
-
-                /** @var Collection<Municipality> $items */
-                $items = $checkIntersects->checkIntersectsWithModels($line);
-                $startModel = $checkIntersects->checkIntersectsWithModels($line->startPoint());
-                $endModel = $checkIntersects->checkIntersectsWithModels($line->endPoint());
-
-                $excludedBrkIdsForLine = $startModel->pluck('brk_identification')
-                    ->merge($endModel->pluck('brk_identification'))
-                    ->unique()
-                    ->toArray();
-
-                $lineData = [
-                    'items' => array_values($items->select(['brk_identification', 'name'])->toArray()),
-                    'within' => null,
-                    'start' => null,
-                    'end' => null,
-                    'start_end_equal' => null,
-                    'passing' => array_values($items
-                        ->reject(fn ($item) => in_array($item->brk_identification, $excludedBrkIdsForLine))
-                        ->select(['brk_identification', 'name'])
-                        ->toArray()),
-                ];
-
-                if ($start = $startModel->first()) {
-                    $lineData['start'] = [
-                        'brk_identification' => $start->brk_identification,
-                        'name' => $start->name,
-                    ];
-                }
-                if ($end = $endModel->first()) {
-                    $lineData['end'] = [
-                        'brk_identification' => $end->brk_identification,
-                        'name' => $end->name,
-                    ];
-                }
-                if (! $startModel->isEmpty() && ! $endModel->isEmpty()) {
-                    $lineData['start_end_equal'] = $startModel->first()->id == $endModel->first()->id;
-                }
-
-                $responseData['lines'][] = $lineData;
-
-                $responseData = $this->updateResponseDataItems($responseData, $items, ['all.items']);
-                $responseData = $this->updateResponseDataWithin($responseData, fn () => $checkWithin->checkWithinAllGeometriesFromModels($line), ['all.within']);
-
-                // Update the within value for the current line in the lines array
-                $lastIndex = count($responseData['lines']) - 1;
-                $responseData['lines'][$lastIndex]['within'] = $checkWithin->checkWithinAllGeometriesFromModels($line);
-            }
-
-            // If lines contains only 1 item, also set it as the single line response
-            if (count($responseData['lines']) === 1) {
-                $responseData['line'] = [
-                    'items' => collect($responseData['lines'][0]['items']),
-                    'within' => $responseData['lines'][0]['within'],
-                    'start' => $responseData['lines'][0]['start'],
-                    'end' => $responseData['lines'][0]['end'],
-                    'start_end_equal' => $responseData['lines'][0]['start_end_equal'],
-                    'passing' => collect($responseData['lines'][0]['passing']),
-                ];
-            }
-        }
-
-        if (isset($data['addresses'])) {
-            $adressen = json_decode($data['addresses'], true);
-
-            foreach ($adressen as $adres) {
-                $responseData = $this->handleSingleAdres($adres, $responseData);
-            }
-        }
-
-        if (isset($data['address'])) {
-            $adres = json_decode($data['address'], true);
-            $responseData = $this->handleSingleAdres($adres, $responseData);
-        }
-
-        $responseData['all']['object'] = $this->getObjectFromItems(Arr::get($responseData, 'all.items'));
-
-        $responseData['all']['items'] = array_values($responseData['all']['items']->toArray());
-
-        return response()->json([
-            'data' => $responseData,
-        ]);
+        return response()->json(['data' => $this->service->execute($input)]);
     }
 
-    private function handleSingleAdres(array $adres, array $responseData): array
+    /**
+     * @return list<array<string, mixed>>|null
+     */
+    private function decodeAsList(?string $json): ?array
     {
-        $brkIdentificatie = (new LocatieserverService)->getBrkIdentificationByPostcodeHuisnummer($adres['postcode'], $adres['houseNumber']);
-        $municipality = $brkIdentificatie ? Municipality::where('brk_identification', $brkIdentificatie)->select(['brk_identification', 'name'])->first() : null;
-        if ($municipality) {
-            $responseData = $this->updateResponseDataItems($responseData, collect([$municipality]), ['all.items', 'addresses.items']);
-            $responseData = $this->updateResponseDataWithin($responseData, fn () => true, ['addresses.within', 'all.within']);
-        } else {
-            $responseData = $this->updateResponseDataWithin($responseData, fn () => false, ['addresses.within', 'all.within']);
-        }
-
-        return $responseData;
-    }
-
-    private function updateResponseDataItems(array $responseData, Collection $items, array $paths, array $fields = ['brk_identification', 'name'], string $unique = 'brk_identification'): array
-    {
-        foreach ($paths as $path) {
-            if (Arr::get($responseData, $path) instanceof Collection) {
-                Arr::set($responseData, $path, Arr::get($responseData, $path)->merge($items->select($fields))->unique($unique));
-            }
-        }
-
-        return $responseData;
-    }
-
-    private function updateResponseDataWithin(array $responseData, callable $checkWithin, array $paths): array
-    {
-        foreach ($paths as $path) {
-            if (Arr::get($responseData, $path) === null || Arr::get($responseData, $path) === true) {
-                Arr::set($responseData, $path, $checkWithin());
-            }
-        }
-
-        return $responseData;
-    }
-
-    // TODO Michel make this cleaner later
-    private function getObjectFromItems(Collection $items): ?array
-    {
-        if ($items->isEmpty()) {
+        if ($json === null || $json === '') {
             return null;
         }
 
-        $response = [];
-        foreach ($items as $item) {
-            $response[$item['brk_identification']] = [
-                'brk_identification' => $item['brk_identification'],
-                'name' => $item['name'],
-            ];
+        $decoded = json_decode($json, true);
+        if (! is_array($decoded)) {
+            return null;
         }
 
-        return $response;
+        /** @var list<array<string, mixed>> $result */
+        $result = [];
+        foreach ($decoded as $item) {
+            if (is_array($item)) {
+                /** @var array<string, mixed> $item */
+                $result[] = $item;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeAsObject(?string $json): ?array
+    {
+        if ($json === null || $json === '') {
+            return null;
+        }
+
+        $decoded = json_decode($json, true);
+        if (! is_array($decoded)) {
+            return null;
+        }
+
+        /** @var array<string, mixed> $decoded */
+        return $decoded;
     }
 }

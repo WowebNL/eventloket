@@ -26,4 +26,8 @@ Thumbs.db
 /public/fonts/filament
 /public/js/filament
 /tests/coverage
+tests/Feature/EventForm/Equivalence/scenarios.json
+tests/Feature/EventForm/Equivalence/jsonlogic-verification.json
+test-results/
+.claude/
 /database/openforms_migrations
