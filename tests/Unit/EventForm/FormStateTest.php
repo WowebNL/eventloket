@@ -137,6 +137,106 @@ describe('FormState', function () {
             ->and($state->isStepApplicable('661aabb7-e927-4a75-8d95-0a665c5d83fe'))->toBeFalse();
     });
 
+    describe('lege stappen overslaan (geen show-condities matched)', function () {
+        // Zes stappen hebben show-condities — ze tonen alléén Fieldsets
+        // wanneer specifieke vinkjes aangezet zijn op een eerdere vraag.
+        // Vinkt de organisator niets aan, dan zou de stap een lege
+        // pagina opleveren. Die moet dus overgeslagen worden.
+
+        test('Vervolgvragen-stap: leeg state → niet applicable', function () {
+            $state = FormState::empty();
+
+            expect($state->isStepApplicable('661aabb7-e927-4a75-8d95-0a665c5d83fe'))->toBeFalse();
+        });
+
+        test('Vervolgvragen-stap: één vinkje aan → applicable', function () {
+            $state = FormState::empty();
+            $state->setField('kruisAanWatVanToepassingIsVoorUwEvenementX', ['A1' => true]);
+
+            expect($state->isStepApplicable('661aabb7-e927-4a75-8d95-0a665c5d83fe'))->toBeTrue();
+        });
+
+        test('ExtraActiviteiten-stap: leeg state → niet applicable', function () {
+            $state = FormState::empty();
+
+            expect($state->isStepApplicable('6e285ace-f891-4324-b54e-639c1cfff9fa'))->toBeFalse();
+        });
+
+        test('ExtraActiviteiten-stap: één activiteit aangevinkt → applicable', function () {
+            $state = FormState::empty();
+            $state->setField('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX', ['A37' => true]);
+
+            expect($state->isStepApplicable('6e285ace-f891-4324-b54e-639c1cfff9fa'))->toBeTrue();
+        });
+
+        test('Maatregelen-stap: leeg state → niet applicable', function () {
+            $state = FormState::empty();
+
+            expect($state->isStepApplicable('8a5fb30f-287e-41a2-a9bc-e7340bdaaa99'))->toBeFalse();
+        });
+
+        test('Maatregelen-stap: één maatregel aangevinkt → applicable', function () {
+            $state = FormState::empty();
+            $state->setField('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX', ['A32' => true]);
+
+            expect($state->isStepApplicable('8a5fb30f-287e-41a2-a9bc-e7340bdaaa99'))->toBeTrue();
+        });
+
+        test('Voorwerpen-stap: leeg state → niet applicable', function () {
+            $state = FormState::empty();
+
+            expect($state->isStepApplicable('d790edb5-712a-4f83-87a8-1a86e4831455'))->toBeFalse();
+        });
+
+        test('Voorwerpen-stap: één voorwerp aangevinkt → applicable', function () {
+            $state = FormState::empty();
+            $state->setField('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX', ['A23' => true]);
+
+            expect($state->isStepApplicable('d790edb5-712a-4f83-87a8-1a86e4831455'))->toBeTrue();
+        });
+
+        test('Overig-stap: leeg state → niet applicable', function () {
+            $state = FormState::empty();
+
+            expect($state->isStepApplicable('e8f00982-ee47-4bec-bf31-a5c8d1b05e5e'))->toBeFalse();
+        });
+
+        test('Overig-stap: één kenmerk aangevinkt → applicable', function () {
+            $state = FormState::empty();
+            $state->setField('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX', ['A48' => true]);
+
+            expect($state->isStepApplicable('e8f00982-ee47-4bec-bf31-a5c8d1b05e5e'))->toBeTrue();
+        });
+
+        test('Voorzieningen-stap: leeg state → niet applicable', function () {
+            // Dit is het concrete scenario uit de feedback: organisator
+            // vinkt geen voorzieningen aan, stap moet overgeslagen worden.
+            $state = FormState::empty();
+
+            expect($state->isStepApplicable('f4e91db5-fd74-4eba-b818-96ed2cc07d84'))->toBeFalse();
+        });
+
+        test('Voorzieningen-stap: één voorziening aangevinkt → applicable', function () {
+            $state = FormState::empty();
+            $state->setField('welkeVoorzieningenZijnAanwezigBijUwEvenement', ['A12' => true]);
+
+            expect($state->isStepApplicable('f4e91db5-fd74-4eba-b818-96ed2cc07d84'))->toBeTrue();
+        });
+
+        test('stappen zonder show-condities blijven default applicable bij leeg state', function () {
+            // Vragenboom2, Risicoscan en AanvraagOfMelding hebben alleen
+            // hide-condities (vooraankondiging / geen wegafsluiting). Bij
+            // leeg state moet 'lege' state nog steeds applicable zijn —
+            // anders stranden organisators die nog niets ingevuld hebben.
+            $state = FormState::empty();
+
+            expect($state->isStepApplicable('ae44ab5b-c068-4ceb-b121-6e6907f78ef9'))->toBeTrue() // Vragenboom2
+                ->and($state->isStepApplicable('c75cc256-6729-4684-9f9b-ede6265b3e72'))->toBeTrue() // Risicoscan
+                ->and($state->isStepApplicable('d87c01ce-8387-43b0-a8c8-e6cf5abb6da1'))->toBeTrue() // AanvraagOfMelding
+                ->and($state->isStepApplicable('5f986f16-6a3a-4066-9383-d71f09877f47'))->toBeTrue(); // MeldingStep
+        });
+    });
+
     test('snapshot round-trips through fromSnapshot', function () {
         $state = FormState::empty();
         $state->setField('soortEvenement', 'Markt of braderie');

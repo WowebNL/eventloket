@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\EventForm\State;
 
 /**
- * Pure-functions-class voor stap-zichtbaarheid. Gegenereerd uit de
- * 144 transpiled rule-files via dev-scripts/generate-step-applicability.php.
+ * Pure-functions-class voor stap-zichtbaarheid. Oorspronkelijk
+ * gegenereerd uit 144 transpiled rule-files via
+ * dev-scripts/generate-step-applicability.php; rule-files zijn nadien
+ * opgeruimd, dit bestand is daarom hand-onderhouden.
  *
  * Per OF-stap één arm in de match-statement die `bool|null`
  * retourneert:
@@ -15,6 +17,10 @@ namespace App\EventForm\State;
  *               wizard skipt 'm)
  *   - `null`  → geen mening; FormState valt terug op default
  *               (alle stappen applicable)
+ *
+ * Stappen mét show-condities geven bij geen-match `false` ipv `null`,
+ * anders blijven 'ze zichtbaar als lege pagina (alle Fieldsets zijn
+ * dan hidden omdat de bijbehorende vinkjes ontbreken).
  *
  * `FormState::isStepApplicable()` raadpleegt deze class direct.
  * Pure-functioneel = toggle-veilig: switch-back werkt automatisch correct.
@@ -78,7 +84,7 @@ final class FormStepApplicability
                     return false; // not applicable
                 }
 
-                return null; // door-fall: default applicable
+                return false; // geen show-conditie matched → niet applicable
             })(),
             '6e285ace-f891-4324-b54e-639c1cfff9fa' => (function () use ($s): ?bool {
                 // OF-rules:
@@ -100,7 +106,7 @@ final class FormStepApplicability
                     return false; // not applicable
                 }
 
-                return null; // door-fall: default applicable
+                return false; // geen show-conditie matched → niet applicable
             })(),
             '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99' => (function () use ($s): ?bool {
                 // OF-rules:
@@ -115,7 +121,7 @@ final class FormStepApplicability
                     return false; // not applicable
                 }
 
-                return null; // door-fall: default applicable
+                return false; // geen show-conditie matched → niet applicable
             })(),
             'ae44ab5b-c068-4ceb-b121-6e6907f78ef9' => (function () use ($s): ?bool {
                 // OF-rules:
@@ -156,7 +162,7 @@ final class FormStepApplicability
                     return false; // not applicable
                 }
 
-                return null; // door-fall: default applicable
+                return false; // geen show-conditie matched → niet applicable
             })(),
             'd87c01ce-8387-43b0-a8c8-e6cf5abb6da1' => (function () use ($s): ?bool {
                 // OF-rules:
@@ -182,7 +188,7 @@ final class FormStepApplicability
                     return false; // not applicable
                 }
 
-                return null; // door-fall: default applicable
+                return false; // geen show-conditie matched → niet applicable
             })(),
             'f4e91db5-fd74-4eba-b818-96ed2cc07d84' => (function () use ($s): ?bool {
                 // OF-rules:
@@ -205,7 +211,7 @@ final class FormStepApplicability
                     return false; // not applicable
                 }
 
-                return null; // door-fall: default applicable
+                return false; // geen show-conditie matched → niet applicable
             })(),
             default => null,
         };

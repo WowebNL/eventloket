@@ -12,7 +12,7 @@ namespace Tests\Feature\EventForm\Equivalence\Scenarios;
  */
 final class OverigScenarios implements ScenarioProvider
 {
-    public const STAP_OVERIG = '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99';
+    public const STAP_OVERIG = 'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e';
 
     public static function categorie(): string
     {
