@@ -7,27 +7,25 @@ namespace App\EventForm\Submit;
 use App\EventForm\State\FormState;
 
 /**
- * Leidt uit een FormState af welke "aard" de aanvraag heeft. De canonieke
- * bron is de content-template op stap 17 "Type aanvraag" (zie
- * `TypeAanvraagStep`), die toont wat het uiteindelijk wordt:
+ * Leidt uit een FormState af welke "aard" de aanvraag heeft. Twee
+ * paden — afhankelijk van of de gemeente al naar het nieuwe
+ * ReportQuestion-systeem is overgeschakeld of niet:
  *
- *   {% if waarvoorWiltUEventloketGebruiken == 'vooraankondiging' %}
- *       Vooraankondiging
- *   {% elif wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer == 'Nee' %}
- *       Melding
- *   {% else %}
- *       Evenementenvergunning
- *   {% endif %}
+ * 1. Legacy (`use_new_report_questions !== true`):
+ *    - `waarvoorWiltUEventloketGebruiken == 'vooraankondiging'` → Vooraankondiging
+ *    - `wordenErGebiedsontsluitings…VoorHetVerkeer == 'Nee'`     → Melding
+ *    - anders                                                    → Evenementenvergunning
  *
- * We volgen die expressie 1-op-1. Let op: als het "wegen afsluiten"-veld
- * leeg is (bijv. verborgen, of meldingsroute niet afgemaakt), valt het in
- * de `else`-tak en wordt het een **vergunning** — dat is exact OF's
- * default. Vergunning is dus de veilige default; melding vereist een
- * expliciete "Nee".
+ * 2. Nieuw ReportQuestion-systeem (`use_new_report_questions === true`):
+ *    - Vooraankondiging-keuze blijft hetzelfde voorop in de keten.
+ *    - Eén `reportQuestion_N` op 'Nee' (bij een actieve vraag) → Vergunning
+ *      (één Nee = niet-meldbaar; dezelfde semantiek als
+ *      `FormDerivedState::isVergunningaanvraag()` in 't nieuwe pad).
+ *    - Alle actieve `reportQuestion_N` op 'Ja' → Melding.
+ *    - Geen / niet-volledige antwoorden → Vergunning (veilige default).
  *
- * Eerdere implementatie las `isVergunningaanvraag`; die variabele is een
- * interne vlag voor veld-zichtbaarheid (triggert het tonen van
- * vergunning-specifieke velden), niet de uiteindelijke aard-keuze.
+ * Vergunning is in beide paden de fallback wanneer het scan-resultaat
+ * niet expliciet een meldings- of vooraankondigings-pad oplevert.
  */
 final class DetermineAanvraagType
 {
@@ -43,10 +41,45 @@ final class DetermineAanvraagType
             return self::VOORAANKONDIGING;
         }
 
+        if ($state->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            return $this->fromReportQuestions($state);
+        }
+
         if ($state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') {
             return self::MELDING;
         }
 
         return self::VERGUNNING;
+    }
+
+    /**
+     * Verwerk het nieuwe ReportQuestion-pad. We lopen alle actieve
+     * vragen langs (gemeente kan minder dan 10 vragen hebben):
+     *   - één 'Nee' → vergunning (cascade gestopt op een knock-out)
+     *   - alle 'Ja' → melding
+     *   - mix met onbeantwoorde slots → vergunning (default — scan
+     *     niet doorlopen)
+     */
+    private function fromReportQuestions(FormState $state): string
+    {
+        $questions = $state->get('gemeenteVariabelen.report_questions');
+        if (! is_array($questions) || $questions === []) {
+            return self::VERGUNNING;
+        }
+
+        $alleJa = true;
+        foreach ($questions as $index => $_question) {
+            $position = (int) $index + 1;
+            $antwoord = $state->get(sprintf('reportQuestion_%d', $position));
+
+            if ($antwoord === 'Nee') {
+                return self::VERGUNNING;
+            }
+            if ($antwoord !== 'Ja') {
+                $alleJa = false;
+            }
+        }
+
+        return $alleJa ? self::MELDING : self::VERGUNNING;
     }
 }

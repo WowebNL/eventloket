@@ -66,3 +66,75 @@ test('volledig lege FormState → evenementenvergunning (OF-default)', function 
 
     expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
 });
+
+describe('Nieuw ReportQuestion-pad (use_new_report_questions = true)', function () {
+    function reportQuestionState(array $extra = []): FormState
+    {
+        return new FormState(values: array_merge([
+            'waarvoorWiltUEventloketGebruiken' => 'evenement',
+            'gemeenteVariabelen' => [
+                'use_new_report_questions' => true,
+                'report_questions' => [
+                    ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                    ['id' => 2, 'order' => 2, 'question' => 'Vraag 2'],
+                ],
+            ],
+        ], $extra));
+    }
+
+    test('alle reportQuestions Ja → melding', function () {
+        // Identieke semantiek als de uitkomst-tekst op de scan-stap:
+        // alle vragen Ja = scan compleet zonder knock-out = melding-pad.
+        $state = reportQuestionState([
+            'reportQuestion_1' => 'Ja',
+            'reportQuestion_2' => 'Ja',
+        ]);
+
+        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::MELDING);
+    });
+
+    test('één reportQuestion Nee → vergunning', function () {
+        $state = reportQuestionState([
+            'reportQuestion_1' => 'Nee',
+        ]);
+
+        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+    });
+
+    test('halve cascade (geen Nee maar nog niet alle Ja) → vergunning (default)', function () {
+        $state = reportQuestionState([
+            'reportQuestion_1' => 'Ja',
+            // reportQuestion_2 nog niet beantwoord
+        ]);
+
+        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+    });
+
+    test('geen antwoorden ingevuld → vergunning', function () {
+        $state = reportQuestionState();
+
+        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+    });
+
+    test('vooraankondiging-keuze wint ook in nieuw pad', function () {
+        $state = reportQuestionState([
+            'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+            'reportQuestion_1' => 'Nee',
+            'reportQuestion_2' => 'Nee',
+        ]);
+
+        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VOORAANKONDIGING);
+    });
+
+    test('legacy wegen-veld wordt genegeerd in nieuw pad', function () {
+        // In de nieuwe modus wordt `wordenErGebiedsontsluitings…` niet
+        // ingevuld; als 't ergens toch op 'Nee' staat moet dat geen
+        // melding meer triggeren — anders kruisen we de paden.
+        $state = reportQuestionState([
+            'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+            'reportQuestion_1' => 'Nee',
+        ]);
+
+        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+    });
+});
