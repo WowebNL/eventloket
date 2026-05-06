@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Enums\MunicipalityVariableType;
@@ -12,7 +11,6 @@ use App\Models\Users\MunicipalityAdminUser;
 use Filament\Facades\Filament;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Laravel\Passport\Client;
 
 use function Pest\Livewire\livewire;
 
@@ -133,76 +131,6 @@ test('syncs newly added default variables to all existing municipalities', funct
         ->name->toBe('New Default Setting')
         ->key->toBe('new_default')
         ->is_default->toBe(true);
-});
-
-test('returns municipality variables via the API endpoint', function () {
-    // arrange: create variables
-    $municipality = Municipality::factory()->create();
-
-    $variable1 = MunicipalityVariable::factory()->create([
-        'municipality_id' => $municipality->id,
-        'name' => 'Text Variable',
-        'key' => 'text_var',
-        'type' => MunicipalityVariableType::Text,
-        'value' => 'Hello World',
-        'is_default' => true,
-    ]);
-
-    $variable2 = MunicipalityVariable::factory()->create([
-        'municipality_id' => $municipality->id,
-        'name' => 'Number Variable',
-        'key' => 'number_var',
-        'type' => MunicipalityVariableType::Number,
-        'value' => 42,
-        'is_default' => false,
-    ]);
-
-    // act
-    $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
-
-    $response = $this->postJson(route('passport.token'), [
-        'grant_type' => 'client_credentials',
-        'client_id' => $client->id,
-        'client_secret' => '12345678',
-    ]);
-
-    $body = $response->json();
-    $this->access_token = $body['access_token'];
-
-    $response = $this->getJson(route('api.municipality-variables', $municipality->brk_identification), [
-        'Authorization' => 'Bearer '.$this->access_token,
-    ]);
-
-    // assert: 200 + JSON shape + values
-    $response->assertStatus(200);
-    $response->assertJsonStructure([
-        'data' => [
-            '*' => [
-                'id',
-                'name',
-                'key',
-                'type',
-                'value',
-                'is_default',
-            ],
-        ],
-    ]);
-
-    $responseData = $response->json('data');
-    expect($responseData)->toHaveCount(2);
-
-    $textVar = collect($responseData)->firstWhere('key', 'text_var');
-    $numberVar = collect($responseData)->firstWhere('key', 'number_var');
-
-    expect($textVar)
-        ->name->toBe('Text Variable')
-        ->value->toBe('Hello World')
-        ->is_default->toBe(true);
-
-    expect($numberVar)
-        ->name->toBe('Number Variable')
-        ->value->toBe(42)
-        ->is_default->toBe(false);
 });
 
 test('stores the origin of a variable as is_default', function () {

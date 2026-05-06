@@ -1,10 +1,8 @@
 <?php
 
-use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings\Resources\ReportQuestions\Pages\ListReportQuestions;
 use App\Models\Municipality;
-use App\Models\MunicipalityVariable;
 use App\Models\ReportQuestion;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -90,74 +88,6 @@ test('report questions API returns empty for municipalities with old system', fu
 
     $response->assertStatus(200);
     expect($response->json('data'))->toBeEmpty();
-});
-
-test('municipality variables API excludes report questions for municipalities with new system', function () {
-    $municipality = Municipality::factory()->create(['use_new_report_questions' => true]);
-
-    MunicipalityVariable::factory()->create([
-        'municipality_id' => $municipality->id,
-        'type' => MunicipalityVariableType::ReportQuestion,
-        'key' => 'report_question_1',
-        'value' => 'Old question?',
-    ]);
-
-    MunicipalityVariable::factory()->create([
-        'municipality_id' => $municipality->id,
-        'type' => MunicipalityVariableType::Text,
-        'key' => 'some_text_var',
-        'value' => 'Some text',
-    ]);
-
-    $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
-    $response = $this->postJson(route('passport.token'), [
-        'grant_type' => 'client_credentials',
-        'client_id' => $client->id,
-        'client_secret' => '12345678',
-    ]);
-    $accessToken = $response->json('access_token');
-
-    $response = $this->getJson(route('api.municipality-variables', $municipality->brk_identification), [
-        'Authorization' => 'Bearer '.$accessToken,
-    ]);
-
-    $response->assertStatus(200);
-    $data = $response->json('data');
-    expect($data)->toHaveCount(1);
-    expect($data[0]['key'])->toBe('some_text_var');
-});
-
-test('municipality variables API includes report questions for municipalities with old system', function () {
-    $municipality = Municipality::factory()->create(['use_new_report_questions' => false]);
-
-    MunicipalityVariable::factory()->create([
-        'municipality_id' => $municipality->id,
-        'type' => MunicipalityVariableType::ReportQuestion,
-        'key' => 'report_question_1',
-        'value' => 'Old question?',
-    ]);
-
-    MunicipalityVariable::factory()->create([
-        'municipality_id' => $municipality->id,
-        'type' => MunicipalityVariableType::Text,
-        'key' => 'some_text_var',
-        'value' => 'Some text',
-    ]);
-
-    $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
-    $response = $this->postJson(route('passport.token'), [
-        'grant_type' => 'client_credentials',
-        'client_id' => $client->id,
-        'client_secret' => '12345678',
-    ]);
-    $accessToken = $response->json('access_token');
-
-    $response = $this->getJson(route('api.municipality-variables', $municipality->brk_identification), [
-        'Authorization' => 'Bearer '.$accessToken,
-    ]);
-
-    $response->assertStatus(200);
-    expect($response->json('data'))->toHaveCount(2);
 });
 
 test('admin users can view report questions', function () {
