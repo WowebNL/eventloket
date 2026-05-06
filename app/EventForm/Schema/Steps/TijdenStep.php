@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\InfoText;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
@@ -27,9 +28,7 @@ final class TijdenStep
         return Step::make('Tijden')
             ->key(self::UUID)
             ->schema([
-                TextEntry::make('content2')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><span >Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</span></p>', $livewire->state()))),
+                InfoText::warning('content2', '<p>Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</p>'),
                 Grid::make(1)
                     ->schema([
                         DateTimePicker::make('EvenementStart')
@@ -45,9 +44,7 @@ final class TijdenStep
                             ->required()
                             ->live(),
                     ]),
-                TextEntry::make('evenmentenInDeBuurtContent')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>', $livewire->state())))
+                InfoText::info('evenmentenInDeBuurtContent', '<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('evenmentenInDeBuurtContent') !== false),
                 Radio::make('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))

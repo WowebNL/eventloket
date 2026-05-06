@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\InfoText;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid f4e91db5-fd74-4eba-b818-96ed2cc07d84
@@ -32,9 +31,7 @@ final class VergunningsaanvraagVoorzieningenStep
             ->schema([
                 Fieldset::make('WC\'s')
                     ->schema([
-                        TextEntry::make('content23')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>', $livewire->state()))),
+                        InfoText::info('content23', '<p>U heeft aangegeven om toiletten te plaatsen (of bestaande te gebruiken) . Hierinder volgen een a<strong>antal vragen hierover.</strong></p>'),
                         TextInput::make('hoeveelVasteToilettenZijnBeschikbaar')
                             ->label('Hoeveel vaste toiletten zijn beschikbaar?')
                             ->numeric()
@@ -90,9 +87,7 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wCs') !== false),
                 Fieldset::make('Douche\'s')
                     ->schema([
-                        TextEntry::make('content24')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content24', '<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>'),
                         TextInput::make('hoeveelVasteDouchevoorzieningenZijnBeschikbaar')
                             ->label('Hoeveel vaste douchevoorzieningen zijn beschikbaar?')
                             ->numeric()
@@ -112,9 +107,7 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('douches') !== false),
                 Fieldset::make('EHBO')
                     ->schema([
-                        TextEntry::make('content25')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>', $livewire->state()))),
+                        InfoText::info('content25', '<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>'),
                         TextInput::make('aantalVasteEersteHulpposten')
                             ->label('Aantal vaste eerste hulpposten')
                             ->numeric()
@@ -270,9 +263,7 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('overnachtingen') !== false),
                 Fieldset::make('Bouwsels')
                     ->schema([
-                        TextEntry::make('content26')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>', $livewire->state()))),
+                        InfoText::info('content26', '<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>'),
                         TextInput::make('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?', $livewire->state()))
                             ->numeric()
@@ -282,9 +273,7 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('bouwsels') !== false),
                 Fieldset::make('Beveiligers')
                     ->schema([
-                        TextEntry::make('content36')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>', $livewire->state()))),
+                        InfoText::info('content36', '<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>'),
                         Textarea::make('gegevensBeveiligingsorganisatieOpLocatieEvenementX1')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                             ->required()

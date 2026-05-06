@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
-use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Components\InfoText;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid 48e9408a-3455-4d3c-b9ce-5f6f08f8f2b5
@@ -88,9 +86,7 @@ final class ContactgegevensStep
                             ->maxLength(1000),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('organisatieInformatie') !== false),
-                TextEntry::make('waarschuwingGeenKvk')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>', $livewire->state())))
+                InfoText::warning('waarschuwingGeenKvk', '<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('waarschuwingGeenKvk') !== false),
                 Fieldset::make('Adresgegevens')
                     ->schema([

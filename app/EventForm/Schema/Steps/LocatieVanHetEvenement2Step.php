@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\AddressNL;
+use App\EventForm\Components\InfoText;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
@@ -14,11 +15,9 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid 2186344f-9821-45d1-bd52-9900ae15fcb6
@@ -83,9 +82,7 @@ final class LocatieVanHetEvenement2Step
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('locatieSOpKaart') !== false),
                 Fieldset::make('Route')
                     ->schema([
-                        TextEntry::make('infoGpx1')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Wanneer het een eenvoudige route betreft (bijvoorbeeld voor een processie), dan kun je hieronder de route intekenen op de kaart.</p><p>Ingeval het een complexe route betreft (bijvoorbeeld een wielertocht), dan wordt aanbevolen om de route op de kaart globaal in te tekenen, zodat de applicatie kan herkennen door welke gemeenten de route gaat (en deze daarover informeren). Voor de detailroute bieden we hieronder de mogelijkheid voor het uploaden van een GPX bestand.</p>', $livewire->state()))),
+                        InfoText::info('infoGpx1', '<p>Wanneer het een eenvoudige route betreft (bijvoorbeeld voor een processie), dan kun je hieronder de route intekenen op de kaart.</p><p>Ingeval het een complexe route betreft (bijvoorbeeld een wielertocht), dan wordt aanbevolen om de route op de kaart globaal in te tekenen, zodat de applicatie kan herkennen door welke gemeenten de route gaat (en deze daarover informeren). Voor de detailroute bieden we hieronder de mogelijkheid voor het uploaden van een GPX bestand.</p>'),
                         Repeater::make('routesOpKaart')
                             ->label('Route op kaart')
                             ->schema([
@@ -151,9 +148,7 @@ final class LocatieVanHetEvenement2Step
                                 'staatsbosbeheer' => 'Staatsbosbeheer',
                             ])
                             ->live(),
-                        TextEntry::make('content1')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor het gebruik van provinciale wegen, of in het geval van een wegwedstrijd die door meerdere gemeenten binnen de provincie voert dient er <a href="https://www.limburg.nl/@1161/wedstrijden-weg" target="_blank" rel="noopener noreferrer">een verzoek voor ontheffing van de openbare weg </a>gericht te worden aan de Provincie Limburg.</p>', $livewire->state())))
+                        InfoText::info('content1', '<p>Voor het gebruik van provinciale wegen, of in het geval van een wegwedstrijd die door meerdere gemeenten binnen de provincie voert dient er <a href="https://www.limburg.nl/@1161/wedstrijden-weg" target="_blank" rel="noopener noreferrer">een verzoek voor ontheffing van de openbare weg </a>gericht te worden aan de Provincie Limburg.</p>')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('content1');
                                 if ($rule !== null) {
@@ -162,9 +157,7 @@ final class LocatieVanHetEvenement2Step
 
                                 return ! (in_array('provincie', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
-                        TextEntry::make('content39')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/waters van het Waterschap dient u een aanvraag te doen via <a href="https://www.waterschaplimburg.nl/overons/regels-wetgeving-0/melding-vergunning/" target="_blank" rel="noopener noreferrer">de website</a>.</p>', $livewire->state())))
+                        InfoText::info('content39', '<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/waters van het Waterschap dient u een aanvraag te doen via <a href="https://www.waterschaplimburg.nl/overons/regels-wetgeving-0/melding-vergunning/" target="_blank" rel="noopener noreferrer">de website</a>.</p>')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('content39');
                                 if ($rule !== null) {
@@ -173,9 +166,7 @@ final class LocatieVanHetEvenement2Step
 
                                 return ! (in_array('waterschap', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
-                        TextEntry::make('content41')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/waters van het Rijkswaterstaat dient u een aanvraag te doen via <a href="https://www.rijkswaterstaat.nl/wegen/wetten-regels-en-vergunningen/vergunningen-rijkswegen" target="_blank" rel="noopener noreferrer">de website van Rijkswaterstaat</a>.</p>', $livewire->state())))
+                        InfoText::info('content41', '<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/waters van het Rijkswaterstaat dient u een aanvraag te doen via <a href="https://www.rijkswaterstaat.nl/wegen/wetten-regels-en-vergunningen/vergunningen-rijkswegen" target="_blank" rel="noopener noreferrer">de website van Rijkswaterstaat</a>.</p>')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('content41');
                                 if ($rule !== null) {
@@ -184,9 +175,7 @@ final class LocatieVanHetEvenement2Step
 
                                 return ! (in_array('rijkswaterstaat', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
-                        TextEntry::make('content40')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/paden van het Staatsbosheer dient u een aanvraag te doen via <a href="https://www.staatsbosbeheer.nl/contact/evenementen-aanmelden" target="_blank" rel="noopener noreferrer">de website van Staatsbosbeheer</a>.</p>', $livewire->state())))
+                        InfoText::info('content40', '<p>Voor het afgeven van een ontheffing voor het kruisen van wegen/paden van het Staatsbosheer dient u een aanvraag te doen via <a href="https://www.staatsbosbeheer.nl/contact/evenementen-aanmelden" target="_blank" rel="noopener noreferrer">de website van Staatsbosbeheer</a>.</p>')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('content40');
                                 if ($rule !== null) {
@@ -195,9 +184,7 @@ final class LocatieVanHetEvenement2Step
 
                                 return ! (in_array('staatsbosbeheer', (array) $get('komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan'), true));
                             }),
-                        TextEntry::make('routeStartEndContent2')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>{% if not inGemeentenResponse.line.start or not inGemeentenResponse.line.end %}</p><p>Er is nog geen route ingetekend of de route start of eindigt &nbsp;buiten de gemeenten die gebruik maken van Eventloket.&nbsp;</p><p>{% elif inGemeentenResponse.line.start_end_equal == False %}</p><p>De route start in de gemeente <strong>{{ inGemeentenResponse.line.start.name }}</strong> en eindigt in de gemeente <strong>{{ inGemeentenResponse.line.end.name }}</strong>, hierdoor kan het zijn dat u bij beide gemeenten een vergunningaanvraag moet doen. U dient vult dit formulier helemaal in voor 1 gemeente, als u de aanvraag vervolgens heeft gedaan kunt u binnen de aanvraag in Eventloket de knop “Nieuwe aanvraag” gebruiken om een nieuw aanvraag te starten waarbij (een deel van) het formulier al vooraf ingevuld is.</p><p>{% elif inGemeentenResponse.line.start_end_equal == True %}</p><p>De route start en eindigt binnen de gemeente <strong>{{ inGemeentenResponse.line.start.name }}.</strong></p><p>{% endif %}</p>', $livewire->state()))),
+                        InfoText::info('routeStartEndContent2', '<p>{% if not inGemeentenResponse.line.start or not inGemeentenResponse.line.end %}</p><p>Er is nog geen route ingetekend of de route start of eindigt &nbsp;buiten de gemeenten die gebruik maken van Eventloket.&nbsp;</p><p>{% elif inGemeentenResponse.line.start_end_equal == False %}</p><p>De route start in de gemeente <strong>{{ inGemeentenResponse.line.start.name }}</strong> en eindigt in de gemeente <strong>{{ inGemeentenResponse.line.end.name }}</strong>, hierdoor kan het zijn dat u bij beide gemeenten een vergunningaanvraag moet doen. U dient vult dit formulier helemaal in voor 1 gemeente, als u de aanvraag vervolgens heeft gedaan kunt u binnen de aanvraag in Eventloket de knop “Nieuwe aanvraag” gebruiken om een nieuw aanvraag te starten waarbij (een deel van) het formulier al vooraf ingevuld is.</p><p>{% elif inGemeentenResponse.line.start_end_equal == True %}</p><p>De route start en eindigt binnen de gemeente <strong>{{ inGemeentenResponse.line.start.name }}.</strong></p><p>{% endif %}</p>'),
                     ])
                     ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('route');
@@ -207,9 +194,7 @@ final class LocatieVanHetEvenement2Step
 
                         return ! (in_array('route', (array) $get('waarVindtHetEvenementPlaats'), true));
                     }),
-                TextEntry::make('NotWithin')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<h3><span >Let op</span></h3><p>Een ingevoerd adres of (een deel van) een getekende route of locatie valt buiten de gemeenten die EventLoket gebruiken.</p><p>Eventloket wordt gebruikt door de gemeenten:&nbsp;{{ alleGemeenteNamen }}</p>', $livewire->state())))
+                InfoText::warning('NotWithin', '<h3>Let op</h3><p>Een ingevoerd adres of (een deel van) een getekende route of locatie valt buiten de gemeenten die EventLoket gebruiken.</p><p>Eventloket wordt gebruikt door de gemeenten:&nbsp;{{ alleGemeenteNamen }}</p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('NotWithin') !== false),
                 Radio::make('userSelectGemeente')
                     ->label('De ingevoerde locatie(s) of route valt binnen of doorkruist meerdere gemeenten, wat is de gemeente waarbinnen u de aanvraag wilt doen?')
@@ -217,13 +202,9 @@ final class LocatieVanHetEvenement2Step
                     ->required()
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('userSelectGemeente') !== false)
                     ->live(),
-                TextEntry::make('contentRouteDoorkuistMeerdereGemeenteInfo')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>De ingetekende route doorkruist de volgende gemeente(n): {{ routeDoorGemeentenNamen|join:", " }} &nbsp;U gaat de vergunningaanvraag invullen voor de gemeente&nbsp;<strong> {% get_value evenementInGemeente \'name\' %}</strong>, de overige gemeente(n) die gebruik maken van Eventloket op de route zullen automatisch geïnformeerd worden.</p>', $livewire->state())))
+                InfoText::info('contentRouteDoorkuistMeerdereGemeenteInfo', '<p>De ingetekende route doorkruist de volgende gemeente(n): {{ routeDoorGemeentenNamen|join:", " }} &nbsp;U gaat de vergunningaanvraag invullen voor de gemeente&nbsp;<strong> {% get_value evenementInGemeente \'name\' %}</strong>, de overige gemeente(n) die gebruik maken van Eventloket op de route zullen automatisch geïnformeerd worden.</p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentRouteDoorkuistMeerdereGemeenteInfo') !== false),
-                TextEntry::make('content200')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U gaat verder met deze aanraag voor de gemeente:<strong> {% get_value evenementInGemeente \'name\' %}</strong></p>', $livewire->state())))
+                InfoText::info('content200', '<p>U gaat verder met deze aanraag voor de gemeente:<strong> {% get_value evenementInGemeente \'name\' %}</strong></p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('content200') !== false),
             ]);
     }

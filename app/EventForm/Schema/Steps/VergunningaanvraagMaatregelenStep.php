@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\InfoText;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -11,11 +12,9 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid 8a5fb30f-287e-41a2-a9bc-e7340bdaaa99
@@ -33,9 +32,7 @@ final class VergunningaanvraagMaatregelenStep
             ->schema([
                 Fieldset::make('Aanpassen locatie en/of verwijderen straatmeubilair')
                     ->schema([
-                        TextEntry::make('content29')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>', $livewire->state()))),
+                        InfoText::info('content29', '<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>'),
                         Textarea::make('geefEenOmschrijvingWelkeAanpassingenOpLocatieEvenementXWaarNodigZijnOfWelkStraatmeubilairUWiltVerwijderenOfAanpassen')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geef een omschrijving welke aanpassingen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }} waar nodig zijn of welk straatmeubilair u wilt verwijderen of aanpassen.', $livewire->state()))
                             ->required()
@@ -44,9 +41,7 @@ final class VergunningaanvraagMaatregelenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('aanpassenLocatieEnOfVerwijderenStraatmeubilair') !== false),
                 Fieldset::make('Extra afval')
                     ->schema([
-                        TextEntry::make('content30')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>', $livewire->state()))),
+                        InfoText::info('content30', '<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>'),
                         Repeater::make('wieMaaktDeLocatiesEnDeOmgevingDaarvanSchoonEnWanneerGebeurtDat')
                             ->label('Wie maakt de locaties en de omgeving daarvan schoon, en wanneer gebeurt dat?')
                             ->schema([
@@ -110,9 +105,7 @@ final class VergunningaanvraagMaatregelenStep
                             ->live(),
                         Fieldset::make('Veldengroep')
                             ->schema([
-                                TextEntry::make('content37')
-                                    ->hiddenLabel()
-                                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Vermeld hier van welke materialen u gebruik zou willen maken en ook de aantallen. Uw betreffende gemeente zal aangeven welke hulpmiddelen aangeboden kunnen worden.</p>', $livewire->state()))),
+                                InfoText::info('content37', '<p>Vermeld hier van welke materialen u gebruik zou willen maken en ook de aantallen. Uw betreffende gemeente zal aangeven welke hulpmiddelen aangeboden kunnen worden.</p>'),
                                 TextInput::make('dranghekken1')
                                     ->label('Dranghekken')
                                     ->numeric(),

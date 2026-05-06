@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\InfoText;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
@@ -13,11 +14,9 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid e8f00982-ee47-4bec-bf31-a5c8d1b05e5e
@@ -35,9 +34,7 @@ final class VergunningaanvraagOverigStep
             ->schema([
                 Fieldset::make('Voorwerpen op de weg')
                     ->schema([
-                        TextEntry::make('content32')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>', $livewire->state()))),
+                        InfoText::info('content32', '<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>'),
                         Repeater::make('geefAanOpWelkeDataEnTijdenUDeVoorwerpenWiltPlaatsenOpDeOpenbareWegOfGroteVoertuigenWiltParkerenInDeBuurtVanHetEvenement')
                             ->label('Geef aan op welke data en tijden u de voorwerpen wilt plaatsen op de openbare weg of grote voertuigen wilt parkeren in de buurt van het evenement')
                             ->schema([
@@ -80,9 +77,7 @@ final class VergunningaanvraagOverigStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('groteVoertuigen') !== false),
                 Fieldset::make('Verkeersregelaars')
                     ->schema([
-                        TextEntry::make('content33')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content33', '<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>'),
                         Radio::make('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie')
                             ->label('Huurt u de verkeersregelaars in bij een daarin gespecialiseerd bedrijf/organisatie?')
                             ->options([
@@ -103,9 +98,7 @@ final class VergunningaanvraagOverigStep
 
                                 return ! ($get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Ja');
                             }),
-                        TextEntry::make('content34')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>', $livewire->state())))
+                        InfoText::info('content34', '<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('content34');
                                 if ($rule !== null) {

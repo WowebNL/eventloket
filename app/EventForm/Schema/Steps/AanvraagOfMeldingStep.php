@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\InfoText;
 use App\EventForm\State\FormState;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid d87c01ce-8387-43b0-a8c8-e6cf5abb6da1
@@ -29,12 +28,8 @@ final class AanvraagOfMeldingStep
         return Step::make('Vergunningsplichtig scan')
             ->key(self::UUID)
             ->schema([
-                TextEntry::make('content4')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>', $livewire->state()))),
-                TextEntry::make('contentGemeenteMelding')
-                    ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>', $livewire->state())))
+                InfoText::info('content4', '<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>'),
+                InfoText::info('contentGemeenteMelding', '<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentGemeenteMelding') !== false),
                 Fieldset::make('Algemene vragen')
                     ->schema([
@@ -277,13 +272,9 @@ final class AanvraagOfMeldingStep
                                         self::resetLegacyCascade($component->getName(), $set);
                                     }
                                 }),
-                            TextEntry::make('contentGoNext')
-                                ->hiddenLabel()
-                                ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>', $livewire->state())))
+                            InfoText::info('contentGoNext', '<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>')
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentGoNext') !== false),
-                            TextEntry::make('MeldingTekst')
-                                ->hiddenLabel()
-                                ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>', $livewire->state())))
+                            InfoText::info('MeldingTekst', '<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>')
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('MeldingTekst') !== false),
                         ])
                             ->hidden(fn ($livewire): bool => ! self::legacySysteemActief($livewire->state())),

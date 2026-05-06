@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\InfoText;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
@@ -14,11 +15,9 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
-use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid 661aabb7-e927-4a75-8d95-0a665c5d83fe
@@ -36,9 +35,7 @@ final class VergunningaanvraagVervolgvragenStep
             ->schema([
                 Fieldset::make('Versterkte muziek')
                     ->schema([
-                        TextEntry::make('content5')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content5', '<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>'),
                         CheckboxList::make('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wie maakt de muziek op locatie bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
@@ -158,9 +155,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('versterkteMuziek') !== false),
                 Fieldset::make('Bouwsels &gt; 10m<sup>2</sup> ')
                     ->schema([
-                        TextEntry::make('content15')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er bouwsels &gt; 10m2 zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content15', '<p>U heeft aangegeven, dat er bouwsels &gt; 10m2 zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>'),
                         CheckboxList::make('watVoorBouwselsPlaatsUOpDeLocaties')
                             ->label('Wat voor bouwsels plaats u op de locaties?')
                             ->options([
@@ -267,9 +262,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('bouwsels10MSup2Sup') !== false),
                 Fieldset::make('Kansspelen')
                     ->schema([
-                        TextEntry::make('content16')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft kansspelen aangekruist.&nbsp;Hieronder volgen een aantal vragen daarover.</p>', $livewire->state()))),
+                        InfoText::info('content16', '<p>U heeft kansspelen aangekruist.&nbsp;Hieronder volgen een aantal vragen daarover.</p>'),
                         Textarea::make('welkSoortKansspelBetreftHet')
                             ->label('Welk soort kansspel betreft het?')
                             ->required()
@@ -309,9 +302,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('kansspelen') !== false),
                 Fieldset::make('Alcoholische dranken')
                     ->schema([
-                        TextEntry::make('content17')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er alcoholische dranken genuttigd worden. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content17', '<p>U heeft aangegeven, dat er alcoholische dranken genuttigd worden. Hieronder volgen een aantal vragen hierover.</p>'),
                         Radio::make('isEenPersoonOfOrganisatieVerantwoordelijkVoorDeAlcoholverkoop')
                             ->label('Is een persoon of organisatie verantwoordelijk voor de alcoholverkoop?')
                             ->options([
@@ -397,9 +388,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('alcoholischeDranken') !== false),
                 Fieldset::make('Eten bereiden of verkopen')
                     ->schema([
-                        TextEntry::make('content18')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content18', '<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgen een aantal vragen hierover.</p>'),
                         Radio::make('welkSoortBereidingVanEtenswarenIsVanToepassingOpLocatieEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welk soort bereiding van etenswaren is van toepassing op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options([
@@ -443,9 +432,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('etenBereidenOfVerkopen') !== false),
                 Fieldset::make('Belemmering van verkeer')
                     ->schema([
-                        TextEntry::make('content19')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat er sprake is van belemmering van verkeer. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content19', '<p>U heeft aangegeven, dat er sprake is van belemmering van verkeer. Hieronder volgen een aantal vragen hierover.</p>'),
                         Textarea::make('beschrijfOpWelkeWijzeErSprakeIsVanBelemmeringVanVerkeer')
                             ->label('Beschrijf op welke wijze er sprake is van belemmering van verkeer')
                             ->required()
@@ -454,9 +441,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('belemmeringVanVerkeer') !== false),
                 Fieldset::make('Weg of vaarweg afsluiten')
                     ->schema([
-                        TextEntry::make('content20')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p>U heeft aangegeven, dat u een (deel van-) de doorgaande weg of vaarweg wilt afsluiten voor doorgaand verkeer. Hieronder volgen een aantal vragen hierover.</p>', $livewire->state()))),
+                        InfoText::info('content20', '<p>U heeft aangegeven, dat u een (deel van-) de doorgaande weg of vaarweg wilt afsluiten voor doorgaand verkeer. Hieronder volgen een aantal vragen hierover.</p>'),
                         Repeater::make('welkeDoorgangenWiltUAfsluiten')
                             ->label('Welke doorgangen wilt u afsluiten?')
                             ->schema([
@@ -496,9 +481,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wegOfVaarwegAfsluiten') !== false),
                 Fieldset::make('Toegang voor hulpdiensten is beperkt')
                     ->schema([
-                        TextEntry::make('content21')
-                            ->hiddenLabel()
-                            ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->render('<p><strong>Beschrijf in de bijlage “Verkeersplan” de calamiteitenroute en op welke wijze de toegang voor hulpdiensten beperkt wordt en welke maatregelen u heeft getroffen om de deze beperking op te lossen.</strong></p>', $livewire->state()))),
+                        InfoText::warning('content21', '<p><strong>Beschrijf in de bijlage “Verkeersplan” de calamiteitenroute en op welke wijze de toegang voor hulpdiensten beperkt wordt en welke maatregelen u heeft getroffen om de deze beperking op te lossen.</strong></p>'),
                         TextInput::make('watIsDeNaamVanDeFunctionarisOfPersoonDieDeTaakHeeftOmInGevalVanEenCalamiteitDeHulpdienstenOpTeVangen')
                             ->label('Wat is de naam van de functionaris of persoon die de taak heeft om in geval van een calamiteit de hulpdiensten op te vangen?')
                             ->required()
