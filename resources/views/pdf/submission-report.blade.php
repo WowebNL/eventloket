@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Inzendingsbewijs — {{ $zaak->public_id }}</title>
+    <title>Aanvraagformulier {{ $zaak->public_id }}</title>
     <style>
         @page { margin: 1.4cm 1.4cm 1.6cm 1.4cm; }
         body { font-family: DejaVu Sans, sans-serif; color: #111; font-size: 8.5pt; line-height: 1.35; margin: 0; padding: 0; }
@@ -28,9 +28,8 @@
     </style>
 </head>
 <body>
-    <h1>Inzendingsbewijs</h1>
+    <h1>Aanvraagformulier {{ $zaak->public_id }}</h1>
     <div class="meta">
-        <div><strong>Zaaknummer:</strong> {{ $zaak->public_id }}</div>
         <div><strong>Zaaktype:</strong> {{ $zaak->zaaktype?->name ?? '—' }}</div>
         @if (! empty($gemeenteNaam))
             <div><strong>Gemeente:</strong> {{ $gemeenteNaam }}</div>

@@ -5,7 +5,7 @@
  * gegenereerd. Deze test checkt:
  *
  * 1. Na uitvoering van de job staat er een PDF op de lokale disk onder
- *    `zaken/{zaak_uuid}/submission-report.pdf`.
+ *    `zaken/{zaak_uuid}/aanvraagformulier.pdf`.
  * 2. De PDF bevat het zaaknummer + de belangrijkste antwoorden uit de
  *    FormState (naam evenement, locatie, datum).
  * 3. Een bevestigings-email-job wordt aangesloten (dispatched) zodat
@@ -69,7 +69,7 @@ test('rendert een PDF-bewijs op de juiste plek na submit', function () {
     (new GenerateSubmissionPdf($zaak))->handle();
 
     // 1. PDF staat op de verwachte plek.
-    $expectedPath = "zaken/{$zaak->id}/submission-report.pdf";
+    $expectedPath = "zaken/{$zaak->id}/aanvraagformulier.pdf";
     Storage::disk('local')->assertExists($expectedPath);
 
     // 2. Het eerste stukje bytes is een geldige PDF-header.

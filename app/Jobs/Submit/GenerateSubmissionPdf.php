@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
 /**
  * Rendert een PDF-inzendingsbewijs met alle belangrijkste antwoorden
  * uit de aanvraag en slaat 'm op bij
- * `storage/app/zaken/{zaak_uuid}/submission-report.pdf`.
+ * `storage/app/zaken/{zaak_uuid}/aanvraagformulier.pdf`.
  *
  * Op de `high`-queue omdat de organisator 'm snel moet kunnen
  * downloaden + in de bevestigingsmail als bijlage krijgt.
@@ -53,7 +53,7 @@ final class GenerateSubmissionPdf implements ShouldQueue
             'risicoClassificatie' => $risicoClassificatie,
         ])->setPaper('a4');
 
-        $path = sprintf('zaken/%s/submission-report.pdf', $this->zaak->id);
+        $path = sprintf('zaken/%s/aanvraagformulier.pdf', $this->zaak->id);
         Storage::disk('local')->put($path, $pdf->output());
 
         // Pas bevestigingsmail dispatchen nadat de PDF klaar staat, zodat

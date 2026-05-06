@@ -42,7 +42,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             return;
         }
 
-        $path = sprintf('zaken/%s/submission-report.pdf', $this->zaak->id);
+        $path = sprintf('zaken/%s/aanvraagformulier.pdf', $this->zaak->id);
         if (! Storage::disk('local')->exists($path)) {
             // Geen PDF om te uploaden — een eerdere job heeft 'm niet
             // weggeschreven. Loggen en stilletjes terug; we willen geen
@@ -63,10 +63,10 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
             'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
-            'titel' => 'Inzendingsbewijs '.$this->zaak->public_id,
+            'titel' => 'Aanvraagformulier '.$this->zaak->public_id,
             'auteur' => 'Eventloket',
             'taal' => 'dut',
-            'bestandsnaam' => 'inzendingsbewijs.pdf',
+            'bestandsnaam' => 'aanvraagformulier.pdf',
             'bestandsomvang' => strlen($content),
             'formaat' => 'application/pdf',
             'inhoud' => base64_encode($content),

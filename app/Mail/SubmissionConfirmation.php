@@ -52,14 +52,14 @@ class SubmissionConfirmation extends Mailable
      */
     public function attachments(): array
     {
-        $path = sprintf('zaken/%s/submission-report.pdf', $this->zaak->id);
+        $path = sprintf('zaken/%s/aanvraagformulier.pdf', $this->zaak->id);
         if (! Storage::disk('local')->exists($path)) {
             return [];
         }
 
         return [
             Attachment::fromStorageDisk('local', $path)
-                ->as(sprintf('inzendingsbewijs-%s.pdf', $this->zaak->public_id))
+                ->as(sprintf('aanvraagformulier-%s.pdf', $this->zaak->public_id))
                 ->withMime('application/pdf'),
         ];
     }

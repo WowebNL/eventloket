@@ -73,7 +73,7 @@ class GenereerVolledigeDemoPdf extends Command
 
         (new GenerateSubmissionPdf($zaak))->handle();
 
-        $path = sprintf('storage/app/private/zaken/%s/submission-report.pdf', $zaak->id);
+        $path = sprintf('storage/app/private/zaken/%s/aanvraagformulier.pdf', $zaak->id);
 
         $this->info('Zaak: '.$zaak->public_id);
         $this->info('PDF: /var/www/html/'.$path);

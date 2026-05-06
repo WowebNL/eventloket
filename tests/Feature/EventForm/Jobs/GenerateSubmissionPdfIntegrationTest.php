@@ -73,7 +73,7 @@ test('PDF bevat per-stap secties + concrete ingevulde waarden uit het formulier'
 
     (new GenerateSubmissionPdf($zaak))->handle();
 
-    $pdfPath = sprintf('zaken/%s/submission-report.pdf', $zaak->id);
+    $pdfPath = sprintf('zaken/%s/aanvraagformulier.pdf', $zaak->id);
     expect(Storage::disk('local')->exists($pdfPath))
         ->toBeTrue('verwacht een PDF op '.$pdfPath);
 

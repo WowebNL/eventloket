@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
 /**
  * Dev-command dat een voorbeeld-inzendingsbewijs PDF genereert zonder
  * DB-afhankelijkheid — handig om het visuele resultaat te bekijken.
- * De PDF wordt naar `storage/app/demo-submission-report.pdf` geschreven.
+ * De PDF wordt naar `storage/app/demo-aanvraagformulier.pdf` geschreven.
  */
 class GenereerDemoPdf extends Command
 {
@@ -238,11 +238,11 @@ class GenereerDemoPdf extends Command
             'rows' => $rows,
         ])->setPaper('a4');
 
-        $target = storage_path('app/demo-submission-report.pdf');
+        $target = storage_path('app/demo-aanvraagformulier.pdf');
         file_put_contents($target, $pdf->output());
 
         $this->info('PDF geschreven naar: '.$target);
-        $this->info('Host-pad: storage/app/demo-submission-report.pdf');
+        $this->info('Host-pad: storage/app/demo-aanvraagformulier.pdf');
 
         return self::SUCCESS;
     }

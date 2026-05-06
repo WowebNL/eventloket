@@ -70,7 +70,7 @@ test('stuurt bevestigingsmail naar de organisator met PDF als bijlage', function
     // Simuleer de PDF die `GenerateSubmissionPdf` eerder zou hebben
     // geschreven — anders is er geen bijlage.
     Storage::disk('local')->put(
-        "zaken/{$zaak->id}/submission-report.pdf",
+        "zaken/{$zaak->id}/aanvraagformulier.pdf",
         '%PDF-1.4 fake content'
     );
 
