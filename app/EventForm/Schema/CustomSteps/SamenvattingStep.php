@@ -48,36 +48,19 @@ final class SamenvattingStep
     }
 
     /**
-     * Bouw de samenvatting-HTML uit `SubmissionReport`-secties. Lege
-     * secties (stappen waar niets ingevuld is) vallen automatisch weg
-     * — geen "—"-rijen.
+     * Bouw de samenvatting-HTML uit `SubmissionReport`-secties. Het
+     * rendrenden delegeren we aan een blade-partial zodat:
+     *   - de structuur 1-op-1 spiegelt met de submission-PDF
+     *     (titel + per sectie tabel, plus aparte takken voor
+     *     `table` en `sub` entries);
+     *   - kaart-SVG's uit Map-velden worden meegenomen (Filament
+     *     rendert de HtmlString in de browser → de `<img>`-data-URI
+     *     uit `renderGeoJsonSvg()` werkt direct).
      */
     private static function renderHtml(FormState $state): string
     {
         $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
-        if ($sections === []) {
-            return '<p>U heeft nog geen velden ingevuld.</p>';
-        }
 
-        $html = '';
-        foreach ($sections as $section) {
-            $html .= '<h3 style="margin-top: 1.5rem; font-size: 1rem; font-weight: 600;">'
-                .htmlspecialchars((string) $section['title'])
-                .'</h3>';
-            $html .= '<table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">';
-            foreach ($section['entries'] as $entry) {
-                $html .= '<tr>';
-                $html .= '<td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; color: #555; vertical-align: top; width: 40%;">'
-                    .strip_tags((string) $entry['label'])
-                    .'</td>';
-                $html .= '<td style="padding: 0.4rem 0.5rem; border-bottom: 1px solid #eee; vertical-align: top;">'
-                    .nl2br(htmlspecialchars((string) $entry['value']))
-                    .'</td>';
-                $html .= '</tr>';
-            }
-            $html .= '</table>';
-        }
-
-        return $html;
+        return view('event-form.samenvatting', ['sections' => $sections])->render();
     }
 }
