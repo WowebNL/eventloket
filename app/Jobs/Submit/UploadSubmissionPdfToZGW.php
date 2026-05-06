@@ -78,6 +78,8 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             'zaak' => $this->zaak->zgw_zaak_url,
             'informatieobject' => $info->url,
         ]);
+
+        $this->zaak->clearZgwCache();
     }
 
     private function resolveInformatieobjecttype(): string

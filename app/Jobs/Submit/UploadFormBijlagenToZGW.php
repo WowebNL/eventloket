@@ -75,7 +75,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         // Filter eerst op aanwezigheid op disk; pas resolve & POST als er
         // daadwerkelijk een bestand te uploaden valt. Voorkomt onnodige
         // ZGW-roundtrips wanneer alle paden verdwenen zijn.
-        $disk = Storage::disk(config('filament.default_filesystem_disk', 'local'));
+        $disk = Storage::disk('local');
         $aanwezig = [];
         foreach ($bestandPaden as $pad) {
             if (! $disk->exists($pad)) {
@@ -119,6 +119,8 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 'informatieobject' => $info->url,
             ]);
         }
+
+        $this->zaak->clearZgwCache();
     }
 
     /**
