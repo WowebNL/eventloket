@@ -231,6 +231,14 @@ class EventFormPage extends Page implements HasForms
             ->schema([
                 VerticalWizard::make(EventFormSchema::steps())
                     ->stepApplicability(fn (string $stepKey): bool => $this->state->isStepApplicable($stepKey))
+                    // Resume bij terugkeer: als de organisator weg is geweest
+                    // (bv. naar Dashboard) en geen `?step=`-query-param meer
+                    // heeft, opent de wizard op de step waar 'ie gebleven
+                    // was via `DraftStore::currentStepKey()`. Filament's
+                    // eigen `getStartStep()` checkt eerst de query-param;
+                    // alleen wanneer die afwezig is wordt deze closure
+                    // geëvalueerd.
+                    ->startOnStep(fn (): int => $this->resolveStartStep())
                     ->submitAction(
                         Action::make('submit')
                             ->label('Aanvraag indienen')
@@ -288,6 +296,42 @@ class EventFormPage extends Page implements HasForms
         }
 
         return str_starts_with($step, 'form.') ? substr($step, 5) : $step;
+    }
+
+    /**
+     * 1-based positie van de step waar de wizard moet openen. Wordt
+     * door Filament's `Wizard::getStartStep()` aangeroepen wanneer
+     * 'r geen `?step=`-query-param in de URL staat — dat is precies
+     * de "resume bij terugkeer"-case waarvoor we hier de bewaarde
+     * step uit de draft willen pakken.
+     *
+     * Defaultet naar 1 (Contactgegevens) bij geen draft / onbekende
+     * step-key zodat een verse organisator gewoon vanaf het begin
+     * start.
+     */
+    private function resolveStartStep(): int
+    {
+        $user = $this->state->get('authUser');
+        $organisation = $this->state->get('authOrganisation');
+        if (! $user instanceof User || ! $organisation instanceof Organisation) {
+            return 1;
+        }
+
+        $key = app(DraftStore::class)->currentStepKey($user, $organisation);
+        if ($key === null || $key === '') {
+            return 1;
+        }
+        // De draft slaat de pure UUID op; defensieve strip voor het
+        // geval een legacy-draft de `form.`-prefix nog meeschrijft.
+        $cleanKey = str_starts_with($key, 'form.') ? substr($key, 5) : $key;
+
+        foreach (EventFormSchema::stepUuidsInOrder() as $index => $uuid) {
+            if ($uuid === $cleanKey) {
+                return $index + 1;
+            }
+        }
+
+        return 1;
     }
 
     /**

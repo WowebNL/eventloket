@@ -70,6 +70,68 @@ test('mount loads an existing draft if present for user + organisation', functio
     expect($page->state()->get('watIsDeNaamVanHetEvenementVergunning'))->toBe('Eva se feest');
 });
 
+test('mount opent op de step waar de gebruiker gebleven was (uit draft)', function () {
+    // De gebruiker stopte op de Tijden-stap (index 4 in EventFormSchema::steps()).
+    Draft::create([
+        'user_id' => $this->user->id,
+        'organisation_id' => $this->organisation->id,
+        'state' => FormState::empty()->toSnapshot(),
+        'current_step_key' => \App\EventForm\Schema\Steps\TijdenStep::UUID,
+    ]);
+
+    $component = Livewire::test(EventFormPage::class);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    // Reflectie op de helper die de wizard-startindex bepaalt.
+    $reflection = new \ReflectionMethod($page, 'resolveStartStep');
+    $reflection->setAccessible(true);
+
+    $expectedIndex = array_search(
+        \App\EventForm\Schema\Steps\TijdenStep::UUID,
+        \App\EventForm\Schema\EventFormSchema::stepUuidsInOrder(),
+        true,
+    );
+    expect($expectedIndex)->not->toBeFalse();
+    expect($reflection->invoke($page))->toBe($expectedIndex + 1);
+});
+
+test('mount valt terug op stap 1 zonder current_step_key', function () {
+    Draft::create([
+        'user_id' => $this->user->id,
+        'organisation_id' => $this->organisation->id,
+        'state' => FormState::empty()->toSnapshot(),
+        'current_step_key' => null,
+    ]);
+
+    $component = Livewire::test(EventFormPage::class);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    $reflection = new \ReflectionMethod($page, 'resolveStartStep');
+    $reflection->setAccessible(true);
+
+    expect($reflection->invoke($page))->toBe(1);
+});
+
+test('mount valt terug op stap 1 bij onbekende current_step_key', function () {
+    Draft::create([
+        'user_id' => $this->user->id,
+        'organisation_id' => $this->organisation->id,
+        'state' => FormState::empty()->toSnapshot(),
+        'current_step_key' => 'this-is-not-a-real-step-uuid',
+    ]);
+
+    $component = Livewire::test(EventFormPage::class);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    $reflection = new \ReflectionMethod($page, 'resolveStartStep');
+    $reflection->setAccessible(true);
+
+    expect($reflection->invoke($page))->toBe(1);
+});
+
 test('route die start+eindigt in dezelfde gemeente maar door ≥2 gemeenten gaat → eerdere gemeente-keuze wordt geleegd', function () {
     // Bug-rapport-equivalent uit OF: de organisator had al een
     // gemeente gekozen (Heerlen), tekent dan een route die start+eindigt

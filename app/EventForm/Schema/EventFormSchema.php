@@ -76,4 +76,37 @@ class EventFormSchema
             BijlagenStep::make(),
         ];
     }
+
+    /**
+     * Statische lijst van step-UUIDs in de volgorde van de wizard.
+     * Spiegel van `steps()` zonder Filament-Step-instances te bouwen,
+     * voor contexten waar je geen mounted container hebt (bv.
+     * `EventFormPage::resolveStartStep()` om uit een step-key de
+     * 1-based positie af te leiden).
+     *
+     * @return list<string>
+     */
+    public static function stepUuidsInOrder(): array
+    {
+        return [
+            ContactgegevensStep::UUID,
+            NaamVanHetEvenementStep::UUID,
+            LocatieVanHetEvenement2Step::UUID,
+            TijdenStep::UUID,
+            WaarvoorWiltUHetEventloketGebruikenStep::UUID,
+            AanvraagOfMeldingStep::UUID,
+            MeldingStep::UUID,
+            RisicoscanStep::UUID,
+            Vragenboom2Step::UUID,
+            VergunningaanvraagVervolgvragenStep::UUID,
+            VergunningsaanvraagVoorzieningenStep::UUID,
+            VergunningsaanvraagVoorwerpenStep::UUID,
+            VergunningaanvraagMaatregelenStep::UUID,
+            VergunningsaanvraagExtraActiviteitenStep::UUID,
+            VergunningaanvraagOverigStep::UUID,
+            BijlagenStep::UUID,
+            SamenvattingStep::UUID,
+            TypeAanvraagStep::UUID,
+        ];
+    }
 }
