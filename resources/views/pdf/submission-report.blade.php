@@ -128,6 +128,22 @@
         <p class="muted">Geen ingevulde velden gevonden.</p>
     @endforelse
 
+    <section>
+        <h2>Akkoordverklaring</h2>
+        <table class="kv">
+            <tr>
+                <th>Akkoord met verwerking persoonsgegevens</th>
+                <td>
+                    @if (! empty($akkoordGegeven))
+                        Ja, op {{ $zaak->created_at?->timezone('Europe/Amsterdam')->translatedFormat('j F Y · H:i') ?? '—' }}
+                    @else
+                        Niet vastgelegd
+                    @endif
+                </td>
+            </tr>
+        </table>
+    </section>
+
     <div class="footer">
         Eventloket — Veiligheidsregio Zuid-Limburg · Gegenereerd op {{ now()->timezone('Europe/Amsterdam')->translatedFormat('j F Y H:i') }}
     </div>

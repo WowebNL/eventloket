@@ -45,12 +45,19 @@ final class GenerateSubmissionPdf implements ShouldQueue
         $gemeenteNaam = is_array($evenementInGemeente) ? ($evenementInGemeente['name'] ?? null) : null;
         $risicoClassificatie = $state->get('risicoClassificatie');
 
+        // De AVG-akkoord-checkbox staat op de aparte SamenvattingStep en
+        // valt daarom buiten de SubmissionReport-walk; voor de PDF willen
+        // we die wél tonen omdat behandelaars willen zien dát toestemming
+        // is gegeven en wanneer.
+        $akkoordGegeven = $state->get('akkoordVerwerkingGegevens') === true;
+
         $pdf = Pdf::loadView('pdf.submission-report', [
             'zaak' => $this->zaak->loadMissing(['zaaktype', 'organisation']),
             'state' => $state,
             'sections' => $sections,
             'gemeenteNaam' => $gemeenteNaam,
             'risicoClassificatie' => $risicoClassificatie,
+            'akkoordGegeven' => $akkoordGegeven,
         ])->setPaper('a4');
 
         $path = sprintf('zaken/%s/aanvraagformulier.pdf', $this->zaak->id);

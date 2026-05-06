@@ -64,6 +64,7 @@ test('PDF bevat per-stap secties + concrete ingevulde waarden uit het formulier'
                 'EvenementEind' => '2026-06-14T18:00',
                 'aantalVerwachteAanwezigen' => '80',
                 'wordtErAlcoholGeschonkenTijdensUwEvenement' => 'Nee',
+                'akkoordVerwerkingGegevens' => true,
             ],
             'fieldHidden' => [],
             'stepApplicable' => [],
@@ -112,6 +113,13 @@ test('PDF bevat per-stap secties + concrete ingevulde waarden uit het formulier'
     foreach (['Eva', 'Buurtfeest Testlaan', '14 juni 2026'] as $waarde) {
         expect(str_contains($tekstUitStreams, $waarde))
             ->toBeTrue("verwacht ingevulde waarde '{$waarde}' in de PDF");
+    }
+
+    // 4b. AVG-akkoord-vinkje van de SamenvattingStep moet ook in de PDF
+    //     staan — behandelaars willen zien dát toestemming is gegeven.
+    foreach (['Akkoordverklaring', 'Akkoord met verwerking persoonsgegevens'] as $waarde) {
+        expect(str_contains($tekstUitStreams, $waarde))
+            ->toBeTrue("verwacht akkoord-tekst '{$waarde}' in de PDF");
     }
 
     // 4. Vervolg-jobs zijn gedispatched: bevestigingsmail + ZGW-upload.
