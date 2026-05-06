@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.6.1 - 2026-05-06
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix getting route line for doorkomst zaken (#357) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.6.0...v0.6.1
+
 ## v0.6.0 - 2026-04-22
 
 ### What's Changed
@@ -167,6 +177,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
