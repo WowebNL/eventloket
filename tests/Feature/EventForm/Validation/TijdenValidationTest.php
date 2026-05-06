@@ -157,6 +157,11 @@ test('AfbouwStart moet op of na EvenementEind liggen — Filament-rule is geregi
 });
 
 test('EvenementStart moet vandaag of later zijn — voorkomt dat we vergunningen voor het verleden aanvragen', function () {
+    // Onderwerp: validatie + calendar-grijsmaak. Voorheen stond hier
+    // de letterlijke string 'today'; die toonde Laravel ook letterlijk
+    // in de error-melding. Nu geven we de actuele datum als ISO-string
+    // mee, zodat de :date-placeholder een echte datum is en de NL-
+    // override-melding ('vandaag of later') leesbaar overkomt.
     $pickers = findDateTimePickers(TijdenStep::make());
     $start = $pickers['EvenementStart'];
 
@@ -165,7 +170,8 @@ test('EvenementStart moet vandaag of later zijn — voorkomt dat we vergunningen
     $rulesProp->setAccessible(true);
     $rules = $rulesProp->getValue($start);
 
-    $heeftAfterOrEqualToday = collect($rules)->contains(function ($entry): bool {
+    $vandaag = today()->toDateString();
+    $heeftAfterOrEqualToday = collect($rules)->contains(function ($entry) use ($vandaag): bool {
         [$rule] = $entry;
         if (! $rule instanceof Closure) {
             return false;
@@ -173,7 +179,7 @@ test('EvenementStart moet vandaag of later zijn — voorkomt dat we vergunningen
         $vars = (new ReflectionFunction($rule))->getStaticVariables();
 
         return ($vars['rule'] ?? null) === 'after_or_equal'
-            && ($vars['date'] ?? null) === 'today';
+            && ($vars['date'] ?? null) === $vandaag;
     });
 
     expect($heeftAfterOrEqualToday)->toBeTrue();

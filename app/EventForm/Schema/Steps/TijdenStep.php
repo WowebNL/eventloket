@@ -34,13 +34,21 @@ final class TijdenStep
                         DateTimePicker::make('EvenementStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->seconds(false)
-                            ->afterOrEqual('today')
+                            ->minDate(today())
+                            ->afterOrEqual(today()->toDateString())
+                            ->validationMessages([
+                                'after_or_equal' => 'De startdatum van het evenement moet vandaag of later zijn.',
+                            ])
                             ->required()
                             ->live(),
                         DateTimePicker::make('EvenementEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->seconds(false)
+                            ->minDate(fn (Get $get) => $get('EvenementStart') ?: today())
                             ->afterOrEqual('EvenementStart')
+                            ->validationMessages([
+                                'after_or_equal' => 'De einddatum van het evenement moet op of na de startdatum liggen.',
+                            ])
                             ->required()
                             ->live(),
                     ]),
@@ -59,7 +67,12 @@ final class TijdenStep
                         DateTimePicker::make('OpbouwStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->seconds(false)
+                            ->minDate(today())
+                            ->maxDate(fn (Get $get) => $get('OpbouwEind') ?: $get('EvenementStart'))
                             ->beforeOrEqual('OpbouwEind')
+                            ->validationMessages([
+                                'before_or_equal' => 'De starttijd van de opbouw moet op of voor de eindtijd opbouw liggen.',
+                            ])
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('OpbouwStart');
@@ -73,7 +86,12 @@ final class TijdenStep
                         DateTimePicker::make('OpbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->seconds(false)
+                            ->minDate(fn (Get $get) => $get('OpbouwStart') ?: today())
+                            ->maxDate(fn (Get $get) => $get('EvenementStart'))
                             ->beforeOrEqual('EvenementStart')
+                            ->validationMessages([
+                                'before_or_equal' => 'De eindtijd van de opbouw moet op of voor de startdatum van het evenement liggen.',
+                            ])
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('OpbouwEind');
@@ -105,7 +123,12 @@ final class TijdenStep
                         DateTimePicker::make('AfbouwStart')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->seconds(false)
+                            ->minDate(fn (Get $get) => $get('EvenementEind') ?: today())
+                            ->maxDate(fn (Get $get) => $get('AfbouwEind'))
                             ->afterOrEqual('EvenementEind')
+                            ->validationMessages([
+                                'after_or_equal' => 'De starttijd van de afbouw moet op of na de einddatum van het evenement liggen.',
+                            ])
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('AfbouwStart');
@@ -119,7 +142,11 @@ final class TijdenStep
                         DateTimePicker::make('AfbouwEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->seconds(false)
+                            ->minDate(fn (Get $get) => $get('AfbouwStart') ?: $get('EvenementEind'))
                             ->afterOrEqual('AfbouwStart')
+                            ->validationMessages([
+                                'after_or_equal' => 'De eindtijd van de afbouw moet op of na de starttijd van de afbouw liggen.',
+                            ])
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('AfbouwEind');
