@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Reporting;
 
+use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\State\FormState;
 use Carbon\Carbon;
 use Closure;
@@ -64,14 +65,32 @@ final class SubmissionReport
     }
 
     /**
-     * @return list<array{label: string, value: string, sub?: list<array{label: string, value: string}>}>
+     * Velden die voor de TijdenStep al in de overzichts-tabel
+     * verwerkt worden — laten we niet ook nog als losse rijen tonen.
+     */
+    private const TIJDEN_TABEL_KEYS = [
+        'OpbouwStart', 'OpbouwEind',
+        'EvenementStart', 'EvenementEind',
+        'AfbouwStart', 'AfbouwEind',
+    ];
+
+    /**
+     * @return list<array{label: string, value: string, sub?: list<array{label: string, value: string}>, table?: array{header: list<string>, rows: list<list<string>>}}>
      */
     private function extractEntries(Step $step, FormState $state): array
     {
         $stubLivewire = $this->stubLivewire($state);
         $entries = [];
 
-        $walk = function (object $component, ?string $keyPrefix = null) use (&$walk, &$entries, $state, $stubLivewire): void {
+        $isTijdenStep = $this->resolveStepKey($step) === TijdenStep::UUID;
+        if ($isTijdenStep) {
+            $tabel = $this->buildTijdenTable($state);
+            if ($tabel !== null) {
+                $entries[] = $tabel;
+            }
+        }
+
+        $walk = function (object $component, ?string $keyPrefix = null) use (&$walk, &$entries, $state, $stubLivewire, $isTijdenStep): void {
             // Repeater: per rij een sub-tabel, alle child-velden uitgeklapt.
             if ($component instanceof Repeater) {
                 $key = $component->getName();
@@ -105,6 +124,10 @@ final class SubmissionReport
             if ($component instanceof Field) {
                 $key = $component->getName();
                 if ($key !== null && $key !== '') {
+                    if ($isTijdenStep && in_array($key, self::TIJDEN_TABEL_KEYS, true)) {
+                        // Al in de tijden-tabel verwerkt; sla over.
+                        return;
+                    }
                     $fullKey = $keyPrefix === null ? $key : "{$keyPrefix}.{$key}";
                     $entry = $this->buildEntry($component, $state, $fullKey, $stubLivewire);
                     if ($entry !== null) {
@@ -119,6 +142,41 @@ final class SubmissionReport
         $walk($step, null);
 
         return $entries;
+    }
+
+    /**
+     * Bouw een 3×2-overzichts-tabel (Opbouw / Publiek / Afbouw × Start / Eind)
+     * voor de Tijden-stap. Lege rijen (geen opbouw of geen afbouw) laten we
+     * weg. Zijn alle rijen leeg, dan retourneren we null zodat de tabel
+     * helemaal niet in de PDF verschijnt.
+     *
+     * @return array{label: string, value: string, table: array{header: list<string>, rows: list<list<string>>}}|null
+     */
+    private function buildTijdenTable(FormState $state): ?array
+    {
+        $rijen = [
+            ['Opbouw', $this->humanDateTime($state->get('OpbouwStart')), $this->humanDateTime($state->get('OpbouwEind'))],
+            ['Publiek', $this->humanDateTime($state->get('EvenementStart')), $this->humanDateTime($state->get('EvenementEind'))],
+            ['Afbouw', $this->humanDateTime($state->get('AfbouwStart')), $this->humanDateTime($state->get('AfbouwEind'))],
+        ];
+
+        $rijenMetData = array_values(array_filter(
+            $rijen,
+            fn (array $rij) => $rij[1] !== '' || $rij[2] !== '',
+        ));
+
+        if ($rijenMetData === []) {
+            return null;
+        }
+
+        return [
+            'label' => 'Overzicht ingevulde tijden',
+            'value' => '',
+            'table' => [
+                'header' => ['Activiteit', 'Start', 'Eind'],
+                'rows' => $rijenMetData,
+            ],
+        ];
     }
 
     /**
@@ -721,6 +779,25 @@ final class SubmissionReport
         } catch (\Throwable) {
             return (string) $value;
         }
+    }
+
+    /**
+     * Step::getKey() heeft een mounted container nodig (BelongsToContainer).
+     * In een queue-job hebben we die niet, dus lezen we de raw `$key`-
+     * property via reflection. Voor onze stappen is dat altijd de UUID-
+     * string die in `Step::make()->key(self::UUID)` is gezet.
+     */
+    private function resolveStepKey(Step $step): ?string
+    {
+        $reflection = new ReflectionObject($step);
+        if (! $reflection->hasProperty('key')) {
+            return null;
+        }
+        $prop = $reflection->getProperty('key');
+        $prop->setAccessible(true);
+        $value = $prop->getValue($step);
+
+        return is_string($value) ? $value : null;
     }
 
     private function stubLivewire(FormState $state): object

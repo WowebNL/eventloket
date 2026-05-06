@@ -58,7 +58,9 @@ test('alleen contact-velden ingevuld → één sectie Contactgegevens', function
         ->and($waarden)->toContain('eva@example.nl');
 });
 
-test('DateTimePicker-waarden worden human-readable geformatteerd', function () {
+test('Tijden-stap: DateTimePicker-waarden landen in de overzichts-tabel met human-readable datums', function () {
+    // Behandelaars gebruiken de PDF veel — voor Tijden willen we
+    // dezelfde tabel als op het formulier: Activiteit / Start / Eind.
     $state = new FormState(values: [
         'EvenementStart' => '2026-06-14T14:30',
         'EvenementEind' => '2026-06-14T18:00',
@@ -66,10 +68,61 @@ test('DateTimePicker-waarden worden human-readable geformatteerd', function () {
 
     $sections = app(SubmissionReport::class)->build($state, [TijdenStep::make()]);
 
-    // Beide waarden moeten als "j F Y · H:i" verschijnen — niet als ISO.
-    $waarden = collect($sections[0]['entries'])->pluck('value')->all();
-    expect($waarden)->toContain('14 juni 2026 · 14:30')
-        ->and($waarden)->toContain('14 juni 2026 · 18:00');
+    $tabelEntry = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['table']));
+    expect($tabelEntry)->not->toBeNull()
+        ->and($tabelEntry['table']['header'])->toBe(['Activiteit', 'Start', 'Eind']);
+
+    // Eén rij (Publiek) want opbouw/afbouw zijn niet ingevuld.
+    expect($tabelEntry['table']['rows'])->toHaveCount(1)
+        ->and($tabelEntry['table']['rows'][0])->toBe([
+            'Publiek',
+            '14 juni 2026 · 14:30',
+            '14 juni 2026 · 18:00',
+        ]);
+
+    // Diezelfde EvenementStart/Eind mogen niet óók nog als losse rij in
+    // de PDF verschijnen — anders staat alles dubbel.
+    $waarden = collect($sections[0]['entries'])->pluck('value')->filter()->all();
+    expect($waarden)->not->toContain('14 juni 2026 · 14:30')
+        ->and($waarden)->not->toContain('14 juni 2026 · 18:00');
+});
+
+test('Tijden-stap: alle drie de blokken ingevuld → tabel met 3 rijen in volgorde Opbouw/Publiek/Afbouw', function () {
+    $state = new FormState(values: [
+        'OpbouwStart' => '2026-06-14T08:00',
+        'OpbouwEind' => '2026-06-14T13:30',
+        'EvenementStart' => '2026-06-14T14:00',
+        'EvenementEind' => '2026-06-14T22:00',
+        'AfbouwStart' => '2026-06-14T22:00',
+        'AfbouwEind' => '2026-06-15T01:00',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TijdenStep::make()]);
+    $tabelEntry = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['table']));
+
+    expect($tabelEntry['table']['rows'])->toBe([
+        ['Opbouw', '14 juni 2026 · 08:00', '14 juni 2026 · 13:30'],
+        ['Publiek', '14 juni 2026 · 14:00', '14 juni 2026 · 22:00'],
+        ['Afbouw', '14 juni 2026 · 22:00', '15 juni 2026 · 01:00'],
+    ]);
+});
+
+test('Tijden-stap: geen enkele datetime ingevuld → geen tabel-entry', function () {
+    // Andere velden in TijdenStep (de Radio-vragen) kunnen wel ingevuld
+    // zijn; de tabel zelf moet bij ontbrekende datums niet als een
+    // lege strook verschijnen.
+    $state = new FormState(values: [
+        'zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten' => 'Nee',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TijdenStep::make()]);
+
+    if ($sections === []) {
+        expect($sections)->toBe([]);
+    } else {
+        $tabelEntry = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['table']));
+        expect($tabelEntry)->toBeNull();
+    }
 });
 
 test('Repeater-rijen worden uitgeklapt naar sub-entries in plaats van samengevat', function () {

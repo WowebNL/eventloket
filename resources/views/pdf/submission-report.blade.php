@@ -21,6 +21,10 @@
         table.sub td { padding-right: 0; padding-left: 8pt; }
         table.sub th { width: 50%; color: #555; font-weight: normal; }
         table.sub td { width: 50%; }
+        table.tijden { width: 100%; border-collapse: collapse; margin: 2pt 0; }
+        table.tijden th, table.tijden td { text-align: left; padding: 2pt 6pt; border: 1px solid #ddd; font-size: 8pt; }
+        table.tijden thead th { background: #f0f0f0; font-weight: bold; color: #111; }
+        table.tijden tbody th { font-weight: bold; color: #111; width: 28%; }
         .map-img { display: block; margin: 2pt 0; max-width: 100%; }
         .footer { position: fixed; bottom: -1.5cm; left: 0; right: 0; text-align: center; font-size: 9pt; color: #888; }
         .muted { color: #888; font-style: italic; }
@@ -46,7 +50,41 @@
             <h2>{{ $section['title'] }}</h2>
             <table class="kv">
                 @foreach ($section['entries'] as $entry)
-                    @if (! empty($entry['sub']))
+                    @if (! empty($entry['table']))
+                        {{-- Step-specifieke overzichts-tabel (zoals
+                             het tijden-overzicht op de Tijden-stap):
+                             een label-rij gevolgd door een echte
+                             tabel met header en rijen. --}}
+                        <tr>
+                            <th colspan="2" class="row-label">{!! strip_tags((string) $entry['label']) !!}</th>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="padding: 0;">
+                                <table class="tijden">
+                                    <thead>
+                                        <tr>
+                                            @foreach ($entry['table']['header'] as $kop)
+                                                <th>{{ $kop }}</th>
+                                            @endforeach
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($entry['table']['rows'] as $rij)
+                                            <tr>
+                                                @foreach ($rij as $i => $cel)
+                                                    @if ($i === 0)
+                                                        <th>{{ $cel }}</th>
+                                                    @else
+                                                        <td>{{ $cel === '' ? '—' : $cel }}</td>
+                                                    @endif
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    @elseif (! empty($entry['sub']))
                         {{-- Sub-entries: een rij in een Repeater (bv. een
                              locatie of route). Toon de label-rij als kop
                              en daaronder een sub-tabel met alle velden. --}}
