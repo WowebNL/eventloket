@@ -32,6 +32,7 @@ final class AanvraagOfMeldingStep
                 InfoText::info('contentGemeenteMelding', '<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentGemeenteMelding') !== false),
                 Fieldset::make('Algemene vragen')
+                    ->columns(1)
                     ->schema([
                         // === NIEUW PAD: ReportQuestion-systeem ===
                         //
@@ -272,12 +273,18 @@ final class AanvraagOfMeldingStep
                                         self::resetLegacyCascade($component->getName(), $set);
                                     }
                                 }),
-                            InfoText::info('contentGoNext', '<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>')
-                                ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentGoNext') !== false),
-                            InfoText::info('MeldingTekst', '<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>')
-                                ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('MeldingTekst') !== false),
                         ])
                             ->hidden(fn ($livewire): bool => ! self::legacySysteemActief($livewire->state())),
+
+                        // Uitkomst-teksten staan BUITEN beide systeem-Groups
+                        // zodat ze in beide paden zichtbaar kunnen worden.
+                        // De hidden-Closure switcht tussen het legacy
+                        // FormFieldVisibility-pad en de afgeleide
+                        // `isVergunningaanvraag`-flag uit FormDerivedState.
+                        InfoText::info('contentGoNext', '<p>Voor uw evenement is een vergunning noodzakelijk. U wordt in Evenloket doorgeleid naar de vragen voor het aanvragen van een vergunning voor uw evenement.</p>')
+                            ->hidden(fn ($livewire): bool => self::contentGoNextHidden($livewire->state())),
+                        InfoText::info('MeldingTekst', '<p>Voor uw evenement is geen vergunning noodzakelijk, maar is een melding voldoende. U wordt in Eventloket doorgeleid naar de vragen voor het indienen van een melding.</p>')
+                            ->hidden(fn ($livewire): bool => self::meldingTekstHidden($livewire->state())),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('algemeneVragen') !== false),
             ]);
@@ -364,6 +371,47 @@ final class AanvraagOfMeldingStep
     private static function legacySysteemActief(FormState $state): bool
     {
         return $state->get('gemeenteVariabelen.use_new_report_questions') !== true;
+    }
+
+    /**
+     * `contentGoNext` (= "vergunning noodzakelijk") tonen zodra duidelijk
+     * is dat de aanvraag een vergunning wordt. In het oude pad bepaalt
+     * FormFieldVisibility dat via de scan-cascade; in het nieuwe pad
+     * leunt 't op de afgeleide `isVergunningaanvraag`-flag.
+     */
+    public static function contentGoNextHidden(FormState $state): bool
+    {
+        if ($state->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            return $state->get('isVergunningaanvraag') !== true;
+        }
+
+        return $state->isFieldHidden('contentGoNext') !== false;
+    }
+
+    /**
+     * `MeldingTekst` (= "melding volstaat") verschijnt pas wanneer alle
+     * actieve scan-vragen positief beantwoord zijn. In het oude pad regelt
+     * FormFieldVisibility dat; in het nieuwe pad checken we expliciet of
+     * álle `reportQuestion_N` op 'Ja' staan voor de gemeente-config.
+     */
+    public static function meldingTekstHidden(FormState $state): bool
+    {
+        if ($state->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            $questions = $state->get('gemeenteVariabelen.report_questions');
+            if (! is_array($questions) || $questions === []) {
+                return true;
+            }
+            foreach ($questions as $index => $_question) {
+                $position = (int) $index + 1;
+                if ($state->get(sprintf('reportQuestion_%d', $position)) !== 'Ja') {
+                    return true;
+                }
+            }
+
+            return false; // alle vragen Ja → toon melding-tekst
+        }
+
+        return $state->isFieldHidden('MeldingTekst') !== false;
     }
 
     /**
