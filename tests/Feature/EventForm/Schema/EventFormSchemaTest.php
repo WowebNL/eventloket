@@ -15,15 +15,17 @@ test('EventFormSchema::steps() returns all 18 steps (17 OF-stappen + Samenvattin
         ->and($steps[0])->toBeInstanceOf(Step::class);
 });
 
-test('EventFormSchema::stepsForReport() bevat alleen de data-collecterende stappen', function () {
-    // De Samenvatting + Type-aanvraag tonen alleen data en bevatten geen
-    // velden om in een rapport op te nemen — vandaar deze splitsing.
+test('EventFormSchema::stepsForReport() bevat data-stappen + Type-aanvraag (zonder Samenvatting)', function () {
+    // Samenvatting valt eruit omdat 'ie zichzelf rendert via deze
+    // lijst — recursie. Type-aanvraag zit er WEL in: SubmissionReport
+    // herkent 'm en bouwt zelf een afgeleide "Onderdelen aanvraag"-
+    // sectie zodat 'ie ook in de samenvatting + PDF verschijnt.
     $report = EventFormSchema::stepsForReport();
     $labels = collect($report)->map(fn (Step $s) => $s->getLabel())->all();
 
-    expect($report)->toHaveCount(16)
+    expect($report)->toHaveCount(17)
         ->and($labels)->not->toContain('Samenvatting')
-        ->and($labels)->not->toContain('Type aanvraag');
+        ->and($labels)->toContain('Type aanvraag');
 });
 
 test('each step has a non-empty label', function () {

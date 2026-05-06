@@ -27,9 +27,14 @@ use Filament\Schemas\Components\Wizard\Step;
 
 /**
  * Compositie-factory voor het complete evenementformulier: 18 stappen
- * (17 transpiled uit OF + 1 hand-geschreven Samenvatting vlak voor
- * Type-aanvraag). Elke OF-stap leeft in z'n eigen gegenereerde klasse;
- * deze factory plakt ze in volgorde aan elkaar.
+ * (17 transpiled uit OF + 1 hand-geschreven Samenvatting vlak voor de
+ * laatste 'Indienen'-actie). Elke OF-stap leeft in z'n eigen gegenereerde
+ * klasse; deze factory plakt ze in volgorde aan elkaar.
+ *
+ * Volgorde Type-aanvraag → Samenvatting: behandelaars / organisators
+ * willen op de samenvatting eerst zien wélke aanvraag er gedaan wordt
+ * (vergunning vs. melding vs. vooraankondiging + ontheffingen) voordat
+ * 'ze de complete recapitulatie scannen.
  */
 class EventFormSchema
 {
@@ -41,17 +46,18 @@ class EventFormSchema
         return [
             ...self::stepsForReport(),
             SamenvattingStep::make(),
-            TypeAanvraagStep::make(),
         ];
     }
 
     /**
-     * De data-collecterende stappen — alles waar de organisator velden
-     * invult. Wordt door `SamenvattingStep` en `GenerateSubmissionPdf`
-     * gebruikt om secties op te bouwen; Samenvatting + Type-aanvraag
-     * laten we eruit omdat die geen nieuwe data bevatten (Samenvatting
-     * toont juist de overige stappen, Type-aanvraag is een tonende
-     * conclusion-tekst).
+     * De data-collecterende + concluderende stappen — alle stappen
+     * waarvan de inhoud op de samenvatting + in de PDF moet verschijnen.
+     * `SamenvattingStep` zelf zit hier niet bij omdat 'ie juist deze
+     * lijst rendert (dan zou 'ie zichzelf bevatten).
+     *
+     * `TypeAanvraagStep` heeft geen Field-componenten, maar
+     * `SubmissionReport` herkent 'm en bouwt zelf een afgeleide
+     * "Onderdelen aanvraag"-sectie op basis van de FormState.
      *
      * @return list<Step>
      */
@@ -74,6 +80,7 @@ class EventFormSchema
             VergunningsaanvraagExtraActiviteitenStep::make(),
             VergunningaanvraagOverigStep::make(),
             BijlagenStep::make(),
+            TypeAanvraagStep::make(),
         ];
     }
 
@@ -105,8 +112,8 @@ class EventFormSchema
             VergunningsaanvraagExtraActiviteitenStep::UUID,
             VergunningaanvraagOverigStep::UUID,
             BijlagenStep::UUID,
-            SamenvattingStep::UUID,
             TypeAanvraagStep::UUID,
+            SamenvattingStep::UUID,
         ];
     }
 }

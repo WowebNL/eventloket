@@ -25,6 +25,7 @@ use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\TijdenStep;
+use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
 
 test('lege state → geen secties (alle stappen worden overgeslagen)', function () {
@@ -123,6 +124,66 @@ test('Tijden-stap: geen enkele datetime ingevuld → geen tabel-entry', function
         $tabelEntry = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['table']));
         expect($tabelEntry)->toBeNull();
     }
+});
+
+test('Type-aanvraag-stap: vergunning + ontheffingen → entry met afgeleide onderdelen', function () {
+    // Behandelaars willen op de samenvatting + in de PDF zien wélke
+    // aanvraag-soorten in het spel zijn. TypeAanvraagStep heeft geen
+    // Field-componenten — SubmissionReport leidt het zelf af uit
+    // FormState (zelfde logica als het content35-template op de stap).
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+        'alcoholvergunning' => true,
+        'kruisAanWatVanToepassingIsVoorUwEvenementX' => ['A3' => true, 'A4' => true],
+        'kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX' => ['A48' => true, 'A51' => true],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
+
+    expect($sections)->toHaveCount(1)
+        ->and($sections[0]['title'])->toBe('Type aanvraag');
+
+    $value = $sections[0]['entries'][0]['value'];
+    foreach ([
+        'Evenementenvergunning',
+        'Ontheffing Alcoholwet',
+        'Gebruiksmelding brandveilig gebruik en basishulpverlening overige plaatsen',
+        'Ontheffing plaatsen object of parkeren grote voertuigen op de openbare weg',
+        'Kansspelen',
+        'Aanstellingsbesluit verkeersregelaars',
+    ] as $verwacht) {
+        expect($value)->toContain($verwacht);
+    }
+});
+
+test('Type-aanvraag-stap: vooraankondiging-pad → alleen Vooraankondiging', function () {
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
+
+    expect($sections[0]['entries'][0]['value'])->toBe('Vooraankondiging');
+});
+
+test('Type-aanvraag-stap: meldingspad → Melding zonder aanvullende ontheffingen', function () {
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
+
+    expect($sections[0]['entries'][0]['value'])->toBe('Melding');
+});
+
+test('Type-aanvraag-stap: lege state → geen entry, geen sectie', function () {
+    // Niemand heeft iets ingevuld → niets te zeggen over het type
+    // aanvraag. Geen lege sectie tonen.
+    $sections = app(SubmissionReport::class)->build(FormState::empty(), [TypeAanvraagStep::make()]);
+
+    expect($sections)->toBe([]);
 });
 
 test('Repeater-rijen worden uitgeklapt naar sub-entries in plaats van samengevat', function () {

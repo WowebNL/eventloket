@@ -27,15 +27,18 @@ function samenvattingChildren(Step $step): array
     return is_array($children) && is_array($children['default'] ?? null) ? $children['default'] : [];
 }
 
-test('Samenvatting komt vlak vóór Type-aanvraag in de wizard', function () {
+test('Type-aanvraag komt vlak vóór de Samenvatting in de wizard', function () {
+    // Behandelaars / organisators willen op de Samenvatting eerst zien
+    // wélke aanvraag er gedaan wordt; Type-aanvraag staat daarom direct
+    // ervóór en is óók opgenomen in de Samenvatting + PDF zelf.
     $steps = EventFormSchema::steps();
     $labels = collect($steps)->map(fn (Step $s) => $s->getLabel())->all();
-    $samenvattingIndex = array_search('Samenvatting', $labels, true);
     $typeAanvraagIndex = array_search('Type aanvraag', $labels, true);
+    $samenvattingIndex = array_search('Samenvatting', $labels, true);
 
-    expect($samenvattingIndex)->toBeInt('Samenvatting-stap ontbreekt')
-        ->and($typeAanvraagIndex)->toBeInt()
-        ->and($typeAanvraagIndex - $samenvattingIndex)->toBe(1);
+    expect($typeAanvraagIndex)->toBeInt('Type-aanvraag-stap ontbreekt')
+        ->and($samenvattingIndex)->toBeInt('Samenvatting-stap ontbreekt')
+        ->and($samenvattingIndex - $typeAanvraagIndex)->toBe(1);
 });
 
 test('Samenvatting bevat een verplichte akkoord-checkbox', function () {

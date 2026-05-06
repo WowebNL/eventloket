@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Reporting;
 
 use App\EventForm\Schema\Steps\TijdenStep;
+use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
 use Carbon\Carbon;
 use Closure;
@@ -82,11 +83,21 @@ final class SubmissionReport
         $stubLivewire = $this->stubLivewire($state);
         $entries = [];
 
-        $isTijdenStep = $this->resolveStepKey($step) === TijdenStep::UUID;
+        $stepKey = $this->resolveStepKey($step);
+        $isTijdenStep = $stepKey === TijdenStep::UUID;
+        $isTypeAanvraagStep = $stepKey === TypeAanvraagStep::UUID;
+
         if ($isTijdenStep) {
             $tabel = $this->buildTijdenTable($state);
             if ($tabel !== null) {
                 $entries[] = $tabel;
+            }
+        }
+
+        if ($isTypeAanvraagStep) {
+            $typeEntry = $this->buildTypeAanvraagEntry($state);
+            if ($typeEntry !== null) {
+                $entries[] = $typeEntry;
             }
         }
 
@@ -176,6 +187,62 @@ final class SubmissionReport
                 'header' => ['Activiteit', 'Start', 'Eind'],
                 'rows' => $rijenMetData,
             ],
+        ];
+    }
+
+    /**
+     * Bouw één entry voor de TypeAanvraagStep met de afgeleide
+     * "Onderdelen van uw aanvraag"-lijst. Spiegelt de logica van het
+     * `content35`-template op de stap (waarvoor / vergunning vs. melding
+     * vs. vooraankondiging + ontheffingen) zodat behandelaars in de
+     * samenvatting + PDF zien wélk soort aanvraag dit is.
+     *
+     * @return array{label: string, value: string}|null
+     */
+    private function buildTypeAanvraagEntry(FormState $state): ?array
+    {
+        $items = [];
+
+        $waarvoor = $state->get('waarvoorWiltUEventloketGebruiken');
+        $afsluit = $state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer');
+
+        if ($waarvoor === 'vooraankondiging') {
+            $items[] = 'Vooraankondiging';
+        } elseif ($afsluit === 'Nee') {
+            $items[] = 'Melding';
+        } elseif ($waarvoor === 'evenement') {
+            $items[] = 'Evenementenvergunning';
+        }
+
+        if ($state->get('alcoholvergunning') === true) {
+            $items[] = 'Ontheffing Alcoholwet';
+        }
+        if ($state->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A3') === true) {
+            $items[] = 'Gebruiksmelding brandveilig gebruik en basishulpverlening overige plaatsen';
+        }
+        if (
+            $state->get('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX.A48') === true
+            || $state->get('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX.A49') === true
+        ) {
+            $items[] = 'Ontheffing plaatsen object of parkeren grote voertuigen op de openbare weg';
+        }
+        if ($state->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A4') === true) {
+            $items[] = 'Kansspelen';
+        }
+        if ($state->get('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX.A51') === true) {
+            $items[] = 'Aanstellingsbesluit verkeersregelaars';
+        }
+
+        if ($items === []) {
+            return null;
+        }
+
+        // Comma-separated voor samenvatting + PDF — beide schermen tonen
+        // dat compact en leesbaar. Per regel zou ook kunnen, maar
+        // behandelaars willen 'm vooral snel kunnen scannen.
+        return [
+            'label' => 'Onderdelen van uw aanvraag',
+            'value' => implode(', ', $items),
         ];
     }
 
