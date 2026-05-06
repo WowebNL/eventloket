@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\State\FormState;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
@@ -52,10 +53,7 @@ final class AanvraagOfMeldingStep
                         Group::make([
                             Radio::make('isHetAantalAanwezigenBijUwEvenementMinderDanSdf')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is het aantal aanwezigen bij uw evenement minder dan {% get_value gemeenteVariabelen \'aanwezigen\' %} personen?', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->live()
                                 ->afterStateUpdated(function ($state, Set $set, $component) {
@@ -65,10 +63,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Vinden de activiteiten van uw evenement plaats tussen {{ gemeenteVariabelen.tijdstip_mogelijk_niet_vergunningsplichtig.start }} uur en {{ gemeenteVariabelen.tijdstip_mogelijk_niet_vergunningsplichtig.end }} uur?', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(function (Get $get, $livewire): bool {
                                     $rule = $livewire->state()->isFieldHidden('vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen');
@@ -86,10 +81,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('WordtErAlleenMuziekGeluidGeproduceerdTussen')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wordt er alleen muziek/geluid geproduceerd tussen {{ gemeenteVariabelen.muziektijden.start }} uur en {{ gemeenteVariabelen.muziektijden.end }} uur?', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(function (Get $get, $livewire): bool {
                                     $rule = $livewire->state()->isFieldHidden('WordtErAlleenMuziekGeluidGeproduceerdTussen');
@@ -107,10 +99,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('IsdeGeluidsproductieLagerDan')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is de geluidsproductie lager dan {{ gemeenteVariabelen.melding_maximale_dba }} dB(A) bronvermogen, gemeten op 3 meter afstand van de bron?', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(function (Get $get, $livewire): bool {
                                     $rule = $livewire->state()->isFieldHidden('IsdeGeluidsproductieLagerDan');
@@ -128,10 +117,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten')
                                 ->label('Er vinden GEEN activiteiten plaats op de rijbaan, (brom)fietspad of parkeerplaats of anderszins een belemmering vormen voor het verkeer en de hulpdiensten?')
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(function (Get $get, $livewire): bool {
                                     $rule = $livewire->state()->isFieldHidden('erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten');
@@ -149,10 +135,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Worden er minder dan {{ gemeenteVariabelen.aantal_objecten }} objecten (bijv. tent, springkussen) geplaatst?', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(function (Get $get, $livewire): bool {
                                     $rule = $livewire->state()->isFieldHidden('wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst');
@@ -170,10 +153,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('indienErObjectenGeplaatstWordenZijnDezeDanKleiner')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Indien er objecten geplaatst worden, zijn deze dan kleiner {{ gemeenteVariabelen.maximale_grootte_objecten_in_m2 }} m2? ', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(function (Get $get, $livewire): bool {
                                     $rule = $livewire->state()->isFieldHidden('indienErObjectenGeplaatstWordenZijnDezeDanKleiner');
@@ -191,10 +171,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('meldingvraag1')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_1 }}', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag1') !== false)
                                 ->live()
@@ -205,10 +182,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('meldingvraag2')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_2 }}', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag2') !== false)
                                 ->live()
@@ -219,10 +193,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('meldingvraag3')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_3 }}', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag3') !== false)
                                 ->live()
@@ -233,10 +204,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('meldingvraag4')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_4 }}', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag4') !== false)
                                 ->live()
@@ -247,10 +215,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('meldingvraag5')
                                 ->label(fn ($livewire): string => app(LabelRenderer::class)->render('{{ gemeenteVariabelen.report_question_5 }}', $livewire->state()))
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('meldingvraag5') !== false)
                                 ->live()
@@ -261,10 +226,7 @@ final class AanvraagOfMeldingStep
                                 }),
                             Radio::make('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer')
                                 ->label('Worden er gebiedsontsluitingswegen en/of doorgaande wegen afgesloten voor het verkeer?')
-                                ->options([
-                                    'Ja' => 'Ja',
-                                    'Nee' => 'Nee',
-                                ])
+                                ->options(JaNeeOptions::OPTIONS)
                                 ->required()
                                 ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') !== false)
                                 ->live()
@@ -314,10 +276,7 @@ final class AanvraagOfMeldingStep
             $position = $i;
             $radios[] = Radio::make($key)
                 ->label(fn ($livewire): string => self::reportQuestionLabel($livewire->state(), $index))
-                ->options([
-                    'Ja' => 'Ja',
-                    'Nee' => 'Nee',
-                ])
+                ->options(JaNeeOptions::OPTIONS)
                 ->required()
                 ->hidden(fn (Get $get, $livewire): bool => self::reportQuestionHidden($livewire->state(), $get, $i, $index))
                 ->live()

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
@@ -90,10 +91,7 @@ final class NaamVanHetEvenementStep
                     }),
                 Radio::make('gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen')
                     ->label('Gaat het hier om een periodiek terugkerende markt (jaarmarkt of weekmarkt), waarvoor de gemeente een besluit heeft genomen met betrekking tot de marktdagen?')
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen');
                         if ($rule !== null) {

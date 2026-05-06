@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
@@ -56,10 +57,7 @@ final class TijdenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('evenmentenInDeBuurtContent') !== false),
                 Radio::make('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->live(),
                 Grid::make(1)
@@ -105,17 +103,11 @@ final class TijdenStep
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXOpbouwactiviteiten')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->required(),
                 Radio::make('zijnErAansluitendAanHetEvenementAfbouwactiviteiten')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er aansluitend aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?', $livewire->state()))
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->live(),
                 Grid::make(1)
@@ -160,10 +152,7 @@ final class TijdenStep
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXAfbouwactiviteiten3')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?', $livewire->state()))
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->required(),
                 TextEntry::make('overzichtTijden')
                     ->hiddenLabel()

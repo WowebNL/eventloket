@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\Radio;
@@ -71,17 +72,11 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->required(),
                         Radio::make('reinigtUDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunning')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Reinigt u de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                         Radio::make('gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wCs') !== false),
@@ -98,10 +93,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->required(),
                         Radio::make('wordenDeDouchesTussentijdsSchoonGemaakt')
                             ->label('Worden de douches tussentijds schoon gemaakt?')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('douches') !== false),
@@ -197,10 +189,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->required(),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers')
                             ->label('Is er sprake van overnachten door publiek/deelnemers?')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1')
@@ -229,10 +218,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1') !== false),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Is er sprake van overnachten door personeel/organisatie?')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Repeater::make('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2')

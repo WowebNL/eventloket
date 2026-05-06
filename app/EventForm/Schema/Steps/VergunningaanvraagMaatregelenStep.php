@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
@@ -68,17 +69,11 @@ final class VergunningaanvraagMaatregelenStep
                             ->required(),
                         Radio::make('doetUAanAfvalscheidingOpLocatieEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Doet u aan afvalscheiding op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                         Radio::make('voertUDeSchoonmaakZelfUit')
                             ->label('Voert u de schoonmaak zelf uit? ')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         FileUpload::make('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen')
@@ -97,10 +92,7 @@ final class VergunningaanvraagMaatregelenStep
                     ->schema([
                         Radio::make('wilUGebruikMakenVanGemeentelijkeHulpmiddelen')
                             ->label('Wil U gebruik maken van gemeentelijke hulpmiddelen?')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Fieldset::make('Veldengroep')
@@ -129,10 +121,7 @@ final class VergunningaanvraagMaatregelenStep
                                     ->numeric(),
                                 Radio::make('wenstUTegenBetalingStroomAfTeNemenVanDeGemeente1')
                                     ->label('Wenst u tegen betaling stroom af te nemen van de gemeente?')
-                                    ->options([
-                                        'Ja' => 'Ja',
-                                        'Nee' => 'Nee',
-                                    ])
+                                    ->options(JaNeeOptions::OPTIONS)
                                     ->required(),
                                 Textarea::make('geefAanOpWelkeLocatieUStroomWilt1')
                                     ->label('Geef aan op welke locatie u stroom wilt afnemen')

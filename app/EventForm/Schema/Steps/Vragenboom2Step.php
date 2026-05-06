@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
@@ -28,10 +29,7 @@ final class Vragenboom2Step
             ->schema([
                 Radio::make('voordatUVerderGaatMetHetBeantwoordenVanDeVragenVoorUwEvenementWillenWeGraagWetenOfUEerderEenVooraankondigingHeeftIngevuldVoorDitEvenement')
                     ->label('Voordat u verder gaat met het beantwoorden van de vragen voor uw evenement willen we graag weten of u eerder een vooraankondiging heeft ingevuld voor dit evenement?')
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->required(),
                 TextInput::make('watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is tijdens de hele duur van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} het totaal aantal aanwezige personen van alle dagen bij elkaar opgeteld?', $livewire->state()))
@@ -52,10 +50,7 @@ final class Vragenboom2Step
                     ->required(),
                 Radio::make('isUwEvenementXGratisToegankelijkVoorHetPubliek')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} gratis toegankelijk voor het publiek?', $livewire->state()))
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->required(),
                 CheckboxList::make('kruisAanWatVanToepassingIsVoorUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan wat van toepassing is voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -177,10 +172,7 @@ final class Vragenboom2Step
                     ->live(),
                 Radio::make('isUwEvenementToegankelijkVoorMensenMetEenBeperking')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?', $livewire->state()))
-                    ->options([
-                        'Ja' => 'Ja',
-                        'Nee' => 'Nee',
-                    ])
+                    ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('isUwEvenementToegankelijkVoorMensenMetEenBeperking');

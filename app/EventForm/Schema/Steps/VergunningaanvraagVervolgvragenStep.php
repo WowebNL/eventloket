@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
@@ -269,18 +270,12 @@ final class VergunningaanvraagVervolgvragenStep
                             ->maxLength(10000),
                         Radio::make('isDeOrganisatieVanHetKansspelInHandenVanEenVereniging')
                             ->label('Is de organisatie van het kansspel in handen van een vereniging?')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Radio::make('bestaatDeVereningingDieHetKansspelOrganiseertLangerDan3Jaar')
                             ->label('Bestaat de vereninging, die het kansspel organiseert langer dan 3 jaar?')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('bestaatDeVereningingDieHetKansspelOrganiseertLangerDan3Jaar');
@@ -399,10 +394,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->required(),
                         Radio::make('maaktUGebruikVanEenCateraarSOpLocatieEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Maakt u gebruik van een cateraar(s) op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                         CheckboxList::make('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Met welke warmtebron wordt het eten ter plaatse klaargemaakt  op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))

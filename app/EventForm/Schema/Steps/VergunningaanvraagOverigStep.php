@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
@@ -80,10 +81,7 @@ final class VergunningaanvraagOverigStep
                         InfoText::info('content33', '<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>'),
                         Radio::make('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie')
                             ->label('Huurt u de verkeersregelaars in bij een daarin gespecialiseerd bedrijf/organisatie?')
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Textarea::make('zijnDeInTeZettenPersonenBeroepsmatigeVerkeersregelaarsOfIsErSprakeVanEvenementenverkeersregelaars')
@@ -150,10 +148,7 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('wiltUPromotieMakenVoorUwEvenement')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Radio::make('opWelkNiveauWiltUPromotieMaken')
@@ -219,10 +214,7 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geeft u omwonenden en nabijgelegen bedrijven vooraf informatie over uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Textarea::make('opWelkeWijzeInformeertUHen')
@@ -244,10 +236,7 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('organiseertUUwEvenementXVoorDeEersteKeer')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Textarea::make('welkeErvaringHeeftDeOrganisatorMetHetOrganiserenVanEvenementen')
@@ -299,10 +288,7 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('hanteertUHuisregelsVoorUwEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         FileUpload::make('uKuntHierHetHuisregelementUploaden')
@@ -317,10 +303,7 @@ final class VergunningaanvraagOverigStep
                             }),
                         Radio::make('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Textarea::make('lichtDeSideEventsToe')
@@ -340,10 +323,7 @@ final class VergunningaanvraagOverigStep
                     ->schema([
                         Radio::make('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
-                            ->options([
-                                'Ja' => 'Ja',
-                                'Nee' => 'Nee',
-                            ])
+                            ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         FileUpload::make('uploadDeVerzekeringspolis')
