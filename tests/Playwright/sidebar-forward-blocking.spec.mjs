@@ -12,7 +12,7 @@ test('sidebar blokkeert navigatie naar nog-niet-bereikte stappen', async ({ page
 
     const stepButtons = page.locator('.fi-vertical-wizard-step-btn');
     const count = await stepButtons.count();
-    expect(count, 'het formulier heeft 17 stappen in de sidebar').toBe(17);
+    expect(count, 'het formulier heeft 18 stappen in de sidebar').toBe(18);
 
     await expect(stepButtons.nth(0)).toBeEnabled();
 

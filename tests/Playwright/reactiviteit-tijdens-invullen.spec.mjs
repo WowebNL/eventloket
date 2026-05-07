@@ -151,14 +151,17 @@ test('reactiviteit: na "evenement"-keuze blijven alle stappen applicable', async
     await kiesRadio(page, 'waarvoorWiltUEventloketGebruiken', 'evenement');
     await page.waitForTimeout(1500);
 
-    // 'evenement'-keuze: alle stappen applicable (afgezien van melding/vergunning
-    // die later door wegen=Ja/Nee worden afgehandeld). Op dit moment in de flow
-    // is wegen nog niet ingevuld → niet-applicable count moet ≤1 zijn.
+    // 'evenement'-keuze: de zes vergunning-stappen met show-condities
+    // (Vervolgvragen / Voorzieningen / Voorwerpen / Maatregelen /
+    // ExtraActiviteiten / Overig) zijn pas applicable wanneer er
+    // ergens een vinkje gezet wordt op de eerdere keuze-vragen. Zolang
+    // dat nog niet zo is staan ze als niet-applicable in de sidebar —
+    // dat is het correct gedrag dat lege wizard-pagina's voorkomt.
     const nietApplicable = await page.locator('.fi-vertical-wizard-step-not-applicable').count();
     expect(
         nietApplicable,
-        'na evenement-keuze (zonder wegen-keuze) zijn vrijwel geen stappen niet-applicable',
-    ).toBeLessThanOrEqual(1);
+        'na evenement-keuze zonder verdere input zijn de 6 show-condition-stappen niet-applicable',
+    ).toBeGreaterThanOrEqual(5);
 });
 
 test('reactiviteit: brk-postcode triggert gemeente-detect → algemeneVragen sectie verschijnt', async ({ page }) => {

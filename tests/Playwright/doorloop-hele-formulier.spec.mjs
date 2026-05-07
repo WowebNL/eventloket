@@ -160,50 +160,13 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
         await klikVolgende(page);
     });
 
-    // ---------- Stap 8: Risicoscan -----------------------------------
-    await test.step('Stap 8 — Risicoscan', async () => {
-        expect(await huidigeStap(page)).toMatch(/Risicoscan/i);
-        // Buurtfeest: laagste risico-profiel op alle assen.
-        const risico = [
-            ['watIsDeAantrekkingskrachtVanHetEvenement', '0.5'],       // Wijk of buurt
-            ['watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep', '0.75__2'], // Alle leeftijden
-            ['isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid', '0'], // Nee
-            ['isEenDeelVanDeDoelgroepVerminderdZelfredzaam', '0'],     // Volledig zelfredzaam
-            ['isErSprakeVanAanwezigheidVanRisicovolleActiviteiten', '0'], // Nee
-            ['watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep', '0.5'], // Alleen toeschouwers
-            ['isErSprakeVanOvernachten', '0'],                         // Niet overnacht
-            ['isErGebruikVanAlcoholEnDrugs', '0'],                     // Niet aanwezig
-            ['watIsHetAantalGelijktijdigAanwezigPersonen', '0'],       // Minder dan 150
-            ['inWelkSeizoenVindtHetEvenementPlaats', '0.5'],           // Zomer of winter
-            ['inWelkeLocatieVindtHetEvenementPlaats', '0.25'],         // In een gebouw, ingericht
-            ['opWelkSoortOndergrondVindtHetEvenementPlaats', '0.25'],  // Verharde ondergrond
-            ['watIsDeTijdsduurVanHetEvenement', '0.5'],                // 3-12 uur daguren
-            ['welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing', '0'], // Goede
-        ];
-        for (const [key, val] of risico) {
-            await kiesRadioOptioneel(page, key, val);
-            await page.waitForTimeout(300);
-        }
-        await page.screenshot({ path: 'test-results/walkthrough/stap-08.png', fullPage: true });
-        await klikVolgende(page);
-    });
+    // In de meldingsroute (wegen=Nee) skipt FormStepApplicability álle
+    // vergunning-specifieke stappen — Risicoscan, Vragenboom2, en de
+    // 6 show-condition-stappen (Vervolgvragen / Voorzieningen / etc).
+    // Na "Melding" springt de wizard daarom direct door naar Bijlagen;
+    // geen extra invul-blokken nodig. Voor een vergunning-route-spec
+    // hoort hier een aparte test te komen die de show-vinkjes zet.
 
-    // ---------- Stap 9: Vergunningsaanvraag: soort -------------------
-    await test.step('Stap 9 — Vergunningsaanvraag: soort', async () => {
-        expect(await huidigeStap(page)).toMatch(/Vergunningsaanvraag/i);
-        await kiesRadioOptioneel(page, 'voordatUVerderGaatMetHetBeantwoordenVanDeVragenVoorUwEvenementWillenWeGraagWetenOfUEerderEenVooraankondigingHeeftIngevuldVoorDitEvenement', 'Nee');
-        await page.waitForTimeout(300);
-        await vulTekst(page, 'watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld', '80').catch(() => {});
-        await vulTekst(page, 'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX', '80').catch(() => {});
-        await kiesRadioOptioneel(page, 'watZijnDeBelangrijksteLeeftijdscategorieenVanHetPubliekTijdensUwEvenement', '45JaarEnOuder');
-        await page.waitForTimeout(300);
-        await kiesRadioOptioneel(page, 'isUwEvenementXGratisToegankelijkVoorHetPubliek', 'Ja');
-        await page.waitForTimeout(300);
-        await kiesRadioOptioneel(page, 'isUwEvenementToegankelijkVoorMensenMetEenBeperking', 'Nee');
-        await page.waitForTimeout(400);
-        await page.screenshot({ path: 'test-results/walkthrough/stap-09.png', fullPage: true });
-        await klikVolgende(page);
-    });
 
     // ---------- Stap 10+: per-stap handlers + doorklik-loop ---------
     //
@@ -323,8 +286,11 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
     // Bewaar de zojuist aangemaakte zaak-URL (ViewZaak) voor de prefill-
     // stap — anders overschrijft de 'Draft is geleegd'-check hieronder 'm.
     const ingediende_zaak_url = page.url();
-    const publicId = ingediende_zaak_url.match(/\/zaken\/([^/?#]+)/)?.[1];
-    expect(publicId, 'kon public_id niet uit ViewZaak-URL halen').toBeTruthy();
+    // Filament gebruikt het zaak-UUID in de URL, niet het public_id. We
+    // gebruiken die UUID als identifier richting `eventform:dump-pdf-content`,
+    // dat zelf zowel UUID's als public_id's accepteert.
+    const zaakIdentifier = ingediende_zaak_url.match(/\/zaken\/([^/?#]+)/)?.[1];
+    expect(zaakIdentifier, 'kon zaak-identifier niet uit ViewZaak-URL halen').toBeTruthy();
 
     // ---------- PDF-content: zaaktype + kernvelden ---------------------
     //
@@ -333,9 +299,9 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
     // straks rendert. Dat dekt: zaaktype, sectie-structuur, en alle
     // ingevulde velden uit de melding-walkthrough.
     await test.step('PDF-content (sections + entries) klopt voor melding-pad', async () => {
-        const pdf = leesPdfContent(publicId);
+        const pdf = leesPdfContent(zaakIdentifier);
 
-        expect(pdf.zaak.public_id).toBe(publicId);
+        expect(pdf.zaak.public_id, 'PDF heeft een ZAAK-public_id').toMatch(/^ZAAK-/);
         expect(pdf.zaak.zaaktype, 'melding-pad eindigt op Melding-zaaktype').toMatch(/melding/i);
         expect(pdf.sections.length, 'PDF moet meerdere secties tonen').toBeGreaterThan(3);
 
@@ -349,8 +315,13 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
         expect(tijden, 'sectie "tijden" gevonden').not.toBeNull();
         // Eén van de entries moet onze starttijd bevatten — Filament's
         // DateTimePicker-renderer kan 'm formatteren, dus we checken
-        // alleen op de jaar-kern.
-        const alleTijdWaarden = (tijden?.entries ?? []).map((e) => e.value).join(' ');
+        // alleen op de jaar-kern. Sinds de tijden-tabel-entry zit de
+        // datum-data ook in `entries[].table.rows[]` (zie punt 5);
+        // we serializeren beide naar één string voor de check.
+        const alleTijdWaarden = (tijden?.entries ?? []).flatMap((e) => [
+            e.value ?? '',
+            ...(e.table?.rows?.flat() ?? []),
+        ]).join(' ');
         expect(alleTijdWaarden).toMatch(/2026/);
     });
 
