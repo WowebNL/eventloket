@@ -154,9 +154,9 @@ final class VergunningaanvraagVervolgvragenStep
                             ->required(),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('versterkteMuziek') !== false),
-                Fieldset::make('Bouwsels &gt; 10m<sup>2</sup> ')
+                Fieldset::make('Bouwsels > 10m²')
                     ->schema([
-                        InfoText::info('content15', '<p>U heeft aangegeven, dat er bouwsels &gt; 10m2 zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>'),
+                        InfoText::info('content15', '<p>U heeft aangegeven, dat er bouwsels > 10m² zoals tenten of podia geplaatst worden. Hieronder volgen een aantal vragen hierover.</p>'),
                         CheckboxList::make('watVoorBouwselsPlaatsUOpDeLocaties')
                             ->label('Wat voor bouwsels plaats u op de locaties?')
                             ->options([
