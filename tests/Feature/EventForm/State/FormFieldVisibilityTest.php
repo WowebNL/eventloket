@@ -40,3 +40,25 @@ test('NotWithin: zonder inGemeentenResponse → null (= default hidden)', functi
 
     expect($state->isFieldHidden('NotWithin'))->toBeNull();
 });
+
+test('evenmentenInDeBuurtContent verschijnt zodra evenementenInDeGemeente truthy is', function () {
+    // Op de Tijden-stap staat een InfoText `evenmentenInDeBuurtContent`
+    // die de organisator waarschuwt voor overlappende evenementen.
+    // FormFieldVisibility zegt: tonen (= false) wanneer
+    // `evenementenInDeGemeente` truthy is, anders default hidden.
+    $state = new FormState;
+
+    // Zonder data → fall-through naar default hidden.
+    expect($state->isFieldHidden('evenmentenInDeBuurtContent'))->toBeNull();
+
+    // ServiceFetcher heeft een lijst overlappende evenementen
+    // teruggekregen → InfoText moet TONEN.
+    $state->setVariable('evenementenInDeGemeente', 'Zomerfestival, Buurtloop');
+    expect($state->isFieldHidden('evenmentenInDeBuurtContent'))
+        ->toBeFalse('met overlappende evenementen hoort de waarschuwing zichtbaar');
+
+    // Lege string (geen overlap) → niet tonen.
+    $state->setVariable('evenementenInDeGemeente', '');
+    expect($state->isFieldHidden('evenmentenInDeBuurtContent'))
+        ->toBeNull('zonder overlap is de waarschuwing default-hidden');
+});

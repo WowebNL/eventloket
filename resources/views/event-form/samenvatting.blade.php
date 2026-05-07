@@ -82,6 +82,12 @@
                     <td style="{{ $valueStyle }}">
                         @if (! empty($entry['svg']))
                             {!! $entry['svg'] !!}
+                        @elseif (! empty($entry['files']))
+                            <ul style="margin: 0; padding-left: 1.1em;">
+                                @foreach ($entry['files'] as $bestand)
+                                    <li>{{ $bestand }}</li>
+                                @endforeach
+                            </ul>
                         @else
                             {!! nl2br(e($entry['value'])) !!}
                         @endif

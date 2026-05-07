@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 use App\EventForm\Reporting\SubmissionReport;
 use App\EventForm\Schema\EventFormSchema;
+use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\TijdenStep;
@@ -179,6 +180,32 @@ test('Type-aanvraag-stap: meldingspad → Melding zonder aanvullende ontheffinge
     $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
 
     expect($sections[0]['entries'][0]['value'])->toBe('Melding');
+});
+
+test('Bijlagen-stap: FileUpload-velden krijgen een `files`-array per bestandsvraag', function () {
+    // Behandelaars willen in de PDF + samenvatting per bestandsvraag een
+    // <ul> met alle geuploade bestand-namen — niet één lange comma-rij.
+    // SubmissionReport bouwt daarvoor een aparte `files`-array op.
+    $state = new FormState(values: [
+        'veiligheidsplan' => 'event-form-uploads/veiligheidsplan-buurtfeest.pdf',
+        'bijlagen1' => [
+            'event-form-uploads/draaiboek.pdf',
+            'event-form-uploads/situatietekening.pdf',
+        ],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [BijlagenStep::make()]);
+
+    expect($sections)->toHaveCount(1);
+    $entries = $sections[0]['entries'];
+
+    $veiligheidsplan = collect($entries)->first(fn ($e) => str_contains(strtolower($e['label'] ?? ''), 'veiligheidsplan'));
+    expect($veiligheidsplan)->not->toBeNull()
+        ->and($veiligheidsplan['files'] ?? [])->toBe(['veiligheidsplan-buurtfeest.pdf']);
+
+    $bijlagen = collect($entries)->first(fn ($e) => str_contains(strtolower($e['label'] ?? ''), 'overige bijlagen'));
+    expect($bijlagen)->not->toBeNull()
+        ->and($bijlagen['files'] ?? [])->toBe(['draaiboek.pdf', 'situatietekening.pdf']);
 });
 
 test('Type-aanvraag-stap: lege state → geen entry, geen sectie', function () {

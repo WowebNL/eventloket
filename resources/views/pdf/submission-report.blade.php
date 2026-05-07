@@ -115,6 +115,14 @@
                             <td>
                                 @if (! empty($entry['svg']))
                                     {!! $entry['svg'] !!}
+                                @elseif (! empty($entry['files']))
+                                    {{-- FileUpload met één of meerdere bijlagen:
+                                         <ul> per bestandsvraag. --}}
+                                    <ul style="margin: 0; padding-left: 1.1em;">
+                                        @foreach ($entry['files'] as $bestand)
+                                            <li>{{ $bestand }}</li>
+                                        @endforeach
+                                    </ul>
                                 @else
                                     {!! nl2br(e($entry['value'])) !!}
                                 @endif

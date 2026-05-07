@@ -228,7 +228,19 @@ final class SubmissionReport
             $svg = $this->renderGeoJsonSvg($rawValue['geojson']);
         }
 
-        if ($value === '' && $svg === null) {
+        // FileUpload-velden krijgen naast de comma-string óók een
+        // `files`-array zodat de blade-templates 'r een nette `<ul>`
+        // van kunnen renderen — leesbaarder dan een lange comma-rij,
+        // zeker bij meerdere geüploade bestanden per veld.
+        $files = null;
+        if ($component instanceof FileUpload) {
+            $files = $this->extractFileNames($rawValue);
+            if ($files === [] && $value === '') {
+                return null;
+            }
+        }
+
+        if ($value === '' && $svg === null && $files === null) {
             return null;
         }
 
@@ -248,8 +260,35 @@ final class SubmissionReport
         if ($svg !== null) {
             $entry['svg'] = $svg;
         }
+        if ($files !== null && $files !== []) {
+            $entry['files'] = $files;
+        }
 
         return $entry;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractFileNames(mixed $value): array
+    {
+        if (is_string($value) && $value !== '') {
+            return [basename($value)];
+        }
+        if (! is_array($value)) {
+            return [];
+        }
+
+        $names = [];
+        foreach ($value as $entry) {
+            if (is_string($entry) && $entry !== '') {
+                $names[] = basename($entry);
+            } elseif (is_array($entry) && isset($entry['name']) && is_string($entry['name'])) {
+                $names[] = $entry['name'];
+            }
+        }
+
+        return $names;
     }
 
     /**
