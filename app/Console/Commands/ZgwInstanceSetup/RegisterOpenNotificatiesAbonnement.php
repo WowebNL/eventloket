@@ -241,7 +241,7 @@ class RegisterOpenNotificatiesAbonnement extends Command
         return Command::SUCCESS;
     }
 
-    private function buildJwt(string $clientId, string $clientSecret) : string
+    private function buildJwt(string $clientId, string $clientSecret): string
     {
 
         $payload = [
@@ -251,10 +251,10 @@ class RegisterOpenNotificatiesAbonnement extends Command
             'user_id' => 'application',
             'user_representation' => 'Application background task',
         ];
-        $encode = fn($data) => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        $encode = fn ($data) => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 
-        $header    = $encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
-        $body      = $encode(json_encode($payload));
+        $header = $encode(json_encode(['typ' => 'JWT', 'alg' => 'HS256']));
+        $body = $encode(json_encode($payload));
         $signature = $encode(hash_hmac('sha256', "$header.$body", $clientSecret, true));
 
         return "$header.$body.$signature";

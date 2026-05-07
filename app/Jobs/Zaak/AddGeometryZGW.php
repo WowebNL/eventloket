@@ -54,13 +54,11 @@ class AddGeometryZGW implements ShouldQueue
 
         $geoJson = $geometryBuilder->buildGeoJson($eventLocation);
         if ($geoJson) {
-            if(str_contains($this->zaak->zgw_zaak_url, 'https://zaken.preprod-rx-services.nl/')) {
-                Log::warning('Skipping geometry update for zaak '.$this->zaak->id.' because it is on preprod-rx-services which gives http 500 response when patch the zaak with geometryCollection as zaakgeometrie', ['zaak_id' => $this->zaak->id, 'zgw_zaak_url' => $this->zaak->zgw_zaak_url, 'geojson' => $geoJson]);
-                // rx mission gives a http 500 response when patch the zaak witch geometryCollection as zaakgeometrie, skip this for now
-                return;
+            if (str_contains($this->zaak->zgw_zaak_url, 'https://zaken.preprod-rx-services.nl/')) {
+                Log::info('Geometry update for zaak '.$this->zaak->id, ['zaak_id' => $this->zaak->id, 'zgw_zaak_url' => $this->zaak->zgw_zaak_url, 'geojson' => $geoJson]);
             }
             $openzaak->zaken()->zaken()->patch($ozZaak->uuid, [
-                'zaakgeometrie' => $geoJson,
+                'zaakgeometrie' => json_decode($geoJson, true),
             ]);
         }
 

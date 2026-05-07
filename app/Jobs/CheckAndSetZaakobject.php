@@ -69,7 +69,7 @@ class CheckAndSetZaakobject implements ShouldQueue
             'relatieomschrijving' => 'Formulier inzending gekoppeld aan de zaak',
             'objectIdentificatie' => [
                 'overigeData' => $object->uuid,
-            ]
+            ],
         ]);
 
         // The zaakobject creation will trigger a notification which starts the normal zaak creation chain.

@@ -10,6 +10,7 @@ use App\Models\Zaak;
 use App\Normalizers\OpenFormsNormalizer;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -69,7 +70,7 @@ class AddZaakeigenschappenZGW implements ShouldQueue
             if (is_string($waarde) && (str_starts_with($waarde, '[') || str_starts_with($waarde, '{'))) {
                 $waarde = OpenFormsNormalizer::normalizeJson($waarde);
             } elseif (str_contains($this->zaak->zgw_zaak_url, 'https://zaken.preprod-rx-services.nl/') && preg_match('/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/', $waarde)) {
-                    $waarde = \Carbon\Carbon::parse($waarde)->format('YmdHis');
+                $waarde = Carbon::parse($waarde)->format('YmdHis');
             }
 
             if ($waarde === null || $waarde === '' || $waarde === []) {
