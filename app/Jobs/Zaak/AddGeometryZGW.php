@@ -14,6 +14,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Woweb\Openzaak\Openzaak;
 
 /**
@@ -36,11 +37,6 @@ class AddGeometryZGW implements ShouldQueue
         EventLocationGeometryBuilder $geometryBuilder,
     ): void {
 
-        if(str_contains($this->zaak->zgw_zaak_url, 'https://zaken.preprod-rx-services.nl/')) {
-            // rx mission gives a http 500 response when patch the zaak witch geometryCollection as zaakgeometrie, skip this for now
-            return;
-        }
-
         if (! $this->zaak->zgw_zaak_url) {
             return;
         }
@@ -58,6 +54,11 @@ class AddGeometryZGW implements ShouldQueue
 
         $geoJson = $geometryBuilder->buildGeoJson($eventLocation);
         if ($geoJson) {
+            if(str_contains($this->zaak->zgw_zaak_url, 'https://zaken.preprod-rx-services.nl/')) {
+                Log::warning('Skipping geometry update for zaak '.$this->zaak->id.' because it is on preprod-rx-services which gives http 500 response when patch the zaak with geometryCollection as zaakgeometrie', ['zaak_id' => $this->zaak->id, 'zgw_zaak_url' => $this->zaak->zgw_zaak_url, 'geojson' => $geoJson]);
+                // rx mission gives a http 500 response when patch the zaak witch geometryCollection as zaakgeometrie, skip this for now
+                return;
+            }
             $openzaak->zaken()->zaken()->patch($ozZaak->uuid, [
                 'zaakgeometrie' => $geoJson,
             ]);
