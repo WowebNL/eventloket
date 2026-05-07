@@ -38,7 +38,11 @@ final class TypeAanvraagOnderdelen
             $items[] = 'Evenementenvergunning';
         }
 
-        if ($state->get('alcoholvergunning') === true) {
+        // `alcoholvergunning` is een afgeleide variabele die `'Ja'` of
+        // `null` returnt (zie FormDerivedState::alcoholvergunning) —
+        // niet een bool. Zonder die specifieke check zou de ontheffing
+        // nooit in de "Onderdelen aanvraag"-lijst belanden.
+        if ($state->get('alcoholvergunning') === 'Ja') {
             $items[] = 'Ontheffing Alcoholwet';
         }
         if ($state->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A3') === true) {

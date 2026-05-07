@@ -134,8 +134,11 @@ test('Type-aanvraag-stap: vergunning + ontheffingen → entry met afgeleide onde
     $state = new FormState(values: [
         'waarvoorWiltUEventloketGebruiken' => 'evenement',
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
-        'alcoholvergunning' => true,
-        'kruisAanWatVanToepassingIsVoorUwEvenementX' => ['A3' => true, 'A4' => true],
+        // `alcoholvergunning` wordt door FormDerivedState afgeleid uit
+        // `kruisAanWatVanToepassingIsVoorUwEvenementX.A5` en heeft de
+        // waarde `'Ja'` (string), niet `true`.
+        'alcoholvergunning' => 'Ja',
+        'kruisAanWatVanToepassingIsVoorUwEvenementX' => ['A3' => true, 'A4' => true, 'A5' => true],
         'kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX' => ['A48' => true, 'A51' => true],
     ]);
 
