@@ -243,7 +243,10 @@ class Zaak extends Model implements Eventable
             $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);
             $collection = collect();
             foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
-                $collection->push(new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
+                $item = (new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
+                if (!$item->status || $item->status == 'definitief') {
+                    $collection->push($item);
+                }
             }
 
             return $collection;

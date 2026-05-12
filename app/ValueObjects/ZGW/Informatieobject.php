@@ -21,6 +21,7 @@ class Informatieobject implements Arrayable
         public readonly string $informatieobjecttype,
         public readonly string $formaat,
         public readonly bool $locked,
+        public readonly ?string $status,
         public readonly ?string $beschrijving,
         public readonly ?Besluit $besluit = null,
         ...$otherParams
@@ -36,6 +37,7 @@ class Informatieobject implements Arrayable
             'vertrouwelijkheidaanduiding' => $this->vertrouwelijkheidaanduiding,
             'auteur' => $this->auteur,
             'versie' => $this->versie,
+            'status' => $this->status,
             'bestandsnaam' => $this->bestandsnaam,
             'inhoud' => $this->inhoud,
             'beschrijving' => $this->beschrijving,
