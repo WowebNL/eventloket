@@ -18,7 +18,7 @@ final readonly class Besluit implements Arrayable
         public string $zaak,
         public string $datum,
         public string $ingangsdatum,
-        public string $verzenddatum,
+        public ?string $verzenddatum,
         public ?string $toelichting,
         public ?string $vervaldatum = null,
         public ?BesluitType $besluittypeObject = null,
