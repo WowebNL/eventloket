@@ -244,7 +244,7 @@ class Zaak extends Model implements Eventable
             $collection = collect();
             foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
                 $item = (new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
-                if (!$item->status || $item->status == 'definitief') {
+                if (! $item->status || $item->status == 'definitief') {
                     $collection->push($item);
                 }
             }

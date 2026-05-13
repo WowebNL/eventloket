@@ -14,6 +14,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Woweb\Openzaak\Openzaak;
 
@@ -72,7 +73,7 @@ class UpdateInitiatorZGW implements ShouldQueue
     /** @param  array<string, mixed>  $initiator */
     private function buildNietNatuurlijkPersoonRol(string $zaakUrl, string $roltype, array $initiator): array
     {
-        return [
+        $data = [
             'zaak' => $zaakUrl,
             'betrokkeneType' => 'niet_natuurlijk_persoon',
             'roltype' => $roltype,
@@ -80,10 +81,17 @@ class UpdateInitiatorZGW implements ShouldQueue
             'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
             'betrokkeneIdentificatie' => array_filter([
                 'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
-                'annIdentificatie' => $initiator['kvk'],
+                // 'annIdentificatie' => $initiator['kvk'],
                 'kvkNummer' => $initiator['kvk'],
             ]),
         ];
+
+        Log::info('UpdateInitiatorZGW: bouw niet-natuurlijk persoon rol', [
+            'zaak_id' => $this->zaak->id,
+            'rolData' => $data,
+        ]);
+
+        return $data;
     }
 
     /** @param  array<string, mixed>  $initiator */

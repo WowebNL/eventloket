@@ -62,7 +62,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
         $info = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
-            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Openbaar->value,
             'titel' => 'Inzendingsbewijs '.$this->zaak->public_id,
             'auteur' => 'Eventloket',
             'taal' => 'dut',

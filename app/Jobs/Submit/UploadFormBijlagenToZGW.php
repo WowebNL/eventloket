@@ -102,7 +102,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
             $info = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
                 'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
                 'creatiedatum' => now()->format('Y-m-d'),
-                'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+                'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Openbaar->value,
                 'titel' => $bestandsnaam,
                 'auteur' => $this->zaak->organisation?->name ?? 'Organisator',
                 'taal' => 'dut',

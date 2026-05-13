@@ -50,13 +50,14 @@ class CheckAndSetZaakobject implements ShouldQueue
             return;
         }
 
-        if(!env('OBJECTSAPI_OBJECTSTYPE_FORMULIER_URL')) {
+        if (! env('OBJECTSAPI_OBJECTSTYPE_FORMULIER_URL')) {
             Log::warning('CheckAndSetZaakobject: OBJECTSAPI_OBJECTSTYPE_FORMULIER_URL is not set', [
                 'zaakUrl' => $zaakUrl,
             ]);
+
             return;
         }
-        
+
         // Take the most recently registered object.
         $object = $objects->first();
         $objectUrl = $object->url ?? (rtrim(config('openzaak.objectsapi.url'), '/')

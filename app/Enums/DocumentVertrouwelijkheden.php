@@ -19,12 +19,12 @@ enum DocumentVertrouwelijkheden: string
     public static function fromUserRole(Role $role): array
     {
         return match ($role) {
-            Role::Organiser => [self::Zaakvertrouwelijk->value],
-            Role::Advisor => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value],
-            Role::MunicipalityAdmin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::ReviewerMunicipalityAdmin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::Reviewer => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::Admin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value]
+            Role::Organiser => [self::Openbaar->value],
+            Role::Advisor => [self::Openbaar->value, self::BeperktOpenbaar->value],
+            Role::MunicipalityAdmin => [self::Openbaar->value, self::BeperktOpenbaar->value, self::Intern->value],
+            Role::ReviewerMunicipalityAdmin => [self::Openbaar->value, self::BeperktOpenbaar->value, self::Intern->value],
+            Role::Reviewer => [self::Openbaar->value, self::BeperktOpenbaar->value, self::Intern->value],
+            Role::Admin => [self::Openbaar->value, self::BeperktOpenbaar->value, self::Intern->value]
         };
     }
 
