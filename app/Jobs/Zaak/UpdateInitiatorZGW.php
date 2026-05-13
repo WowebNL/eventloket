@@ -45,6 +45,12 @@ class UpdateInitiatorZGW implements ShouldQueue
 
         $state = FormState::fromSnapshot($this->zaak->form_state_snapshot ?? []);
         $initiator = $map->buildInitiator($state);
+        
+        Log::info('UpdateInitiatorZGW: gevonden initiator', [
+            'zaak_id' => $this->zaak->id,
+            'initiator' => $initiator,
+        ]);
+
         if (empty($initiator)) {
             return;
         }
@@ -81,7 +87,7 @@ class UpdateInitiatorZGW implements ShouldQueue
             'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
             'betrokkeneIdentificatie' => array_filter([
                 'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
-                // 'annIdentificatie' => $initiator['kvk'],
+                'annIdentificatie' => $initiator['kvk'],
                 'kvkNummer' => $initiator['kvk'],
             ]),
         ];
