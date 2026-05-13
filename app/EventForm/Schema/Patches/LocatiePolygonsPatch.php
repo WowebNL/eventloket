@@ -10,6 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Contracts\Validation\ValidationRule;
 use ReflectionObject;
 
 /**
@@ -79,6 +80,7 @@ final class LocatiePolygonsPatch
                     ->geoMan(true)
                     ->geoManEditable(true)
                     ->drawPolygon(true)
+                    ->editPolygon(false)
                     ->drawPolyline(false)
                     ->drawMarker(false)
                     ->drawCircle(false)
@@ -88,9 +90,33 @@ final class LocatiePolygonsPatch
                     ->dragMode(false)
                     ->rotateMode(false)
                     ->showMarker(false)
+                    ->drawText(false)
+                    ->deleteLayer(true)
+                    ->showFullscreenControl(false)
                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                     ->columnSpanFull()
+                    ->showMyLocationButton(false)
                     ->required()
+                    ->rule(new class implements ValidationRule {
+                        public function validate(string $attribute, mixed $value, \Closure $fail): void
+                        {
+                            if (empty($value)) {
+                                return;
+                            }
+                            if (is_string($value)) {
+                                $value = json_decode($value, true) ?? [];
+                            }
+                            $features = $value['geojson']['features'] ?? [];
+                            foreach ($features as $feature) {
+                                $type = $feature['geometry']['type'] ?? '';
+                                if (! in_array($type, ['Polygon', 'MultiPolygon'], strict: true)) {
+                                    $fail('De locatiekaart mag alleen vlakken (polygonen) bevatten. Verwijder eventuele lijnen of andere vormen.');
+
+                                    return;
+                                }
+                            }
+                        }
+                    })
                     ->hidden($hiddenCallback);
 
                 continue;
@@ -150,14 +176,37 @@ final class LocatiePolygonsPatch
                     ->dragMode(false)
                     ->rotateMode(false)
                     ->showMarker(false)
+                    ->deleteLayer(true)
+                    ->drawText(false)
+                    ->showFullscreenControl(false)
                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                     ->columnSpanFull()
-                    ->required();
+                    ->showMyLocationButton(false)
+                    ->required()
+                    ->rule(new class implements ValidationRule {
+                        public function validate(string $attribute, mixed $value, \Closure $fail): void
+                        {
+                            if (empty($value)) {
+                                return;
+                            }
+                            if (is_string($value)) {
+                                $value = json_decode($value, true) ?? [];
+                            }
+                            $features = $value['geojson']['features'] ?? [];
+                            foreach ($features as $feature) {
+                                $type = $feature['geometry']['type'] ?? '';
+                                if (! in_array($type, ['LineString', 'MultiLineString'], strict: true)) {
+                                    $fail('De routekaart mag alleen lijnen bevatten. Verwijder eventuele vlakken of andere vormen.');
+
+                                    return;
+                                }
+                            }
+                        }
+                    });
 
                 continue;
             }
-            // Forceer alle andere route-velden ook full-width zodat de
-            // route-tab consistent breed weergeeft (feedback opdrachtgever).
+            // Forceer alle andere route-velden ook full-width 
             if ($component instanceof Component && method_exists($component, 'columnSpanFull')) {
                 $component->columnSpanFull();
             }

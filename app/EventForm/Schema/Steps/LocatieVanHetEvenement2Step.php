@@ -16,9 +16,11 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Exceptions\Halt;
 
 /**
  * @openforms-step-uuid 2186344f-9821-45d1-bd52-9900ae15fcb6
@@ -33,6 +35,19 @@ final class LocatieVanHetEvenement2Step
     {
         return Step::make('Locatie')
             ->key(self::UUID)
+            ->afterValidation(function ($livewire): void {
+                $evenementInGemeente = $livewire->state()->get('evenementInGemeente');
+
+                if (empty($evenementInGemeente)) {
+                    Notification::make()
+                        ->title('Gemeente niet bepaald')
+                        ->body('Vul een adres, locatie of route in zodat de gemeente automatisch bepaald kan worden voordat u verder gaat.')
+                        ->warning()
+                        ->send();
+
+                    throw new Halt;
+                }
+            })
             ->schema([
                 CheckboxList::make('waarVindtHetEvenementPlaats')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Waar vindt het evenement {{ watIsDeNaamVanHetEvenementVergunning }} plaats?', $livewire->state()))

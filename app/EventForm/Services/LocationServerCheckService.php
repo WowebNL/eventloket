@@ -68,8 +68,13 @@ class LocationServerCheckService
         if ($input->lines !== null) {
             [$engine, $intersects, $within] = $this->ensureEngine($engine, $intersects, $within);
             foreach ($input->lines as $lineObject) {
-                /** @var LineString $line */
                 $line = (new GeoJsonReader)->read((string) json_encode($lineObject));
+                if (! $line instanceof LineString) {
+                    // Sla geometrieën over die geen lijn zijn; de collect-laag
+                    // filtert dit al af, maar dit vangt edge-cases in oude
+                    // draft-state op.
+                    continue;
+                }
                 $response = $this->appendLineToLinesArray($response, $line, $intersects, $within);
             }
             $response = $this->promoteSingleLine($response);

@@ -206,7 +206,7 @@ class ServiceFetcher
 
         // Nieuwe shape: één Map-state-object met geojson direct erin.
         if (isset($value['geojson'])) {
-            return $this->extractFeatureGeometries($value) ?: null;
+            return $this->extractFeatureGeometries($value, ['Polygon', 'MultiPolygon']) ?: null;
         }
 
         // Oude shape: Repeater-rows. Per rij ofwel direct een geojson
@@ -218,7 +218,7 @@ class ServiceFetcher
             }
             $map = $row['buitenLocatieVanHetEvenement'] ?? $row;
             if (is_array($map)) {
-                array_push($polygons, ...$this->extractFeatureGeometries($map));
+                array_push($polygons, ...$this->extractFeatureGeometries($map, ['Polygon', 'MultiPolygon']));
             }
         }
 
@@ -231,7 +231,7 @@ class ServiceFetcher
      *
      * @return list<array<string, mixed>>
      */
-    private function extractFeatureGeometries(mixed $mapState): array
+    private function extractFeatureGeometries(mixed $mapState, array $allowedTypes = []): array
     {
         if (! is_array($mapState)) {
             return [];
@@ -251,6 +251,9 @@ class ServiceFetcher
             }
             $geometry = $feature['geometry'] ?? null;
             if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
+                continue;
+            }
+            if ($allowedTypes !== [] && ! in_array($geometry['type'], $allowedTypes, strict: true)) {
                 continue;
             }
             $out[] = $geometry;
@@ -278,7 +281,7 @@ class ServiceFetcher
 
         // Nieuwe shape (sinds Route-Repeater eruit): direct een Map-state.
         if (isset($value['geojson'])) {
-            return $this->extractFeatureGeometries($value) ?: null;
+            return $this->extractFeatureGeometries($value, ['LineString', 'MultiLineString']) ?: null;
         }
 
         // Oude shape: Repeater-rows. Per rij óf een wrapper-key
@@ -306,6 +309,9 @@ class ServiceFetcher
                 }
                 $geometry = $feature['geometry'] ?? null;
                 if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
+                    continue;
+                }
+                if (! in_array($geometry['type'], ['LineString', 'MultiLineString'], strict: true)) {
                     continue;
                 }
                 $lines[] = $geometry;

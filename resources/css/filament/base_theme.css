@@ -5,7 +5,7 @@
 
 @source '../../../resources/views/filament/components/**/*';
 @source '../../../resources/views/filament/infolists/**/*';
-
 @source '../../../resources/views/livewire/**/*';
+@source '../../../resources/views/vendor/**/*';
 
 @source '../../../vendor/guava/calendar/resources/**/*';

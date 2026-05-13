@@ -12,6 +12,7 @@ use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\SubmitEventForm;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
+use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
@@ -97,6 +98,8 @@ class EventFormPage extends Page implements HasForms
         $this->state = $prefill ?? $draft ?? FormState::empty();
         $this->state->setSystem('authUser', $user);
         $this->state->setSystem('authOrganisation', $tenant);
+
+        $this->state->setVariable('alleGemeenteNamen', Municipality::orderBy('name')->pluck('name')->implode(', '));
 
         app(ServiceFetcher::class)->fetch('eventloketSession', $this->state);
 
