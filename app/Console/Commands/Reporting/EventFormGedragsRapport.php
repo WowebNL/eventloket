@@ -300,7 +300,7 @@ class EventFormGedragsRapport extends Command
     }
 
     /**
-     * @param  list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>}>  $results
+     * @param  list<array{provider: class-string<ScenarioProvider>, scenario: array<string, mixed>, pass: bool, diffs: array<string, mixed>, js_ref?: array<string, mixed>|null, skipped_in_report_runner?: array<int, mixed>}>  $results
      * @param  array<string, string>  $pageFiles  stap-key → absolute path
      */
     private function renderIndex(array $results, array $pageFiles, string $pagesDir, string $indexPath): string

@@ -330,29 +330,54 @@
         </div>
     </div>
 
-    <div x-data="mapPicker($wire, {{ $getMapConfig() }})"
+    {{--
+        Fix voor upstream-bug in dotswan/filament-map-picker v2.3.3:
+        in resources/css/index.css regel 33-51 wordt een `z-index: auto
+        !important` toegepast op alle Leaflet-panes. Daardoor verdwijnt
+        getekende geometry visueel onder de tile-layer. Hier herstellen
+        we de Leaflet-default-stacking via hogere specificity (.leaflet-
+        container scoping) zodat onze regel wint van dotswan's !important.
+    --}}
+    <style>
+        .leaflet-container .leaflet-tile-pane { z-index: 200 !important; }
+        .leaflet-container .leaflet-overlay-pane { z-index: 400 !important; }
+        .leaflet-container .leaflet-shadow-pane { z-index: 500 !important; }
+        .leaflet-container .leaflet-marker-pane { z-index: 600 !important; }
+        .leaflet-container .leaflet-tooltip-pane { z-index: 650 !important; }
+        .leaflet-container .leaflet-popup-pane { z-index: 700 !important; }
+    </style>
+    <div
+            wire:key="osm-map-picker-{{ $getStatePath() }}"
+            x-data="mapPicker($wire, {{ $getMapConfig() }})"
             x-init="async () => {
-            // Registreer de fly-to handler vóór de eerste await.
-            // Geen $cleanup nodig: de handler is goedaardig (statePath-
-            // guard zorgt dat hij nooit per ongeluk de verkeerde kaart
-            // beweegt), en de browser ruimt window-listeners op bij
-            // page-unload. De wizard mount deze kaart niet meer dan één
-            // keer per sessie.
+            // Symptoom-fix voor multi-instance Alpine state-collision:
+            // wanneer er meerdere Map::make() velden op dezelfde Livewire-
+            // pagina staan, blijken hun Alpine-componenten op een
+            // ondoorzichtige manier dezelfde data-objectreferentie te
+            // delen (this.config, this.map, this.drawItems). Daardoor
+            // overschrijft de tweede mapPicker-init de eerste en zien
+            // beide kaarten dezelfde geojson.
+            //
+            // De fix omzeilt dotswan's gedeelde state door per kaart:
+            // 1) de Leaflet-map aan het DOM-element zelf te koppelen
+            //    (mapEl.__leafletMap), zodat we per kaart de juiste
+            //    Leaflet-instance terug kunnen vinden;
+            // 2) na attach() de getekende layers van DIE specifieke map
+            //    weg te halen en te vervangen door de eigen geojson (uit
+            //    $wire.get(_expectedStatePath));
+            // 3) eigen pm:create/edit/remove/moveend-handlers te binden
+            //    die direct naar _expectedStatePath schrijven, los van
+            //    dotswan's gedeelde this.config.statePath.
+            const _self = $data;
+            const _expectedStatePath = '{{ $getStatePath() }}';
+
+            // Fly-to handler: pakt de map via het DOM-element ipv via
+            // _self.map (kan overschreven zijn door andere instance).
             const flyToHandler = (e) => {
-                if (e.detail.statePath !== '{{ $getStatePath() }}') return;
-                // Gebruik $data.map in plaats van this.map: Alpine evalueert x-init
-                // via een with(scope)-blok, waarbij $data de reactieve component-data
-                // is. Arrow-functions in closures erven die scope via de scope-chain,
-                // zodat $data.map altijd het correcte Leaflet-instantie opleverd,
-                // ongeacht hoe Alpine intern 'this' bindt.
-                const map = $data.map;
+                if (e.detail.statePath !== _expectedStatePath) return;
+                const map = $refs.map && $refs.map.__leafletMap;
                 if (map) {
-                    // setView is direct en betrouwbaarder dan flyTo (geen animatie
-                    // die stil kan falen als de kaart nog niet volledig geladen is).
-                    map.setView(
-                        [e.detail.lat, e.detail.lng],
-                        Math.max(16)
-                    );
+                    map.setView([e.detail.lat, e.detail.lng], 16);
                 }
             };
             window.addEventListener('map-fly-to', flyToHandler);
@@ -361,97 +386,135 @@
                 await (new Promise(resolve => setTimeout(resolve, 100)));
             } while (!$refs.map);
 
-            // GeoMan-toolbar in het Nederlands. Zet de actieve taal op het
-            // globale L.PM object vóórdat attach() de kaart aanmaakt.
-            // Dotswan's createMap roept addControls() → _defineButtons()
-            // synchroon aan; _defineButtons leest L.PM.activeLang op dat
-            // moment, dus als we 'm hier alvast op 'nl' zetten hoeven we
-            // achteraf niets te herinit-en.
+            // GeoMan-toolbar in het Nederlands.
             if (window.L && window.L.PM) {
                 window.L.PM.activeLang = 'nl';
             }
 
+            // FIX 1: monkey-patch createMap om de Leaflet-instance aan het
+            // DOM-element te koppelen. DOM-elementen zijn echt per kaart
+            // uniek, dus dit overleeft state-deling op _self.
+            const _origCreateMap = _self.createMap;
+            _self.createMap = function (el) {
+                _origCreateMap.call(this, el);
+                el.__leafletMap = this.map;
+            };
+
             attach($refs.map);
 
-            // Patch dotswan's loadExistingGeojson: de originele implementatie
-            // vervangt this.drawItems (een FeatureGroup) met een nieuw
-            // L.geoJSON-object en voegt dat als extra layer toe aan de kaart.
-            // Daardoor staan er twee layer-objecten op de kaart (de lege
-            // FeatureGroup + de geoJSON layer), werkt drawItems.removeLayer()
-            // niet meer voor GeoMan-layers, en kunnen shapes van eerdere
-            // loadExistingGeojson-aanroepen zich opstapelen (elke refreshMap
-            // voegt een nieuwe layer toe zonder de vorige te verwijderen).
-            //
-            // Fix: we vullen de bestaande FeatureGroup met de geladen features
-            // in plaats van drawItems te overschrijven. Zo behoudt GeoMan
-            // zijn eigen layer-registry en werkt removeLayer() correct.
-            //
-            // Gebruik $data.* in plaats van this.*: Alpine evalueert x-init
-            // via een async arrow function waardoor 'this' niet de Alpine
-            // component is. $data is de magische Alpine-property die altijd
-            // naar de reactieve component-data wijst, ongeacht de this-binding.
-            $data.loadExistingGeojson = () => {
-                const existingGeoJson = $data.getGeoJson();
-                if (!existingGeoJson || !existingGeoJson.features || existingGeoJson.features.length === 0) {
-                    return;
-                }
-                // Wis de bestaande FeatureGroup zodat refreshMap niet stapelt.
-                if ($data.drawItems && $data.drawItems.clearLayers) {
-                    $data.drawItems.clearLayers();
-                }
-                // Laad elke feature als GeoJSON-layer en voeg 'm via addLayer
-                // toe aan de bestaande FeatureGroup. Zo is drawItems altijd
-                // de FeatureGroup die GeoMan kent.
-                window.L.geoJSON(existingGeoJson, {
-                    onEachFeature(feature, layer) {
-                        if ($data.drawItems && $data.drawItems.addLayer) {
-                            $data.drawItems.addLayer(layer);
-                        }
+            // FIX 2: vervang de door dotswan geladen (mogelijk verkeerde)
+            // features op DEZE map door de juiste geojson uit onze eigen
+            // _expectedStatePath. Bind ook eigen draw-event-handlers die
+            // naar _expectedStatePath schrijven.
+            setTimeout(() => {
+                const mapEl = $refs.map;
+                const map = mapEl && mapEl.__leafletMap;
+                if (!map) return;
+
+                // Verwijder bestaande feature-layers (behoud tile-layer).
+                const toRemove = [];
+                map.eachLayer((layer) => {
+                    if (window.L && layer instanceof window.L.TileLayer) return;
+                    if (layer.toGeoJSON || layer.getLatLngs) {
+                        toRemove.push(layer);
                     }
                 });
-                try {
-                    const bounds = $data.drawItems.getBounds();
-                    if (bounds && bounds.isValid()) {
-                        $data.map.fitBounds(bounds);
+                toRemove.forEach(layer => map.removeLayer(layer));
+
+                // Lees onze eigen state, los van dotswan's gedeelde config.
+                const state = $wire.get(_expectedStatePath) || {};
+                const initialGeoJson = state.geojson || { type: 'FeatureCollection', features: [] };
+
+                // Lokale FeatureGroup voor DEZE kaart. Geen jacht op
+                // _self.drawItems — die is gedeeld en niet betrouwbaar.
+                const fg = window.L.geoJSON(initialGeoJson, {
+                    style: function (feature) {
+                        if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+                            return { color: '#3388ff', fillColor: '#cad9ec', weight: 2, fillOpacity: 0.4 };
+                        }
+                        return { color: '#3388ff', weight: 3 };
+                    },
+                    onEachFeature: (feature, layer) => {
+                        if (layer.pm) {
+                            layer.pm.enable({ allowSelfIntersection: false });
+                        }
                     }
-                } catch (_) {}
-            };
-            // Herlaad direct met de nieuwe implementatie zodat al geladen
-            // features (door de originele attach/createMap) opnieuw via de
-            // FeatureGroup worden geladen in plaats van via een losse layer.
-            if ($data.drawItems && $data.drawItems.clearLayers) {
-                $data.drawItems.clearLayers();
-            }
-            $data.loadExistingGeojson();
+                }).addTo(map);
+                mapEl.__featureGroup = fg;
 
-            // Forceer een directe Livewire-commit zodra de gebruiker een
-            // polygon/lijn tekent, bewerkt of verwijdert. Zonder dit blijft
-            // de state hangen tot een andere live-actie 'm meepakt en zou
-            // de gemeente-detectie pas later zichtbaar worden.
-            const flushNu = () => {
-                // Microtick zodat dotswan's eigen handler eerst z'n
-                // deferred state-set doet; daarna pas committen.
-                queueMicrotask(() => $wire.$commit());
-            };
-            const map = $data.map;
-            if (map && map.on) {
-                map.on('pm:create', flushNu);
-                map.on('pm:edit', flushNu);
-                map.on('pm:remove', flushNu);
-                map.on('pm:update', flushNu);
-            }
+                if (initialGeoJson.features && initialGeoJson.features.length) {
+                    try { map.fitBounds(fg.getBounds()); } catch (e) { /* empty bounds */ }
+                }
 
-            // Onderdruk dotswan's `setMarkerRange`: zonder een
-            // `rangeSelectField` met daadwerkelijke afstand tekent 'ie
-            // bij elke moveend een 1-pixel rode/blauwe dot in het midden
-            // van het venster. Wij gebruiken die feature niet — alle
-            // input loopt via geojson.features[]. Vervang de methode door
-            // een no-op en ruim een eventueel al getekende rangeCircle
-            // op.
-            $data.setMarkerRange = () => {};
-            if ($data.rangeCircle && $data.rangeCircle.remove) {
-                $data.rangeCircle.remove();
-                $data.rangeCircle = null;
+                // Sync onze FeatureGroup naar _expectedStatePath.
+                const syncToState = () => {
+                    const features = [];
+                    fg.eachLayer((layer) => {
+                        if (layer.toGeoJSON) {
+                            features.push(layer.toGeoJSON());
+                        }
+                    });
+                    const current = $wire.get(_expectedStatePath) || {};
+                    const center = map.getCenter();
+                    $wire.set(_expectedStatePath, {
+                        ...current,
+                        lat: current.lat ?? center.lat,
+                        lng: current.lng ?? center.lng,
+                        zoom: map.getZoom(),
+                        geojson: { type: 'FeatureCollection', features }
+                    });
+                    queueMicrotask(() => $wire.$commit());
+                };
+
+                map.on('pm:create', (e) => {
+                    if (!e.layer) return;
+                    // Verwijder uit dotswan's gedeelde drawItems indien aanwezig.
+                    if (_self.drawItems && _self.drawItems.hasLayer && _self.drawItems.hasLayer(e.layer)) {
+                        _self.drawItems.removeLayer(e.layer);
+                    }
+                    fg.addLayer(e.layer);
+                    if (e.layer.pm) {
+                        e.layer.pm.enable({ allowSelfIntersection: false });
+                    }
+                    e.layer.on('pm:edit', syncToState);
+                    syncToState();
+                });
+                map.on('pm:edit', syncToState);
+                map.on('pm:remove', (e) => {
+                    if (e.layer && fg.hasLayer(e.layer)) {
+                        fg.removeLayer(e.layer);
+                    }
+                    syncToState();
+                });
+
+                // Moveend → schrijf alleen lat/lng/zoom naar _expectedStatePath,
+                // ongeacht dotswan's setCoordinates die naar de gedeelde
+                // this.config.statePath schrijft.
+                map.on('moveend', () => {
+                    const center = map.getCenter();
+                    const current = $wire.get(_expectedStatePath) || {};
+                    $wire.set(_expectedStatePath, {
+                        ...current,
+                        lat: center.lat,
+                        lng: center.lng,
+                        zoom: map.getZoom(),
+                    });
+                });
+            }, 300);
+
+            // Onderdruk dotswan's setMarkerRange en setCoordinates: beide
+            // schrijven naar de gedeelde this.config.statePath en zouden
+            // onze eigen sync ondermijnen. Wij doen state-sync zelf via
+            // de moveend/pm:* handlers hierboven.
+            _self.setMarkerRange = () => {};
+            _self.setCoordinates = () => {};
+            // Onderdruk dotswan's removeMap zodat de IntersectionObserver
+            // (threshold 1.0) onze kaart niet wegschiet bij scrollen, met
+            // als gevolg een lege kaart na re-createMap zonder onze fix.
+            _self.removeMap = () => {};
+            if (_self.rangeCircle && _self.rangeCircle.remove) {
+                _self.rangeCircle.remove();
+                _self.rangeCircle = null;
             }
         }"
             wire:ignore

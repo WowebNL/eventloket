@@ -97,7 +97,8 @@ final class LocatiePolygonsPatch
                     ->columnSpanFull()
                     ->showMyLocationButton(false)
                     ->required()
-                    ->rule(new class implements ValidationRule {
+                    ->rule(new class implements ValidationRule
+                    {
                         public function validate(string $attribute, mixed $value, \Closure $fail): void
                         {
                             if (empty($value)) {
@@ -183,7 +184,8 @@ final class LocatiePolygonsPatch
                     ->columnSpanFull()
                     ->showMyLocationButton(false)
                     ->required()
-                    ->rule(new class implements ValidationRule {
+                    ->rule(new class implements ValidationRule
+                    {
                         public function validate(string $attribute, mixed $value, \Closure $fail): void
                         {
                             if (empty($value)) {
@@ -206,8 +208,8 @@ final class LocatiePolygonsPatch
 
                 continue;
             }
-            // Forceer alle andere route-velden ook full-width 
-            if ($component instanceof Component && method_exists($component, 'columnSpanFull')) {
+            // Forceer alle andere route-velden ook full-width
+            if ($component instanceof Component) {
                 $component->columnSpanFull();
             }
             $new[] = $component;

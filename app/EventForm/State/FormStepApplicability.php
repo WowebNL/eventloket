@@ -61,7 +61,7 @@ final class FormStepApplicability
 
                 return null; // door-fall: default applicable
             })(),
-            '661aabb7-e927-4a75-8d95-0a665c5d83fe' => (function () use ($s): ?bool {
+            '661aabb7-e927-4a75-8d95-0a665c5d83fe' => (function () use ($s): bool {
                 // OF-rules:
                 //   - 0c026fb1-e43c-4fa7-a33f-615efd68d3bb → applicable wanneer: $s->get('watVoorBouwselsPlaatsUOpDeLocaties.A55') === true
                 //   - 2a01382c-1fd2-4aac-82c7-c5fc22a5a4bf → applicable wanneer: $s->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A11') === true
@@ -86,7 +86,7 @@ final class FormStepApplicability
 
                 return false; // geen show-conditie matched → niet applicable
             })(),
-            '6e285ace-f891-4324-b54e-639c1cfff9fa' => (function () use ($s): ?bool {
+            '6e285ace-f891-4324-b54e-639c1cfff9fa' => (function () use ($s): bool {
                 // OF-rules:
                 //   - 0a5531ff-5f95-42e3-b911-53affa4c88d6 → NOT applicable wanneer: $s->get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A45') === true
                 //   - 199313af-cc35-4409-8398-294c658ae03f → applicable wanneer: $s->get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX.A38') === true
@@ -108,7 +108,7 @@ final class FormStepApplicability
 
                 return false; // geen show-conditie matched → niet applicable
             })(),
-            '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99' => (function () use ($s): ?bool {
+            '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99' => (function () use ($s): bool {
                 // OF-rules:
                 //   - 03a87183-48c3-4e5b-b6ec-287c4f3daf97 → applicable wanneer: $s->get('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX.A33') === true
                 //   - 0ab47106-f334-492a-b676-a98ca88c2a64 → applicable wanneer: $s->get('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX.A32') === true
@@ -143,7 +143,7 @@ final class FormStepApplicability
 
                 return null; // door-fall: default applicable
             })(),
-            'd790edb5-712a-4f83-87a8-1a86e4831455' => (function () use ($s): ?bool {
+            'd790edb5-712a-4f83-87a8-1a86e4831455' => (function () use ($s): bool {
                 // OF-rules:
                 //   - 2d10885d-3e3a-4df1-a17b-d979668d2581 → applicable wanneer: $s->get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX.A26') === true
                 //   - 3a1ac5f3-eac2-40d6-8d46-9dad8622b3c6 → NOT applicable wanneer: $s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee'
@@ -173,7 +173,7 @@ final class FormStepApplicability
 
                 return null; // door-fall: default applicable
             })(),
-            'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e' => (function () use ($s): ?bool {
+            'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e' => (function () use ($s): bool {
                 // OF-rules:
                 //   - 2bbecc17-8f88-474d-9399-acb4cd509541 → applicable wanneer: $s->get('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX.A51') === true
                 //   - 3a1ac5f3-eac2-40d6-8d46-9dad8622b3c6 → NOT applicable wanneer: $s->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee'
@@ -190,7 +190,7 @@ final class FormStepApplicability
 
                 return false; // geen show-conditie matched → niet applicable
             })(),
-            'f4e91db5-fd74-4eba-b818-96ed2cc07d84' => (function () use ($s): ?bool {
+            'f4e91db5-fd74-4eba-b818-96ed2cc07d84' => (function () use ($s): bool {
                 // OF-rules:
                 //   - 145ceec2-91c7-4e67-8195-2444d734ddfc → applicable wanneer: $s->get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A20') === true
                 //   - 21e363f3-9ca8-42d4-b52e-bddfab43ddd6 → applicable wanneer: $s->get('welkeVoorzieningenZijnAanwezigBijUwEvenement.A18') === true

@@ -18,11 +18,7 @@ use App\ValueObjects\ZGW\CatalogiEigenschap;
 use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Io\GeoJsonReader;
 use Brick\Geo\LineString;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -39,7 +35,7 @@ use Woweb\Openzaak\Openzaak;
  */
 class CreateDoorkomstZaken implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Illuminate\Foundation\Queue\Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

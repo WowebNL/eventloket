@@ -105,7 +105,7 @@ final class SubmissionReport
             // Repeater: per rij een sub-tabel, alle child-velden uitgeklapt.
             if ($component instanceof Repeater) {
                 $key = $component->getName();
-                if ($key === null || $key === '') {
+                if ($key === '') {
                     return;
                 }
                 $fullKey = $keyPrefix === null ? $key : "{$keyPrefix}.{$key}";
@@ -134,7 +134,7 @@ final class SubmissionReport
 
             if ($component instanceof Field) {
                 $key = $component->getName();
-                if ($key !== null && $key !== '') {
+                if ($key !== '') {
                     if ($isTijdenStep && in_array($key, self::TIJDEN_TABEL_KEYS, true)) {
                         // Al in de tijden-tabel verwerkt; sla over.
                         return;
@@ -308,7 +308,7 @@ final class SubmissionReport
             }
             if ($component instanceof Field) {
                 $key = $component->getName();
-                if ($key !== null && $key !== '') {
+                if ($key !== '') {
                     $fullKey = "{$rowKeyPrefix}.{$key}";
                     $entry = $this->buildEntry($component, $state, $fullKey, $stubLivewire);
                     if ($entry !== null) {
@@ -681,8 +681,8 @@ final class SubmissionReport
         }
 
         return match (true) {
-            $component instanceof DateTimePicker => $this->humanDateTime($value),
             $component instanceof DatePicker => $this->humanDate($value),
+            $component instanceof DateTimePicker => $this->humanDateTime($value),
             $component instanceof CheckboxList => $this->renderCheckboxListValue($component, $value),
             $component instanceof Radio, $component instanceof Select => $this->renderSelectValue($component, $value),
             $component instanceof FileUpload => $this->renderFiles($value),

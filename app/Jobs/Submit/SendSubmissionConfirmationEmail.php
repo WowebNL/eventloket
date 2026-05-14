@@ -6,11 +6,7 @@ namespace App\Jobs\Submit;
 
 use App\Mail\SubmissionConfirmation;
 use App\Models\Zaak;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -25,7 +21,7 @@ use Illuminate\Support\Facades\Mail;
  */
 final class SendSubmissionConfirmationEmail implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Illuminate\Foundation\Queue\Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

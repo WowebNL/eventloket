@@ -28,7 +28,7 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
     // waar de Repeater al rijen had. We tikken even de DB leeg via
     // `artisan tinker --execute=...` zodat elke run met een lege state
     // begint.
-    execSync('./vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::truncate();\'', {
+    execSync('./vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::whereHas("user", fn ($q) => $q->where("email", "noah.degraaf@example.net"))->delete();\'', {
         stdio: 'pipe',
         timeout: 30_000,
     });

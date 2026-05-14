@@ -186,7 +186,7 @@ class GenereerVolledigeDemoPdf extends Command
 
         if ($component instanceof Field) {
             $key = $component->getName();
-            if ($key !== null && $key !== '' && ! isset($values[$key])) {
+            if ($key !== '' && ! isset($values[$key])) {
                 $value = $this->dummyFor($component);
                 if ($value !== null) {
                     $this->setNested($values, $key, $value);
@@ -231,8 +231,8 @@ class GenereerVolledigeDemoPdf extends Command
             str_ends_with($key, 'postcode') || str_contains(strtolower($key), 'postcode') => '6411CD',
             // Huisnummer
             str_ends_with($key, 'huisnummer') => '1',
-            $component instanceof DateTimePicker => '2026-08-15T16:00',
             $component instanceof DatePicker => '2026-08-15',
+            $component instanceof DateTimePicker => '2026-08-15T16:00',
             $component instanceof CheckboxList => $this->firstNOptions($component, 3),
             $component instanceof Radio, $component instanceof Select => $this->firstOption($component),
             $component instanceof Textarea => sprintf('Voorbeeld-tekst voor %s. Lorem ipsum dolor sit amet.', $key),

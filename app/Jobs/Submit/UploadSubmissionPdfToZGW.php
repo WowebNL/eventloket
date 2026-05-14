@@ -7,11 +7,7 @@ namespace App\Jobs\Submit;
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Models\Zaak;
 use App\ValueObjects\ZGW\Informatieobject;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -28,7 +24,7 @@ use Woweb\Openzaak\Openzaak;
  */
 final class UploadSubmissionPdfToZGW implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Illuminate\Foundation\Queue\Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 
@@ -88,7 +84,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
         if (! $first || ! property_exists($first, 'url') || $first->url === '') {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
-                .($this->zaak->zaaktype?->id ?? '?')
+                .($this->zaak->zaaktype->id ?? '?')
                 .' — kan PDF niet uploaden.'
             );
         }

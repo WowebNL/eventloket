@@ -10,11 +10,7 @@ use App\Models\Zaak;
 use App\Normalizers\OpenFormsNormalizer;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
 use Woweb\Openzaak\Openzaak;
 
@@ -29,7 +25,7 @@ use Woweb\Openzaak\Openzaak;
  */
 class AddZaakeigenschappenZGW implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Illuminate\Foundation\Queue\Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

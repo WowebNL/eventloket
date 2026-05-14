@@ -38,7 +38,7 @@ test('scenario report-questions: nieuw pad → dynamische vragen + cascade + ste
         require "vendor/autoload.php";
         $a = require "bootstrap/app.php";
         $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
-        \\App\\EventForm\\Persistence\\Draft::truncate();
+        \\App\\EventForm\\Persistence\\Draft::whereHas("user", fn ($q) => $q->where("email", "noah.degraaf@example.net"))->delete();
         $heerlen = \\App\\Models\\Municipality::where("brk_identification", "GM0917")->first();
         if ($heerlen) {
             $heerlen->update(["use_new_report_questions" => true]);

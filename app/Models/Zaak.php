@@ -32,7 +32,9 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Woweb\Openzaak\Openzaak;
 
 /**
- * @property-read ZaakReferenceData            $reference_data
+ * @property ZaakReferenceData $reference_data
+ * @property array<string, mixed> $form_state_snapshot
+ * @property array<string, mixed>|null $imported_data
  * @property-read ?Organisation                $organisation
  * @property-read Municipality                 $municipality
  * @property-read Collection<Informatieobject> $documenten

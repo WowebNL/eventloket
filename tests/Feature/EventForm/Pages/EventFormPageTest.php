@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
 use App\EventForm\Persistence\Draft;
+use App\EventForm\Schema\EventFormSchema;
+use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Municipality;
@@ -76,7 +78,7 @@ test('mount opent op de step waar de gebruiker gebleven was (uit draft)', functi
         'user_id' => $this->user->id,
         'organisation_id' => $this->organisation->id,
         'state' => FormState::empty()->toSnapshot(),
-        'current_step_key' => \App\EventForm\Schema\Steps\TijdenStep::UUID,
+        'current_step_key' => TijdenStep::UUID,
     ]);
 
     $component = Livewire::test(EventFormPage::class);
@@ -84,12 +86,12 @@ test('mount opent op de step waar de gebruiker gebleven was (uit draft)', functi
     /** @var EventFormPage $page */
     $page = $component->instance();
     // Reflectie op de helper die de wizard-startindex bepaalt.
-    $reflection = new \ReflectionMethod($page, 'resolveStartStep');
+    $reflection = new ReflectionMethod($page, 'resolveStartStep');
     $reflection->setAccessible(true);
 
     $expectedIndex = array_search(
-        \App\EventForm\Schema\Steps\TijdenStep::UUID,
-        \App\EventForm\Schema\EventFormSchema::stepUuidsInOrder(),
+        TijdenStep::UUID,
+        EventFormSchema::stepUuidsInOrder(),
         true,
     );
     expect($expectedIndex)->not->toBeFalse();
@@ -108,7 +110,7 @@ test('mount valt terug op stap 1 zonder current_step_key', function () {
 
     /** @var EventFormPage $page */
     $page = $component->instance();
-    $reflection = new \ReflectionMethod($page, 'resolveStartStep');
+    $reflection = new ReflectionMethod($page, 'resolveStartStep');
     $reflection->setAccessible(true);
 
     expect($reflection->invoke($page))->toBe(1);
@@ -126,7 +128,7 @@ test('mount valt terug op stap 1 bij onbekende current_step_key', function () {
 
     /** @var EventFormPage $page */
     $page = $component->instance();
-    $reflection = new \ReflectionMethod($page, 'resolveStartStep');
+    $reflection = new ReflectionMethod($page, 'resolveStartStep');
     $reflection->setAccessible(true);
 
     expect($reflection->invoke($page))->toBe(1);

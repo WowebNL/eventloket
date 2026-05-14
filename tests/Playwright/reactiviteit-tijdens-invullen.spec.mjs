@@ -26,7 +26,7 @@ test.beforeEach(async () => {
     // Schoon vertrekpunt: oude drafts kunnen in een vorige run-staat
     // hangen waardoor velden al ingevuld zijn die we hier juist willen
     // observeren.
-    execSync('./vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::truncate();\'', {
+    execSync('./vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::whereHas("user", fn ($q) => $q->where("email", "noah.degraaf@example.net"))->delete();\'', {
         stdio: 'pipe',
         timeout: 30_000,
     });

@@ -30,7 +30,7 @@ class CreateDoorkomstZakenForZaak extends Command
             return self::FAILURE;
         }
 
-        CreateDoorkomstZaken::dispatch($zaak->zgw_zaak_url);
+        CreateDoorkomstZaken::dispatch($zaak);
 
         $this->info("Dispatched CreateDoorkomstZaken job for zaak {$publicId} ({$zaak->zgw_zaak_url}).");
 

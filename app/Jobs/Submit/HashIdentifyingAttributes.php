@@ -5,11 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Submit;
 
 use App\Models\Zaak;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 
 /**
  * Hasht identificerende attributen (BSN, KvK-nummer) in de opgeslagen
@@ -34,7 +30,7 @@ use Illuminate\Queue\SerializesModels;
  */
 final class HashIdentifyingAttributes implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Illuminate\Foundation\Queue\Queueable;
 
     private const HASH_PREFIX = 'hash:';
 

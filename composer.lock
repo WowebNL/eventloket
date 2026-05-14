@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0bdfc6cab601019de101c58cd97bc4d1",
+    "content-hash": "be3c0dc40ecdadb3af63cd17787b6997",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -1199,28 +1199,28 @@
         },
         {
             "name": "dotswan/filament-map-picker",
-            "version": "dev-master",
+            "version": "v2.3.3",
             "source": {
                 "type": "git",
-                "url": "https://github.com/LorensoD/filament-map-picker.git",
-                "reference": "908e0544ebdb7cbb93489a4a2ffbe453e818a4fa"
+                "url": "https://github.com/dotswan/filament-map-picker.git",
+                "reference": "e41e326ccee2fcd7804296441ce5679e2716c241"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/LorensoD/filament-map-picker/zipball/908e0544ebdb7cbb93489a4a2ffbe453e818a4fa",
-                "reference": "908e0544ebdb7cbb93489a4a2ffbe453e818a4fa",
+                "url": "https://api.github.com/repos/dotswan/filament-map-picker/zipball/e41e326ccee2fcd7804296441ce5679e2716c241",
+                "reference": "e41e326ccee2fcd7804296441ce5679e2716c241",
                 "shasum": ""
             },
             "require": {
-                "filament/filament": "^4.0",
-                "illuminate/contracts": "^10.0 || ^11.0 || ^12.0",
+                "filament/filament": "^4.0 || ^5.0",
+                "illuminate/contracts": "^10.0 || ^11.0 || ^12.0 || ^13.0",
                 "php": "^8.2",
                 "spatie/laravel-package-tools": "^1.19.0"
             },
             "require-dev": {
                 "laravel/pint": "^1.0",
-                "nunomaduro/collision": "^7",
-                "orchestra/testbench": "^8.0|^9.0|^10.0",
+                "nunomaduro/collision": "^7|^8",
+                "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
                 "pestphp/pest": "^2.1|^3.1",
                 "pestphp/pest-plugin-arch": "^2.0",
                 "pestphp/pest-plugin-laravel": "^2.0",
@@ -1228,16 +1228,15 @@
                 "phpstan/phpstan-deprecation-rules": "^1.0",
                 "phpstan/phpstan-phpunit": "^1.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "laravel": {
-                    "providers": [
-                        "Dotswan\\MapPicker\\MapPickerServiceProvider"
-                    ],
                     "aliases": {
                         "MapPicker": "Dotswan\\MapPicker\\Facades\\MapPicker"
-                    }
+                    },
+                    "providers": [
+                        "Dotswan\\MapPicker\\MapPickerServiceProvider"
+                    ]
                 }
             },
             "autoload": {
@@ -1246,28 +1245,7 @@
                     "Dotswan\\MapPicker\\Database\\Factories\\": "database/factories/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Dotswan\\MapPicker\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "post-autoload-dump": [
-                    "@php ./vendor/bin/testbench package:discover --ansi"
-                ],
-                "analyse": [
-                    "vendor/bin/phpstan analyse"
-                ],
-                "test": [
-                    "vendor/bin/pest"
-                ],
-                "test-coverage": [
-                    "vendor/bin/pest --coverage"
-                ],
-                "format": [
-                    "vendor/bin/pint"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -1284,7 +1262,7 @@
                 "dotswan",
                 "filament",
                 "filament-map-picker",
-                "filament-v4",
+                "filament-v5",
                 "filamentphp",
                 "laravel",
                 "map-picker"
@@ -1293,7 +1271,7 @@
                 "issues": "https://github.com/dotswan/filament-map-picker/issues",
                 "source": "https://github.com/dotswan/filament-map-picker"
             },
-            "time": "2025-12-03T12:46:15+00:00"
+            "time": "2026-05-04T07:11:45+00:00"
         },
         {
             "name": "dragonmantank/cron-expression",
@@ -14152,7 +14130,6 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "dotswan/filament-map-picker": 20,
         "webbingbrasil/filament-maps": 20,
         "woweb/openzaak": 20
     },

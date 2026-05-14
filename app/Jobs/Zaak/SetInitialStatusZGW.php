@@ -5,11 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Zaak;
 
 use App\Models\Zaak;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Woweb\Openzaak\Openzaak;
 
@@ -22,7 +18,7 @@ use Woweb\Openzaak\Openzaak;
  */
 class SetInitialStatusZGW implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Illuminate\Foundation\Queue\Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

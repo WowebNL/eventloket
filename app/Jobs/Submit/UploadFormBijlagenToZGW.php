@@ -9,11 +9,7 @@ use App\EventForm\Schema\EventFormSchema;
 use App\Models\Zaak;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Forms\Components\FileUpload;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ReflectionObject;
@@ -32,7 +28,7 @@ use Woweb\Openzaak\Openzaak;
  */
 final class UploadFormBijlagenToZGW implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use \Illuminate\Foundation\Queue\Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 
@@ -104,7 +100,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 'creatiedatum' => now()->format('Y-m-d'),
                 'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
                 'titel' => $bestandsnaam,
-                'auteur' => $this->zaak->organisation?->name ?? 'Organisator',
+                'auteur' => $this->zaak->organisation->name ?? 'Organisator',
                 'taal' => 'dut',
                 'bestandsnaam' => $bestandsnaam,
                 'bestandsomvang' => strlen($content),
@@ -175,7 +171,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         if (! $first || ! property_exists($first, 'url') || $first->url === '') {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
-                .($this->zaak->zaaktype?->id ?? '?')
+                .($this->zaak->zaaktype->id ?? '?')
                 .' — kan bijlagen niet uploaden.'
             );
         }
