@@ -224,6 +224,16 @@
                     },
 
                     async requestNextStep() {
+                        // Forceer een synchrone draft-save voordat we doorgaan
+                        // naar de volgende stap. Filament's wizard syncen wel
+                        // de deferred wire:model-velden mee tijdens nextStep,
+                        // maar de updated()-throttle op EventFormPage kan
+                        // binnen 10s skippen — saveDraftNow() omzeilt dat
+                        // zodat de huidige stap-state (incl. kaart-tekening)
+                        // gegarandeerd in de DB staat voor de step-change.
+                        if (typeof this.$wire.saveDraftNow === 'function') {
+                            await this.$wire.saveDraftNow();
+                        }
                         await this.$wire.callSchemaComponentMethod(key, 'nextStep', {
                             currentStepIndex: this.getStepIndex(this.step),
                         });

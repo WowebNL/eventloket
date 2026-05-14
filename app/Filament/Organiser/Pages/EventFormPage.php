@@ -23,7 +23,6 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
 
 /**
@@ -121,19 +120,6 @@ class EventFormPage extends Page implements HasForms
 
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
         $this->form->fill($this->state->fields());
-
-        // TIJDELIJK: log wat na mount in $this->data zit voor de map-keys,
-        // zodat we kunnen vergelijken met wat in de Draft-DB staat.
-        $countFeatures = function ($key) {
-            $val = $this->data[$key] ?? null;
-            $features = $val['geojson']['features'] ?? null;
-
-            return is_array($features) ? count($features).' features ['.implode(',', array_map(fn ($f) => $f['geometry']['type'] ?? '?', $features)).']' : 'no geojson';
-        };
-        Log::info('mount-hydration', [
-            'state->fields-locatieSOpKaart-features' => $countFeatures('locatieSOpKaart'),
-            'state->fields-routesOpKaart-features' => $countFeatures('routesOpKaart'),
-        ]);
     }
 
     /**
@@ -293,26 +279,39 @@ class EventFormPage extends Page implements HasForms
         // Kaart-state moet altijd direct gepersisteerd worden — een tekening
         // kan niet "later", en Vorige/Volgende komt typisch binnen het
         // throttle-window na een teken-actie.
-        $isMapUpdate = str_contains($propertyName, 'buitenLocatieVanHetEvenement')
-            || str_contains($propertyName, 'routeVanHetEvenement');
+        $isMapUpdate = str_contains($propertyName, 'locatieSOpKaart')
+            || str_contains($propertyName, 'routesOpKaart');
 
         $now = time();
         if (! $isMapUpdate && $now - $this->lastDraftSaveAt < 10) {
             return;
         }
+        $this->persistDraft();
+        $this->lastDraftSaveAt = $now;
+    }
+
+    /**
+     * Persisteer de huidige draft direct, los van de updated()-throttle.
+     * Aangeroepen vanuit JS (Volgende-knop in de vertical-wizard) om te
+     * garanderen dat de meest recente kaart-tekening en andere deferred-
+     * gesynchroniseerde velden in de DB staan vóór de step-change.
+     */
+    public function saveDraftNow(): void
+    {
+        $this->state->absorbFields($this->data ?? []);
+        $this->stateSnapshot = $this->serializableSnapshot($this->state);
+        $this->persistDraft();
+        $this->lastDraftSaveAt = time();
+    }
+
+    private function persistDraft(): void
+    {
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
-        if ($user instanceof User && $org instanceof Organisation) {
-            Log::info('save-debug', [
-                'propertyName' => $propertyName,
-                'isMapUpdate' => $isMapUpdate,
-                'data.locatieSOpKaart' => $this->data['locatieSOpKaart'] ?? '<missing>',
-                'data.routesOpKaart' => $this->data['routesOpKaart'] ?? '<missing>',
-                'data.waarVindtHetEvenementPlaats' => $this->data['waarVindtHetEvenementPlaats'] ?? '<missing>',
-            ]);
-            app(DraftStore::class)->save($user, $org, $this->state, $this->currentStepUuid());
-            $this->lastDraftSaveAt = $now;
+        if (! ($user instanceof User) || ! ($org instanceof Organisation)) {
+            return;
         }
+        app(DraftStore::class)->save($user, $org, $this->state, $this->currentStepUuid());
     }
 
     private function currentStepUuid(): ?string

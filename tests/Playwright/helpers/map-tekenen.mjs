@@ -1,90 +1,148 @@
 /**
- * Helpers om programmatisch op de osm-map-picker te "tekenen" zonder
- * GeoMan-knoppen aan te klikken (in headless te flaky). We pakken het
- * Leaflet-map-object via Alpine's `_x_dataStack`, voegen een layer toe
- * aan dezelfde FeatureGroup waar dotswan's component op luistert, en
- * vuren het `pm:create` event. De bestaande `flushNu` x-init-listener
- * in osm-map-picker.blade.php committeert dan via `$wire.$commit()`.
+ * Helpers om programmatisch op de osm-map-picker te tekenen zonder de
+ * GeoMan-toolbar aan te klikken (te flaky in headless). Werkt via de
+ * `__leafletMap`-property die onze blade-override op de map-host-DIV
+ * zet (zie resources/views/vendor/map-picker/fields/osm-map-picker.blade.php).
+ *
+ * Sinds de Alpine state-collision-fix is `$data.map` niet meer betrouwbaar
+ * per kaart — meerdere Map::make()-velden op dezelfde Livewire-pagina
+ * delen dat object. We pakken de Leaflet-instance daarom per DOM-element.
  */
 
 /**
- * @returns {Promise<{ ok: true } | { ok: false, reason: string }>}
+ * @private Vindt de Leaflet-map die bij de N-de leaflet-container in
+ * de DOM hoort, via de `__leafletMap`-stash op de host-DIV.
  */
-export async function tekenPolygonOpEersteKaart(page, coords = [
+function pakMapVoorContainer(containerIndex) {
+    const containers = Array.from(document.querySelectorAll('.leaflet-container'));
+    const container = containers[containerIndex];
+    if (! container) {
+        return { ok: false, reason: `geen leaflet-container met index ${containerIndex}` };
+    }
+
+    let el = container;
+    while (el && ! el.__leafletMap) {
+        el = el.parentElement;
+    }
+    if (! el || ! el.__leafletMap) {
+        return { ok: false, reason: 'geen __leafletMap op host-DIV (fix niet actief?)' };
+    }
+
+    return { ok: true, map: el.__leafletMap };
+}
+
+/**
+ * Teken een polygon op de N-de kaart (0 = bovenste, 1 = volgende).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {number} kaartIndex
+ * @param {Array<[number, number]>} coords  Lat/lng-paren, minimaal 3.
+ * @returns {Promise<{ok: true} | {ok: false, reason: string}>}
+ */
+export async function tekenPolygonOpKaart(page, kaartIndex, coords = [
     [50.853, 5.690],
     [50.858, 5.690],
     [50.858, 5.700],
     [50.853, 5.700],
 ]) {
-    return page.evaluate((coords) => {
-        const containers = Array.from(document.querySelectorAll('.leaflet-container'));
-        if (! containers.length) return { ok: false, reason: 'no leaflet container in DOM' };
-
-        const alpineHost = containers[0].closest('[x-data]');
-        if (! alpineHost || ! alpineHost._x_dataStack || ! alpineHost._x_dataStack.length) {
-            return { ok: false, reason: 'no Alpine $data on map host' };
-        }
-
-        const $data = alpineHost._x_dataStack[0];
-        const map = $data.map;
-        if (! map) return { ok: false, reason: 'Alpine $data.map missing' };
-        if (! window.L) return { ok: false, reason: 'Leaflet (window.L) missing' };
+    return page.evaluate(({ kaartIndex, coords, pakMapVoorContainerSrc }) => {
+        const pakMap = new Function('return ' + pakMapVoorContainerSrc)();
+        const got = pakMap(kaartIndex);
+        if (! got.ok) return got;
+        if (! window.L) return { ok: false, reason: 'Leaflet niet aanwezig' };
 
         const layer = window.L.polygon(coords);
-        if ($data.drawItems && $data.drawItems.addLayer) {
-            $data.drawItems.addLayer(layer);
-        } else {
-            layer.addTo(map);
-        }
-
-        map.fire('pm:create', { layer, shape: 'Polygon' });
+        got.map.fire('pm:create', { layer, shape: 'Polygon' });
         return { ok: true };
-    }, coords);
+    }, { kaartIndex, coords, pakMapVoorContainerSrc: pakMapVoorContainer.toString() });
 }
 
 /**
- * @returns {Promise<{ ok: true } | { ok: false, reason: string }>}
+ * Teken een lijn (polyline) op de N-de kaart.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {number} kaartIndex
+ * @param {Array<[number, number]>} coords  Lat/lng-paren, minimaal 2.
  */
-export async function tekenLijnOpEersteKaart(page, coords = [
+export async function tekenLijnOpKaart(page, kaartIndex, coords = [
     [50.853, 5.690],
     [50.860, 5.700],
     [50.865, 5.720],
 ]) {
-    return page.evaluate((coords) => {
-        const containers = Array.from(document.querySelectorAll('.leaflet-container'));
-        if (! containers.length) return { ok: false, reason: 'no leaflet container in DOM' };
-
-        const alpineHost = containers[0].closest('[x-data]');
-        if (! alpineHost || ! alpineHost._x_dataStack || ! alpineHost._x_dataStack.length) {
-            return { ok: false, reason: 'no Alpine $data on map host' };
-        }
-
-        const $data = alpineHost._x_dataStack[0];
-        const map = $data.map;
-        if (! map) return { ok: false, reason: 'Alpine $data.map missing' };
-        if (! window.L) return { ok: false, reason: 'Leaflet missing' };
+    return page.evaluate(({ kaartIndex, coords, pakMapVoorContainerSrc }) => {
+        const pakMap = new Function('return ' + pakMapVoorContainerSrc)();
+        const got = pakMap(kaartIndex);
+        if (! got.ok) return got;
+        if (! window.L) return { ok: false, reason: 'Leaflet niet aanwezig' };
 
         const layer = window.L.polyline(coords);
-        if ($data.drawItems && $data.drawItems.addLayer) {
-            $data.drawItems.addLayer(layer);
-        } else {
-            layer.addTo(map);
-        }
-
-        map.fire('pm:create', { layer, shape: 'Line' });
+        got.map.fire('pm:create', { layer, shape: 'Line' });
         return { ok: true };
-    }, coords);
+    }, { kaartIndex, coords, pakMapVoorContainerSrc: pakMapVoorContainer.toString() });
 }
 
 /**
- * Telt het aantal geometry-paths dat de eerste leaflet-map momenteel
- * rendert (polygon/polyline → SVG <path>). Werkt voor de assertion
- * "is mijn tekening (nog) zichtbaar".
+ * Telt het aantal SVG-paths in de overlay-pane van de N-de kaart. Eén
+ * path per getekend feature (polygon of polyline).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {number} kaartIndex
+ * @returns {Promise<number>}
  */
-export async function aantalGetekendeShapesOpEersteKaart(page) {
-    return page.evaluate(() => {
-        const overlay = document.querySelector('.leaflet-container .leaflet-overlay-pane svg');
+export async function aantalShapesOpKaart(page, kaartIndex) {
+    return page.evaluate((kaartIndex) => {
+        const containers = Array.from(document.querySelectorAll('.leaflet-container'));
+        const container = containers[kaartIndex];
+        if (! container) return 0;
+        const overlay = container.querySelector('.leaflet-overlay-pane svg');
         if (! overlay) return 0;
         return overlay.querySelectorAll('path').length;
-    });
+    }, kaartIndex);
 }
+
+/**
+ * Telt het aantal features in de Livewire-state voor een specifiek
+ * map-veld. Geeft 0 als de state nog leeg is. Gebruikt voor end-to-end
+ * verificatie dat een tekening daadwerkelijk naar de server is gesynct
+ * (en dus bij reload terug komt).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {'locatieSOpKaart' | 'routesOpKaart'} veldNaam
+ * @returns {Promise<number>}
+ */
+export async function aantalFeaturesInLivewireState(page, veldNaam) {
+    return page.evaluate((veldNaam) => {
+        if (! window.Livewire) return 0;
+        const component = window.Livewire.all()[0];
+        if (! component) return 0;
+        const value = component.get('data.' + veldNaam);
+        if (! value || ! value.geojson || ! Array.isArray(value.geojson.features)) return 0;
+        return value.geojson.features.length;
+    }, veldNaam);
+}
+
+/**
+ * Geometry-types van de features in een specifiek map-veld. Handig om
+ * te verifiëren dat een upper-tekening niet als LineString in de
+ * lower-state belandt (of vice versa).
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {'locatieSOpKaart' | 'routesOpKaart'} veldNaam
+ * @returns {Promise<string[]>}
+ */
+export async function geometryTypesInLivewireState(page, veldNaam) {
+    return page.evaluate((veldNaam) => {
+        if (! window.Livewire) return [];
+        const component = window.Livewire.all()[0];
+        if (! component) return [];
+        const value = component.get('data.' + veldNaam);
+        if (! value || ! value.geojson || ! Array.isArray(value.geojson.features)) return [];
+        return value.geojson.features.map((f) => (f.geometry && f.geometry.type) || '?');
+    }, veldNaam);
+}
+
+// Backwards-compat aliases zodat bestaande scenarios blijven werken
+// totdat we ze opschonen.
+export const tekenPolygonOpEersteKaart = (page, coords) => tekenPolygonOpKaart(page, 0, coords);
+export const tekenLijnOpEersteKaart = (page, coords) => tekenLijnOpKaart(page, 0, coords);
+export const aantalGetekendeShapesOpEersteKaart = (page) => aantalShapesOpKaart(page, 0);
