@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { expect } from '@playwright/test';
+import { expect, request as playwrightRequest } from '@playwright/test';
 import { loginAlsOrganiser, openFormulier } from './login.mjs';
 import {
     vulTekst,
@@ -19,7 +19,29 @@ import {
  * componeren ze in volgorde en injecteren afwijkingen via parameters.
  */
 
-export function leegDraftDb() {
+/**
+ * Leeg de Draft-DB voor de test-organisator. Probeer eerst het HTTP-
+ * endpoint (POST /_test/reset-draft, alleen actief in local/testing)
+ * zodat de helper werkt in zowel directe `npx playwright test`-runs op
+ * de Mac als in de Docker-runner (scripts/run-playwright.sh) — die
+ * laatste heeft geen toegang tot `./vendor/bin/sail` (nested Docker).
+ * Valt terug op execSync sail bij netwerk-issues.
+ */
+export async function leegDraftDb() {
+    const baseUrl = process.env.EF_BASE_URL || 'http://localhost';
+    try {
+        const ctx = await playwrightRequest.newContext({ baseURL: baseUrl });
+        const resp = await ctx.post('/_test/reset-draft', {
+            form: { email: 'noah.degraaf@example.net' },
+            timeout: 10_000,
+        });
+        await ctx.dispose();
+        if (resp.ok()) {
+            return;
+        }
+    } catch {
+        // endpoint niet bereikbaar — val terug op sail
+    }
     execSync(
         './vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::whereHas("user", fn ($q) => $q->where("email", "noah.degraaf@example.net"))->delete();\'',
         { stdio: 'pipe', timeout: 30_000 },
@@ -27,7 +49,7 @@ export function leegDraftDb() {
 }
 
 export async function verseStart(page) {
-    leegDraftDb();
+    await leegDraftDb();
     await loginAlsOrganiser(page);
     await openFormulier(page);
 }

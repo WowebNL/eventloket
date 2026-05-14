@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { execSync } from 'node:child_process';
 import { loginAlsOrganiser, openFormulier } from './helpers/login.mjs';
+import { leegDraftDb } from './helpers/wizard-flow.mjs';
 import {
     vulTekst,
     vulTextarea,
@@ -28,10 +28,7 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
     // waar de Repeater al rijen had. We tikken even de DB leeg via
     // `artisan tinker --execute=...` zodat elke run met een lege state
     // begint.
-    execSync('./vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::whereHas("user", fn ($q) => $q->where("email", "noah.degraaf@example.net"))->delete();\'', {
-        stdio: 'pipe',
-        timeout: 30_000,
-    });
+    await leegDraftDb();
 
     await loginAlsOrganiser(page);
     await openFormulier(page);

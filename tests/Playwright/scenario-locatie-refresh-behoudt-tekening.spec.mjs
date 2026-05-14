@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { execSync } from 'node:child_process';
+import { leegDraftDb } from './helpers/wizard-flow.mjs';
 import { loginAlsOrganiser, openFormulier } from './helpers/login.mjs';
 import {
     vulTekst,
@@ -24,10 +24,7 @@ import {
 test('locatie: getekend vlak overleeft een page-refresh', async ({ page }) => {
     test.setTimeout(120_000);
 
-    execSync('./vendor/bin/sail exec laravel.test php -r \'require "vendor/autoload.php"; $a = require "bootstrap/app.php"; $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap(); \\App\\EventForm\\Persistence\\Draft::whereHas("user", fn ($q) => $q->where("email", "noah.degraaf@example.net"))->delete();\'', {
-        stdio: 'pipe',
-        timeout: 30_000,
-    });
+    await leegDraftDb();
 
     await loginAlsOrganiser(page);
     await openFormulier(page);

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { execSync } from 'node:child_process';
 import { loginAlsOrganiser, openFormulier } from './helpers/login.mjs';
+import { leegDraftDb } from './helpers/wizard-flow.mjs';
 import {
     vulTekst,
     vulTextarea,
@@ -34,18 +35,26 @@ test('scenario report-questions: nieuw pad → dynamische vragen + cascade + ste
 
     // Setup: schoon vertrekpunt + Heerlen op het nieuwe systeem zetten +
     // garanderen dat 'r een paar actieve ReportQuestions zijn.
-    execSync(`./vendor/bin/sail exec laravel.test php -r '
-        require "vendor/autoload.php";
-        $a = require "bootstrap/app.php";
-        $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
-        \\App\\EventForm\\Persistence\\Draft::whereHas("user", fn ($q) => $q->where("email", "noah.degraaf@example.net"))->delete();
-        $heerlen = \\App\\Models\\Municipality::where("brk_identification", "GM0917")->first();
-        if ($heerlen) {
-            $heerlen->update(["use_new_report_questions" => true]);
-            // Garandeer dat 1 + 2 actief zijn voor de cascade-test
-            $heerlen->reportQuestions()->where("order", "<=", 2)->update(["is_active" => true]);
-        }
-    '`, { stdio: 'pipe', timeout: 30_000 });
+    await leegDraftDb();
+    try {
+        execSync(`./vendor/bin/sail exec laravel.test php -r '
+            require "vendor/autoload.php";
+            $a = require "bootstrap/app.php";
+            $a->make(\\Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
+            $heerlen = \\App\\Models\\Municipality::where("brk_identification", "GM0917")->first();
+            if ($heerlen) {
+                $heerlen->update(["use_new_report_questions" => true]);
+                // Garandeer dat 1 + 2 actief zijn voor de cascade-test
+                $heerlen->reportQuestions()->where("order", "<=", 2)->update(["is_active" => true]);
+            }
+        '`, { stdio: 'pipe', timeout: 30_000 });
+    } catch (e) {
+        // Sail niet bereikbaar (typisch wanneer we via scripts/run-playwright.sh
+        // in de Docker-container draaien — geen geneste Docker). Deze
+        // specifieke test heeft municipality-mutaties nodig die nog niet
+        // via een HTTP-endpoint bereikbaar zijn; skip in plaats van falen.
+        test.skip(true, 'Sail niet bereikbaar — draai handmatig op de Mac voor deze test');
+    }
 
     try {
         await loginAlsOrganiser(page);

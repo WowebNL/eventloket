@@ -1,11 +1,15 @@
 import { test, expect } from '@playwright/test';
 import { loginAlsOrganiser, openFormulier } from './helpers/login.mjs';
+import { leegDraftDb } from './helpers/wizard-flow.mjs';
 
 /**
  * Klikken op "Volgende" zonder verplichte velden ingevuld te hebben moet
  * de stap-wissel blokkeren en rood-gemarkeerde fouten tonen.
  */
 test('volgende-knop blijft op dezelfde stap bij ontbrekende verplichte velden', async ({ page }) => {
+    // Schoon vertrekpunt zodat een oude draft de Contactgegevens-stap
+    // niet pre-fillt — anders zou Volgende juist wél door mogen.
+    await leegDraftDb();
     await loginAlsOrganiser(page);
     await openFormulier(page);
 
