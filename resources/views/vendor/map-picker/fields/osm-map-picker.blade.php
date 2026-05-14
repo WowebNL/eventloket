@@ -446,6 +446,17 @@
                     try { map.fitBounds(fg.getBounds()); } catch (e) { /* empty bounds */ }
                 }
 
+                // Verwijder dotswan's eigen pm:create/edit/remove/update
+                // handlers van DEZE map. Anders dual-writen ze naar de
+                // gedeelde this.config.statePath via updateGeoJson() en
+                // belandt elke getekende layer ook in de andere kaart's
+                // state — bij reload zien beide kaarten dan dezelfde
+                // geojson.
+                map.off('pm:create');
+                map.off('pm:edit');
+                map.off('pm:remove');
+                map.off('pm:update');
+
                 // Sync onze FeatureGroup naar _expectedStatePath.
                 const syncToState = () => {
                     const features = [];
@@ -508,6 +519,11 @@
             // de moveend/pm:* handlers hierboven.
             _self.setMarkerRange = () => {};
             _self.setCoordinates = () => {};
+            // Onderdruk dotswan's updateGeoJson: schrijft naar de gedeelde
+            // this.config.statePath en zou onze per-instance syncToState
+            // overrulen / vervuilen. Wij doen state-sync zelf via de
+            // pm:* handlers hieronder die _expectedStatePath gebruiken.
+            _self.updateGeoJson = () => {};
             // Onderdruk dotswan's removeMap zodat de IntersectionObserver
             // (threshold 1.0) onze kaart niet wegschiet bij scrollen, met
             // als gevolg een lege kaart na re-createMap zonder onze fix.
