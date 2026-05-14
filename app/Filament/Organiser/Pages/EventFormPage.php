@@ -120,6 +120,19 @@ class EventFormPage extends Page implements HasForms
 
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
         $this->form->fill($this->state->fields());
+
+        // Filament's $form->fill() filtert complex value-objects soms weg
+        // wanneer een veld z'n schema niet rendert (bv. de Locatie-stap is
+        // nog niet actief op het moment van fill). Voor onze Map::make()-
+        // velden willen we wél dat de polygon-/lijn-state direct in
+        // $this->data zit — anders gaat een page-reload na enkel tekenen
+        // (zonder Volgende-klik) verloren. Herstel hand-handig.
+        $values = $this->state->fields();
+        foreach (['locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'] as $mapKey) {
+            if (array_key_exists($mapKey, $values) && ! empty($values[$mapKey])) {
+                $this->data[$mapKey] = $values[$mapKey];
+            }
+        }
     }
 
     /**

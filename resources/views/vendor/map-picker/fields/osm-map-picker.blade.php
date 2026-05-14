@@ -458,7 +458,7 @@
                 map.off('pm:update');
 
                 // Sync onze FeatureGroup naar _expectedStatePath.
-                const syncToState = () => {
+                const syncToState = async () => {
                     const features = [];
                     fg.eachLayer((layer) => {
                         if (layer.toGeoJSON) {
@@ -467,14 +467,20 @@
                     });
                     const current = $wire.get(_expectedStatePath) || {};
                     const center = map.getCenter();
+                    // Map::make() heeft geen ->live(), dus Filament rendert
+                    // het veld met wire:model.deferred. Daardoor markeert
+                    // $wire.set wel dirty maar commit niet automatisch — we
+                    // moeten zelf $commit() aanroepen + await zodat de
+                    // polygon écht naar de server is gegaan vóór de
+                    // volgende test-actie (reload, navigatie, etc.).
                     $wire.set(_expectedStatePath, {
                         ...current,
                         lat: current.lat ?? center.lat,
                         lng: current.lng ?? center.lng,
                         zoom: map.getZoom(),
-                        geojson: { type: 'FeatureCollection', features }
+                        geojson: { type: 'FeatureCollection', features },
                     });
-                    queueMicrotask(() => $wire.$commit());
+                    await $wire.$commit();
                 };
 
                 map.on('pm:create', (e) => {

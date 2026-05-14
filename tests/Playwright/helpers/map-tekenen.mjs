@@ -45,7 +45,7 @@ export async function tekenPolygonOpKaart(page, kaartIndex, coords = [
     [50.858, 5.700],
     [50.853, 5.700],
 ]) {
-    return page.evaluate(({ kaartIndex, coords, pakMapVoorContainerSrc }) => {
+    return page.evaluate(async ({ kaartIndex, coords, pakMapVoorContainerSrc }) => {
         const pakMap = new Function('return ' + pakMapVoorContainerSrc)();
         const got = pakMap(kaartIndex);
         if (! got.ok) return got;
@@ -53,6 +53,20 @@ export async function tekenPolygonOpKaart(page, kaartIndex, coords = [
 
         const layer = window.L.polygon(coords);
         got.map.fire('pm:create', { layer, shape: 'Polygon' });
+        // Wacht op de pm:create-handler's async $wire.set + $commit; fire()
+        // is zelf synchroon. Map::make() rendert wire:model.deferred, dus
+        // zonder dit zou de polygon nooit naar de server gaan vóór een
+        // reload of vervolgactie in de test.
+        await new Promise((r) => setTimeout(r, 50));
+        const wireEl = document.querySelector('[wire\\:id]');
+        if (wireEl && window.Livewire) {
+            const c = window.Livewire.find(wireEl.getAttribute('wire:id'));
+            if (c && c.$wire && typeof c.$wire.$commit === 'function') {
+                await c.$wire.$commit();
+            } else if (c && typeof c.$commit === 'function') {
+                await c.$commit();
+            }
+        }
         return { ok: true };
     }, { kaartIndex, coords, pakMapVoorContainerSrc: pakMapVoorContainer.toString() });
 }
@@ -69,7 +83,7 @@ export async function tekenLijnOpKaart(page, kaartIndex, coords = [
     [50.860, 5.700],
     [50.865, 5.720],
 ]) {
-    return page.evaluate(({ kaartIndex, coords, pakMapVoorContainerSrc }) => {
+    return page.evaluate(async ({ kaartIndex, coords, pakMapVoorContainerSrc }) => {
         const pakMap = new Function('return ' + pakMapVoorContainerSrc)();
         const got = pakMap(kaartIndex);
         if (! got.ok) return got;
@@ -77,6 +91,16 @@ export async function tekenLijnOpKaart(page, kaartIndex, coords = [
 
         const layer = window.L.polyline(coords);
         got.map.fire('pm:create', { layer, shape: 'Line' });
+        await new Promise((r) => setTimeout(r, 50));
+        const wireEl = document.querySelector('[wire\\:id]');
+        if (wireEl && window.Livewire) {
+            const c = window.Livewire.find(wireEl.getAttribute('wire:id'));
+            if (c && c.$wire && typeof c.$wire.$commit === 'function') {
+                await c.$wire.$commit();
+            } else if (c && typeof c.$commit === 'function') {
+                await c.$commit();
+            }
+        }
         return { ok: true };
     }, { kaartIndex, coords, pakMapVoorContainerSrc: pakMapVoorContainer.toString() });
 }
@@ -101,6 +125,25 @@ export async function aantalShapesOpKaart(page, kaartIndex) {
 }
 
 /**
+ * @private Vindt de Livewire-page-component (EventFormPage) op de pagina
+ * via een input met wire:model^="data." Loopt vandaaruit omhoog naar
+ * de dichtsbijzijnde [wire:id] root en haalt die proxy op via
+ * Livewire.find(). Werkt voor zowel Livewire 3 als oudere versies.
+ *
+ * Retourneert null wanneer geen geschikt element bestaat.
+ */
+function vindFormPageComponent() {
+    if (! window.Livewire) return null;
+    const dataInput = document.querySelector('input[wire\\:model^="data."], textarea[wire\\:model^="data."], select[wire\\:model^="data."], input[wire\\:model\\.live^="data."], textarea[wire\\:model\\.live^="data."], select[wire\\:model\\.live^="data."]');
+    if (! dataInput) return null;
+    const root = dataInput.closest('[wire\\:id]');
+    if (! root) return null;
+    const id = root.getAttribute('wire:id');
+    if (! id) return null;
+    return window.Livewire.find(id);
+}
+
+/**
  * Telt het aantal features in de Livewire-state voor een specifiek
  * map-veld. Geeft 0 als de state nog leeg is. Gebruikt voor end-to-end
  * verificatie dat een tekening daadwerkelijk naar de server is gesynct
@@ -111,14 +154,14 @@ export async function aantalShapesOpKaart(page, kaartIndex) {
  * @returns {Promise<number>}
  */
 export async function aantalFeaturesInLivewireState(page, veldNaam) {
-    return page.evaluate((veldNaam) => {
-        if (! window.Livewire) return 0;
-        const component = window.Livewire.all()[0];
+    return page.evaluate(({ veldNaam, vindSrc }) => {
+        const vind = new Function('return ' + vindSrc)();
+        const component = vind();
         if (! component) return 0;
         const value = component.get('data.' + veldNaam);
         if (! value || ! value.geojson || ! Array.isArray(value.geojson.features)) return 0;
         return value.geojson.features.length;
-    }, veldNaam);
+    }, { veldNaam, vindSrc: vindFormPageComponent.toString() });
 }
 
 /**
@@ -131,14 +174,14 @@ export async function aantalFeaturesInLivewireState(page, veldNaam) {
  * @returns {Promise<string[]>}
  */
 export async function geometryTypesInLivewireState(page, veldNaam) {
-    return page.evaluate((veldNaam) => {
-        if (! window.Livewire) return [];
-        const component = window.Livewire.all()[0];
+    return page.evaluate(({ veldNaam, vindSrc }) => {
+        const vind = new Function('return ' + vindSrc)();
+        const component = vind();
         if (! component) return [];
         const value = component.get('data.' + veldNaam);
         if (! value || ! value.geojson || ! Array.isArray(value.geojson.features)) return [];
         return value.geojson.features.map((f) => (f.geometry && f.geometry.type) || '?');
-    }, veldNaam);
+    }, { veldNaam, vindSrc: vindFormPageComponent.toString() });
 }
 
 // Backwards-compat aliases zodat bestaande scenarios blijven werken
