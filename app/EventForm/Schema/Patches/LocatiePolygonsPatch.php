@@ -71,11 +71,13 @@ final class LocatiePolygonsPatch
                     ->label('Naam van de locatie')
                     ->required()
                     ->maxLength(1000)
-                    // Sync op blur zodat de getypte waarde naar server gaat
-                    // zodra de user weg-klikt. Zonder dit verdwijnt de net-
-                    // getypte naam wanneer de gemeente-response na een
-                    // tekening een form-rerender triggert (race-conditie).
-                    ->live(onBlur: true)
+                    // Direct per keystroke synchroniseren naar Livewire-
+                    // state. Nodig omdat de gemeente-response na een
+                    // polygon-tekening een form-rerender triggert;
+                    // debounce (500ms) en onBlur lieten beide een race-
+                    // window open waarin de net getypte naam alsnog werd
+                    // platgewalst.
+                    ->live()
                     ->hidden($hiddenCallback);
 
                 $patched[] = Map::make('locatieSOpKaart')

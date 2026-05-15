@@ -6,14 +6,14 @@
  * proberen ze allemaal in volgorde totdat er één lokaliseert.
  */
 
-const MODIFIERS = ['', '.live', '.defer', '.blur', '.debounce.500ms'];
+const MODIFIERS = ['', '.live', '.defer', '.blur', '.debounce.500ms', '.live.debounce.500ms'];
 
 function selectorVoor(tag, attr) {
     // Bouw een CSS-selector die één van de wire:model-varianten matcht.
     return MODIFIERS.map((m) => `${tag}[wire\\:model${m.replace(/\./g, '\\.')}="${attr}"]`).join(', ');
 }
 
-function endsWithSelector(tag, suffix) {
+export function endsWithSelector(tag, suffix) {
     // Voor een eind-match (bv. een pad dat eindigt op ".postcode")
     return MODIFIERS.map((m) => `${tag}[wire\\:model${m.replace(/\./g, '\\.')}$="${suffix}"]`).join(', ');
 }
