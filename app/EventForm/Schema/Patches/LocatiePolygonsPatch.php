@@ -71,6 +71,11 @@ final class LocatiePolygonsPatch
                     ->label('Naam van de locatie')
                     ->required()
                     ->maxLength(1000)
+                    // Sync op blur zodat de getypte waarde naar server gaat
+                    // zodra de user weg-klikt. Zonder dit verdwijnt de net-
+                    // getypte naam wanneer de gemeente-response na een
+                    // tekening een form-rerender triggert (race-conditie).
+                    ->live(onBlur: true)
                     ->hidden($hiddenCallback);
 
                 $patched[] = Map::make('locatieSOpKaart')

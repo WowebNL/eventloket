@@ -400,6 +400,19 @@
                 el.__leafletMap = this.map;
             };
 
+            // KRITIEK: dotswan's setCoordinates doet
+            // `$wire.set(statePath, {lat, lng})` — een object ZONDER geojson.
+            // Dat wordt aangeroepen vanuit:
+            //   - createMap's initial setView() → moveend → updateLocation()
+            //   - initFormRestoration's pageshow-listener (bij elke reload!)
+            // Beide pad'en overschrijven onze geojson-state met enkel coords.
+            // No-op'en MOET vóór attach() gebeuren — anders is de schade
+            // al gedaan bij de eerste moveend van setView().
+            _self.setMarkerRange = () => {};
+            _self.setCoordinates = () => {};
+            _self.updateGeoJson = () => {};
+            _self.removeMap = () => {};
+
             attach($refs.map);
 
             // FIX 2: vervang de door dotswan geladen (mogelijk verkeerde)
@@ -504,36 +517,21 @@
                     syncToState();
                 });
 
-                // Moveend → schrijf alleen lat/lng/zoom naar _expectedStatePath,
-                // ongeacht dotswan's setCoordinates die naar de gedeelde
-                // this.config.statePath schrijft.
-                map.on('moveend', () => {
-                    const center = map.getCenter();
-                    const current = $wire.get(_expectedStatePath) || {};
-                    $wire.set(_expectedStatePath, {
-                        ...current,
-                        lat: center.lat,
-                        lng: center.lng,
-                        zoom: map.getZoom(),
-                    });
-                });
+                // Geen moveend-handler: lat/lng/zoom persistentie van de
+                // map-viewport hebben we niet nodig (default-center +
+                // fitBounds-na-load doen de UX al goed). Wel zit hier een
+                // bug-risk: bij map.fitBounds(...) firet Leaflet meteen
+                // moveend, en op dat moment kan onze ...current-spread
+                // de geojson-key verliezen (Livewire-3 Proxy-spread-quirk?).
+                // Resultaat: state op de server wordt overschreven met
+                // {lat, lng, zoom} zonder geojson, en bij reload zijn de
+                // tekeningen weg. Tot we dat veilig hebben opgelost is de
+                // handler eruit.
             }, 300);
 
-            // Onderdruk dotswan's setMarkerRange en setCoordinates: beide
-            // schrijven naar de gedeelde this.config.statePath en zouden
-            // onze eigen sync ondermijnen. Wij doen state-sync zelf via
-            // de moveend/pm:* handlers hierboven.
-            _self.setMarkerRange = () => {};
-            _self.setCoordinates = () => {};
-            // Onderdruk dotswan's updateGeoJson: schrijft naar de gedeelde
-            // this.config.statePath en zou onze per-instance syncToState
-            // overrulen / vervuilen. Wij doen state-sync zelf via de
-            // pm:* handlers hieronder die _expectedStatePath gebruiken.
-            _self.updateGeoJson = () => {};
-            // Onderdruk dotswan's removeMap zodat de IntersectionObserver
-            // (threshold 1.0) onze kaart niet wegschiet bij scrollen, met
-            // als gevolg een lege kaart na re-createMap zonder onze fix.
-            _self.removeMap = () => {};
+            // Cleanup: een eventueel al getekende rangeCircle weg.
+            // (setMarkerRange / setCoordinates / updateGeoJson / removeMap
+            // zijn al hierboven, vóór attach(), genullified.)
             if (_self.rangeCircle && _self.rangeCircle.remove) {
                 _self.rangeCircle.remove();
                 _self.rangeCircle = null;

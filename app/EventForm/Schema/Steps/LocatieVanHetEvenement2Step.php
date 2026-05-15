@@ -127,7 +127,13 @@ final class LocatieVanHetEvenement2Step
                         TextInput::make('naamVanDeRoute')
                             ->label('Naam van de route')
                             ->required()
-                            ->maxLength(1000),
+                            ->maxLength(1000)
+                            // Sync op blur zodat de getypte waarde naar
+                            // server gaat zodra de user weg-klikt. Zonder
+                            // dit verdwijnt de net-getypte naam wanneer
+                            // de gemeente-response na route-tekenen een
+                            // form-rerender triggert (race-conditie).
+                            ->live(onBlur: true),
                         Select::make('watVoorEvenementGaatPlaatsvindenOpDeRoute1')
                             ->label('Wat voor evenement gaat plaatsvinden op de route?')
                             ->options([
