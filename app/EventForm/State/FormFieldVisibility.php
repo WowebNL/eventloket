@@ -459,17 +459,21 @@ final class FormFieldVisibility
     }
 
     /**
-     * `content200`-veld zichtbaarheid.
-     *  - OF-rule b0b1b8ed-4bdf-4fde-9657-b11cd3d88f08 → show wanneer: $s->get('evenementInGemeente') !== ''
+     * `content200`-veld zichtbaarheid — "U gaat verder met deze aanvraag
+     * voor de gemeente …". Mag alleen verschijnen als er daadwerkelijk
+     * een gemeente bepaald is; eerder check'te dit op `!== ''` maar
+     * `evenementInGemeente` is óf `null` óf een array, beide nooit gelijk
+     * aan een lege string. Daardoor stond de tekst er altijd, óók zonder
+     * bekende gemeente — met een lege gemeentenaam erachter.
      */
     public function content200(): ?bool
     {
-        $s = $this->state;
-        if (($s->get('evenementInGemeente') !== '')) {
+        $gemeente = $this->state->get('evenementInGemeente');
+        if (is_array($gemeente) && ! empty($gemeente['brk_identification'])) {
             return false; // show
         }
 
-        return null; // door-fall: default visibility uit step-file
+        return null; // door-fall: default visibility uit step-file (= hidden)
     }
 
     /**
