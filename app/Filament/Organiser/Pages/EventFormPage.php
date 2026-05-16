@@ -485,6 +485,19 @@ class EventFormPage extends Page implements HasForms
         }
         $this->submitting = true;
 
+        // Trigger Filament's `saveUploadedFiles()` zodat FileUpload-velden
+        // hun TemporaryUploadedFile-objects vervangen door definitieve
+        // disk-paths. Zonder deze call eindigen die TempUpload-objects in
+        // $this->state, en bij toSnapshot()->JSON wordt 'n niet-
+        // serializable object stilletjes leeg — vandaar "key wel, value
+        // niet" in form_state_snapshot en een UploadFormBijlagenToZGW-job
+        // die niks oppikt. We gebruiken `getStateSnapshot()` ipv
+        // `getState()` zodat we de dehydrate-pipeline (incl. de FileUpload
+        // beforeStateDehydrated-hook) doorlopen zónder validation; de
+        // submit-action heeft 'm al gevalideerd voor 'ie ons aanroept.
+        $this->form->getStateSnapshot();
+        $this->state->absorbFields($this->data ?? []);
+
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
 
