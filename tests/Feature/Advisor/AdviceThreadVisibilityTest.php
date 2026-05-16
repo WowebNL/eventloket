@@ -19,6 +19,8 @@ use Filament\Facades\Filament;
 
 use function Pest\Livewire\livewire;
 
+covers(AdviceThreadInboxWidget::class);
+
 beforeEach(function () {
     $this->advisory = Advisory::factory()->create([
         'name' => 'Test Advisory',
@@ -194,3 +196,209 @@ test('advisor can view asked thread page', function () {
 //        ->assertSuccessful()
 //        ->assertCanSeeTableRecords([$thread]);
 // });
+
+// --- AdviceThreadInboxWidget tests ---
+
+test('AdviceThreadInboxWidget hides concept threads', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $conceptThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Concept,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Concept Thread',
+    ]);
+
+    $askedThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Asked Thread',
+    ]);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->assertSuccessful()
+        ->filterTable('unread', 'all')
+        ->assertCountTableRecords(1)
+        ->assertCanSeeTableRecords([$askedThread])
+        ->assertCanNotSeeTableRecords([$conceptThread]);
+});
+
+test('AdviceThreadInboxWidget shows threads with any non-concept status', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $inProgressThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::InProgress,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'In Progress Thread',
+    ]);
+
+    $repliedThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::AdvisoryReplied,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Replied Thread',
+    ]);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->filterTable('unread', 'all')
+        ->assertCanSeeTableRecords([$inProgressThread, $repliedThread]);
+});
+
+test('AdviceThreadInboxWidget only shows threads for current advisory', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $otherAdvisory = Advisory::factory()->create(['name' => 'Other Advisory']);
+
+    $ownThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Own Advisory Thread',
+    ]);
+
+    $otherThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $otherAdvisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Other Advisory Thread',
+    ]);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->filterTable('unread', 'all')
+        ->assertCanSeeTableRecords([$ownThread])
+        ->assertCanNotSeeTableRecords([$otherThread]);
+});
+
+test('assign to self action is visible for unassigned advisor', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $thread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Unassigned Thread',
+    ]);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->filterTable('unread', 'all')
+        ->assertTableActionVisible('assign_to_self', $thread);
+});
+
+test('assign to self action is hidden when advisor is already assigned', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $thread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::InProgress,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Already Assigned Thread',
+    ]);
+    $thread->assignedUsers()->attach($this->advisor->id);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->filterTable('unread', 'all')
+        ->filterTable('assigned', 'all')
+        ->assertTableActionHidden('assign_to_self', $thread);
+});
+
+test('assign to self action attaches advisor and transitions status to InProgress', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $thread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Thread to assign',
+    ]);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->filterTable('unread', 'all')
+        ->callTableAction('assign_to_self', $thread);
+
+    expect($thread->fresh()->advice_status)->toBe(AdviceStatus::InProgress)
+        ->and($thread->assignedUsers()->where('user_id', $this->advisor->id)->exists())->toBeTrue();
+});
+
+test('assign action is visible for advisory admin', function () {
+    $adminAdvisor = User::factory()->create(['role' => Role::Advisor]);
+    $this->advisory->users()->attach($adminAdvisor, ['role' => AdvisoryRole::Admin]);
+
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($adminAdvisor);
+    Filament::setTenant($this->advisory);
+
+    $thread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Thread for admin',
+    ]);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->filterTable('unread', 'all')
+        ->assertTableActionVisible('assign', $thread);
+});
+
+test('assign action is hidden for advisory member', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor); // $this->advisor is a Member in beforeEach
+    Filament::setTenant($this->advisory);
+
+    $thread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Thread for member',
+    ]);
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->filterTable('unread', 'all')
+        ->assertTableActionHidden('assign', $thread);
+});

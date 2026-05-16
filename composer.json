@@ -8,20 +8,20 @@
     "require": {
         "php": "^8.4",
         "brick/geo": "^0.13.1",
-        "dotswan/filament-map-picker": "dev-master",
-        "filament/filament": "^4.0",
-        "filament/spatie-laravel-settings-plugin": "^4.0",
-        "guava/calendar": "^2.0",
-        "laravel/framework": "^12.0",
+        "dotswan/filament-map-picker": "5.x-dev",
+        "filament/filament": "^5.0",
+        "filament/spatie-laravel-settings-plugin": "^5.0",
+        "guava/calendar": "^3.1",
+        "laravel/framework": "^13.0",
         "laravel/passport": "^13.0",
-        "laravel/tinker": "^2.10.1",
+        "laravel/tinker": "^3.0",
         "phiki/phiki": "^2.0",
         "spatie/laravel-activitylog": "^4.10",
-        "webbingbrasil/filament-maps": "4.x-dev",
+        "webbingbrasil/filament-maps": "5.x-dev",
         "woweb/openzaak": "dev-main"
     },
     "require-dev": {
-        "barryvdh/laravel-debugbar": "^3.15",
+        "barryvdh/laravel-debugbar": "^4.2",
         "driftingly/rector-laravel": "^2.0",
         "fakerphp/faker": "^1.23",
         "larastan/larastan": "^3.0",
@@ -30,9 +30,9 @@
         "laravel/sail": "^1.43",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
-        "pestphp/pest": "^3.8",
-        "pestphp/pest-plugin-laravel": "^3.2",
-        "pestphp/pest-plugin-livewire": "^3.0"
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0",
+        "pestphp/pest-plugin-livewire": "^4.0"
     },
     "repositories": {
         "woweb/openzaak": {
