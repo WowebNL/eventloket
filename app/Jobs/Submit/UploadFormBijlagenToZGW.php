@@ -10,6 +10,7 @@ use App\Models\Zaak;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ReflectionObject;
@@ -28,7 +29,7 @@ use Woweb\Openzaak\Openzaak;
  */
 final class UploadFormBijlagenToZGW implements ShouldQueue
 {
-    use \Illuminate\Foundation\Queue\Queueable;
+    use Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 
@@ -165,10 +166,17 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         return array_values(array_unique($keys));
     }
 
+    /**
+     * Voor nu: zoek het informatieobjecttype waarvan de omschrijving
+     * "bijlage" bevat (case-insensitive); valt terug op het eerste type
+     * als er geen treffer is. TODO: per upload-veld instelbaar maken,
+     * waarschijnlijk via een mapping op Zaaktype (per gemeente kan het
+     * informatieobjecttype namelijk verschillen per upload-veld).
+     */
     private function resolveInformatieobjecttype(): string
     {
-        $first = $this->zaak->zaaktype?->document_types?->first();
-        if (! $first || ! property_exists($first, 'url') || $first->url === '') {
+        $types = $this->zaak->zaaktype?->document_types;
+        if (! $types || $types->isEmpty()) {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
                 .($this->zaak->zaaktype->id ?? '?')
@@ -176,6 +184,19 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
             );
         }
 
-        return (string) $first->url;
+        $bijlageType = $types->first(static fn ($type): bool => property_exists($type, 'omschrijving')
+            && str_contains(mb_strtolower($type->omschrijving), 'bijlage')
+        );
+        $chosen = $bijlageType ?? $types->first();
+
+        if (! $chosen || ! property_exists($chosen, 'url') || $chosen->url === '') {
+            throw new RuntimeException(
+                'Geen informatieobjecttype gevonden voor zaaktype '
+                .($this->zaak->zaaktype->id ?? '?')
+                .' — kan bijlagen niet uploaden.'
+            );
+        }
+
+        return (string) $chosen->url;
     }
 }
