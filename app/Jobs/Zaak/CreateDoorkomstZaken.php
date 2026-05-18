@@ -144,7 +144,7 @@ class CreateDoorkomstZaken implements ShouldQueue
                         ...array_merge(
                             $newOzZaak->eigenschappen_key_value,
                             [
-                                'registratiedatum' => $newOzZaak->registratiedatum ?? '',
+                                'registratiedatum' => $newOzZaak->registratiedatum,
                                 'status_name' => $newOzZaak->status_name ?? '',
                                 'statustype_url' => $newOzZaak->statustype_url ?? '',
                                 'organisator' => $organisator,
