@@ -8,6 +8,7 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Models\Zaak;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -24,7 +25,7 @@ use Woweb\Openzaak\Openzaak;
  */
 final class UploadSubmissionPdfToZGW implements ShouldQueue
 {
-    use \Illuminate\Foundation\Queue\Queueable;
+    use Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

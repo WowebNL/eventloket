@@ -129,7 +129,12 @@ class EventFormPage extends Page implements HasForms
         // (zonder Volgende-klik) verloren. Herstel hand-handig.
         $values = $this->state->fields();
         foreach (['locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'] as $mapKey) {
-            if (array_key_exists($mapKey, $values) && ! empty($values[$mapKey])) {
+            if (array_key_exists($mapKey, $values) && ! empty($values[$mapKey]) && empty($this->data[$mapKey])) {
+                // Alleen overschrijven als form->fill() het veld niet heeft gevuld.
+                // Als form->fill() wel heeft verwerkt, heeft afterStateHydrated al
+                // UUID-string-keys toegewezen. Overschrijven met snapshot-data (die
+                // integer-keys kan hebben) breekt Filament's getChildSchema()-lookup:
+                // filled(0) === false, waardoor getChildSchema(0) null retourneert.
                 $this->data[$mapKey] = $values[$mapKey];
             }
         }

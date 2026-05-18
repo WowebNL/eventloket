@@ -11,6 +11,7 @@ use App\Normalizers\OpenFormsNormalizer;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
 use Woweb\Openzaak\Openzaak;
 
@@ -25,7 +26,7 @@ use Woweb\Openzaak\Openzaak;
  */
 class AddZaakeigenschappenZGW implements ShouldQueue
 {
-    use \Illuminate\Foundation\Queue\Queueable;
+    use Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

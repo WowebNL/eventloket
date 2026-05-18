@@ -10,6 +10,7 @@ use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Zaak;
 use App\ValueObjects\OzZaak;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
 use Woweb\Openzaak\Openzaak;
 
 /**
@@ -22,7 +23,7 @@ use Woweb\Openzaak\Openzaak;
  */
 class AddGeometryZGW implements ShouldQueue
 {
-    use \Illuminate\Foundation\Queue\Queueable;
+    use Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

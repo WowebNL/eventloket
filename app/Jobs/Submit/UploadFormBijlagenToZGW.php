@@ -101,7 +101,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 'creatiedatum' => now()->format('Y-m-d'),
                 'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
                 'titel' => $bestandsnaam,
-                'auteur' => $this->zaak->organisation->name ?? 'Organisator',
+                'auteur' => $this->zaak->organiserUser->name ?? 'Organisator',
                 'taal' => 'dut',
                 'bestandsnaam' => $bestandsnaam,
                 'bestandsomvang' => strlen($content),

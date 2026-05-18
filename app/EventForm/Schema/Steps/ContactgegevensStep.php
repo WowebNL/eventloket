@@ -41,13 +41,14 @@ final class ContactgegevensStep
                 TextInput::make('watIsUwTelefoonnummer')
                     ->label('Wat is uw telefoonnummer?')
                     ->required()
-                    ->maxLength(1000),
+                    ->maxLength(20),
                 Fieldset::make('Organisatie informatie')
                     ->schema([
                         TextInput::make('watIsHetKamerVanKoophandelNummerVanUwOrganisatie')
                             ->label('Wat is het Kamer van Koophandel nummer van uw organisatie?')
                             ->required()
-                            ->maxLength(1000),
+                            ->maxLength(8)
+                            ->numeric(),
                         TextInput::make('watIsDeNaamVanUwOrganisatie')
                             ->label('Wat is de naam van uw organisatie?')
                             ->required()
@@ -57,10 +58,10 @@ final class ContactgegevensStep
                                 TextInput::make('postcode1')
                                     ->label('Postcode')
                                     ->required()
-                                    ->maxLength(1000),
+                                    ->maxLength(8),
                                 TextInput::make('huisletter1')
                                     ->label('Huisletter')
-                                    ->maxLength(1000),
+                                    ->maxLength(10),
                                 TextInput::make('straatnaam1')
                                     ->label('Straatnaam')
                                     ->required()
@@ -68,7 +69,7 @@ final class ContactgegevensStep
                                 TextInput::make('huisnummer1')
                                     ->label('Huisnummer')
                                     ->required()
-                                    ->maxLength(1000),
+                                    ->maxLength(10),
                                 TextInput::make('huisnummertoevoeging1')
                                     ->label('Huisnummertoevoeging')
                                     ->maxLength(1000),
@@ -83,39 +84,40 @@ final class ContactgegevensStep
                         TextInput::make('telefoonnummerOrganisatie')
                             ->label('Wat is het telefoonnummer van uw organisatie?')
                             ->required()
-                            ->maxLength(1000),
+                            ->maxLength(100),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('organisatieInformatie') !== false),
                 InfoText::warning('waarschuwingGeenKvk', '<p><strong>Let op: </strong>u vult dit formulier in op persoonlijke titel, hiermee ligt de verantwoordelijkheid voor de aanvraag ook bij u als persoon. U kunt deze aanvraag als bedrijf doen door linksboven op “Mijn omgeving” te klikken en een organisatie te registeren (of een bestaande te selecteren), vervolgens kunt u een nieuwe aanvraag starten.</p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('waarschuwingGeenKvk') !== false),
                 Fieldset::make('Adresgegevens')
+                    ->columns(1)
                     ->schema([
-                        Grid::make(1)
+                        Grid::make(2)
                             ->schema([
                                 TextInput::make('postcode')
                                     ->label('Postcode')
                                     ->required()
-                                    ->maxLength(1000),
+                                    ->maxLength(6),
+                                TextInput::make('huisnummer')
+                                    ->label('Huisnummer')
+                                    ->required()
+                                    ->maxLength(10),
                                 TextInput::make('huisletter')
                                     ->label('Huisletter')
-                                    ->maxLength(1000),
+                                    ->maxLength(4),
+                                TextInput::make('huisnummertoevoeging')
+                                    ->label('Huisnummertoevoeging')
+                                        ->maxLength(10),
                                 TextInput::make('straatnaam')
                                     ->label('Straatnaam')
                                     ->required()
                                     ->maxLength(1000),
-                                TextInput::make('land')
-                                    ->label('Land')
-                                    ->maxLength(1000),
-                                TextInput::make('huisnummer')
-                                    ->label('Huisnummer')
-                                    ->required()
-                                    ->maxLength(1000),
-                                TextInput::make('huisnummertoevoeging')
-                                    ->label('Huisnummertoevoeging')
-                                    ->maxLength(1000),
                                 TextInput::make('plaatsnaam')
                                     ->label('Plaatsnaam')
                                     ->required()
+                                    ->maxLength(1000),
+                                TextInput::make('land')
+                                    ->label('Land')
                                     ->maxLength(1000),
                             ]),
                     ])

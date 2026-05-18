@@ -62,13 +62,36 @@ class PrefillLoader
      */
     private function fromSnapshot(array $snapshot): FormState
     {
-        $state = FormState::fromSnapshot($snapshot);
+        $state = FormState::fromSnapshot($this->stripHashedValues($snapshot));
 
         // Alleen veld-waardes hergebruiken, geen afgeleide variabelen
         // (rules berekenen die opnieuw) of step-applicable-flags (die
         // horen bij de vorige submit). Snapshot kan die bevatten;
         // filteren houdt de prefill schoon.
         return $this->stripDerivedState($state);
+    }
+
+    /**
+     * Verwijdert gehashte waarden (prefix `hash:`) uit de snapshot vóórdat
+     * de FormState wordt gebouwd. Na HashIdentifyingAttributes bevatten
+     * gevoelige velden (KvK, BSN) een HMAC-hash — dat zijn geen bruikbare
+     * voorinvulwaarden. Door ze te wissen krijgt applySessionPrefill() in
+     * EventFormPage de kans om het KvK-veld alsnog vanuit de sessie te vullen,
+     * en BSN-velden blijven leeg zodat de gebruiker ze opnieuw invult.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, mixed>
+     */
+    private function stripHashedValues(array $snapshot): array
+    {
+        if (isset($snapshot['values']) && is_array($snapshot['values'])) {
+            $snapshot['values'] = array_filter(
+                $snapshot['values'],
+                fn (mixed $value): bool => ! (is_string($value) && str_starts_with($value, 'hash:')),
+            );
+        }
+
+        return $snapshot;
     }
 
     private function fromReferenceData(Zaak $zaak): FormState

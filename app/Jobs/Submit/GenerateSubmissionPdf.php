@@ -10,6 +10,7 @@ use App\EventForm\State\FormState;
 use App\Models\Zaak;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -22,7 +23,7 @@ use Illuminate\Support\Facades\Storage;
  */
 final class GenerateSubmissionPdf implements ShouldQueue
 {
-    use \Illuminate\Foundation\Queue\Queueable;
+    use Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

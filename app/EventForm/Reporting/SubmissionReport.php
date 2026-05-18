@@ -20,6 +20,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use ReflectionObject;
@@ -272,7 +273,7 @@ final class SubmissionReport
      */
     private function extractFileNames(mixed $value): array
     {
-        if ($value instanceof \Illuminate\Http\UploadedFile) {
+        if ($value instanceof UploadedFile) {
             return [$value->getClientOriginalName()];
         }
         if (is_string($value) && $value !== '') {
@@ -284,7 +285,7 @@ final class SubmissionReport
 
         $names = [];
         foreach ($value as $entry) {
-            if ($entry instanceof \Illuminate\Http\UploadedFile) {
+            if ($entry instanceof UploadedFile) {
                 $names[] = $entry->getClientOriginalName();
             } elseif (is_string($entry) && $entry !== '') {
                 $names[] = basename($entry);
@@ -827,7 +828,7 @@ final class SubmissionReport
 
     private function renderFiles(mixed $value): string
     {
-        if ($value instanceof \Illuminate\Http\UploadedFile) {
+        if ($value instanceof UploadedFile) {
             return $value->getClientOriginalName();
         }
         if (! is_array($value)) {
@@ -835,7 +836,7 @@ final class SubmissionReport
         }
 
         return collect($value)
-            ->map(fn ($v) => $v instanceof \Illuminate\Http\UploadedFile
+            ->map(fn ($v) => $v instanceof UploadedFile
                 ? $v->getClientOriginalName()
                 : (is_string($v) ? basename($v) : (is_array($v) ? ($v['name'] ?? '') : '')))
             ->filter()

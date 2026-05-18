@@ -10,6 +10,7 @@ use App\ValueObjects\OzZaaktype;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Queue\Queueable;
 use Woweb\Openzaak\Openzaak;
 
 /**
@@ -19,7 +20,7 @@ use Woweb\Openzaak\Openzaak;
  */
 class AddEinddatumZGW implements ShouldQueue
 {
-    use \Illuminate\Foundation\Queue\Queueable;
+    use Queueable;
 
     public function __construct(public readonly Zaak $zaak) {}
 

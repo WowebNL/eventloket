@@ -158,6 +158,29 @@ test('lege of null query-param → null (geen prefill-actie)', function () {
     expect($this->loader->load('', $user, $org))->toBeNull();
 });
 
+test('gehashte waarden (hash:-prefix) worden gewist zodat applySessionPrefill ze kan overschrijven', function () {
+    // HashIdentifyingAttributes vervangt KvK en BSN-velden door hash:<hmac>.
+    // PrefillLoader moet die waarden strippen — anders staan er onleesbare
+    // hashes in het formulier en wordt applySessionPrefill nooit getriggerd
+    // (die slaat velden met een niet-lege waarde over).
+    $sc = scenarioZaakMetSnapshot([
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest 2026',
+        'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => 'hash:1f7c6a828a8078a581b27c46379c66b78044b80b57f16d93b1a01a7d3c60128d',
+        'bsn' => 'hash:aabbcc112233aabbcc112233aabbcc112233aabbcc112233aabbcc112233aabb',
+        'auth_bsn' => 'hash:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef',
+    ]);
+
+    $state = $this->loader->load($sc['zaak']->id, $sc['user'], $sc['org']);
+
+    expect($state)->toBeInstanceOf(FormState::class)
+        // Niet-gevoelig veld blijft ongewijzigd
+        ->and($state->get('watIsDeNaamVanHetEvenementVergunning'))->toBe('Buurtfeest 2026')
+        // Gehashte velden zijn gewist (null of leeg), zodat applySessionPrefill kan invullen
+        ->and($state->get('watIsHetKamerVanKoophandelNummerVanUwOrganisatie'))->toBeNull()
+        ->and($state->get('bsn'))->toBeNull()
+        ->and($state->get('auth_bsn'))->toBeNull();
+});
+
 test('velden die niet meer in het schema zitten komen stil mee uit de snapshot', function () {
     // Voorbeeld: een veld dat bij de vorige submit bestond maar inmiddels
     // vervangen is door een andere key. Dat mag niet crashen; de waarde
