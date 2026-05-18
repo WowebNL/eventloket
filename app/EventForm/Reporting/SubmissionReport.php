@@ -272,6 +272,9 @@ final class SubmissionReport
      */
     private function extractFileNames(mixed $value): array
     {
+        if ($value instanceof \Illuminate\Http\UploadedFile) {
+            return [$value->getClientOriginalName()];
+        }
         if (is_string($value) && $value !== '') {
             return [basename($value)];
         }
@@ -281,7 +284,9 @@ final class SubmissionReport
 
         $names = [];
         foreach ($value as $entry) {
-            if (is_string($entry) && $entry !== '') {
+            if ($entry instanceof \Illuminate\Http\UploadedFile) {
+                $names[] = $entry->getClientOriginalName();
+            } elseif (is_string($entry) && $entry !== '') {
                 $names[] = basename($entry);
             } elseif (is_array($entry) && isset($entry['name']) && is_string($entry['name'])) {
                 $names[] = $entry['name'];
@@ -822,12 +827,17 @@ final class SubmissionReport
 
     private function renderFiles(mixed $value): string
     {
+        if ($value instanceof \Illuminate\Http\UploadedFile) {
+            return $value->getClientOriginalName();
+        }
         if (! is_array($value)) {
             return is_string($value) ? basename($value) : '';
         }
 
         return collect($value)
-            ->map(fn ($v) => is_string($v) ? basename($v) : (is_array($v) ? ($v['name'] ?? '') : ''))
+            ->map(fn ($v) => $v instanceof \Illuminate\Http\UploadedFile
+                ? $v->getClientOriginalName()
+                : (is_string($v) ? basename($v) : (is_array($v) ? ($v['name'] ?? '') : '')))
             ->filter()
             ->implode(', ');
     }

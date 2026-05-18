@@ -33,6 +33,7 @@ final class BijlagenStep
                 InfoText::info('ContentOverigeBijlage', '<p>Naast het veiligheidsplan moet u bij uw aanvraag ook de hier aangegeven bijlage(n) indienen.</p><ul><li>Draaiboek van alle dagen, inclusief opbouwen en afbouwen.</li><li>Muziek- of activiteiten programma (van alle dagen), indien van toepassing</li><li>Situatietekening(en) (plattegrond)&nbsp; van uw evenement locatie(s) met alle activiteiten.</li><li>Mobiliteitsplan voor omleidingen of beperking van de toegangswegen voor hulpdiensten (ingeval van een geringe impact volstaat het intekenen van de verkeersimpact op de plattegrond bij de vraag over verkeersbelemmeringen)</li></ul>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('ContentOverigeBijlage') !== false),
                 EventloketFileUpload::make('bijlagen1')
+                    ->multiple()
                     ->label('Overige bijlagen'),
             ]);
     }

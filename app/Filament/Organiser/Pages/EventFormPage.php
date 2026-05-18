@@ -485,18 +485,22 @@ class EventFormPage extends Page implements HasForms
         }
         $this->submitting = true;
 
-        // Trigger Filament's `saveUploadedFiles()` zodat FileUpload-velden
-        // hun TemporaryUploadedFile-objects vervangen door definitieve
-        // disk-paths. Zonder deze call eindigen die TempUpload-objects in
-        // $this->state, en bij toSnapshot()->JSON wordt 'n niet-
-        // serializable object stilletjes leeg — vandaar "key wel, value
-        // niet" in form_state_snapshot en een UploadFormBijlagenToZGW-job
-        // die niks oppikt. We gebruiken `getStateSnapshot()` ipv
-        // `getState()` zodat we de dehydrate-pipeline (incl. de FileUpload
-        // beforeStateDehydrated-hook) doorlopen zónder validation; de
-        // submit-action heeft 'm al gevalideerd voor 'ie ons aanroept.
-        $this->form->getStateSnapshot();
-        $this->state->absorbFields($this->data ?? []);
+        // `getStateSnapshot()` roept intern NIET `callBeforeStateDehydrated()`
+        // aan (in tegenstelling tot `getState()`). Daardoor wordt de
+        // `beforeStateDehydrated`-hook van BaseFileUpload — die
+        // `saveUploadedFiles()` aanroept — overgeslagen. Zonder die call
+        // blijven TemporaryUploadedFile-objecten in `livewire-tmp/` staan
+        // en worden ze nooit naar de definitieve opslag verplaatst.
+        //
+        // Oplossing: roep eerst `callBeforeStateDehydrated()` expliciet aan.
+        // Dat triggert `saveUploadedFiles()` voor elk FileUpload-veld, dat
+        // op zijn beurt de bestanden verplaatst en `$this->data` bijwerkt
+        // met de permanente schijfpaden via `rawState()`. Daarna leest
+        // `getStateSnapshot()` de bijgewerkte `$this->data` en retourneert
+        // de correcte paden.
+        $dehydrationState = [];
+        $this->form->callBeforeStateDehydrated($dehydrationState);
+        $this->state->absorbFields($this->form->getStateSnapshot());
 
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
