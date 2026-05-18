@@ -284,25 +284,4 @@ class CreateDoorkomstZaken implements ShouldQueue
             'datumStatusGezet' => now()->toIso8601String(),
         ]);
     }
-
-    private function extractLineArrayFromZaakgeometrie(?array $zaakgeometrie): ?array
-    {
-        if (! $zaakgeometrie) {
-            return null;
-        }
-
-        if (($zaakgeometrie['type'] ?? '') === 'LineString') {
-            return $zaakgeometrie;
-        }
-
-        if (($zaakgeometrie['type'] ?? '') === 'GeometryCollection') {
-            foreach ($zaakgeometrie['geometries'] ?? [] as $subGeom) {
-                if (($subGeom['type'] ?? '') === 'LineString') {
-                    return $subGeom;
-                }
-            }
-        }
-
-        return null;
-    }
 }

@@ -107,7 +107,7 @@ final class ContactgegevensStep
                                     ->maxLength(4),
                                 TextInput::make('huisnummertoevoeging')
                                     ->label('Huisnummertoevoeging')
-                                        ->maxLength(10),
+                                    ->maxLength(10),
                                 TextInput::make('straatnaam')
                                     ->label('Straatnaam')
                                     ->required()
