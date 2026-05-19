@@ -31,6 +31,7 @@ class ViewZaak extends ViewRecord
                 ->label('Nieuwe aanvraag met deze gegevens')
                 ->icon('heroicon-o-arrow-path-rounded-square')
                 ->tooltip('Start een nieuwe aanvraag waarbij de ingevulde gegevens uit deze zaak vooraf zijn ingevuld. U kunt alles aanpassen voordat u opnieuw indient.')
+                ->visible(fn (Zaak $record): bool => $record->form_state_snapshot !== null)
                 ->action(function (Zaak $record) {
                     $this->redirect(route('filament.organiser.pages.aanvraag', [
                         'tenant' => Filament::getTenant(),
