@@ -2,8 +2,8 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Schemas\Components;
 
-use App\Models\Zaak;
 use App\Filament\Infolists\GeoJsonMapEntry as MapEntry;
+use App\Models\Zaak;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -56,15 +56,15 @@ class LocationsTab
         foreach ($geometry['geometries'] as $geom) {
             $title = match ($geom['type'] ?? '') {
                 'LineString' => 'Route van het evenement',
-                'Polygon'    => 'Buitenlocatie van het evenement',
-                'Point'      => 'Adres van het evenement',
-                default      => null,
+                'Polygon' => 'Buitenlocatie van het evenement',
+                'Point' => 'Adres van het evenement',
+                default => null,
             };
 
             $features[] = [
-                'type'       => 'Feature',
+                'type' => 'Feature',
                 'properties' => ['title' => $title],
-                'geometry'   => $geom,
+                'geometry' => $geom,
             ];
         }
 
