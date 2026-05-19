@@ -112,7 +112,7 @@ final class SubmitEventForm
             new UpdateInitiatorZGW($zaak),
             new AddGeometryZGW($zaak),
             new CreateDoorkomstZaken($zaak),
-            new HashIdentifyingAttributes($zaak),
+            // new HashIdentifyingAttributes($zaak),
         ])->dispatch();
 
         // PDF + email komen als losse (niet-ketende) jobs zodat ze

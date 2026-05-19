@@ -21,7 +21,7 @@ final class WaarvoorWiltUHetEventloketGebruikenStep
 
     public static function make(): Step
     {
-        return Step::make('Vooraankondiging')
+        return Step::make('Type aanvraag')
             ->key(self::UUID)
             ->schema([
                 Radio::make('waarvoorWiltUEventloketGebruiken')

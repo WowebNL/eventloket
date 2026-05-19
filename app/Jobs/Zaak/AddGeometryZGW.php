@@ -50,8 +50,9 @@ class AddGeometryZGW implements ShouldQueue
         $geoJson = $geometryBuilder->buildGeoJson($eventLocation);
         if ($geoJson) {
             $openzaak->zaken()->zaken()->patch($ozZaak->uuid, [
-                'zaakgeometrie' => $geoJson,
+                'zaakgeometrie' => json_decode($geoJson, true),
             ]);
+            $this->zaak->clearZgwCache();
         }
 
         foreach ($geometryBuilder->collectedAddresses() as $bagObject) {

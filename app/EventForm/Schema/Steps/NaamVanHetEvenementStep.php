@@ -10,8 +10,10 @@ use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * @openforms-step-uuid c3c17c65-0cf1-4a79-a348-75eab01f46ec
@@ -36,6 +38,10 @@ final class NaamVanHetEvenementStep
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                     ->required()
                     ->maxLength(10000)
+                    ->belowContent([
+                        Icon::make(Heroicon::InformationCircle),
+                        'Geef aan waar je evenement over gaat, wat het thema is, welke doelgroep je wilt aanspreken, waarom dit evenement interessant is om te bezoeken, wat eerdere ervaringen van bezoekers  zijn met dit evenement etc.',
+                    ])
                     ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning');
                         if ($rule !== null) {

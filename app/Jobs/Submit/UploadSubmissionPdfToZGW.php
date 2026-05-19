@@ -60,7 +60,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
             'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
-            'titel' => 'Aanvraagformulier '.$this->zaak->public_id,
+            'titel' => 'Aanvraagformulier '.$this->zaak->reference_data->naam_evenement,
             'auteur' => 'Eventloket',
             'taal' => 'dut',
             'bestandsnaam' => 'aanvraagformulier.pdf',

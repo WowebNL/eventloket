@@ -35,10 +35,10 @@ test('Type-aanvraag komt vlak vóór de Samenvatting in de wizard', function () 
     // ervóór en is óók opgenomen in de Samenvatting + PDF zelf.
     $steps = EventFormSchema::steps();
     $labels = collect($steps)->map(fn (Step $s) => $s->getLabel())->all();
-    $typeAanvraagIndex = array_search('Type aanvraag', $labels, true);
+    $typeAanvraagIndex = array_search('Aanvraag', $labels, true);
     $samenvattingIndex = array_search('Samenvatting', $labels, true);
 
-    expect($typeAanvraagIndex)->toBeInt('Type-aanvraag-stap ontbreekt')
+    expect($typeAanvraagIndex)->toBeInt('Aanvraag-stap ontbreekt')
         ->and($samenvattingIndex)->toBeInt('Samenvatting-stap ontbreekt')
         ->and($samenvattingIndex - $typeAanvraagIndex)->toBe(1);
 });

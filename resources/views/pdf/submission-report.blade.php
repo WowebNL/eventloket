@@ -32,17 +32,19 @@
     </style>
 </head>
 <body>
-    <h1>Aanvraagformulier {{ $zaak->public_id }}</h1>
+    <h1>Aanvraagformulier {{ $naamEvenement }}</h1>
     <div class="meta">
+        <div><strong>Zaaknummer:</strong> {{ $zaak->public_id }}</div>
+        @if (! empty($risicoClassificatie))
+            <div><strong>Risicoclassificatie:</strong> {{ $risicoClassificatie }}</div>
+        @endif
         <div><strong>Zaaktype:</strong> {{ $zaak->zaaktype?->name ?? '—' }}</div>
         @if (! empty($gemeenteNaam))
             <div><strong>Gemeente:</strong> {{ $gemeenteNaam }}</div>
         @endif
-        @if (! empty($risicoClassificatie))
-            <div><strong>Risicoclassificatie:</strong> {{ $risicoClassificatie }}</div>
-        @endif
-        <div><strong>Ingediend op:</strong> {{ $zaak->created_at?->timezone('Europe/Amsterdam')->translatedFormat('j F Y H:i') }}</div>
         <div><strong>Organisator:</strong> {{ $zaak->organisation?->name ?? '—' }}</div>
+        <div><strong>Aanvrager:</strong> {{ $zaak->organiserUser?->name ?? '—' }}</div>
+        <div><strong>Ingediend op:</strong> {{ $zaak->created_at?->timezone('Europe/Amsterdam')->translatedFormat('j F Y H:i') }}</div>
     </div>
 
     @forelse ($sections as $section)

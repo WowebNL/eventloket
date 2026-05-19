@@ -10,8 +10,10 @@ use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * @openforms-step-uuid ae44ab5b-c068-4ceb-b121-6e6907f78ef9
@@ -30,7 +32,11 @@ final class Vragenboom2Step
                 Radio::make('voordatUVerderGaatMetHetBeantwoordenVanDeVragenVoorUwEvenementWillenWeGraagWetenOfUEerderEenVooraankondigingHeeftIngevuldVoorDitEvenement')
                     ->label('Voordat u verder gaat met het beantwoorden van de vragen voor uw evenement willen we graag weten of u eerder een vooraankondiging heeft ingevuld voor dit evenement?')
                     ->options(JaNeeOptions::OPTIONS)
-                    ->required(),
+                    ->required()
+                    ->belowContent([
+                        Icon::make(Heroicon::InformationCircle),
+                        'Op dit moment is het nog niet mogelijk om de gegevens uit de vooraankondiging over te nemen in de definitieve aanvraag. Deze functionaliteit wordt in 2026 gebouwd.',
+                    ]),
                 TextInput::make('watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is tijdens de hele duur van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} het totaal aantal aanwezige personen van alle dagen bij elkaar opgeteld?', $livewire->state()))
                     ->numeric()

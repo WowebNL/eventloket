@@ -9,8 +9,10 @@ use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * @openforms-step-uuid 48e9408a-3455-4d3c-b9ce-5f6f08f8f2b5
@@ -118,7 +120,11 @@ final class ContactgegevensStep
                                     ->maxLength(1000),
                                 TextInput::make('land')
                                     ->label('Land')
-                                    ->maxLength(1000),
+                                    ->maxLength(1000)
+                                    ->belowContent([
+                                        Icon::make(Heroicon::InformationCircle),
+                                        'Indien niet Nederland',
+                                    ]),
                             ]),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('adresgegevens') !== false),

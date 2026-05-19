@@ -18,7 +18,6 @@
         "laravel/tinker": "^2.10.1",
         "phiki/phiki": "^2.0",
         "spatie/laravel-activitylog": "^4.10",
-        "webbingbrasil/filament-maps": "4.x-dev",
         "woweb/openzaak": "dev-main"
     },
     "require-dev": {
@@ -39,10 +38,6 @@
         "woweb/openzaak": {
             "type": "vcs",
             "url": "git@github.com:WowebNL/laravel-openzaak.git"
-        },
-        "webbingbrasil/filament-maps": {
-            "type": "vcs",
-            "url": "git@github.com:Michel-Verhoeven/filament-maps.git"
         }
     },
     "autoload": {

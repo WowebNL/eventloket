@@ -25,7 +25,7 @@ test('EventFormSchema::stepsForReport() bevat data-stappen + Type-aanvraag (zond
 
     expect($report)->toHaveCount(17)
         ->and($labels)->not->toContain('Samenvatting')
-        ->and($labels)->toContain('Type aanvraag');
+        ->and($labels)->toContain('Aanvraag');
 });
 
 test('each step has a non-empty label', function () {

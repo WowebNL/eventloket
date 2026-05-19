@@ -34,6 +34,7 @@ final class VergunningaanvraagOverigStep
             ->key(self::UUID)
             ->schema([
                 Fieldset::make('Voorwerpen op de weg')
+                    ->columns(1)
                     ->schema([
                         InfoText::info('content32', '<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>'),
                         Repeater::make('geefAanOpWelkeDataEnTijdenUDeVoorwerpenWiltPlaatsenOpDeOpenbareWegOfGroteVoertuigenWiltParkerenInDeBuurtVanHetEvenement')
@@ -77,15 +78,16 @@ final class VergunningaanvraagOverigStep
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('groteVoertuigen') !== false),
                 Fieldset::make('Verkeersregelaars')
+                    ->columns(1)
                     ->schema([
-                        InfoText::info('content33', '<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgen een aantal vragen hierover.</p>'),
+                        InfoText::info('content33', '<p>U heeft aangegeven, dat u verkeersregelaars wilt inzetten. Hieronder volgt een aantal vragen hierover.</p>'),
                         Radio::make('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie')
                             ->label('Huurt u de verkeersregelaars in bij een daarin gespecialiseerd bedrijf/organisatie?')
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
                         Textarea::make('zijnDeInTeZettenPersonenBeroepsmatigeVerkeersregelaarsOfIsErSprakeVanEvenementenverkeersregelaars')
-                            ->label('Zijn de in te zetten personen beroepsmatige verkeersregelaars of is er sprake van evenementenverkeersregelaars?')
+                            ->label('Zijn de in te zetten personen beroepsmatige verkeersregelaars ?')
                             ->required()
                             ->maxLength(10000)
                             ->hidden(function (Get $get, $livewire): bool {
@@ -96,7 +98,7 @@ final class VergunningaanvraagOverigStep
 
                                 return ! ($get('huurtUDeVerkeersregelaarsInBijEenDaarinGespecialiseerdBedrijfOrganisatie') === 'Ja');
                             }),
-                        InfoText::info('content34', '<p>In geval van zelf geworven verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>')
+                        InfoText::info('content34', '<p>In geval van zelf geworven (evenementen-)verkeersregelaars dienen de Verkeersregelaars een digitale instructie te hebben gevolgd. Kijk voor meer informatie op de website van <a href="https://verkeersregelaarsexamen.nl" target="_blank" rel="noopener noreferrer">Verkeersregelaarsexamen</a>.</p>')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('content34');
                                 if ($rule !== null) {
@@ -112,6 +114,7 @@ final class VergunningaanvraagOverigStep
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verkeersregelaars') !== false),
                 Fieldset::make('Vervoersmaatregelen')
+                    ->columns(1)
                     ->schema([
                         CheckboxList::make('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('U heeft aangegeven, dat u extra vervoersmaatregelen wilt nemen voor bezoekers van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Kruis hier aan, wat van toepassing is', $livewire->state()))
@@ -145,6 +148,7 @@ final class VergunningaanvraagOverigStep
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('vervoersmaatregelen') !== false),
                 Fieldset::make('Promotie en communicatie')
+                    ->columns(1)
                     ->schema([
                         Radio::make('wiltUPromotieMakenVoorUwEvenement')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -211,6 +215,7 @@ final class VergunningaanvraagOverigStep
                             ->maxLength(1000),
                     ]),
                 Fieldset::make('Omwonenden communicatie')
+                    ->columns(1)
                     ->schema([
                         Radio::make('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geeft u omwonenden en nabijgelegen bedrijven vooraf informatie over uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -233,6 +238,7 @@ final class VergunningaanvraagOverigStep
                             ->label('Wilt u de informatie-tekst aan de omwonende als bijlage toevoegen?'),
                     ]),
                 Fieldset::make('Organisatorische achtergrond')
+                    ->columns(1)
                     ->schema([
                         Radio::make('organiseertUUwEvenementXVoorDeEersteKeer')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?', $livewire->state()))
@@ -285,6 +291,7 @@ final class VergunningaanvraagOverigStep
                             }),
                     ]),
                 Fieldset::make('Huisregels en flankerende evenementen')
+                    ->columns(1)
                     ->schema([
                         Radio::make('hanteertUHuisregelsVoorUwEvenementX')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -320,6 +327,7 @@ final class VergunningaanvraagOverigStep
                             }),
                     ]),
                 Fieldset::make('Verzekering')
+                    ->columns(1)
                     ->schema([
                         Radio::make('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -335,6 +343,18 @@ final class VergunningaanvraagOverigStep
                                 }
 
                                 return ! ($get('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement') === 'Ja');
+                            }),
+                        Radio::make('wiltUDeVerzekeringapolisOpEenLaterTijdstipToevoegen')
+                            ->label('Wilt u de verzekeringspolis op een later tijdstip toevoegen?')
+                            ->options(JaNeeOptions::OPTIONS)
+                            ->required()
+                            ->hidden(function (Get $get, $livewire): bool {
+                                $rule = $livewire->state()->isFieldHidden('wiltUDeVerzekeringapolisOpEenLaterTijdstipToevoegen');
+                                if ($rule !== null) {
+                                    return $rule;
+                                }
+
+                                return ! ($get('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement') === 'Nee');
                             }),
                     ]),
             ]);

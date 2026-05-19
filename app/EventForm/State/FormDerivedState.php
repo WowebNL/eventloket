@@ -308,9 +308,12 @@ final class FormDerivedState
         $sum = 0.0;
         foreach (self::RISICOSCAN_VELDEN as $key) {
             $value = $this->state->get($key);
-            if (! JsTruthy::of($value)) {
-                // Eén veld nog niet ingevuld → geen classificatie. Door-fall
-                // zodat een eventueel handmatig gezette waarde wint.
+            if ($value === null) {
+                // Veld niet ingevuld → geen classificatie. Door-fall zodat
+                // een eventueel handmatig gezette waarde wint.
+                // Let op: score 0 (integer of string '0') IS een geldige
+                // selectie (laagste risico-optie); gebruik daarom geen
+                // JsTruthy-check die integer 0 als "leeg" behandelt.
                 return null;
             }
             $sum += (float) $value;

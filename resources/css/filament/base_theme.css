@@ -9,3 +9,29 @@
 @source '../../../resources/views/vendor/**/*';
 
 @source '../../../vendor/guava/calendar/resources/**/*';
+
+/* Fix: icon in belowContent stays inline (left-aligned) with multi-line text */
+.fi-sc.fi-inline {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+}
+
+.fi-sc.fi-inline > * {
+    min-width: 0;
+}
+
+/*
+ * Fix: dotswan/filament-map-picker CSS bevat een regel die alle Leaflet pane
+ * z-indexes naar "auto !important" forceert, waardoor tiles voor de GeoJSON-
+ * overlay-laag komen te staan. Onderstaande regels herstellen de Leaflet-
+ * standaard z-indexes met hogere CSS-specificiteit zodat de GeoJSON zichtbaar
+ * blijft.
+ */
+.locaties-kaart .leaflet-tile-pane       { z-index: 200 !important; }
+.locaties-kaart .leaflet-overlay-pane    { z-index: 400 !important; }
+.locaties-kaart .leaflet-shadow-pane     { z-index: 500 !important; }
+.locaties-kaart .leaflet-marker-pane     { z-index: 600 !important; }
+.locaties-kaart .leaflet-tooltip-pane    { z-index: 650 !important; }
+.locaties-kaart .leaflet-popup-pane      { z-index: 700 !important; }
+.locaties-kaart .leaflet-map-pane canvas { z-index: 100 !important; }
+.locaties-kaart .leaflet-map-pane svg    { z-index: 200 !important; }

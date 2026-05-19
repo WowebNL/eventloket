@@ -24,6 +24,12 @@
 
 <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0;">Samenvatting</h2>
 
+@if (! empty($risicoClassificatie))
+    <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #f9f9f9; border-left: 3px solid #ccc; font-size: 0.9rem;">
+        <strong>Risicoclassificatie:</strong> {{ $risicoClassificatie }}
+    </div>
+@endif
+
 @forelse ($sections as $section)
     <h3 style="margin-top: 1.5rem; font-size: 1rem; font-weight: 600;">{{ $section['title'] }}</h3>
     <table style="{{ $tableStyle }}">

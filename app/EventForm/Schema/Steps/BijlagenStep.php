@@ -6,7 +6,9 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * @openforms-step-uuid 7982e106-bce0-49cf-bdaa-ada9eac8b6ba
@@ -34,7 +36,11 @@ final class BijlagenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('ContentOverigeBijlage') !== false),
                 EventloketFileUpload::make('bijlagen1')
                     ->multiple()
-                    ->label('Overige bijlagen'),
+                    ->label('Overige bijlagen')
+                    ->belowContent([
+                        Icon::make(Heroicon::InformationCircle),
+                        'Voeg overige plannen, tekeningen en documenten toe die relevant zijn voor uw aanvraag.',
+                    ]),
             ]);
     }
 }

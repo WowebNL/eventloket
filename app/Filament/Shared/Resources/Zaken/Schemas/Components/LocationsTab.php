@@ -2,11 +2,10 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Schemas\Components;
 
-use App\Livewire\Zaken\Map;
 use App\Models\Zaak;
+use App\Filament\Infolists\GeoJsonMapEntry as MapEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Fieldset;
-use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Support\Str;
 
@@ -34,10 +33,41 @@ class LocationsTab
                     ->columnSpan(4),
                 Fieldset::make(__('municipality/resources/zaak.infolist.tabs.locations.map.label'))
                     ->schema([
-                        Livewire::make(Map::class, fn (Zaak $record) => ['geojson' => $record->openzaak->zaakgeometrie])->key('map-locations'),
+                        MapEntry::make('zaakgeometrie')
+                            ->hiddenLabel()
+                            ->geojsonData(fn (Zaak $record) => static::transformGeometry($record->openzaak->zaakgeometrie))
+                            ->defaultLocation(50.8514, 5.6910)
+                            ->extraAttributes(['class' => 'locaties-kaart'])
+                            ->hidden(fn (Zaak $record) => empty($record->openzaak->zaakgeometrie)),
                     ])
                     ->columns(1)
                     ->columnSpan(8),
             ]);
+    }
+
+    protected static function transformGeometry(?array $geometry): ?array
+    {
+        if (empty($geometry['geometries'])) {
+            return null;
+        }
+
+        $features = [];
+
+        foreach ($geometry['geometries'] as $geom) {
+            $title = match ($geom['type'] ?? '') {
+                'LineString' => 'Route van het evenement',
+                'Polygon'    => 'Buitenlocatie van het evenement',
+                'Point'      => 'Adres van het evenement',
+                default      => null,
+            };
+
+            $features[] = [
+                'type'       => 'Feature',
+                'properties' => ['title' => $title],
+                'geometry'   => $geom,
+            ];
+        }
+
+        return ['type' => 'FeatureCollection', 'features' => $features];
     }
 }

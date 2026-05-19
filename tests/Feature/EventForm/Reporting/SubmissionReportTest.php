@@ -146,19 +146,24 @@ test('Type-aanvraag-stap: vergunning + ontheffingen → entry met afgeleide onde
     $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
 
     expect($sections)->toHaveCount(1)
-        ->and($sections[0]['title'])->toBe('Type aanvraag');
+        ->and($sections[0]['title'])->toBe('Aanvraag')
+        ->and($sections[0]['entries'])->toHaveCount(2);
 
-    $value = $sections[0]['entries'][0]['value'];
+    // Entry 0: het aanvraag-type zelf (afgeleid uit FormState).
+    expect($sections[0]['entries'][0]['value'])->toBe('Evenementenvergunning');
+
+    // Entry 1: onderdelen die de aanvrager zelf moet regelen.
+    $zelfTeRegelen = $sections[0]['entries'][1]['value'];
     foreach ([
-        'Evenementenvergunning',
         'Ontheffing Alcoholwet',
         'Gebruiksmelding brandveilig gebruik en basishulpverlening overige plaatsen',
         'Ontheffing plaatsen object of parkeren grote voertuigen op de openbare weg',
-        'Kansspelen',
-        'Aanstellingsbesluit verkeersregelaars',
+        'Vergunning kansspelen',
     ] as $verwacht) {
-        expect($value)->toContain($verwacht);
+        expect($zelfTeRegelen)->toContain($verwacht);
     }
+    // Aanstellingsbesluit is tijdelijk uitgeschakeld (commented out).
+    expect($zelfTeRegelen)->not->toContain('Aanstellingsbesluit verkeersregelaars');
 });
 
 test('Type-aanvraag-stap: vooraankondiging-pad → alleen Vooraankondiging', function () {

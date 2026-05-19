@@ -40,7 +40,9 @@ final class GenerateSubmissionPdf implements ShouldQueue
         // berekent ze on-the-fly uit de state).
         $evenementInGemeente = $state->get('evenementInGemeente');
         $gemeenteNaam = is_array($evenementInGemeente) ? ($evenementInGemeente['name'] ?? null) : null;
-        $risicoClassificatie = $state->get('risicoClassificatie');
+        $risicoClassificatie = $state->get('risicoClassificatie')
+            ?? $this->zaak->reference_data->risico_classificatie;
+        $naamEvenement = $state->get('watIsDeNaamVanHetEvenementVergunning') ?? $this->zaak->reference_data->naam_evenement;
 
         // De AVG-akkoord-checkbox staat op de aparte SamenvattingStep en
         // valt daarom buiten de SubmissionReport-walk; voor de PDF willen
@@ -54,6 +56,7 @@ final class GenerateSubmissionPdf implements ShouldQueue
             'sections' => $sections,
             'gemeenteNaam' => $gemeenteNaam,
             'risicoClassificatie' => $risicoClassificatie,
+            'naamEvenement' => $naamEvenement,
             'akkoordGegeven' => $akkoordGegeven,
         ])->setPaper('a4');
 

@@ -14,8 +14,10 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * @openforms-step-uuid 8a5fb30f-287e-41a2-a9bc-e7340bdaaa99
@@ -32,6 +34,7 @@ final class VergunningaanvraagMaatregelenStep
             ->key(self::UUID)
             ->schema([
                 Fieldset::make('Aanpassen locatie en/of verwijderen straatmeubilair')
+                    ->columns(1)
                     ->schema([
                         InfoText::info('content29', '<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>'),
                         Textarea::make('geefEenOmschrijvingWelkeAanpassingenOpLocatieEvenementXWaarNodigZijnOfWelkStraatmeubilairUWiltVerwijderenOfAanpassen')
@@ -41,6 +44,7 @@ final class VergunningaanvraagMaatregelenStep
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('aanpassenLocatieEnOfVerwijderenStraatmeubilair') !== false),
                 Fieldset::make('Extra afval')
+                    ->columns(1)
                     ->schema([
                         InfoText::info('content30', '<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>'),
                         Repeater::make('wieMaaktDeLocatiesEnDeOmgevingDaarvanSchoonEnWanneerGebeurtDat')
@@ -78,6 +82,10 @@ final class VergunningaanvraagMaatregelenStep
                             ->live(),
                         FileUpload::make('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen')
                             ->label('U kunt het afvalplan hier uploaden of later als bijlage toevoegen.')
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                ' In het afvalplan vertelt u welke maatregelen u neemt om afval te voorkomen en te beperken. Daarnaast geeft u aan, welke afvalstromen er zijn en hoe deze verwerkt en opgeruimd worden.',
+                            ])
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen');
                                 if ($rule !== null) {
@@ -88,63 +96,6 @@ final class VergunningaanvraagMaatregelenStep
                             }),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('extraAfval') !== false),
-                Fieldset::make('Gemeentelijke hulpmiddelen')
-                    ->schema([
-                        Radio::make('wilUGebruikMakenVanGemeentelijkeHulpmiddelen')
-                            ->label('Wil U gebruik maken van gemeentelijke hulpmiddelen?')
-                            ->options(JaNeeOptions::OPTIONS)
-                            ->required()
-                            ->live(),
-                        Fieldset::make('Veldengroep')
-                            ->schema([
-                                InfoText::info('content37', '<p>Vermeld hier van welke materialen u gebruik zou willen maken en ook de aantallen. Uw betreffende gemeente zal aangeven welke hulpmiddelen aangeboden kunnen worden.</p>'),
-                                TextInput::make('dranghekken1')
-                                    ->label('Dranghekken')
-                                    ->numeric(),
-                                TextInput::make('wegafzettingen1')
-                                    ->label('Wegafzettingen')
-                                    ->numeric(),
-                                TextInput::make('vlaggen1')
-                                    ->label('Vlaggen')
-                                    ->numeric(),
-                                TextInput::make('vlaggenmasten1')
-                                    ->label('Vlaggenmasten')
-                                    ->numeric(),
-                                TextInput::make('parkeerverbodsborden1')
-                                    ->label('Parkeerverbodsborden')
-                                    ->numeric(),
-                                TextInput::make('bordenGeslotenVerklaring1')
-                                    ->label('Borden gesloten verklaring')
-                                    ->numeric(),
-                                TextInput::make('bordenEenrichtingsweg1')
-                                    ->label('Borden eenrichtingsweg')
-                                    ->numeric(),
-                                Radio::make('wenstUTegenBetalingStroomAfTeNemenVanDeGemeente1')
-                                    ->label('Wenst u tegen betaling stroom af te nemen van de gemeente?')
-                                    ->options(JaNeeOptions::OPTIONS)
-                                    ->required(),
-                                Textarea::make('geefAanOpWelkeLocatieUStroomWilt1')
-                                    ->label('Geef aan op welke locatie u stroom wilt afnemen')
-                                    ->required()
-                                    ->maxLength(10000)
-                                    ->hidden(function (Get $get, $livewire): bool {
-                                        $rule = $livewire->state()->isFieldHidden('geefAanOpWelkeLocatieUStroomWilt1');
-                                        if ($rule !== null) {
-                                            return $rule;
-                                        }
-
-                                        return ! ($get('wenstUTegenBetalingStroomAfTeNemenVanDeGemeente') === 'Ja');
-                                    }),
-                            ])
-                            ->hidden(function (Get $get, $livewire): bool {
-                                $rule = $livewire->state()->isFieldHidden('veldengroep2');
-                                if ($rule !== null) {
-                                    return $rule;
-                                }
-
-                                return ! ($get('wilUGebruikMakenVanGemeentelijkeHulpmiddelen') === 'Ja');
-                            }),
-                    ]),
             ]);
     }
 }

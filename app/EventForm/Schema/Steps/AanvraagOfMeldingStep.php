@@ -29,8 +29,7 @@ final class AanvraagOfMeldingStep
         return Step::make('Vergunningsplichtig scan')
             ->key(self::UUID)
             ->schema([
-                InfoText::info('content4', '<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p>'),
-                InfoText::info('contentGemeenteMelding', '<p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>')
+                InfoText::info('content4', '<p>Wij stellen u enkele vragen over uw evenement om te beoordelen of uw evenement meldingsplichtig of vergunningsplichtig is.</p> <p>Uw evenement vindt plaats binnen de gemeente: <strong>{% get_value evenementInGemeente \'name\' %}</strong></p>')
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentGemeenteMelding') !== false),
                 Fieldset::make('Algemene vragen')
                     ->columns(1)

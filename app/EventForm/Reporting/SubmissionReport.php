@@ -100,6 +100,10 @@ final class SubmissionReport
             if ($typeEntry !== null) {
                 $entries[] = $typeEntry;
             }
+            $zelfEntry = $this->buildZelfTeRegelenEntry($state);
+            if ($zelfEntry !== null) {
+                $entries[] = $zelfEntry;
+            }
         }
 
         $walk = function (object $component, ?string $keyPrefix = null) use (&$walk, &$entries, $state, $stubLivewire, $isTijdenStep): void {
@@ -188,6 +192,27 @@ final class SubmissionReport
                 'header' => ['Activiteit', 'Start', 'Eind'],
                 'rows' => $rijenMetData,
             ],
+        ];
+    }
+
+    /**
+     * Bouw één entry voor de onderdelen die de organisator zelf moet
+     * regelen (niet via Eventloket). Retourneert null als er niets
+     * zelf geregeld hoeft te worden.
+     *
+     * @return array{label: string, value: string}|null
+     */
+    private function buildZelfTeRegelenEntry(FormState $state): ?array
+    {
+        $items = TypeAanvraagOnderdelen::buildZelfTeRegelenList($state);
+
+        if ($items === []) {
+            return null;
+        }
+
+        return [
+            'label' => 'Zelf te regelen (niet via Eventloket)',
+            'value' => implode(', ', $items),
         ];
     }
 

@@ -20,7 +20,7 @@ final class TypeAanvraagStep
 
     public static function make(): Step
     {
-        return Step::make('Type aanvraag')
+        return Step::make('Aanvraag')
             ->key(self::UUID)
             ->schema([
                 InfoText::info('content35', fn (FormState $state) => self::renderOnderdelen($state)),
@@ -54,8 +54,21 @@ final class TypeAanvraagStep
             $lijst .= '</ul>';
         }
 
-        $outro = '<p>Alle onderdelen worden door de behandelaar opgepakt, wanneer van toepassing.</p>';
+        $center = '<p>Indien van toepassing dient u additioneel zelf de onderstaande vergunningen te verzorgen middels de daarvoor bestemde formulieren en in overleg met de behandelaar van uw gemeente:</p>';
+        $zelfTeRegelen = TypeAanvraagOnderdelen::buildZelfTeRegelenList($state);
+        $lijstZelfTeRegelen = '';
+        if ($zelfTeRegelen !== []) {
+            $lijstZelfTeRegelen = '<ul>';
+            foreach ($zelfTeRegelen as $item) {
+                $lijstZelfTeRegelen .= '<li><strong>'.e($item).'</strong></li>';
+            }
+            $lijstZelfTeRegelen .= '</ul>';
+        }
 
-        return $intro.$lijst.$outro;
+        if ($lijstZelfTeRegelen) {
+            return $intro.$lijst.$center.$lijstZelfTeRegelen;
+        }
+
+        return $intro.$lijst;
     }
 }

@@ -162,9 +162,9 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     // 4. Draft is leeggemaakt.
     expect(Draft::where('user_id', $sc['user']->id)->count())->toBe(0);
 
-    // 5. De 7 jobs zitten samen in één Bus::chain() in de juiste volgorde.
-    //    SetInitialStatusZGW staat als eerste; Hash als laatste zodat ZGW-jobs
-    //    nooit op gehashte data draaien.
+    // 5. De 6 jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    //    SetInitialStatusZGW staat als eerste; HashIdentifyingAttributes is
+    //    tijdelijk uitgeschakeld.
     Bus::assertChained([
         SetInitialStatusZGW::class,
         AddZaakeigenschappenZGW::class,
@@ -172,7 +172,6 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
         UpdateInitiatorZGW::class,
         AddGeometryZGW::class,
         CreateDoorkomstZaken::class,
-        HashIdentifyingAttributes::class,
     ]);
 
     // 6. PDF en bijlagen-upload draaien onafhankelijk (niet in de ketting)

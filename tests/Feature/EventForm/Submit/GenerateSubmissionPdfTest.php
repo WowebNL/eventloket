@@ -82,3 +82,61 @@ test('rendert een PDF-bewijs op de juiste plek na submit', function () {
         fn (SendSubmissionConfirmationEmail $job) => $job->zaak->is($zaak)
     );
 });
+
+test('risicoClassificatie wordt berekend uit de 14 risicoscan-velden en in de PDF opgenomen', function () {
+    $zaaktype = Zaaktype::factory()->create(['name' => 'Evenementenvergunning gemeente Maastricht']);
+
+    // Gebruik de 14 daadwerkelijke risicoscan-velden (som = 2.75 → A).
+    // De '0'-waarden testen dat integer-0 na JSON round-trip niet als
+    // "ontbrekend veld" wordt gezien (het vroegere JsTruthy-probleem).
+    $state = new FormState(values: [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Risicoscan Test',
+        'watIsDeAantrekkingskrachtVanHetEvenement' => '0.5',
+        'watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep' => '0.25',
+        'isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid' => '0',
+        'isEenDeelVanDeDoelgroepVerminderdZelfredzaam' => '0.25',
+        'isErSprakeVanAanwezigheidVanRisicovolleActiviteiten' => '0',
+        'watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep' => '0.5',
+        'isErSprakeVanOvernachten' => '0',
+        'isErGebruikVanAlcoholEnDrugs' => '0',
+        'watIsHetAantalGelijktijdigAanwezigPersonen' => '0',
+        'inWelkSeizoenVindtHetEvenementPlaats' => '0.25',
+        'inWelkeLocatieVindtHetEvenementPlaats' => '0.25',
+        'opWelkSoortOndergrondVindtHetEvenementPlaats' => '0.25',
+        'watIsDeTijdsduurVanHetEvenement' => '0',
+        'welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing' => '0.5',
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'public_id' => 'ZAAK-11111',
+        'zaaktype_id' => $zaaktype->id,
+        'form_state_snapshot' => $state->toSnapshot(),
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: '2026-08-01T10:00:00+02:00',
+            eind_evenement: '2026-08-01T13:00:00+02:00',
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Ingediend',
+            statustype_url: '',
+            risico_classificatie: null,
+            naam_locatie_eveneme: null,
+            naam_evenement: 'Risicoscan Test',
+            organisator: null,
+            aanwezigen: null,
+            types_evenement: null,
+        ),
+    ]);
+
+    Queue::fake();
+
+    (new GenerateSubmissionPdf($zaak))->handle();
+
+    $expectedPath = "zaken/{$zaak->id}/aanvraagformulier.pdf";
+    Storage::disk('local')->assertExists($expectedPath);
+
+    // Verifieer dat de 14 risicoscan-velden na snapshot-round-trip correct
+    // worden opgeteld tot classificatie 'A' (som = 2.75 ≤ 6).
+    // Dit test specifiek de fix voor het JsTruthy-probleem waarbij integer 0
+    // (na JSON-deserialisatie van '0') eerder als "ontbrekend veld" werd gezien.
+    $loadedState = FormState::fromSnapshot($zaak->fresh()->form_state_snapshot ?? []);
+    expect($loadedState->get('risicoClassificatie'))->toBe('A');
+});

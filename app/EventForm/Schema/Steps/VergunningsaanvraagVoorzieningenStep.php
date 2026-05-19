@@ -13,8 +13,9 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
-use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Icons\Heroicon;
 
 /**
  * @openforms-step-uuid f4e91db5-fd74-4eba-b818-96ed2cc07d84
@@ -41,35 +42,59 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->label('Hoeveel tijdelijke chemische toiletten / Dixies zijn er beschikbaar?')
                             ->numeric()
                             ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Een chemisch toilet heeft geen wateraansluiting nodig en is niet aangesloten op het riool.',
+                            ])
                             ->live(),
                         TextInput::make('hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar')
                             ->label('Hoeveel tijdelijke gespoelde toiletten zijn er beschikbaar?')
                             ->numeric()
                             ->required()
-                            ->hidden(function (Get $get, $livewire): bool {
-                                $rule = $livewire->state()->isFieldHidden('hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar');
-                                if ($rule !== null) {
-                                    return $rule;
-                                }
-
-                                return $get('hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar') === '0';
-                            }),
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Een gespoeld toilet heeft een wateraansluiting nodig en is aangesloten op het riool.',
+                            ]),
+                        TextInput::make('hoeveelPlaskruizenZijnErBeschikbaar')
+                            ->label('Hoeveel plaskruizen zijn er beschikbaar?')
+                            ->numeric()
+                            ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Een plaskruis heeft geen wateraansluiting nodig en is niet aangesloten op het riool.',
+                            ]),
                         TextInput::make('welkPercentageVanDeToilettenIsVoorHeren')
                             ->label('Hoeveel toiletten zijn voor heren?')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Reken op 1 herentoilet per 300 mannen + 1 urinoir per 75 mannen. Ingeval van langere duur (>6 uur) verhoog het aantal met 20%-30%. Ingeval van alcoholgebruik verhoog met 25%-35%.',
+                            ]),
                         TextInput::make('aantalToilettenDamen')
                             ->label('Hoeveel toiletten zijn voor dames?')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Reken op 1 damestoilet per 100 vrouwen. Ingeval van langere duur (>6 uur) verhoog het aantal met 20%-30%. Ingeval van alcoholgebruik verhoog met 25%-35%.',
+                            ]),
                         TextInput::make('aantalToilettenMiva')
                             ->label('Hoeveel toiletten zijn voor MIVA/rolstoelgebruikers?')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Reken op minimaal 1 toilet per 2000 bezoekers.',
+                            ]),
                         TextInput::make('handenwaspunten')
                             ->label('Hoeveel handenwaspunten worden er bij de toiletten ingericht op locatie Evenement ')
                             ->numeric()
-                            ->required(),
+                            ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Let op, dat het volgens de hygiene richtlijnen verplicht is om waspunten aan te bieden. Reken op 1 waspunt per 4 toiletten of 1 waspunt per 200 personen.',
+                            ]),
                         Radio::make('reinigtUDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunning')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Reinigt u de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                             ->options(JaNeeOptions::OPTIONS)
@@ -77,12 +102,16 @@ final class VergunningsaanvraagVoorzieningenStep
                         Radio::make('gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?', $livewire->state()))
                             ->options(JaNeeOptions::OPTIONS)
-                            ->required(),
+                            ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Met oppervlaktewater wordt bedoeld water, dat zich boven de grond bevindt, zoals bijv. in sloten, rivieren of meren.',
+                            ]),
                     ])
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wCs') !== false),
                 Fieldset::make('Douche\'s')
                     ->schema([
-                        InfoText::info('content24', '<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgen een aantal vragen hierover.</p>'),
+                        InfoText::info('content24', '<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgt een aantal vragen hierover.</p>'),
                         TextInput::make('hoeveelVasteDouchevoorzieningenZijnBeschikbaar')
                             ->label('Hoeveel vaste douchevoorzieningen zijn beschikbaar?')
                             ->numeric()
@@ -99,7 +128,7 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('douches') !== false),
                 Fieldset::make('EHBO')
                     ->schema([
-                        InfoText::info('content25', '<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgen een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>'),
+                        InfoText::info('content25', '<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgt een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>'),
                         TextInput::make('aantalVasteEersteHulpposten')
                             ->label('Aantal vaste eerste hulpposten')
                             ->numeric()
@@ -259,7 +288,7 @@ final class VergunningsaanvraagVoorzieningenStep
                     ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('bouwsels') !== false),
                 Fieldset::make('Beveiligers')
                     ->schema([
-                        InfoText::info('content36', '<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgen een aantal vragen daarover.</p>'),
+                        InfoText::info('content36', '<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgt een aantal vragen daarover.</p>'),
                         Textarea::make('gegevensBeveiligingsorganisatieOpLocatieEvenementX1')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                             ->required()
@@ -272,6 +301,10 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->label('Vestigingsplaats beveiligingsorganisatie')
                             ->required()
                             ->maxLength(1000),
+                        TextInput::make('telefoonnummerBeveiligingsorganisatie1')
+                            ->label('Telefoonnummer beveiligingsorganisatie')
+                            ->tel()
+                            ->required(),
                         TextInput::make('aantalBeveiligersOpLocatieEvenementX1')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Aantal beveiligers op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
                             ->numeric()

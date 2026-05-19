@@ -19,6 +19,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
+use Illuminate\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -32,6 +33,8 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
 
     #[Locked]
     public Zaak $zaak;
+
+    public bool $hasDocuments = false;
 
     public function mount(Zaak $zaak): void
     {
@@ -128,11 +131,15 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
             ])
             ->headerActions([
                 UploadDocumentAction::make($this->zaak),
-            ]);
+            ])
+            ->emptyStateHeading('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...')
+            ->emptyStateDescription(null);
     }
 
-    public function render()
+    public function render(): View
     {
-        return view('livewire.shared.table');
+        $this->hasDocuments = $this->zaak->documenten->isNotEmpty();
+
+        return view('livewire.zaken.zaak-documents-table');
     }
 }

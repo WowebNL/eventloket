@@ -42,8 +42,20 @@ final class TypeAanvraagOnderdelen
         // `null` returnt (zie FormDerivedState::alcoholvergunning) —
         // niet een bool. Zonder die specifieke check zou de ontheffing
         // nooit in de "Onderdelen aanvraag"-lijst belanden.
+        return $items;
+    }
+
+    /**
+     * Items die de aanvrager zelf nog moet regelen (niet via Eventloket).
+     *
+     * @return list<string>
+     */
+    public static function buildZelfTeRegelenList(FormState $state): array
+    {
+        $items = [];
+
         if ($state->get('alcoholvergunning') === 'Ja') {
-            $items[] = 'Ontheffing Alcoholwet';
+            $items[] = 'Ontheffing Alcoholwet, indien een externe organisatie verantwoordelijk is';
         }
         if ($state->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A3') === true) {
             $items[] = 'Gebruiksmelding brandveilig gebruik en basishulpverlening overige plaatsen';
@@ -55,11 +67,11 @@ final class TypeAanvraagOnderdelen
             $items[] = 'Ontheffing plaatsen object of parkeren grote voertuigen op de openbare weg';
         }
         if ($state->get('kruisAanWatVanToepassingIsVoorUwEvenementX.A4') === true) {
-            $items[] = 'Kansspelen';
+            $items[] = 'Vergunning kansspelen';
         }
-        if ($state->get('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX.A51') === true) {
-            $items[] = 'Aanstellingsbesluit verkeersregelaars';
-        }
+        // if ($state->get('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX.A51') === true) {
+        //     $items[] = 'Aanstellingsbesluit verkeersregelaars';
+        // }
 
         return $items;
     }

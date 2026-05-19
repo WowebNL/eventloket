@@ -25,9 +25,11 @@ final class VergunningsaanvraagVoorwerpenStep
             ->key(self::UUID)
             ->schema([
                 Fieldset::make('Voorwerpen')
+                    ->columns(1)
                     ->schema([
                         InfoText::info('content27', '<p>U heeft aangegeven, dat er diverse voorwerpen geplaatst worden. Wilt u hier de aantallen en locaties (indien meerdere) invullen?</p>'),
                         Repeater::make('verkooppuntenToegangsKaarten')
+                            ->minItems(1)
                             ->label('Verkooppunten toegangs-kaarten')
                             ->schema([
                                 TextInput::make('locatieVerkooppuntToegangskaart')
@@ -41,6 +43,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ])
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verkooppuntenToegangsKaarten') !== false),
                         Repeater::make('verkooppuntenMuntenEnBonnen')
+                            ->minItems(1)
                             ->label('Verkooppunten munten en bonnen')
                             ->schema([
                                 TextInput::make('locatieVerkooppuntMuntenBonnen')
@@ -68,6 +71,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verkooppuntenCashless') !== false),
                         Repeater::make('Speeltoestellen')
                             ->label('Speeltoestellen')
+                            ->minItems(1)
                             ->schema([
                                 TextInput::make('locatiespeeltoestellen')
                                     ->label('Locatie')
@@ -81,6 +85,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('Speeltoestellen') !== false),
                         Repeater::make('brandstofopslag')
                             ->label('Brandstofopslag')
+                            ->minItems(1)
                             ->schema([
                                 TextInput::make('locatiebrandstofopslag')
                                     ->label('Locatie')
@@ -94,6 +99,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('brandstofopslag') !== false),
                         Repeater::make('geluidstorens')
                             ->label('Geluidstorens')
+                            ->minItems(1)
                             ->schema([
                                 TextInput::make('locatieGeluidstoren')
                                     ->label('Locatie')
@@ -107,6 +113,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('geluidstorens') !== false),
                         Repeater::make('Lichtmasten')
                             ->label('Lichtmasten')
+                            ->minItems(1)
                             ->schema([
                                 TextInput::make('locatieLichtmast')
                                     ->label('Locatie')
@@ -120,6 +127,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('Lichtmasten') !== false),
                         Repeater::make('marktkramen')
                             ->label('Marktkramen')
+                            ->minItems(1)
                             ->schema([
                                 TextInput::make('locatieMarktkraam')
                                     ->label('Locatie')
@@ -133,6 +141,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('marktkramen') !== false),
                         Repeater::make('andersGroup')
                             ->label('Anders')
+                            ->minItems(1)
                             ->schema([
                                 TextInput::make('locatieAnders')
                                     ->label('Locatie')
@@ -151,6 +160,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         InfoText::info('content28', '<p>U heeft aangegeven, dat er sprake is van Aggregaten,&nbsp; brandstofopslag en andere brandgevaarlijke stoffen. Denk aan :</p><ul><li>Aggregaten</li><li>Brandstofopslag</li><li>Gasflessen</li><li>Frituur</li><li>Houtskoolbarbecue</li><li>Open vuur (vuurplaats, vuurkorven)</li><li>Vuurwerk</li><li>Carbid-, kanon- en kamerschieten</li><li>Materiaal voor showeffecten</li></ul>'),
                         Repeater::make('welkeStoffenGebruiktU')
                             ->label('Welke stoffen gebruikt u?')
+                            ->minItems(1)
                             ->schema([
                                 TextInput::make('typeStof')
                                     ->label('Type stof')

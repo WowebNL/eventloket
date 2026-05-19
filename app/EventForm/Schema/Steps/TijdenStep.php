@@ -7,12 +7,16 @@ namespace App\EventForm\Schema\Steps;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
+use Carbon\Carbon;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\HtmlString;
 
 /**
@@ -41,6 +45,17 @@ final class TijdenStep
                                 'after_or_equal' => 'De startdatum van het evenement moet vandaag of later zijn.',
                             ])
                             ->required()
+                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                                if (! $state) {
+                                    return;
+                                }
+                                $month = Carbon::parse($state)->month;
+                                $set('inWelkSeizoenVindtHetEvenementPlaats', in_array($month, [3, 4, 5, 9, 10, 11], strict: true) ? '0.25' : '0.5');
+                            })
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Dit is het startmoment wanneer u bezoekers of deelnemers verwacht.',
+                            ])
                             ->live(),
                         DateTimePicker::make('EvenementEind')
                             ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
@@ -51,6 +66,10 @@ final class TijdenStep
                                 'after_or_equal' => 'De einddatum van het evenement moet op of na de startdatum liggen.',
                             ])
                             ->required()
+                            ->belowContent([
+                                Icon::make(Heroicon::InformationCircle),
+                                'Dit is het eindmoment wanneer u bezoekers of deelnemers verwacht.',
+                            ])
                             ->live(),
                     ]),
                 InfoText::info('evenmentenInDeBuurtContent', '<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>')

@@ -60,7 +60,11 @@ final class SamenvattingStep
     private static function renderHtml(FormState $state): string
     {
         $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
+        $risicoClassificatie = $state->get('risicoClassificatie');
 
-        return view('event-form.samenvatting', ['sections' => $sections])->render();
+        return view('event-form.samenvatting', [
+            'sections' => $sections,
+            'risicoClassificatie' => $risicoClassificatie,
+        ])->render();
     }
 }
