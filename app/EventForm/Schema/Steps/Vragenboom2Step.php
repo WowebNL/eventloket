@@ -6,6 +6,7 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Template\LabelRenderer;
+use Closure;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
@@ -44,6 +45,14 @@ final class Vragenboom2Step
                 TextInput::make('watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is het maximaal aanwezige aantal personen dat op enig moment aanwezig kan zijn bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
                     ->numeric()
+                    ->rules([
+                        fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
+                            $totaal = $get('watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld');
+                            if (filled($totaal) && (int) $value > (int) $totaal) {
+                                $fail('Dit aantal mag niet hoger zijn dan het totaal aantal aanwezige personen van alle dagen bij elkaar opgeteld.');
+                            }
+                        },
+                    ])
                     ->required(),
                 Radio::make('watZijnDeBelangrijksteLeeftijdscategorieenVanHetPubliekTijdensUwEvenement')
                     ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat zijn de belangrijkste leeftijdscategorieen van het publiek tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
