@@ -70,7 +70,10 @@ class CreateDoorkomstZaken implements ShouldQueue
             ->unique()
             ->toArray();
 
-        $passing = $all->reject(fn ($m) => in_array($m->brk_identification, $excluded, true));
+        $hoofdZaakMuniBrk = $this->zaak->municipality?->brk_identification;
+
+        $passing = $all->reject(fn ($m) => in_array($m->brk_identification, $excluded, true))
+            ->reject(fn ($m) => $hoofdZaakMuniBrk && $m->brk_identification === $hoofdZaakMuniBrk);
         if ($passing->isEmpty()) {
             return;
         }
