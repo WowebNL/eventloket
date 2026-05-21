@@ -36,7 +36,7 @@ use Woweb\Openzaak\Openzaak;
  * @property array<string, mixed> $form_state_snapshot
  * @property array<string, mixed>|null $imported_data
  * @property-read ?Organisation                $organisation
- * @property-read Municipality                 $municipality
+ * @property-read ?Municipality                $municipality
  * @property-read Collection<Informatieobject> $documenten
  */
 #[ObservedBy(ZaakObserver::class)]
