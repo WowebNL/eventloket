@@ -7,6 +7,7 @@ namespace App\Jobs\Submit;
 use App\Enums\DocumentVertrouwelijkheden;
 use App\EventForm\Schema\EventFormSchema;
 use App\Models\Zaak;
+use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -69,16 +70,43 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
             return;
         }
 
-        // Filter eerst op aanwezigheid op disk; pas resolve & POST als er
-        // daadwerkelijk een bestand te uploaden valt. Voorkomt onnodige
-        // ZGW-roundtrips wanneer alle paden verdwenen zijn.
+        // De waarden komen ongevalideerd uit form_state_snapshot: de submit-
+        // flow dehydrateert via getStateSnapshot() en draait dus géén
+        // FileUpload-validatie. Een organisator kan daardoor een willekeurig
+        // pad in de state injecteren dat naar de upload-map van een andere
+        // organisatie wijst. We dwingen hier daarom twee checks af:
+        //   1. Containment: het pad moet binnen de upload-map van DEZE zaak
+        //      z'n organisatie liggen (event-form-uploads/<org_id>/...).
+        //   2. Bestandstype: het MIME-type moet op de document-allowlist staan
+        //      (blokkeert o.a. executables/scripts) — de check die normaal in
+        //      de form-request had moeten draaien.
         $disk = Storage::disk('local');
+        $toegestanePrefix = sprintf('event-form-uploads/%s/', $this->zaak->organisation_id);
         $aanwezig = [];
         foreach ($bestandPaden as $pad) {
+            if (! str_starts_with($pad, $toegestanePrefix)) {
+                Log::warning('UploadFormBijlagenToZGW: bijlage-pad buiten de eigen upload-map geweigerd', [
+                    'zaak_id' => $this->zaak->id,
+                    'organisation_id' => $this->zaak->organisation_id,
+                    'pad' => $pad,
+                ]);
+
+                continue;
+            }
             if (! $disk->exists($pad)) {
                 Log::warning('UploadFormBijlagenToZGW: bijlage ontbreekt op disk', [
                     'zaak_id' => $this->zaak->id,
                     'pad' => $pad,
+                ]);
+
+                continue;
+            }
+            $mime = (string) $disk->mimeType($pad);
+            if (! DocumentUploadType::storedMimeTypeIsAllowed($mime)) {
+                Log::warning('UploadFormBijlagenToZGW: bijlage met niet-toegestaan bestandstype geweigerd', [
+                    'zaak_id' => $this->zaak->id,
+                    'pad' => $pad,
+                    'mime' => $mime,
                 ]);
 
                 continue;

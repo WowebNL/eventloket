@@ -81,19 +81,18 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
     $this->actingAs(User::factory()->create(['role' => Role::Organiser]));
 
     $zaaktype = Zaaktype::factory()->create();
+    $org = Organisation::factory()->create(['name' => 'Media Tuin']);
+    $pad = "event-form-uploads/{$org->id}/buurtfeest-veiligheidsplan.pdf";
     $zaak = Zaak::factory()->create([
         'zgw_zaak_url' => 'https://zgw.example.com/zaken/api/v1/zaken/abc-123',
-        'organisation_id' => Organisation::factory()->create(['name' => 'Media Tuin'])->id,
+        'organisation_id' => $org->id,
         'zaaktype_id' => $zaaktype->id,
         'form_state_snapshot' => ['values' => [
-            'bijlagen1' => 'event-form-uploads/buurtfeest-veiligheidsplan.pdf',
+            'bijlagen1' => $pad,
         ]],
     ]);
 
-    Storage::disk('local')->put(
-        'event-form-uploads/buurtfeest-veiligheidsplan.pdf',
-        'fake pdf content'
-    );
+    Storage::disk('local')->put($pad, 'fake pdf content');
 
     // Skip de OpenZaak-GETs door de twee caches te seeden die de job
     // achter de schermen consumeert: zaak.openzaak (voor bronorganisatie)
@@ -170,12 +169,13 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
 test('bijlage-pad dat niet meer op disk staat → log waarschuwing, geen call voor dat bestand', function () {
     Log::spy();
 
+    $org = Organisation::factory()->create();
     $zaak = Zaak::factory()->create([
         'zgw_zaak_url' => 'https://zgw.example.com/zaken/api/v1/zaken/uuid-1',
-        'organisation_id' => Organisation::factory()->create()->id,
+        'organisation_id' => $org->id,
         'zaaktype_id' => Zaaktype::factory()->create()->id,
         'form_state_snapshot' => ['values' => [
-            'veiligheidsplan' => 'documents/verdwenen.pdf',
+            'veiligheidsplan' => "event-form-uploads/{$org->id}/verdwenen.pdf",
         ]],
     ]);
 
@@ -184,6 +184,61 @@ test('bijlage-pad dat niet meer op disk staat → log waarschuwing, geen call vo
 
     Log::shouldHaveReceived('warning')
         ->withArgs(fn (string $message) => str_contains($message, 'bijlage ontbreekt op disk'))
+        ->once();
+    Http::assertNothingSent();
+});
+
+test('security: bijlage-pad buiten de eigen organisatie-map wordt geweigerd', function () {
+    Log::spy();
+
+    // Aanvaller (organisatie A) injecteert via de form-state een pad dat
+    // naar de upload-map van een ándere organisatie (id 999) wijst. Het
+    // bestand bestáát op disk, maar valt buiten event-form-uploads/<eigen
+    // org_id>/ → de job mag het niet uploaden.
+    $org = Organisation::factory()->create();
+    $vreemdPad = 'event-form-uploads/999/geheim-veiligheidsplan.pdf';
+    Storage::disk('local')->put($vreemdPad, 'andermans vertrouwelijke plan');
+
+    $zaak = Zaak::factory()->create([
+        'zgw_zaak_url' => 'https://zgw.example.com/zaken/api/v1/zaken/uuid-1',
+        'organisation_id' => $org->id,
+        'zaaktype_id' => Zaaktype::factory()->create()->id,
+        'form_state_snapshot' => ['values' => [
+            'bijlagen1' => $vreemdPad,
+        ]],
+    ]);
+
+    (new UploadFormBijlagenToZGW($zaak))->handle();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message) => str_contains($message, 'buiten de eigen upload-map geweigerd'))
+        ->once();
+    Http::assertNothingSent();
+});
+
+test('security: bijlage met niet-toegestaan bestandstype wordt geweigerd', function () {
+    Log::spy();
+
+    // Een binnen de eigen map opgeslagen, maar uitvoerbaar bestand mag niet
+    // alsnog als zaakdocument naar OpenZaak — de submit-flow draait geen
+    // FileUpload-validatie, dus de job is de laatste verdedigingslinie.
+    $org = Organisation::factory()->create();
+    $pad = "event-form-uploads/{$org->id}/kwaadaardig.php";
+    Storage::disk('local')->put($pad, "<?php system(\$_GET['c']); ?>");
+
+    $zaak = Zaak::factory()->create([
+        'zgw_zaak_url' => 'https://zgw.example.com/zaken/api/v1/zaken/uuid-1',
+        'organisation_id' => $org->id,
+        'zaaktype_id' => Zaaktype::factory()->create()->id,
+        'form_state_snapshot' => ['values' => [
+            'bijlagen1' => $pad,
+        ]],
+    ]);
+
+    (new UploadFormBijlagenToZGW($zaak))->handle();
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message) => str_contains($message, 'niet-toegestaan bestandstype geweigerd'))
         ->once();
     Http::assertNothingSent();
 });
