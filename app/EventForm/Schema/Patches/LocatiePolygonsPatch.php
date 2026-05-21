@@ -14,17 +14,19 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use ReflectionObject;
 
 /**
- * Vervangt na `LocatieVanHetEvenement2Step::make()` de transpiler-
- * gegenereerde Repeater rond `locatieSOpKaart` door één TextInput
- * (`naamVanDeLocatieKaart`) plus één Map (`locatieSOpKaart`) waarop
- * de organisator zoveel polygonen kan tekenen als 'ie wil. De Map
- * ondersteunt zelf al multi-feature in één FeatureCollection, dus
- * de Repeater voegde alleen verwarrende dubbele nesting toe.
+ * Vervangt na `LocatieVanHetEvenement2Step::make()` de Repeater rond
+ * `locatieSOpKaart` door één TextInput (`naamVanDeLocatieKaart`) plus
+ * één Map (`locatieSOpKaart`) waarop de organisator zoveel polygonen
+ * kan tekenen als 'ie wil. De Map ondersteunt zelf al multi-feature in
+ * één FeatureCollection, dus de Repeater voegde alleen verwarrende
+ * dubbele nesting toe.
  *
- * Waarom een patch i.p.v. de step-file zelf editen: de TranspileEventForm-
- * test wist `app/EventForm/Schema/Steps/` en regenereert 'm bij elke run.
- * Een hand-edit zou daar elke keer uit gewist worden. Deze post-process
- * leeft buiten de wipe-zone en verandert de Step pas op runtime.
+ * Historisch een runtime-patch omdat de (inmiddels verwijderde)
+ * transpiler `app/EventForm/Schema/Steps/` bij elke run wiste, waardoor
+ * een hand-edit in de step-file niet bleef staan. Die reden is vervallen:
+ * deze logica zou nu rechtstreeks in `LocatieVanHetEvenement2Step` kunnen
+ * leven. Zolang dat niet gebeurd is, blijft de patch op runtime de Step
+ * aanpassen.
  *
  * State-shape effect:
  *

@@ -6,7 +6,8 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
-use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Schema\Hidden;
+use App\EventForm\Schema\Label;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
@@ -38,11 +39,11 @@ final class VergunningaanvraagMaatregelenStep
                     ->schema([
                         InfoText::info('content29', '<p>U heeft aangekruisd: (Laten) aanpassen locatie en/of verwijderen straatmeubilair.</p>'),
                         Textarea::make('geefEenOmschrijvingWelkeAanpassingenOpLocatieEvenementXWaarNodigZijnOfWelkStraatmeubilairUWiltVerwijderenOfAanpassen')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geef een omschrijving welke aanpassingen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }} waar nodig zijn of welk straatmeubilair u wilt verwijderen of aanpassen.', $livewire->state()))
+                            ->label(Label::render('Geef een omschrijving welke aanpassingen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }} waar nodig zijn of welk straatmeubilair u wilt verwijderen of aanpassen.'))
                             ->required()
                             ->maxLength(10000),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('aanpassenLocatieEnOfVerwijderenStraatmeubilair') !== false),
+                    ->hidden(Hidden::rule('aanpassenLocatieEnOfVerwijderenStraatmeubilair')),
                 Fieldset::make('Extra afval')
                     ->columns(1)
                     ->schema([
@@ -68,11 +69,11 @@ final class VergunningaanvraagMaatregelenStep
                                     ->required(),
                             ]),
                         TextInput::make('hoeveelExtraAfvalinzamelpuntenGaatUOpLocatieEvenementXPlaatsen')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Hoeveel extra afvalinzamelpunten gaat u op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. plaatsen?', $livewire->state()))
+                            ->label(Label::render('Hoeveel extra afvalinzamelpunten gaat u op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. plaatsen?'))
                             ->numeric()
                             ->required(),
                         Radio::make('doetUAanAfvalscheidingOpLocatieEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Doet u aan afvalscheiding op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Doet u aan afvalscheiding op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                         Radio::make('voertUDeSchoonmaakZelfUit')
@@ -95,7 +96,7 @@ final class VergunningaanvraagMaatregelenStep
                                 return ! ($get('voertUDeSchoonmaakZelfUit') === 'Ja');
                             }),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('extraAfval') !== false),
+                    ->hidden(Hidden::rule('extraAfval')),
             ]);
     }
 }

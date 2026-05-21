@@ -27,9 +27,10 @@ use Filament\Schemas\Components\Wizard\Step;
 
 /**
  * Compositie-factory voor het complete evenementformulier: 18 stappen
- * (17 transpiled uit OF + 1 hand-geschreven Samenvatting vlak voor de
- * laatste 'Indienen'-actie). Elke OF-stap leeft in z'n eigen gegenereerde
- * klasse; deze factory plakt ze in volgorde aan elkaar.
+ * (17 ooit getranspileerd uit OpenForms + 1 hand-geschreven Samenvatting
+ * vlak voor de laatste 'Indienen'-actie). De step-klassen zijn sinds het
+ * verwijderen van de transpiler gewoon hand-onderhouden code; deze factory
+ * plakt ze in volgorde aan elkaar.
  *
  * Volgorde Type-aanvraag → Samenvatting: behandelaars / organisators
  * willen op de samenvatting eerst zien wélke aanvraag er gedaan wordt

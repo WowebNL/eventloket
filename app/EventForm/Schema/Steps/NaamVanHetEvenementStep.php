@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\JaNeeOptions;
-use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Schema\Label;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -35,7 +35,7 @@ final class NaamVanHetEvenementStep
                     ->maxLength(1000)
                     ->live(),
                 Textarea::make('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
+                    ->label(Label::render('Geef een korte omschrijving van het evenement {{ watIsDeNaamVanHetEvenementVergunning }}'))
                     ->required()
                     ->maxLength(10000)
                     ->belowContent([
@@ -51,7 +51,7 @@ final class NaamVanHetEvenementStep
                         return $get('watIsDeNaamVanHetEvenementVergunning') === null || $get('watIsDeNaamVanHetEvenementVergunning') === '';
                     }),
                 Select::make('soortEvenement')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Wat voor soort evenement is {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->options([
                         'Buurt-, barbecue of straatfeest, buitenspeeldagen, (eindejaars-)feesten, garagesales' => 'Buurt-, barbecue of straatfeest, buitenspeeldagen, (eindejaars-)feesten, garagesales',
                         'Muziekevenement Cultuur- of kunstevenement of toneelvoorstellingen' => 'Muziekevenement Cultuur- of kunstevenement of toneelvoorstellingen',

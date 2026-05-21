@@ -6,7 +6,8 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
-use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Schema\Hidden;
+use App\EventForm\Schema\Label;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
@@ -96,11 +97,11 @@ final class VergunningsaanvraagVoorzieningenStep
                                 'Let op, dat het volgens de hygiene richtlijnen verplicht is om waspunten aan te bieden. Reken op 1 waspunt per 4 toiletten of 1 waspunt per 200 personen.',
                             ]),
                         Radio::make('reinigtUDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunning')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Reinigt u de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Reinigt u de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                         Radio::make('gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?', $livewire->state()))
+                            ->label(Label::render('Gebruiken de tijdelijke toiletten op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor het spoelen oppervlaktewater?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->belowContent([
@@ -108,7 +109,7 @@ final class VergunningsaanvraagVoorzieningenStep
                                 'Met oppervlaktewater wordt bedoeld water, dat zich boven de grond bevindt, zoals bijv. in sloten, rivieren of meren.',
                             ]),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wCs') !== false),
+                    ->hidden(Hidden::rule('wCs')),
                 Fieldset::make('Douche\'s')
                     ->schema([
                         InfoText::info('content24', '<p>U heeft aangegeven, dat er douches geplaatst worden (of bestaande gebruiken). Hieronder volgt een aantal vragen hierover.</p>'),
@@ -125,7 +126,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('douches') !== false),
+                    ->hidden(Hidden::rule('douches')),
                 Fieldset::make('EHBO')
                     ->schema([
                         InfoText::info('content25', '<p>U heeft aangegeven extra medische voorzieningen te treffen (EHBO). Hieronder volgt een aantal vragen daarover.</p><p>Meer informatie vind u op de website van <a href="https://www.evenementenz.org/wp/veldnorm/ " target="_blank" rel="noopener noreferrer">Veldnorm Evenementenzorg</a>.</p>'),
@@ -170,7 +171,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->required()
                             ->maxLength(1000),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('ehbo') !== false),
+                    ->hidden(Hidden::rule('ehbo')),
                 Fieldset::make('Verzorging van kinderen jonger dan 12 jaar')
                     ->schema([
                         TextInput::make('voorHoeveelKinderenInTotaalJongerDan12JaarIsVerzorgingNodig')
@@ -209,11 +210,11 @@ final class VergunningsaanvraagVoorzieningenStep
                                     ->required(),
                             ]),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verzorgingVanKinderenJongerDan12Jaar') !== false),
+                    ->hidden(Hidden::rule('verzorgingVanKinderenJongerDan12Jaar')),
                 Fieldset::make('Overnachtingen')
                     ->schema([
                         TextInput::make('voorHoeveelMensenVerzorgtUOvernachtingenTijdensUwEvenement1')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Voor hoeveel mensen verzorgt u overnachtingen tijdens uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Voor hoeveel mensen verzorgt u overnachtingen tijdens uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->numeric()
                             ->required(),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers')
@@ -244,7 +245,7 @@ final class VergunningsaanvraagVoorzieningenStep
                                     ->columnSpanFull()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1') !== false),
+                            ->hidden(Hidden::rule('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1')),
                         Radio::make('isErSprakeVanOvernachtenDoorPubliekDeelnemers1')
                             ->label('Is er sprake van overnachten door personeel/organisatie?')
                             ->options(JaNeeOptions::OPTIONS)
@@ -273,24 +274,24 @@ final class VergunningsaanvraagVoorzieningenStep
                                     ->columnSpanFull()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2') !== false),
+                            ->hidden(Hidden::rule('opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2')),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('overnachtingen') !== false),
+                    ->hidden(Hidden::rule('overnachtingen')),
                 Fieldset::make('Bouwsels')
                     ->schema([
                         InfoText::info('content26', '<p>U heeft aangegeven, dat er diverse bouwsels geplaatst worden. Wilt u hier meer infomatie verstrekken over deze bouwsels?</p>'),
                         TextInput::make('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?', $livewire->state()))
+                            ->label(Label::render('Wat is het maximale aantal personen dat tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} aanwezig is in een tent of andere besloten ruimte (podium, bouwwerk etc)?'))
                             ->numeric()
                             ->required()
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc') !== false),
+                            ->hidden(Hidden::rule('watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc')),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('bouwsels') !== false),
+                    ->hidden(Hidden::rule('bouwsels')),
                 Fieldset::make('Beveiligers')
                     ->schema([
                         InfoText::info('content36', '<p>U heeft aangegeven, dat u beveiligers wilt inhuren. Hieronder volgt een aantal vragen daarover.</p>'),
                         Textarea::make('gegevensBeveiligingsorganisatieOpLocatieEvenementX1')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
+                            ->label(Label::render('Gegevens beveiligingsorganisatie op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}'))
                             ->required()
                             ->maxLength(10000),
                         TextInput::make('vergunningnummerBeveiligingsorganisatie1')
@@ -306,11 +307,11 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->tel()
                             ->required(),
                         TextInput::make('aantalBeveiligersOpLocatieEvenementX1')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Aantal beveiligers op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
+                            ->label(Label::render('Aantal beveiligers op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}'))
                             ->numeric()
                             ->required(),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('beveiligers1') !== false),
+                    ->hidden(Hidden::rule('beveiligers1')),
             ]);
     }
 }

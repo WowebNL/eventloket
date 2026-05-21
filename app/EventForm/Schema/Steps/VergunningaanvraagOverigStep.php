@@ -6,7 +6,8 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
-use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Schema\Hidden;
+use App\EventForm\Schema\Label;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DateTimePicker;
@@ -76,7 +77,7 @@ final class VergunningaanvraagOverigStep
                             ->label('Vul hier eventueel informatie in over het plaatsen van voorwerpen op de openbare weg of het parkeren van grote voertuigen.')
                             ->maxLength(10000),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('groteVoertuigen') !== false),
+                    ->hidden(Hidden::rule('groteVoertuigen')),
                 Fieldset::make('Verkeersregelaars')
                     ->columns(1)
                     ->schema([
@@ -112,12 +113,12 @@ final class VergunningaanvraagOverigStep
                             ->numeric()
                             ->required(),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verkeersregelaars') !== false),
+                    ->hidden(Hidden::rule('verkeersregelaars')),
                 Fieldset::make('Vervoersmaatregelen')
                     ->columns(1)
                     ->schema([
                         CheckboxList::make('uHeeftAangegevenDatUExtraVervoersmaatregelenWiltNemenVoorBezoekersVanUwEvenementXKruisHierAanWatVanToepassingIs')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('U heeft aangegeven, dat u extra vervoersmaatregelen wilt nemen voor bezoekers van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Kruis hier aan, wat van toepassing is', $livewire->state()))
+                            ->label(Label::render('U heeft aangegeven, dat u extra vervoersmaatregelen wilt nemen voor bezoekers van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Kruis hier aan, wat van toepassing is'))
                             ->options([
                                 'extraParkeerplekkenInrichten' => 'Extra parkeerplekken inrichten',
                                 'extraFietsenstallingenPlaatsen' => 'Extra fietsenstallingen plaatsen',
@@ -146,12 +147,12 @@ final class VergunningaanvraagOverigStep
                             ->required()
                             ->maxLength(10000),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('vervoersmaatregelen') !== false),
+                    ->hidden(Hidden::rule('vervoersmaatregelen')),
                 Fieldset::make('Promotie en communicatie')
                     ->columns(1)
                     ->schema([
                         Radio::make('wiltUPromotieMakenVoorUwEvenement')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
@@ -173,7 +174,7 @@ final class VergunningaanvraagOverigStep
                                 return ! ($get('wiltUPromotieMakenVoorUwEvenement') === 'Ja');
                             }),
                         CheckboxList::make('hoeWiltUPromotieMakenVoorUwEvenement')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Hoe wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Hoe wilt u promotie maken voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options([
                                 'driehoeksBorden' => '(Driehoeks)borden',
                                 'posters' => 'Posters',
@@ -205,20 +206,20 @@ final class VergunningaanvraagOverigStep
                                 return ! (in_array('anders', (array) $get('hoeWiltUPromotieMakenVoorUwEvenement'), true));
                             }),
                         TextInput::make('websiteVanUwEvenement')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Website van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
+                            ->label(Label::render('Website van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}'))
                             ->maxLength(1000),
                         TextInput::make('facebookVanUwEvenement1')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Facebookpagina van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
+                            ->label(Label::render('Facebookpagina van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}'))
                             ->maxLength(1000),
                         TextInput::make('xPaginaVanUwEvenementWatIsDeNaamVanHetEvenementVergunning')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('X-pagina van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
+                            ->label(Label::render('X-pagina van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}'))
                             ->maxLength(1000),
                     ]),
                 Fieldset::make('Omwonenden communicatie')
                     ->columns(1)
                     ->schema([
                         Radio::make('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Geeft u omwonenden en nabijgelegen bedrijven vooraf informatie over uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Geeft u omwonenden en nabijgelegen bedrijven vooraf informatie over uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
@@ -241,7 +242,7 @@ final class VergunningaanvraagOverigStep
                     ->columns(1)
                     ->schema([
                         Radio::make('organiseertUUwEvenementXVoorDeEersteKeer')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?', $livewire->state()))
+                            ->label(Label::render('Organiseert u uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} voor de eerste keer?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
@@ -294,7 +295,7 @@ final class VergunningaanvraagOverigStep
                     ->columns(1)
                     ->schema([
                         Radio::make('hanteertUHuisregelsVoorUwEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Hanteert u huisregels voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
@@ -309,7 +310,7 @@ final class VergunningaanvraagOverigStep
                                 return ! ($get('hanteertUHuisregelsVoorUwEvenementX') === 'Ja');
                             }),
                         Radio::make('organiseertUOokFlankerendeEvenementenSideEventsTijdensUwEvenementEvenementNaamSittard2024')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Organiseert u ook flankerende evenementen (side events) tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
@@ -330,7 +331,7 @@ final class VergunningaanvraagOverigStep
                     ->columns(1)
                     ->schema([
                         Radio::make('heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Heeft u een evenementenverzekering afgesloten voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),

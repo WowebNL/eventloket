@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Schema\Hidden;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
@@ -40,7 +41,7 @@ final class WaarvoorWiltUHetEventloketGebruikenStep
                             ->numeric()
                             ->required(),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('vooraankondiginggroep') !== false),
+                    ->hidden(Hidden::rule('vooraankondiginggroep')),
             ]);
     }
 }

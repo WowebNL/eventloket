@@ -6,8 +6,9 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\AddressNL;
 use App\EventForm\Components\InfoText;
+use App\EventForm\Schema\Hidden;
+use App\EventForm\Schema\Label;
 use App\EventForm\State\FormState;
-use App\EventForm\Template\LabelRenderer;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
@@ -50,7 +51,7 @@ final class LocatieVanHetEvenement2Step
             })
             ->schema([
                 CheckboxList::make('waarVindtHetEvenementPlaats')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Waar vindt het evenement {{ watIsDeNaamVanHetEvenementVergunning }} plaats?', $livewire->state()))
+                    ->label(Label::render('Waar vindt het evenement {{ watIsDeNaamVanHetEvenementVergunning }} plaats?'))
                     ->options([
                         'gebouw' => 'In een gebouw of meerdere gebouwen',
                         'buiten' => 'Buiten op één of meerdere plaatsen',
@@ -67,7 +68,7 @@ final class LocatieVanHetEvenement2Step
                             ->maxLength(1000),
                         AddressNL::make('adresVanHetGebouwWaarUwEvenementPlaatsvindt1', 'Adres van het gebouw waar uw evenement plaatsvindt.'),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('adresVanDeGebouwEn') !== false),
+                    ->hidden(Hidden::rule('adresVanDeGebouwEn')),
                 Repeater::make('locatieSOpKaart')
                     ->label('Locatie(s) op kaart')
                     ->schema([
@@ -95,7 +96,7 @@ final class LocatieVanHetEvenement2Step
                             ->columnSpanFull()
                             ->required(),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('locatieSOpKaart') !== false),
+                    ->hidden(Hidden::rule('locatieSOpKaart')),
                 Fieldset::make('Route')
                     ->schema([
                         InfoText::info('infoGpx1', '<p>Wanneer het een eenvoudige route betreft (bijvoorbeeld voor een processie), dan kun je hieronder de route intekenen op de kaart.</p><p>Ingeval het een complexe route betreft (bijvoorbeeld een wielertocht), dan wordt aanbevolen om de route op de kaart globaal in te tekenen, zodat de applicatie kan herkennen door welke gemeenten de route gaat (en deze daarover informeren). Voor de detailroute bieden we hieronder de mogelijkheid voor het uploaden van een GPX bestand.</p>'),
@@ -229,17 +230,17 @@ final class LocatieVanHetEvenement2Step
                         return ! (in_array('route', (array) $get('waarVindtHetEvenementPlaats'), true));
                     }),
                 InfoText::warning('NotWithin', '<h3>Let op</h3><p>Een ingevoerd adres of (een deel van) een getekende route of locatie valt buiten de gemeenten die EventLoket gebruiken.</p><p>Eventloket wordt gebruikt door de gemeenten:&nbsp;{{ alleGemeenteNamen }}</p>')
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('NotWithin') !== false),
+                    ->hidden(Hidden::rule('NotWithin')),
                 Radio::make('userSelectGemeente')
                     ->label('De ingevoerde locatie(s) of route valt binnen of doorkruist meerdere gemeenten, wat is de gemeente waarbinnen u de aanvraag wilt doen?')
                     ->options(fn ($livewire): array => collect((array) $livewire->state()->get('inGemeentenResponse.all.items'))->mapWithKeys(fn ($item) => [(string) ($item['brk_identification'] ?? '') => (string) ($item['name'] ?? '')])->all())
                     ->required()
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('userSelectGemeente') !== false)
+                    ->hidden(Hidden::rule('userSelectGemeente'))
                     ->live(),
                 InfoText::info('contentRouteDoorkuistMeerdereGemeenteInfo', '<p>De ingetekende route doorkruist de volgende gemeente(n): {{ routeDoorGemeentenNamen|join:", " }} &nbsp;U gaat de vergunningaanvraag invullen voor de gemeente&nbsp;<strong> {% get_value evenementInGemeente \'name\' %}</strong>, de overige gemeente(n) die gebruik maken van Eventloket op de route zullen automatisch geïnformeerd worden.</p>')
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('contentRouteDoorkuistMeerdereGemeenteInfo') !== false),
+                    ->hidden(Hidden::rule('contentRouteDoorkuistMeerdereGemeenteInfo')),
                 InfoText::info('content200', '<p>U gaat verder met deze aanraag voor de gemeente:<strong> {% get_value evenementInGemeente \'name\' %}</strong></p>')
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('content200') !== false),
+                    ->hidden(Hidden::rule('content200')),
             ]);
     }
 

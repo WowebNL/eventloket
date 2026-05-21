@@ -6,6 +6,8 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
+use App\EventForm\Schema\Hidden;
+use App\EventForm\Schema\Label;
 use App\EventForm\Template\LabelRenderer;
 use Carbon\Carbon;
 use Filament\Forms\Components\DateTimePicker;
@@ -37,7 +39,7 @@ final class TijdenStep
                 Grid::make(1)
                     ->schema([
                         DateTimePicker::make('EvenementStart')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(today())
                             ->afterOrEqual(today()->toDateString())
@@ -58,7 +60,7 @@ final class TijdenStep
                             ])
                             ->live(),
                         DateTimePicker::make('EvenementEind')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('EvenementStart') ?: today())
                             ->afterOrEqual('EvenementStart')
@@ -73,16 +75,16 @@ final class TijdenStep
                             ->live(),
                     ]),
                 InfoText::info('evenmentenInDeBuurtContent', '<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>')
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('evenmentenInDeBuurtContent') !== false),
+                    ->hidden(Hidden::rule('evenmentenInDeBuurtContent')),
                 Radio::make('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))
+                    ->label(Label::render('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?'))
                     ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->live(),
                 Grid::make(1)
                     ->schema([
                         DateTimePicker::make('OpbouwStart')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(today())
                             ->maxDate(fn (Get $get) => $get('OpbouwEind') ?: $get('EvenementStart'))
@@ -101,7 +103,7 @@ final class TijdenStep
                             })
                             ->live(),
                         DateTimePicker::make('OpbouwEind')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('OpbouwStart') ?: today())
                             ->maxDate(fn (Get $get) => $get('EvenementStart'))
@@ -121,18 +123,18 @@ final class TijdenStep
                             ->live(),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXOpbouwactiviteiten')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?', $livewire->state()))
+                    ->label(Label::render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?'))
                     ->options(JaNeeOptions::OPTIONS)
                     ->required(),
                 Radio::make('zijnErAansluitendAanHetEvenementAfbouwactiviteiten')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er aansluitend aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?', $livewire->state()))
+                    ->label(Label::render('Zijn er aansluitend aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?'))
                     ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->live(),
                 Grid::make(1)
                     ->schema([
                         DateTimePicker::make('AfbouwStart')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('EvenementEind') ?: today())
                             ->maxDate(fn (Get $get) => $get('AfbouwEind'))
@@ -151,7 +153,7 @@ final class TijdenStep
                             })
                             ->live(),
                         DateTimePicker::make('AfbouwEind')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('AfbouwStart') ?: $get('EvenementEind'))
                             ->afterOrEqual('AfbouwStart')
@@ -170,7 +172,7 @@ final class TijdenStep
                             ->live(),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXAfbouwactiviteiten3')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?', $livewire->state()))
+                    ->label(Label::render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?'))
                     ->options(JaNeeOptions::OPTIONS)
                     ->required(),
                 TextEntry::make('overzichtTijden')

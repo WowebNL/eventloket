@@ -85,77 +85,55 @@ final class EventLocationGeometryBuilder
     }
 
     /**
-     * Pak ALLE LineString-geometrieën uit de input. Zelfde logica als
-     * `parseMultipolygons` maar voor lijnen — twee shapes:
-     *
-     *  1. Nieuw: één Map-state-object met meerdere features in
-     *     `geojson.features[]`. Sinds de Repeater eruit kunnen er
-     *     meerdere routes op één kaart staan.
-     *  2. Oud (Repeater-rows): `[{routeVanHetEvenement: {...}}, ...]`
-     *     — backward-compat voor bestaande drafts.
+     * Pak ALLE LineString-geometrieën uit de route-input.
      *
      * @return list<Geometry>
      */
     private function parseLines(mixed $line): array
     {
-        $json = is_array($line) ? json_encode($line) : OpenFormsNormalizer::normalizeGeoJson($line);
-        $decoded = json_decode((string) $json, true);
-        if (! is_array($decoded)) {
-            return [];
-        }
-
-        $mapStates = isset($decoded['geojson'])
-            ? [$decoded]
-            : array_values(array_filter($decoded, static fn ($row) => is_array($row)));
-
-        $out = [];
-        foreach ($mapStates as $mapState) {
-            $candidate = is_array($mapState) ? ($mapState['routeVanHetEvenement'] ?? $mapState) : null;
-            if (! is_array($candidate)) {
-                continue;
-            }
-            $features = $candidate['geojson']['features'] ?? null;
-            if (! is_array($features)) {
-                // Fallback voor pre-Map state-shapes (bv. wanneer OF nog
-                // een platte LineString in de FormState had staan).
-                $array = ArrayHelper::findElementWithKey($candidate, 'coordinates');
-                if ($array) {
-                    $out[] = (new GeoJsonReader)->read((string) json_encode($array));
-                }
-
-                continue;
-            }
-            foreach ($features as $feature) {
-                $geometry = is_array($feature) ? ($feature['geometry'] ?? null) : null;
-                if (! is_array($geometry) || ! isset($geometry['type'], $geometry['coordinates'])) {
-                    continue;
-                }
-                $out[] = (new GeoJsonReader)->read((string) json_encode($geometry));
-            }
-        }
-
-        return $out;
+        return $this->parseGeometries(
+            $line,
+            OpenFormsNormalizer::normalizeGeoJson(...),
+            'routeVanHetEvenement',
+        );
     }
 
     /**
-     * Pak ALLE polygon-geometrieën uit de input. Twee shapes mogelijk:
-     *
-     *  1. Nieuw: één Map-state-object `{lat, lng, geojson: {features: [...]}}`.
-     *     Map ondersteunt multi-feature, dus features[] kan N polygonen
-     *     bevatten — die we allemaal teruggeven.
-     *  2. Oud (Repeater-rows): `[{...}, {...}]` met per rij een
-     *     `buitenLocatieVanHetEvenement` Map-state. Backward-compat
-     *     voor bestaande drafts.
-     *
-     * In beide gevallen pakken we `features[].geometry` — dat zijn
-     * losstaande GeoJSON-shapes die `GeoJsonReader::read()` direct
-     * inleest.
+     * Pak ALLE polygon-geometrieën uit de locatie-input.
      *
      * @return list<Geometry>
      */
     private function parseMultipolygons(mixed $multipolygons): array
     {
-        $json = is_array($multipolygons) ? json_encode($multipolygons) : OpenFormsNormalizer::normalizeJson($multipolygons);
+        return $this->parseGeometries(
+            $multipolygons,
+            OpenFormsNormalizer::normalizeJson(...),
+            'buitenLocatieVanHetEvenement',
+        );
+    }
+
+    /**
+     * Gedeelde parser voor lijnen én polygonen — beide leveren hun
+     * geometrie in identiek gevormde Map-state aan, alleen de normalizer
+     * en de Repeater-row-key verschillen. Twee shapes worden ondersteund:
+     *
+     *  1. Nieuw: één Map-state-object met meerdere features in
+     *     `geojson.features[]`. Sinds de Repeater eruit kunnen er
+     *     meerdere routes/polygonen op één kaart staan.
+     *  2. Oud (Repeater-rows): `[{<candidateKey>: {...}}, ...]` —
+     *     backward-compat voor bestaande drafts.
+     *
+     * In beide gevallen pakken we `features[].geometry`; ontbreekt die,
+     * dan vallen we terug op een recursieve zoektocht naar `coordinates`
+     * (pre-Map state-shapes uit de oude OF-flow).
+     *
+     * @param  callable(string): ?string  $normalizer  zet een ruwe string-payload om naar geldige JSON
+     * @param  string  $candidateKey  Repeater-row-key voor de oude shape
+     * @return list<Geometry>
+     */
+    private function parseGeometries(mixed $input, callable $normalizer, string $candidateKey): array
+    {
+        $json = is_array($input) ? json_encode($input) : $normalizer($input);
         $decoded = json_decode((string) $json, true);
         if (! is_array($decoded)) {
             return [];
@@ -169,15 +147,14 @@ final class EventLocationGeometryBuilder
 
         $out = [];
         foreach ($mapStates as $mapState) {
-            $candidate = is_array($mapState) ? ($mapState['buitenLocatieVanHetEvenement'] ?? $mapState) : null;
+            $candidate = is_array($mapState) ? ($mapState[$candidateKey] ?? $mapState) : null;
             if (! is_array($candidate)) {
                 continue;
             }
             $features = $candidate['geojson']['features'] ?? null;
             if (! is_array($features)) {
-                // Fallback: oude flow waar de FormSubmissionObject hier al
-                // genormaliseerde geometrieën leverde — recursief zoeken
-                // naar coordinates, exact zoals de oorspronkelijke code.
+                // Fallback voor pre-Map state-shapes (bv. wanneer OF nog
+                // een platte geometrie in de FormState had staan).
                 $array = ArrayHelper::findElementWithKey($candidate, 'coordinates');
                 if ($array) {
                     $out[] = (new GeoJsonReader)->read((string) json_encode($array));

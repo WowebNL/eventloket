@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Schema\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
@@ -41,7 +42,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verkooppuntenToegangsKaarten') !== false),
+                            ->hidden(Hidden::rule('verkooppuntenToegangsKaarten')),
                         Repeater::make('verkooppuntenMuntenEnBonnen')
                             ->minItems(1)
                             ->label('Verkooppunten munten en bonnen')
@@ -55,7 +56,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verkooppuntenMuntenEnBonnen') !== false),
+                            ->hidden(Hidden::rule('verkooppuntenMuntenEnBonnen')),
                         Repeater::make('verkooppuntenCashless')
                             ->label('Verkooppunten cashless')
                             ->schema([
@@ -68,7 +69,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('verkooppuntenCashless') !== false),
+                            ->hidden(Hidden::rule('verkooppuntenCashless')),
                         Repeater::make('Speeltoestellen')
                             ->label('Speeltoestellen')
                             ->minItems(1)
@@ -82,7 +83,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('Speeltoestellen') !== false),
+                            ->hidden(Hidden::rule('Speeltoestellen')),
                         Repeater::make('brandstofopslag')
                             ->label('Brandstofopslag')
                             ->minItems(1)
@@ -96,7 +97,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('brandstofopslag') !== false),
+                            ->hidden(Hidden::rule('brandstofopslag')),
                         Repeater::make('geluidstorens')
                             ->label('Geluidstorens')
                             ->minItems(1)
@@ -110,7 +111,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('geluidstorens') !== false),
+                            ->hidden(Hidden::rule('geluidstorens')),
                         Repeater::make('Lichtmasten')
                             ->label('Lichtmasten')
                             ->minItems(1)
@@ -124,7 +125,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('Lichtmasten') !== false),
+                            ->hidden(Hidden::rule('Lichtmasten')),
                         Repeater::make('marktkramen')
                             ->label('Marktkramen')
                             ->minItems(1)
@@ -138,7 +139,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('marktkramen') !== false),
+                            ->hidden(Hidden::rule('marktkramen')),
                         Repeater::make('andersGroup')
                             ->label('Anders')
                             ->minItems(1)
@@ -152,9 +153,9 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('andersGroup') !== false),
+                            ->hidden(Hidden::rule('andersGroup')),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('voorwerpen') !== false),
+                    ->hidden(Hidden::rule('voorwerpen')),
                 Fieldset::make('Brandgevaarlijke stoffen')
                     ->schema([
                         InfoText::info('content28', '<p>U heeft aangegeven, dat er sprake is van Aggregaten,&nbsp; brandstofopslag en andere brandgevaarlijke stoffen. Denk aan :</p><ul><li>Aggregaten</li><li>Brandstofopslag</li><li>Gasflessen</li><li>Frituur</li><li>Houtskoolbarbecue</li><li>Open vuur (vuurplaats, vuurkorven)</li><li>Vuurwerk</li><li>Carbid-, kanon- en kamerschieten</li><li>Materiaal voor showeffecten</li></ul>'),
@@ -180,7 +181,7 @@ final class VergunningsaanvraagVoorwerpenStep
                                     ->maxLength(1000),
                             ]),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('brandgevaarlijkeStoffen') !== false),
+                    ->hidden(Hidden::rule('brandgevaarlijkeStoffen')),
             ]);
     }
 }

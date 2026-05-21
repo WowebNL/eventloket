@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
+use App\EventForm\Schema\Hidden;
 use Carbon\Carbon;
 use Filament\Forms\Components\Radio;
 use Filament\Schemas\Components\Icon;
@@ -243,7 +244,7 @@ final class RisicoscanStep
                     ])
                     ->live(),
                 InfoText::info('risicoClassificatieContent', '<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>')
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('risicoClassificatieContent') !== false),
+                    ->hidden(Hidden::rule('risicoClassificatieContent')),
             ]);
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\JaNeeOptions;
-use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Schema\Label;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
@@ -39,11 +39,11 @@ final class Vragenboom2Step
                         'Op dit moment is het nog niet mogelijk om de gegevens uit de vooraankondiging over te nemen in de definitieve aanvraag. Deze functionaliteit wordt in 2026 gebouwd.',
                     ]),
                 TextInput::make('watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is tijdens de hele duur van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} het totaal aantal aanwezige personen van alle dagen bij elkaar opgeteld?', $livewire->state()))
+                    ->label(Label::render('Wat is tijdens de hele duur van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} het totaal aantal aanwezige personen van alle dagen bij elkaar opgeteld?'))
                     ->numeric()
                     ->required(),
                 TextInput::make('watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is het maximaal aanwezige aantal personen dat op enig moment aanwezig kan zijn bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Wat is het maximaal aanwezige aantal personen dat op enig moment aanwezig kan zijn bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->numeric()
                     ->rules([
                         fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get): void {
@@ -55,7 +55,7 @@ final class Vragenboom2Step
                     ])
                     ->required(),
                 Radio::make('watZijnDeBelangrijksteLeeftijdscategorieenVanHetPubliekTijdensUwEvenement')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat zijn de belangrijkste leeftijdscategorieen van het publiek tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Wat zijn de belangrijkste leeftijdscategorieen van het publiek tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->options([
                         '018Jaar' => '0 - 18 jaar',
                         '1830Jaar' => '18 - 30 jaar',
@@ -64,11 +64,11 @@ final class Vragenboom2Step
                     ])
                     ->required(),
                 Radio::make('isUwEvenementXGratisToegankelijkVoorHetPubliek')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} gratis toegankelijk voor het publiek?', $livewire->state()))
+                    ->label(Label::render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} gratis toegankelijk voor het publiek?'))
                     ->options(JaNeeOptions::OPTIONS)
                     ->required(),
                 CheckboxList::make('kruisAanWatVanToepassingIsVoorUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan wat van toepassing is voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Kruis aan wat van toepassing is voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->options([
                         'A1' => '(Versterkte) muziek',
                         'A2' => 'Versterkte spraak',
@@ -84,7 +84,7 @@ final class Vragenboom2Step
                     ])
                     ->live(),
                 CheckboxList::make('welkeVoorzieningenZijnAanwezigBijUwEvenement')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Welke voorzieningen zijn aanwezig bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->options([
                         'A12' => 'WC\'s plaatsen (of bestaande gebruiken) ',
                         'A13' => 'Douches plaatsen (of bestaande gebruiken) ',
@@ -113,7 +113,7 @@ final class Vragenboom2Step
                         return ! (in_array('A22', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true));
                     }),
                 CheckboxList::make('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Welke voorwerpen gaat u plaatsen bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->options([
                         'A23' => 'Verkooppunten  voor toegangskaarten',
                         'A24' => 'Verkooppunten  voor consumptiemunten of -bonnen',
@@ -126,7 +126,7 @@ final class Vragenboom2Step
                     ])
                     ->live(),
                 Textarea::make('welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('welke ander voorwerpen gaat u plaatsen bij evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('welke ander voorwerpen gaat u plaatsen bij evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->maxLength(10000)
                     ->hidden(function (Get $get, $livewire): bool {
                         $rule = $livewire->state()->isFieldHidden('welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX');
@@ -137,7 +137,7 @@ final class Vragenboom2Step
                         return ! (in_array('A30', (array) $get('welkeVoorwerpenGaatUPlaatsenBijUwEvenementX'), true));
                     }),
                 CheckboxList::make('kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Kruis aan welke overige maatregelen/gevolgen van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->options([
                         'A31' => 'Toegangscontrole',
                         'A32' => '(Laten) aanpassen locatie en/of verwijderen straatmeubilair',
@@ -148,7 +148,7 @@ final class Vragenboom2Step
                     ])
                     ->live(),
                 CheckboxList::make('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Welke van de onderstaande activiteiten vinden verder nog plaats tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->options([
                         'A37' => 'Ballonnen oplaten',
                         'A38' => 'Lasershow',
@@ -164,7 +164,7 @@ final class Vragenboom2Step
                     ])
                     ->live(),
                 Textarea::make('welkActiviteitBetreftUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welk activiteit betreft uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Welk activiteit betreft uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->required()
                     ->maxLength(10000)
                     ->hidden(function (Get $get, $livewire): bool {
@@ -176,7 +176,7 @@ final class Vragenboom2Step
                         return ! (in_array('A46', (array) $get('welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX'), true));
                     }),
                 CheckboxList::make('kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}', $livewire->state()))
+                    ->label(Label::render('Kruis aan wat voor overige kenmerken van toepassing zijn voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}'))
                     ->options([
                         'A48' => 'Voertuigen parkeren die langer zijn dan 6 meter en/of hoger dan 2,40 meter',
                         'A49' => 'Voorwerpen op de weg plaatsen',
@@ -186,7 +186,7 @@ final class Vragenboom2Step
                     ])
                     ->live(),
                 Radio::make('isUwEvenementToegankelijkVoorMensenMetEenBeperking')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?', $livewire->state()))
+                    ->label(Label::render('Is uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} toegankelijk voor mensen met een beperking?'))
                     ->options(JaNeeOptions::OPTIONS)
                     ->required()
                     ->hidden(function (Get $get, $livewire): bool {
@@ -199,7 +199,7 @@ final class Vragenboom2Step
                     })
                     ->live(),
                 TextInput::make('voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Voor hoeveel mensen met een lichamelijke of geestelijke beperking verzorgt u opvang tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Voor hoeveel mensen met een lichamelijke of geestelijke beperking verzorgt u opvang tijdens uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->numeric()
                     ->required()
                     ->hidden(function (Get $get, $livewire): bool {
@@ -211,7 +211,7 @@ final class Vragenboom2Step
                         return ! (in_array('A16', (array) $get('welkeVoorzieningenZijnAanwezigBijUwEvenement'), true));
                     }),
                 Textarea::make('welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement')
-                    ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke maatregelen heeft u genomen om mensen met een beperking ongehinderd deel te laten nemen aan uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                    ->label(Label::render('Welke maatregelen heeft u genomen om mensen met een beperking ongehinderd deel te laten nemen aan uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                     ->required()
                     ->maxLength(10000)
                     ->hidden(function (Get $get, $livewire): bool {

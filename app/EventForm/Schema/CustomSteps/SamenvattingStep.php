@@ -18,9 +18,10 @@ use Illuminate\Support\HtmlString;
  * eindigt met een verplichte AVG-akkoord-checkbox: zonder dat vinkje
  * kan een organisator niet doorklikken naar Indienen.
  *
- * Hand-geschreven (geen OF-equivalent) en bewust buiten de
- * `app/EventForm/Schema/Steps/`-directory geplaatst zodat
- * `transpile:event-form` 'm niet wist.
+ * Hand-geschreven (geen OF-equivalent). Staat buiten de
+ * `app/EventForm/Schema/Steps/`-directory — dat was oorspronkelijk
+ * nodig omdat de (inmiddels verwijderde) transpiler die map bij elke
+ * run wiste; de plaatsing is nu puur organisatorisch.
  */
 final class SamenvattingStep
 {

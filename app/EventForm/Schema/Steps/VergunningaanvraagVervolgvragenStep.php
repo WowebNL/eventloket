@@ -6,7 +6,8 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
-use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Schema\Hidden;
+use App\EventForm\Schema\Label;
 use Carbon\Carbon;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
@@ -42,7 +43,7 @@ final class VergunningaanvraagVervolgvragenStep
                     ->schema([
                         InfoText::info('content5', '<p>U heeft aangegeven, dat er sprake is van versterkte muziek. Hieronder volgen een aantal vragen hierover.</p>'),
                         CheckboxList::make('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wie maakt de muziek op locatie bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wie maakt de muziek op locatie bij uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options([
                                 'dj' => 'DJ',
                                 'band' => 'Band',
@@ -51,7 +52,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'anders' => 'Anders',
                             ])
                             ->required()
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning') !== false)
+                            ->hidden(Hidden::rule('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning'))
                             ->live(),
                         Textarea::make('opWelkeAndereManierWordtErMuziekGemaakt')
                             ->label('Op welke andere manier wordt er muziek gemaakt?')
@@ -66,7 +67,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 return ! (in_array('anders', (array) $get('wieMaaktDeMuziekOpLocatieBijUwEvenementWatIsDeNaamVanHetEvenementVergunning'), true));
                             }),
                         CheckboxList::make('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Welke soorten muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options([
                                 'A69' => 'Klassiek',
                                 'A70' => 'Jazz',
@@ -74,10 +75,10 @@ final class VergunningaanvraagVervolgvragenStep
                                 'A72' => 'Pop (en overige)',
                             ])
                             ->required()
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX') !== false)
+                            ->hidden(Hidden::rule('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'))
                             ->live(),
                         CheckboxList::make('welkeSoortenDanceMuziekZijnErTeHorenOpLocatieEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten Dance muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Welke soorten Dance muziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options([
                                 'acid' => 'Acid',
                                 'ambient' => 'Ambient',
@@ -105,7 +106,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 return ! (in_array('A71', (array) $get('welkeSoortenMuziekZijnErTeHorenOpLocatieEvenementX'), true));
                             }),
                         CheckboxList::make('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke soorten popmuziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Welke soorten popmuziek zijn er te horen op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options([
                                 'blues' => 'Blues',
                                 'country' => 'Country',
@@ -137,7 +138,7 @@ final class VergunningaanvraagVervolgvragenStep
                             })
                             ->live(),
                         Textarea::make('welkeAnderSoortPopmuziekIsErTeHorenOpEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welke ander soort popmuziek is er te horen op evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Welke ander soort popmuziek is er te horen op evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->required()
                             ->maxLength(10000)
                             ->hidden(function (Get $get, $livewire): bool {
@@ -149,7 +150,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 return ! (in_array('anders', (array) $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement'), true));
                             }),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de geluidsbelasting in decibel (dB(A) norm - (0–103 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de geluidsbelasting in decibel (dB(A) norm - (0–103 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->numeric()
                             ->required()
                             ->belowContent([
@@ -157,7 +158,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'Deze geluidssterkte moet gemeten worden op de zogenaamde "Front of House" afstand van maximaal 25 meter. De dB(A) norm meet het geluidsniveau zoals het menselijk oor dat waarneemt. Het kan gemeten worden met een geluidsniveaumeter, die een A-filter toepast. Bij festivals wordt dat gemeten op 25 meter vanaf het podium.',
                             ]),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBCNorm0103DBVanUwEvenement')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Wat is de geluidsbelasting in decibel Db(C) norm - (0–113 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Wat is de geluidsbelasting in decibel Db(C) norm - (0–113 dB)) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->numeric()
                             ->required()
                             ->belowContent([
@@ -165,7 +166,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'Deze geluidssterkte moet gemeten worden op de zogenaamde "Front of House" afstand van maximaal 25 meter. De dB(C) norm meet het geluidsniveau, waarbij verhoudingsgewijs meer rekening gehouden wordt met de bas-tonen, zoals bijv. bij pop- of dance-evenementen. Het kan gemeten worden met een geluidsniveaumeter, die een C-filter toepast. Bij festivals wordt dat gemeten op 25 meter vanaf het podium.',
                             ]),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('versterkteMuziek') !== false),
+                    ->hidden(Hidden::rule('versterkteMuziek')),
                 Fieldset::make('Bouwsels > 10m²')
                     ->columns(1)
                     ->schema([
@@ -179,7 +180,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'A57' => 'Omheiningen',
                             ])
                             ->required()
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('watVoorBouwselsPlaatsUOpDeLocaties') !== false)
+                            ->hidden(Hidden::rule('watVoorBouwselsPlaatsUOpDeLocaties'))
                             ->live(),
                         Repeater::make('tenten')
                             ->label('Welke tenten plaatst u?')
@@ -208,7 +209,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     ])
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('tenten') !== false),
+                            ->hidden(Hidden::rule('tenten')),
                         Repeater::make('podia')
                             ->label('Welke podia plaatst u?')
                             ->schema([
@@ -229,7 +230,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->numeric()
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('podia') !== false),
+                            ->hidden(Hidden::rule('podia')),
                         Repeater::make('overkappingen')
                             ->label('Welke overkappingen plaatst u?')
                             ->schema([
@@ -257,7 +258,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     ])
                                     ->required(),
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('overkappingen') !== false),
+                            ->hidden(Hidden::rule('overkappingen')),
                         Textarea::make('geefEenOmschrijvingVanSoortOmheining')
                             ->label('Geef een omschrijving van soort omheining')
                             ->required()
@@ -277,7 +278,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'In het "Deelplan tijdelijke constructies" zijn de opbouw-, afbreek- en constructiedetails voor constructies als tenten, podia, overkappingen en tribunes beschreven.',
                             ]),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('bouwsels10MSup2Sup') !== false),
+                    ->hidden(Hidden::rule('bouwsels10MSup2Sup')),
                 Fieldset::make('Kansspelen')
                     ->columns(1)
                     ->schema([
@@ -293,7 +294,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->live(),
                         InfoText::info('content16_2', '<p>De behandelaar van de gemeente zal u informeren wanneer de gemeente bijzondere richtlijnen hanteert voor het organiseren van kansspelen.</p>'),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('kansspelen') !== false),
+                    ->hidden(Hidden::rule('kansspelen')),
                 Fieldset::make('Alcoholische dranken')
                     ->columns(1)
                     ->schema([
@@ -438,13 +439,13 @@ final class VergunningaanvraagVervolgvragenStep
                                     }),
                             ]),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('alcoholischeDranken') !== false),
+                    ->hidden(Hidden::rule('alcoholischeDranken')),
                 Fieldset::make('Eten bereiden of verkopen')
                     ->columns(1)
                     ->schema([
                         InfoText::info('content18', '<p>U heeft aangegeven, dat er sprake is van eten bereiden of verkopen. Hieronder volgt een aantal vragen hierover.</p>'),
                         Radio::make('welkSoortBereidingVanEtenswarenIsVanToepassingOpLocatieEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Welk soort bereiding van etenswaren is van toepassing op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Welk soort bereiding van etenswaren is van toepassing op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options([
                                 'beperkteBereiding' => 'Beperkte bereiding',
                                 'eenvoudigeBereiding' => 'Eenvoudige bereiding',
@@ -457,11 +458,11 @@ final class VergunningaanvraagVervolgvragenStep
                             ])
                             ->required(),
                         Radio::make('maaktUGebruikVanEenCateraarSOpLocatieEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Maakt u gebruik van een cateraar(s) op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Maakt u gebruik van een cateraar(s) op locatie evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options(JaNeeOptions::OPTIONS)
                             ->required(),
                         CheckboxList::make('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX')
-                            ->label(fn ($livewire): string => app(LabelRenderer::class)->render('Met welke warmtebron wordt het eten ter plaatse klaargemaakt  op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?', $livewire->state()))
+                            ->label(Label::render('Met welke warmtebron wordt het eten ter plaatse klaargemaakt  op locatie Evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->options([
                                 'gas' => 'Gas',
                                 'houtskoolbarbecueOfHoutoven' => 'Houtskoolbarbecue of houtoven',
@@ -478,7 +479,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 Icon::make(Heroicon::InformationCircle),
                                 'Houdt rekening met de BGBOP wetgeving, die een afstand van 2 meter tot warmtebronnen tot gebouwen of objecten voorschrijft. Voor frituren is dat 5 meter.',
                             ])
-                            ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX') !== false)
+                            ->hidden(Hidden::rule('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX'))
                             ->live(),
                         Textarea::make('welkeAndereWarmtebronWordtGebruikt')
                             ->label('Welke andere warmtebron wordt gebruikt?')
@@ -493,7 +494,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 return ! (in_array('anders', (array) $get('metWelkeWarmtebronWordtHetEtenTerPlaatseKlaargemaaktOpLocatieEvenementX'), true));
                             }),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('etenBereidenOfVerkopen') !== false),
+                    ->hidden(Hidden::rule('etenBereidenOfVerkopen')),
                 Fieldset::make('Belemmering van verkeer')
                     ->columns(1)
                     ->schema([
@@ -503,7 +504,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->required()
                             ->maxLength(10000),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('belemmeringVanVerkeer') !== false),
+                    ->hidden(Hidden::rule('belemmeringVanVerkeer')),
                 Fieldset::make('Weg of vaarweg afsluiten')
                     ->columns(1)
                     ->schema([
@@ -544,7 +545,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->required(),
                             ]),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('wegOfVaarwegAfsluiten') !== false),
+                    ->hidden(Hidden::rule('wegOfVaarwegAfsluiten')),
                 Fieldset::make('Toegang voor hulpdiensten is beperkt')
                     ->columns(1)
                     ->schema([
@@ -562,7 +563,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->required()
                             ->maxLength(10000),
                     ])
-                    ->hidden(fn ($livewire): bool => $livewire->state()->isFieldHidden('toegangVoorHulpdienstenIsBeperkt') !== false),
+                    ->hidden(Hidden::rule('toegangVoorHulpdienstenIsBeperkt')),
             ]);
     }
 }
