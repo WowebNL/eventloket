@@ -61,7 +61,8 @@
                                 @endif
                             </div>
                             <div @class(['prose dark:prose-invert prose-sm max-w-none', 'mt-4' => $message->user])>
-                                {!! str($message->body)->sanitizeHtml() !!}
+                                @php $bodyIsHtml = $message->body !== strip_tags($message->body); @endphp
+                                {!! $bodyIsHtml ? str($message->body)->sanitizeHtml() : nl2br(e($message->body)) !!}
                             </div>
                             @if(!empty($message->documents))
                                 <div class="mt-4 space-y-2">
