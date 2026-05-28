@@ -132,6 +132,22 @@ final class DocumentUploadType
     }
 
     /**
+     * Valideer een reeds opgeslagen bestand op basis van z'n MIME-type
+     * (zoals door de disk gedetecteerd) tegen de geconfigureerde allowlist.
+     *
+     * Bedoeld voor flows die geen `UploadedFile` meer hebben — zoals een
+     * queue-job die een eerder opgeslagen bijlage naar OpenZaak uploadt en
+     * de upload-validatie niet via de form-request heeft zien langskomen.
+     */
+    public static function storedMimeTypeIsAllowed(string $mimeType): bool
+    {
+        $allowedMimeTypes = array_values((array) config('app.document_file_types', []));
+        self::assertConfigurationIsSafe($allowedMimeTypes);
+
+        return self::mimeTypeIsAllowed($mimeType, $allowedMimeTypes);
+    }
+
+    /**
      * @param  array<int, string>  $allowedMimeTypes
      */
     private static function mimeTypeIsAllowed(string $mimeType, array $allowedMimeTypes): bool

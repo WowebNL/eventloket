@@ -14,7 +14,6 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
@@ -65,11 +64,6 @@ class Organisation extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(OrganiserUser::class, 'organisation_user')->withPivot('role');
-    }
-
-    public function formSubmissionSessions(): HasMany
-    {
-        return $this->hasMany(FormsubmissionSession::class);
     }
 
     protected function casts(): array

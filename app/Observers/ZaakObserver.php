@@ -15,11 +15,6 @@ class ZaakObserver
     {
         CreateConceptAdviceQuestions::dispatch($zaak);
 
-        // Notify the organizers that created the zaak
-        if ($zaak->organiser_user_id != null) {
-            $zaak->organiserUser->notify(new NewZaak($zaak));
-        }
-
         // Notify all municipality users with review rights
         $reviewers = $zaak->zaaktype->municipality?->municipalityUsers()->reviewers()->get() ?? [];
 

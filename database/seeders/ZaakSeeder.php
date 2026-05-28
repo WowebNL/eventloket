@@ -2,13 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Jobs\Zaak\CreateZaak;
 use App\Models\Municipality;
-use App\Models\Organisation;
 use App\Models\Zaaktype;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
-use Woweb\Openzaak\Openzaak;
 
 class ZaakSeeder extends Seeder
 {
@@ -17,44 +14,17 @@ class ZaakSeeder extends Seeder
      */
     public function run(): void
     {
-        $municipalities = Municipality::all();
-        $organisations = Organisation::all();
-
-        // Good event names for variety
-        $eventNames = [
-            'Koningsdag Festival',
-            'Zomerconcert in het Park',
-            'Kerstmarkt Centrum',
-            'Straattheater Festival',
-            'Lokale Boerenmarkt',
-            'Kunstexpositie Stadhuis',
-            'Sportevenement Atletiekbaan',
-            'Culinair Festival',
-            'Muziekfestival Openlucht',
-            'Culturele Avond Museum',
-            'Kinderfestijn Speeltuin',
-            'Literatuurcafé Bibliotheek',
-            'Dansvoorstelling Theater',
-            'Filmfestival Bioscoop',
-            'Wetenschapsdag School',
-        ];
-
-        $statuses = ['Ontvangen', 'In behandeling', 'Geregistreerd', 'Afgehandeld'];
-        $risicoClassificaties = ['A', 'B', 'C'];
-
         Artisan::call('app:sync-zaaktypen');
 
         foreach (Municipality::all() as $municipality) {
             Zaaktype::where('name', 'like', "%{$municipality->name}%")->update(['municipality_id' => $municipality->id, 'is_active' => true]);
         }
 
-        $openzaak = new Openzaak;
-
-        $zaken = $openzaak->zaken()->zaken()->getAll()->take(-25);
-
-        foreach ($zaken as $zaak) {
-            CreateZaak::dispatch($zaak['url']);
-        }
+        // Seeden van fake `Zaak`-rijen gebeurde voorheen door OF-zaken uit
+        // OpenZaak te trekken en via `CreateZaak::dispatch` lokale kopieën
+        // te maken. Die job (en flow) zijn er niet meer; als we fake zaken
+        // nodig hebben voor lokale dev, bouwen we dat apart op via een
+        // Factory (Zaak::factory()->create(...)).
     }
 
     private function getRandomLocation(): string
