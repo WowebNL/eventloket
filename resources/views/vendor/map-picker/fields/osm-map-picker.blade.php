@@ -386,9 +386,18 @@
                 await (new Promise(resolve => setTimeout(resolve, 100)));
             } while (!$refs.map);
 
-            // GeoMan-toolbar in het Nederlands.
+            // GeoMan-toolbar in het Nederlands. We registreren een eigen
+            // language die overerft van 'nl' maar de verwarrende
+            // 'Bewaar'-tooltip op de finish-actie van het gummetje
+            // overschrijft naar 'Klaar' (Michel #3: 'Verwijder/Bewaar'
+            // bij dezelfde knop is dubbelzinnig).
             if (window.L && window.L.PM) {
-                window.L.PM.activeLang = 'nl';
+                try {
+                    L.PM.setLang('nlEventloket', { actions: { finish: 'Klaar' } }, 'nl');
+                    window.L.PM.activeLang = 'nlEventloket';
+                } catch (e) {
+                    window.L.PM.activeLang = 'nl';
+                }
             }
 
             // FIX 1: monkey-patch createMap om de Leaflet-instance aan het

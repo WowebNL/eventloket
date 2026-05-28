@@ -28,6 +28,8 @@ use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
+use Filament\Forms\Components\Radio;
+use Filament\Schemas\Components\Wizard\Step;
 
 test('lege state → geen secties (alle stappen worden overgeslagen)', function () {
     $sections = app(SubmissionReport::class)->build(
@@ -328,4 +330,32 @@ test('stappen zonder ingevulde velden worden weggelaten uit het overzicht', func
 
     expect($sections)->toHaveCount(1)
         ->and($sections[0]['title'])->toBe('Tijden');
+});
+
+test('Radio met Closure-options resolveert label uit dynamische bron (#2 Michel: gemeentenaam ipv brk-code)', function () {
+    // userSelectGemeente heeft dynamic options uit `inGemeentenResponse.all.items` (brk → name).
+    // Vóór de fix viel renderSelectValue terug op de raw value en toonde
+    // de samenvatting 'GM1954' i.p.v. 'Beekdaelen'. De stub-livewire
+    // evalueert de Closure nu netjes.
+    $state = new FormState(values: [
+        'userSelectGemeente' => 'GM1954',
+        'inGemeentenResponse' => ['all' => ['items' => [
+            ['brk_identification' => 'GM1954', 'name' => 'Beekdaelen'],
+            ['brk_identification' => 'GM0888', 'name' => 'Heerlen'],
+        ]]],
+    ]);
+
+    $step = Step::make('Test')->schema([
+        Radio::make('userSelectGemeente')
+            ->options(fn ($livewire): array => collect((array) $livewire->state()->get('inGemeentenResponse.all.items'))
+                ->mapWithKeys(fn ($item) => [(string) ($item['brk_identification'] ?? '') => (string) ($item['name'] ?? '')])
+                ->all()),
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [$step]);
+
+    expect($sections)->toHaveCount(1);
+    $waarden = collect($sections[0]['entries'])->pluck('value')->all();
+    expect($waarden)->toContain('Beekdaelen')
+        ->and($waarden)->not->toContain('GM1954');
 });
