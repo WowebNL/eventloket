@@ -61,6 +61,7 @@ final class LocatieVanHetEvenement2Step
                     ->live(),
                 Repeater::make('adresVanDeGebouwEn')
                     ->label('Adres van de gebouw(en)')
+                    ->addActionLabel('Adres toevoegen')
                     ->schema([
                         TextInput::make('naamVanDeLocatieGebouw')
                             ->label('Naam van de locatie')
@@ -239,7 +240,7 @@ final class LocatieVanHetEvenement2Step
                     ->live(),
                 InfoText::info('contentRouteDoorkuistMeerdereGemeenteInfo', '<p>De ingetekende route doorkruist de volgende gemeente(n): {{ routeDoorGemeentenNamen|join:", " }} &nbsp;U gaat de vergunningaanvraag invullen voor de gemeente&nbsp;<strong> {% get_value evenementInGemeente \'name\' %}</strong>, de overige gemeente(n) die gebruik maken van Eventloket op de route zullen automatisch geïnformeerd worden.</p>')
                     ->hidden(Hidden::rule('contentRouteDoorkuistMeerdereGemeenteInfo')),
-                InfoText::info('content200', '<p>U gaat verder met deze aanraag voor de gemeente:<strong> {% get_value evenementInGemeente \'name\' %}</strong></p>')
+                InfoText::info('content200', '<p>U gaat verder met deze aanvraag voor de gemeente:<strong> {% get_value evenementInGemeente \'name\' %}</strong></p>')
                     ->hidden(Hidden::rule('content200')),
             ]);
     }

@@ -63,7 +63,7 @@ test('scenario vergunning-pad: wegen afgesloten → Evenementenvergunning + alle
 
         await page.getByRole('checkbox', { name: /In een gebouw/i }).check();
         await page.waitForTimeout(1500);
-        await page.getByRole('button', { name: /Toevoegen aan adres van de gebouw/i }).click();
+        await page.getByRole('button', { name: /Adres toevoegen/i }).click();
         await page.waitForTimeout(1500);
 
         await vulEindigendOp(page, 'input', '.naamVanDeLocatieGebouw', 'Theater Heerlen');

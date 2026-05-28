@@ -76,7 +76,7 @@ export async function stap3LocatieGebouw(page, { naamLocatie = 'Theater Heerlen'
     expect(await huidigeStap(page)).toMatch(/Locatie/i);
     await page.getByRole('checkbox', { name: /In een gebouw/i }).check();
     await page.waitForTimeout(1500);
-    await page.getByRole('button', { name: /Toevoegen aan adres van de gebouw/i }).click();
+    await page.getByRole('button', { name: /Adres toevoegen/i }).click();
     await page.waitForTimeout(1500);
     await vulEindigendOp(page, 'input', '.naamVanDeLocatieGebouw', naamLocatie);
     await vulEindigendOp(page, 'input', '.adresVanHetGebouwWaarUwEvenementPlaatsvindt1.postcode', '6411CD');

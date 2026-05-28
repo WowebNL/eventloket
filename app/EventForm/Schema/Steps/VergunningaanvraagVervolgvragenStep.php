@@ -184,6 +184,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->live(),
                         Repeater::make('tenten')
                             ->label('Welke tenten plaatst u?')
+                            ->addActionLabel('Wilt u nog een tent toevoegen?')
                             ->schema([
                                 TextInput::make('tentnummer')
                                     ->label('Tentnummer')
@@ -212,6 +213,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->hidden(Hidden::rule('tenten')),
                         Repeater::make('podia')
                             ->label('Welke podia plaatst u?')
+                            ->addActionLabel('Wilt u podium toevoegen?')
                             ->schema([
                                 TextInput::make('podiumnummer')
                                     ->label('Podium nummer')
@@ -361,7 +363,7 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->options(JaNeeOptions::OPTIONS)
                                     ->required(),
                                 Radio::make('deAaneengeslotePeriodeVoorHetVerstrekkenVanDrankIsNietMeerDan12AangeslotenDagen')
-                                    ->label('De aaneengesloten periode voor het verstrekken van drank is niet meer dan 12 aaneengesloten dagen?')
+                                    ->label('Is het aantal aaneengesloten dagen voor het verstrekken van drank minder dan 12?')
                                     ->options(JaNeeOptions::OPTIONS)
                                     ->required(),
                             ])

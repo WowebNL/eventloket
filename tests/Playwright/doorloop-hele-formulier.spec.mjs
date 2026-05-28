@@ -69,7 +69,7 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
 
         await page.getByRole('checkbox', { name: /In een gebouw/i }).check();
         await page.waitForTimeout(1500);
-        await page.getByRole('button', { name: /Toevoegen aan adres van de gebouw/i }).click();
+        await page.getByRole('button', { name: /Adres toevoegen/i }).click();
         await page.waitForTimeout(1500);
 
         await vulEindigendOp(page, 'input', '.naamVanDeLocatieGebouw', 'Buurtcentrum De Hoek');

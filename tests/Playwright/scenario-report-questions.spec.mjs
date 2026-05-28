@@ -86,7 +86,7 @@ test('scenario report-questions: nieuw pad → dynamische vragen + cascade + ste
         // ---- Stap 3: Locatie (Heerlen-postcode triggert BAG-lookup) ----
         await page.getByRole('checkbox', { name: /In een gebouw/i }).check();
         await page.waitForTimeout(1500);
-        await page.getByRole('button', { name: /Toevoegen aan adres van de gebouw/i }).click();
+        await page.getByRole('button', { name: /Adres toevoegen/i }).click();
         await page.waitForTimeout(1500);
         await vulEindigendOp(page, 'input', '.naamVanDeLocatieGebouw', 'X');
         await vulEindigendOp(page, 'input', '.adresVanHetGebouwWaarUwEvenementPlaatsvindt1.postcode', '6411CD');
