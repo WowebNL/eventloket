@@ -247,7 +247,7 @@ final class SubmissionReport
     private function buildEntry(Field $component, FormState $state, string $key, object $stubLivewire): ?array
     {
         $rawValue = $state->get($key);
-        $value = $this->renderValue($component, $state, $key);
+        $value = $this->renderValue($component, $state, $key, $stubLivewire);
 
         $svg = null;
         if (is_array($rawValue) && isset($rawValue['geojson'])) {
@@ -703,7 +703,7 @@ final class SubmissionReport
         return (string) ($raw ?? $component->getName());
     }
 
-    private function renderValue(Field $component, FormState $state, string $key): string
+    private function renderValue(Field $component, FormState $state, string $key, object $stubLivewire): string
     {
         $value = $state->get($key);
 
@@ -715,7 +715,7 @@ final class SubmissionReport
             $component instanceof DatePicker => $this->humanDate($value),
             $component instanceof DateTimePicker => $this->humanDateTime($value),
             $component instanceof CheckboxList => $this->renderCheckboxListValue($component, $value),
-            $component instanceof Radio, $component instanceof Select => $this->renderSelectValue($component, $value),
+            $component instanceof Radio, $component instanceof Select => $this->renderSelectValue($component, $value, $stubLivewire),
             $component instanceof FileUpload => $this->renderFiles($value),
             $component instanceof Textarea, $component instanceof TextInput => (string) $value,
             default => is_scalar($value) ? (string) $value : $this->renderMixed($value),
@@ -815,17 +815,30 @@ final class SubmissionReport
         };
     }
 
-    private function renderSelectValue(Field $component, mixed $value): string
+    private function renderSelectValue(Field $component, mixed $value, object $stubLivewire): string
     {
         // Probeer de option-label te tonen i.p.v. de raw key. We doen dat
         // via reflection op `$options` omdat `getOptions()` ook een
-        // container nodig kan hebben.
+        // container nodig kan hebben. Sinds dynamische options voor o.a.
+        // `userSelectGemeente` als Closure leven (afhankelijk van
+        // inGemeentenResponse), evalueren we die hier met de stub-livewire
+        // — anders viel de render terug op de raw value (= brk_identification
+        // "GM1954" i.p.v. "Beekdaelen").
         $reflection = new ReflectionObject($component);
         if ($reflection->hasProperty('options')) {
             $prop = $reflection->getProperty('options');
             $prop->setAccessible(true);
             $rawOptions = $prop->getValue($component);
-            $options = $rawOptions instanceof Closure ? null : $rawOptions;
+
+            $options = $rawOptions;
+            if ($rawOptions instanceof Closure) {
+                try {
+                    $options = $rawOptions($stubLivewire);
+                } catch (\Throwable) {
+                    $options = null;
+                }
+            }
+
             if (is_array($options)) {
                 if (is_array($value)) {
                     return collect($value)->map(fn ($v) => (string) ($options[$v] ?? $v))->implode(', ');
