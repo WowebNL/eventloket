@@ -312,7 +312,7 @@ final class VergunningaanvraagVervolgvragenStep
                         Fieldset::make('Persoongroep')
                             ->columns(1)
                             ->schema([
-                                InfoText::info('content17_2', '<p>vul de persoonlijke gegevens van degene onder wiens onmiddelijke leiding de verstrekking van zwak alcoholische (<15%) zal plaatsvinden</p>'),
+                                InfoText::info('content17_2', '<p>vul de persoonlijke gegevens van degene onder wiens onmiddelijke leiding de verstrekking van zwak alcoholische (<15%) zal plaatsvinden. Bij juiste beantwoording van de vragen kan de alcoholontheffing als onderdeel van de evenementenvergunning verleend worden.</p>'),
                                 TextInput::make('voornaamVanDePersoonAlcohol')
                                     ->label('Voornaam van de persoon')
                                     ->required()
