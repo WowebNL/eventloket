@@ -17,8 +17,12 @@ jobs:
           tools: composer:v2
           coverage: none
 
+      # --no-scripts: skip artisan package:discover / filament:upgrade die
+      # tijdens autoload-dump draaien — Pint heeft die niet nodig en ze
+      # boot'en de hele app (Filament-panels enz.) wat de CI eerder deed
+      # vastlopen op een undefined-property error.
       - name: Install Composer dependencies
-        run: composer install --no-interaction --no-progress --prefer-dist
+        run: composer install --no-interaction --no-progress --prefer-dist --no-scripts
 
       - name: Run Pint (laravel preset, test mode)
-        run: ./vendor/bin/pint --preset=laravel --test -v
+        run: ./vendor/bin/pint --preset=laravel --test

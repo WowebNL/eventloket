@@ -15,7 +15,6 @@ declare(strict_types=1);
  * label-strings is exact-match precies wat we willen testen, en 't
  * loopt ms-snel.
  */
-
 test('#1 Repeater adresVanDeGebouwEn heeft addActionLabel "Adres toevoegen"', function () {
     $code = file_get_contents(app_path('EventForm/Schema/Steps/LocatieVanHetEvenement2Step.php'));
     expect($code)->toContain("Repeater::make('adresVanDeGebouwEn')")
