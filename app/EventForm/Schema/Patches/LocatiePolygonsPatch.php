@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Patches;
 
+use App\EventForm\Components\InfoText;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -128,6 +129,8 @@ final class LocatiePolygonsPatch
                         }
                     })
                     ->hidden($hiddenCallback);
+
+                $patched[] = InfoText::warning('waarschuwingPlattegrondVereist', '<p><strong>Let op: </strong>het intekenen van de locatie of het terrein in het aanvraagformulier vervangt niet de verplichte plattegrond. Voeg daarom steeds een afzonderlijke plattegrond toe. De vereisten voor deze plattegrond kunnen verschillen per gemeente. Hiervoor kunt u terecht op de gemeentelijke website of neemt u contact op met de betreffende gemeente.</p>');
 
                 continue;
             }
