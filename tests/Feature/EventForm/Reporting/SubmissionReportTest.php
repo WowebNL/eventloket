@@ -332,6 +332,67 @@ test('stappen zonder ingevulde velden worden weggelaten uit het overzicht', func
         ->and($sections[0]['title'])->toBe('Tijden');
 });
 
+test('Tijden-tabel: niet-parseerbare datetime → rij weggefilterd, geen raw ISO-leak (#5 Michel)', function () {
+    // Carbon-fallback gaf eerder de raw value terug → in de tabel verscheen
+    // "2026-05-21 10:00" naast "21 mei 2026 · 01:00" uit dezelfde build.
+    // Defensieve fix: bij parse-fout retourneert humanDateTime '' i.p.v.
+    // raw ISO; de rij valt dan weg in buildTijdenTable's filter — dat is
+    // correcter dan inconsistente opmaak in dezelfde tabel tonen.
+    $state = new FormState(values: [
+        'OpbouwStart' => '2026-05-21T01:00',
+        'OpbouwEind' => '2026-05-21T02:44',
+        // Letterlijke string "null" — Carbon::parse throwt → catch.
+        'EvenementStart' => 'null',
+        'EvenementEind' => 'null',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TijdenStep::make()]);
+    $tabel = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['table']));
+
+    // Opbouw is parseerbaar → NL-format.
+    $opbouwRij = collect($tabel['table']['rows'])->first(fn ($r) => $r[0] === 'Opbouw');
+    expect($opbouwRij)->not->toBeNull()
+        ->and($opbouwRij[1])->toBe('21 mei 2026 · 01:00');
+
+    // Publiek niet-parseerbaar → rij weggefilterd (anders zou raw ISO lekken).
+    $publiekRij = collect($tabel['table']['rows'])->first(fn ($r) => $r[0] === 'Publiek');
+    expect($publiekRij)->toBeNull();
+
+    // En de raw "null"-string mag nergens in de tabel-cells voorkomen.
+    $alleCellen = collect($tabel['table']['rows'])->flatten()->all();
+    expect($alleCellen)->not->toContain('null');
+});
+
+test('Zelf-te-regelen: items komen onder elkaar (newlines), niet comma-separated (#15 Michel)', function () {
+    // Trigger ≥2 items via TypeAanvraagOnderdelen::buildZelfTeRegelenList:
+    //   alcoholvergunning='Ja'                → Ontheffing Alcoholwet
+    //   kruisAanWatVanToepassing...A3=true    → Gebruiksmelding brandveilig
+    //   .A4=true                              → Vergunning kansspelen
+    $state = new FormState(values: [
+        'alcoholvergunning' => 'Ja',
+        'kruisAanWatVanToepassingIsVoorUwEvenementX' => [
+            'A3' => true,
+            'A4' => true,
+        ],
+        // Forceer ook dat buildList >0 items levert (anders bestaat de
+        // section helemaal niet → geen Zelf-te-regelen entry).
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
+    $zelf = collect($sections[0]['entries'] ?? [])->first(
+        fn ($e) => str_contains((string) ($e['label'] ?? ''), 'Zelf te regelen')
+    );
+
+    expect($zelf)->not->toBeNull();
+    // 3 items uit deze state → 2 newlines als separator. Niet meer comma-
+    // joined (één item bevat zelf ', ' in z'n tekst — vandaar count-check
+    // i.p.v. not->toContain(', ')).
+    expect(substr_count($zelf['value'], "\n"))->toBe(2);
+    // Concrete eerste regel-grens: item 2 begint na een newline.
+    expect($zelf['value'])->toContain("\nGebruiksmelding");
+});
+
 test('Radio met Closure-options resolveert label uit dynamische bron (#2 Michel: gemeentenaam ipv brk-code)', function () {
     // userSelectGemeente heeft dynamic options uit `inGemeentenResponse.all.items` (brk → name).
     // Vóór de fix viel renderSelectValue terug op de raw value en toonde

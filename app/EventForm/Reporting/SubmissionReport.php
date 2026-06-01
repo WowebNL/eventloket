@@ -212,7 +212,11 @@ final class SubmissionReport
 
         return [
             'label' => 'Zelf te regelen (niet via Eventloket)',
-            'value' => implode(', ', $items),
+            // Items onder elkaar via linebreak — blade rendert via nl2br()
+            // dus elke regel komt als eigen <br>-line. De stap-info in
+            // TypeAanvraagStep gebruikt al een <ul>; nu is samenvatting/
+            // PDF visueel consistent (Michel #15).
+            'value' => implode("\n", $items),
         ];
     }
 
@@ -886,10 +890,17 @@ final class SubmissionReport
         if (! is_string($value) && ! is_numeric($value)) {
             return '';
         }
+        $raw = (string) $value;
+        if ($raw === '') {
+            return '';
+        }
         try {
-            return Carbon::parse((string) $value, 'Europe/Amsterdam')->translatedFormat('j F Y · H:i');
+            return Carbon::parse($raw, 'Europe/Amsterdam')->translatedFormat('j F Y · H:i');
         } catch (\Throwable) {
-            return (string) $value;
+            // Niet parseerbaar — toon leeg i.p.v. de raw waarde, anders
+            // verschijnt er bv. een ISO-format ("2026-05-21 10:00") naast
+            // de geformatteerde NL-rijen in dezelfde tabel (Michel #5).
+            return '';
         }
     }
 
@@ -898,10 +909,15 @@ final class SubmissionReport
         if (! is_string($value) && ! is_numeric($value)) {
             return '';
         }
+        $raw = (string) $value;
+        if ($raw === '') {
+            return '';
+        }
         try {
-            return Carbon::parse((string) $value, 'Europe/Amsterdam')->translatedFormat('j F Y');
+            return Carbon::parse($raw, 'Europe/Amsterdam')->translatedFormat('j F Y');
         } catch (\Throwable) {
-            return (string) $value;
+            // Zie humanDateTime: liever leeg dan raw-ISO leak in de tabel.
+            return '';
         }
     }
 
