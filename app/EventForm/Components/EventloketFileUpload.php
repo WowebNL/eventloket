@@ -39,7 +39,7 @@ final class EventloketFileUpload
             : 'event-form-uploads';
 
         return FileUpload::make($name)
-            ->maxSize(30720) // 30 MB
+            ->maxSize(61440) // 60 MB
             ->mimeTypeMap(config('app.document_mime_type_mappings'))
             ->rule(DocumentUploadType::fileUploadRule())
             ->directory($directory)
