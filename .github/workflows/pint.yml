@@ -4,11 +4,21 @@ jobs:
   phplint:
     runs-on: ubuntu-latest
     steps:
-        - uses: actions/checkout@v4
-        
-        - name: "laravel-pint"
-          uses: aglipanci/laravel-pint-action@latest
-          with:
-            preset: laravel
-            testMode: true
-            pintVersion: 1.29.0
+      - uses: actions/checkout@v4
+
+      # Explicit PHP 8.4 + Pint uit project-vendor i.p.v. de aglipanci-
+      # action: die draait op `composer:latest` (PHP 8.3) en faalde dan
+      # op format-issues die Pint 1.29.0 onder PHP 8.4 lokaal niet ziet.
+      # Zo matcht CI exact de lokale Sail-environment (PHP 8.4 + composer.lock).
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Run Pint (laravel preset, test mode)
+        run: ./vendor/bin/pint --preset=laravel --test
