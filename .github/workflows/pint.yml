@@ -21,4 +21,4 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: Run Pint (laravel preset, test mode)
-        run: ./vendor/bin/pint --preset=laravel --test
+        run: ./vendor/bin/pint --preset=laravel --test -v
