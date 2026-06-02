@@ -76,7 +76,7 @@ class UploadDocumentAction
         $fields[] = FileUpload::make('file')
             ->label(__('Bestand'))
             ->required()
-            ->maxSize(30720) // 30MB
+            ->maxSize(61440) // 60MB
             ->mimeTypeMap(config('app.document_mime_type_mappings'))
             ->rule(DocumentUploadType::fileUploadRule())
             ->directory('documents')
