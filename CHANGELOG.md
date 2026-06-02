@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.6.3 - 2026-06-02
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Set max file upload to 60mb (#363) @Michel-Verhoeven
+* Fix: show thread messages in correct format (#362) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.6.2...v0.6.3
+
 ## v0.6.2 - 2026-05-18
 
 ### What's Changed
@@ -187,6 +198,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
