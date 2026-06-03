@@ -11,6 +11,7 @@ use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -93,7 +94,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         //   2. Bestandstype: het MIME-type moet op de document-allowlist staan
         //      (blokkeert o.a. executables/scripts) — de check die normaal in
         //      de form-request had moeten draaien.
-        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        /** @var FilesystemAdapter $disk */
         $disk = Storage::disk('local');
         $toegestanePrefix = sprintf('event-form-uploads/%s/', $this->zaak->organisation?->uuid);
         /** @var array<string, string> $aanwezig  pad => originele naam */

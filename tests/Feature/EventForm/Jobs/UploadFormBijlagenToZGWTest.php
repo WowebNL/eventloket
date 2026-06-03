@@ -82,7 +82,7 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
 
     $zaaktype = Zaaktype::factory()->create();
     $org = Organisation::factory()->create(['name' => 'Media Tuin']);
-    $pad = "event-form-uploads/{$org->id}/buurtfeest-veiligheidsplan.pdf";
+    $pad = "event-form-uploads/{$org->uuid}/buurtfeest-veiligheidsplan.pdf";
     $zaak = Zaak::factory()->create([
         'zgw_zaak_url' => 'https://zgw.example.com/zaken/api/v1/zaken/abc-123',
         'organisation_id' => $org->id,
@@ -175,7 +175,7 @@ test('bijlage-pad dat niet meer op disk staat → log waarschuwing, geen call vo
         'organisation_id' => $org->id,
         'zaaktype_id' => Zaaktype::factory()->create()->id,
         'form_state_snapshot' => ['values' => [
-            'veiligheidsplan' => "event-form-uploads/{$org->id}/verdwenen.pdf",
+            'veiligheidsplan' => "event-form-uploads/{$org->uuid}/verdwenen.pdf",
         ]],
     ]);
 
@@ -223,7 +223,7 @@ test('security: bijlage met niet-toegestaan bestandstype wordt geweigerd', funct
     // alsnog als zaakdocument naar OpenZaak — de submit-flow draait geen
     // FileUpload-validatie, dus de job is de laatste verdedigingslinie.
     $org = Organisation::factory()->create();
-    $pad = "event-form-uploads/{$org->id}/kwaadaardig.php";
+    $pad = "event-form-uploads/{$org->uuid}/kwaadaardig.php";
     Storage::disk('local')->put($pad, "<?php system(\$_GET['c']); ?>");
 
     $zaak = Zaak::factory()->create([

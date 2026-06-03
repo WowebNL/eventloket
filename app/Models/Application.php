@@ -25,6 +25,10 @@ class Application extends Model
         'all_endpoints',
     ];
 
+    protected $casts = [
+        'all_endpoints' => 'boolean',
+    ];
+
     public function clients()
     {
         return $this->morphMany(Client::class, 'owner');

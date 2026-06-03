@@ -9,7 +9,6 @@ use App\EventForm\Schema\Patches\LocatiePolygonsPatch;
 use App\EventForm\Schema\Steps\AanvraagOfMeldingStep;
 use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
-use App\Models\Organisation;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\MeldingStep;
 use App\EventForm\Schema\Steps\NaamVanHetEvenementStep;
@@ -24,6 +23,7 @@ use App\EventForm\Schema\Steps\VergunningsaanvraagVoorwerpenStep;
 use App\EventForm\Schema\Steps\VergunningsaanvraagVoorzieningenStep;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\Schema\Steps\WaarvoorWiltUHetEventloketGebruikenStep;
+use App\Models\Organisation;
 use Filament\Schemas\Components\Wizard\Step;
 
 /**
