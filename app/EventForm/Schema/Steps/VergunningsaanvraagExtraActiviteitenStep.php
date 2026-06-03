@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\EventForm\Schema\Steps;
+
+use App\EventForm\Components\InfoText;
+use App\EventForm\Schema\Hidden;
+use Filament\Forms\Components\Textarea;
+use Filament\Schemas\Components\Wizard\Step;
+
+/**
+ * @openforms-step-uuid 6e285ace-f891-4324-b54e-639c1cfff9fa
+ *
+ * @openforms-step-index 13
+ */
+final class VergunningsaanvraagExtraActiviteitenStep
+{
+    public const UUID = '6e285ace-f891-4324-b54e-639c1cfff9fa';
+
+    public static function make(): Step
+    {
+        return Step::make('Vergunningsaanvraag: extra activiteiten')
+            ->key(self::UUID)
+            ->schema([
+                InfoText::info('contentBalon', '<p>Het oplaten van ballonnen kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op <a href="www.lvnl.nl" target="_blank" rel="noopener noreferrer">www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>')
+                    ->hidden(Hidden::rule('contentBalon')),
+                InfoText::info('contentLasershow', '<p>Het uitvoeren van een lasershow kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op <a href="www.lvnl.nl" target="_blank" rel="noopener noreferrer">www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>')
+                    ->hidden(Hidden::rule('contentLasershow')),
+                InfoText::info('contentZeppelin', '<p>Het oplaten van een zeppelin kan van invloed zijn op het luchtverkeer binnen een straal van 8 km van een commerciele luchthaven. Zie voor de richtlijnen op<a href="www.lvnl.nl " target="_blank" rel="noopener noreferrer"> www.lvnl.nl - een actviteit in het luchtruim</a> - evenementen.</p>')
+                    ->hidden(Hidden::rule('contentZeppelin')),
+                InfoText::info('contentDieren', '<p>Voor activiteiten met dieren verwijzen wij u naar de website van <a href="https://www.nvwa.nl/onderwerpen/evenementen-met-levende-dieren" target="_blank" rel="noopener noreferrer">de Nederlandse Voedsel- en Warenautoriteit</a></p>')
+                    ->hidden(Hidden::rule('contentDieren')),
+                InfoText::warning('contentVuurwerk', '<p>Het afsteken van vuurwerk, buiten de oud/nieuw periode is voorbehouden aan professionele bedrijven, die hiervoor een toepassingsvergunning nodig hebben en per evenement hiervoor een ontbrandingstoestemming moeten aanvragen. De regels hiervoor zijn te vinden op <a href="https://ondernemersplein.overheid.nl/professioneel-vuurwerk-opslaan-en-afsteken/provincie/limburg/" target="_blank" rel="noopener noreferrer">de website van het ondernemersplein</a>.</p>')
+                    ->hidden(Hidden::rule('contentVuurwerk')),
+                InfoText::info('contentTattoo', '<p>Voor het plaatsen van tatoeages of piercings tijdens evenementen is een vergunning van de Gemeenschappelijke Gezondheidsdienst (GGD) noodzakelijk. De regels hiervoor vindt u op <a href="https://ondernemersplein.overheid.nl/vergunning-aanvragen-voor-tatoeeren-of-piercen/" target="_blank" rel="noopener noreferrer">de website van het ondernemersplein.</a></p>')
+                    ->hidden(Hidden::rule('contentTattoo')),
+                InfoText::info('contentVuurkorf', '<p>Voor het plaatsen van vuurkorven of het aansteken van open vuur verwijzen we naar <a href="https://www.brandweer.nl/onderwerpen/evenement-organiseren/" target="_blank" rel="noopener noreferrer">de website van de brandweer</a>.</p><p>Controleer ook bij uw betreffende gemeente of een aparte ontheffing hiervoor nodig is voor het gebruik van open vuur of vuurkorven.</p>')
+                    ->hidden(Hidden::rule('contentVuurkorf')),
+                InfoText::warning('contentWapen', '<p>Controleer of u een ontheffing van het wapenverbod nodig heeft voor uw evenement op <a href="https://www.rijksoverheid.nl/wetten-en-regelingen/productbeschrijvingen/ontheffing-wapenverbod-aanvragen" target="_blank" rel="noopener noreferrer">de website van Rijksoverheid</a>.</p>')
+                    ->hidden(Hidden::rule('contentWapen')),
+                Textarea::make('welkeShoweffectenBentUVanPlanTeOrganiserenVoorUwEvenement')
+                    ->label('Welke showeffecten bent u van plan te organiseren voor uw evenement?\'')
+                    ->required()
+                    ->maxLength(10000)
+                    ->hidden(Hidden::rule('welkeShoweffectenBentUVanPlanTeOrganiserenVoorUwEvenement')),
+            ]);
+    }
+}

@@ -57,6 +57,15 @@ class DocumentNotificationReceived implements ShouldQueue
         if (Arr::has($zaakinformatieObject, 'zaak') && $zaakUrl = Arr::get($zaakinformatieObject, 'zaak')) {
             $zaak = Zaak::where('zgw_zaak_url', $zaakUrl)->first();
             if ($zaak) {
+                // Versie 1 van inzendingsdocumenten (aanvraagformulier-PDF en form-bijlagen)
+                // triggert geen notificatie — de organisator krijgt al de bevestigingsmail.
+                // Versie 2+ (isNew=false) triggert wel een notificatie.
+                if ($isNew && $this->isSubmissionDocument($informatieobject, $zaak)) {
+                    $zaak->clearZgwCache();
+
+                    return;
+                }
+
                 $users = $zaak->relatedUsers();
                 foreach ($users as $user) {
                     /** @var Role $role */
@@ -75,5 +84,34 @@ class DocumentNotificationReceived implements ShouldQueue
         } else {
             Log::warning("Received document notification for informatieobject {$this->notification->hoofdObject} which is not linked to a zaak.");
         }
+    }
+
+    /**
+     * Bepaalt of een document een inzendingsdocument is (versie 1):
+     * het aanvraagformulier (herkenbaar aan de bestandsnaam) of een
+     * bijlage die de organisator via het formulier heeft ge-upload
+     * (herkenbaar via form_state_snapshot van de zaak).
+     */
+    private function isSubmissionDocument(Informatieobject $informatieobject, Zaak $zaak): bool
+    {
+        if ($informatieobject->bestandsnaam === 'aanvraagformulier.pdf') {
+            return true;
+        }
+
+        $values = $zaak->form_state_snapshot['values'] ?? [];
+        foreach ($values as $value) {
+            if (is_string($value) && $value !== '' && basename($value) === $informatieobject->bestandsnaam) {
+                return true;
+            }
+            if (is_array($value)) {
+                foreach ($value as $entry) {
+                    if (is_string($entry) && $entry !== '' && basename($entry) === $informatieobject->bestandsnaam) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 }

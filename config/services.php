@@ -38,13 +38,23 @@ return [
     'open_forms' => [
         'base_url' => env('OPEN_FORMS_BASE_URL'),
         'main_form_uuid' => env('OPEN_FORMS_MAIN_FORM_UUID'),
+        'main_form_slug' => env('OPEN_FORMS_FORM_SLUG', 'evenementformulier-poc-kopie-a6efc0'),
         'prefill_object_type_url' => env('OPEN_FORMS_PREFILL_OBJECT_TYPE_URL'),
         'prefill_object_type_version' => env('OPEN_FORMS_PREFILL_OBJECT_TYPE_VERSION', '1'),
         'auteur_name' => env('OPEN_FORMS_AUTEUR_NAME', 'Aanvrager'),
+        'admin_token' => env('OPEN_FORMS_ADMIN_TOKEN'),
     ],
 
     'kadaster' => [
         'base_url' => env('KADASTER_BASE_URL', 'https://api.pdok.nl/kadaster'),
+    ],
+
+    'openzaak' => [
+        // RSIN van Veiligheidsregio Zuid-Limburg — bronorganisatie bij elke
+        // nieuwe zaak in OpenZaak. In de oude OF-flow stond dit in alle 45
+        // registratie-backends hardcoded op dezelfde waarde (820151130),
+        // dus we repliceren dat hier in één plek.
+        'bronorganisatie_rsin' => env('OPENZAAK_BRONORGANISATIE_RSIN', '820151130'),
     ],
 
     'locatieserver' => [
