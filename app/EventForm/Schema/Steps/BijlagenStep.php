@@ -7,6 +7,7 @@ namespace App\EventForm\Schema\Steps;
 use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Schema\Hidden;
+use App\Models\Organisation;
 use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Icons\Heroicon;
@@ -20,22 +21,22 @@ final class BijlagenStep
 {
     public const UUID = '7982e106-bce0-49cf-bdaa-ada9eac8b6ba';
 
-    public static function make(): Step
+    public static function make(?Organisation $organisation = null): Step
     {
         return Step::make('Bijlagen')
             ->key(self::UUID)
             ->schema([
                 InfoText::info('infoTekstVeiligheidsplan', '<p><strong>U moet voor uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} een veiligheidsplan indienen, waarin de volgende onderdelen zijn opgenomen:</strong></p><ul><li><strong>Huisregelement</strong>: beschrijft de regels, waaraan een bezoeker of deelnemer zich dient te houden tijdens het evenement</li><li><strong>Zorgplan</strong>/EHBO inzetplan/medische planvorming: beschrijft hoe de organisatie van het evenement er voor zorgt, dat de bezoekers/deelnemers medisch ondersteund worden tijdens het evenement, zowel preventief als reactief.</li><li><strong>Beveiligingsplan</strong>: beschrijft op welke wijze de organisatie tijdens het evenement de veiligheid van alle deelnemers waarborgt, waarbij zowel de preventieve maatregelen ter voorkoming van incidenten, als de correctieve maatregelen ingeval van incidenten en/of calamiteiten beschreven worden. Hierbij wordt ook verwacht, dat er nagedacht is over mogelijke calamiteiten en dat beschreven wordt hoe daarop gereageerd wordt door de organisatie en de hulpdiensten.</li><li><strong>Verkeersplan</strong> (mobiliteitsplan): beschrijft de wijze waarop het evenement impact heeft op de normale verkeersstromen op- en rondom het evenemententerrein. Speciale aandacht dient er de zijn voor de toegankelijkheid van het evenemententerrein voor de hulpdiensten Brandweer/Politie/Ambulance.</li></ul>')
                     ->hidden(Hidden::rule('infoTekstVeiligheidsplan')),
-                EventloketFileUpload::make('veiligheidsplan')
+                EventloketFileUpload::make('veiligheidsplan', $organisation)
                     ->label('Veiligheidsplan')
                     ->hidden(Hidden::rule('veiligheidsplan')),
-                EventloketFileUpload::make('bebordingsEnBewegwijzeringsplan')
+                EventloketFileUpload::make('bebordingsEnBewegwijzeringsplan', $organisation)
                     ->label('U heeft aangegeven, dat u gebruik gaat maken van bewegwijzering. Hiervoor dient u een bebordings- en bewegwijzeringsplan toe te voegen, als onderdeel van het verkeersplan, dat als bijlage toegevoegd wordt.')
                     ->hidden(Hidden::rule('bebordingsEnBewegwijzeringsplan')),
                 InfoText::info('ContentOverigeBijlage', '<p>Naast het veiligheidsplan moet u bij uw aanvraag ook de hier aangegeven bijlage(n) indienen.</p><ul><li>Draaiboek van alle dagen, inclusief opbouwen en afbouwen.</li><li>Muziek- of activiteiten programma (van alle dagen), indien van toepassing</li><li>Situatietekening(en) (plattegrond)&nbsp; van uw evenement locatie(s) met alle activiteiten.</li><li>Mobiliteitsplan voor omleidingen of beperking van de toegangswegen voor hulpdiensten (ingeval van een geringe impact volstaat het intekenen van de verkeersimpact op de plattegrond bij de vraag over verkeersbelemmeringen)</li></ul>')
                     ->hidden(Hidden::rule('ContentOverigeBijlage')),
-                EventloketFileUpload::make('bijlagen1')
+                EventloketFileUpload::make('bijlagen1', $organisation)
                     ->multiple()
                     ->label('Overige bijlagen')
                     ->belowContent([

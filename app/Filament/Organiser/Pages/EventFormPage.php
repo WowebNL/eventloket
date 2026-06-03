@@ -248,9 +248,12 @@ class EventFormPage extends Page implements HasForms
 
     public function form(Schema $form): Schema
     {
+        /** @var Organisation|null $organisation */
+        $organisation = Filament::getTenant();
+
         return $form
             ->schema([
-                VerticalWizard::make(EventFormSchema::steps())
+                VerticalWizard::make(EventFormSchema::steps($organisation))
                     ->stepApplicability(fn (string $stepKey): bool => $this->state->isStepApplicable($stepKey))
                     // Resume bij terugkeer: als de organisator weg is geweest
                     // (bv. naar Dashboard) en geen `?step=`-query-param meer

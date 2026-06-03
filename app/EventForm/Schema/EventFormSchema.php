@@ -9,6 +9,7 @@ use App\EventForm\Schema\Patches\LocatiePolygonsPatch;
 use App\EventForm\Schema\Steps\AanvraagOfMeldingStep;
 use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
+use App\Models\Organisation;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\MeldingStep;
 use App\EventForm\Schema\Steps\NaamVanHetEvenementStep;
@@ -42,10 +43,10 @@ class EventFormSchema
     /**
      * @return list<Step>
      */
-    public static function steps(): array
+    public static function steps(?Organisation $organisation = null): array
     {
         return [
-            ...self::stepsForReport(),
+            ...self::stepsForReport($organisation),
             SamenvattingStep::make(),
         ];
     }
@@ -62,7 +63,7 @@ class EventFormSchema
      *
      * @return list<Step>
      */
-    public static function stepsForReport(): array
+    public static function stepsForReport(?Organisation $organisation = null): array
     {
         return [
             ContactgegevensStep::make(),
@@ -80,7 +81,7 @@ class EventFormSchema
             VergunningaanvraagMaatregelenStep::make(),
             VergunningsaanvraagExtraActiviteitenStep::make(),
             VergunningaanvraagOverigStep::make(),
-            BijlagenStep::make(),
+            BijlagenStep::make($organisation),
             TypeAanvraagStep::make(),
         ];
     }

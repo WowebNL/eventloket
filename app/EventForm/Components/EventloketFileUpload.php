@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventForm\Components;
 
+use App\Models\Organisation;
 use App\Support\Uploads\DocumentUploadType;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 
 /**
@@ -22,20 +22,24 @@ use Filament\Forms\Components\FileUpload;
  *   passende mime-types ipv `application/octet-stream`)
  * - executable / script-uploads geweigerd via
  *   `DocumentUploadType::fileUploadRule()`
- * - opgeslagen op de lokale `local`-disk in een tenant-specifieke
- *   sub-map zodat `UploadFormBijlagenToZGW` 'm gegarandeerd
- *   terugvindt
+ * - opgeslagen op de lokale `local`-disk in een organisatie-specifieke
+ *   sub-map (`event-form-uploads/{organisation_uuid}/`) zodat
+ *   `UploadFormBijlagenToZGW` 'm gegarandeerd terugvindt
  * - private visibility
  * - originele bestandsnaam bewaard zodat 'ie 1-op-1 als
  *   `bestandsnaam` naar OpenZaak kan
+ *
+ * De `Organisation` wordt expliciet meegegeven in plaats van via
+ * `Filament::getTenant()` opgehaald, omdat de Livewire upload-request
+ * (`/livewire/upload-file`) niet door de Filament panel-middleware gaat
+ * waardoor `getTenant()` daar altijd `null` retourneert.
  */
 final class EventloketFileUpload
 {
-    public static function make(string $name): FileUpload
+    public static function make(string $name, ?Organisation $organisation = null): FileUpload
     {
-        $tenant = Filament::getTenant();
-        $directory = $tenant && property_exists($tenant, 'id')
-            ? sprintf('event-form-uploads/%s', $tenant->id)
+        $directory = $organisation !== null
+            ? sprintf('event-form-uploads/%s', $organisation->uuid)
             : 'event-form-uploads';
 
         return FileUpload::make($name)
@@ -45,6 +49,6 @@ final class EventloketFileUpload
             ->directory($directory)
             ->disk('local')
             ->visibility('private')
-            ->preserveFilenames();
+            ->storeFileNamesIn("{$name}_namen");
     }
 }

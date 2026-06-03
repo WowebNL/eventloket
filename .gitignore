@@ -22,9 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-/public/css/filament
-/public/fonts/filament
-/public/js/filament
 /tests/coverage
 tests/Feature/EventForm/Equivalence/scenarios.json
 tests/Feature/EventForm/Equivalence/jsonlogic-verification.json
