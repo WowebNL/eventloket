@@ -8,6 +8,7 @@ use App\Console\Commands\Zaaktypen\SyncZaaktypen;
 use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
+use App\Listeners\NotifySlackOfFailedJob;
 use App\Models\Export;
 use App\Models\Import;
 use App\Support\CarbonBusinessDaysMixin;
@@ -20,8 +21,10 @@ use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\View\View;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -102,6 +105,8 @@ class AppServiceProvider extends ServiceProvider
         Passport::tokensExpireIn(CarbonInterval::days(config('app.api.token_expire_in_days')));
 
         Carbon::mixin(new CarbonBusinessDaysMixin);
+
+        Event::listen(JobFailed::class, NotifySlackOfFailedJob::class);
 
         $this->bindCustomMethods();
     }
