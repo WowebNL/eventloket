@@ -3,6 +3,8 @@ includes:
     - vendor/nesbot/carbon/extension.neon
 
 parameters:
+    tmpDir: storage/phpstan
+
     treatPhpDocTypesAsCertain: false
 
     paths:

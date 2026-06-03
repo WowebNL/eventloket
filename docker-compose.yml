@@ -25,6 +25,24 @@ services:
             - mysql
             - redis
             - pgsql
+    horizon:
+        image: sail-8.4/app
+        extra_hosts:
+            - 'host.docker.internal:host-gateway'
+        environment:
+            WWWUSER: '${WWWUSER}'
+            LARAVEL_SAIL: 1
+            XDEBUG_MODE: 'off'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            - sail
+        depends_on:
+            redis:
+                condition: service_healthy
+            pgsql:
+                condition: service_healthy
+        command: php /var/www/html/artisan horizon
     mysql:
         image: 'mysql/mysql-server:8.0'
         ports:
