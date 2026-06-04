@@ -18,22 +18,38 @@ describe('viewAny', function () {
         expect($this->policy->viewAny($admin))->toBeTrue();
     });
 
-    it('allows advisor to view any advisor users', function () {
+    it('allows advisory admin to view any advisor users', function () {
+        $advisoryAdmin = User::factory()->create(['role' => Role::Advisor]);
+        $advisory = Advisory::factory()->create();
+        $advisoryAdmin->advisories()->attach($advisory, ['role' => AdvisoryRole::Admin]);
+
+        expect($this->policy->viewAny($advisoryAdmin))->toBeTrue();
+    });
+
+    it('denies advisory member from viewing any advisor users', function () {
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisory = Advisory::factory()->create();
+        $advisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
+
+        expect($this->policy->viewAny($advisor))->toBeFalse();
+    });
+
+    it('denies advisor without any advisory from viewing any advisor users', function () {
         $advisor = User::factory()->create(['role' => Role::Advisor]);
 
-        expect($this->policy->viewAny($advisor))->toBeTrue();
+        expect($this->policy->viewAny($advisor))->toBeFalse();
     });
 
-    it('allows municipality admin to view any advisor users', function () {
+    it('denies municipality admin to view any advisor users', function () {
         $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
 
-        expect($this->policy->viewAny($municipalityAdmin))->toBeTrue();
+        expect($this->policy->viewAny($municipalityAdmin))->toBeFalse();
     });
 
-    it('allows reviewer municipality admin to view any advisor users', function () {
+    it('denies reviewer municipality admin to view any advisor users', function () {
         $reviewerMunicipalityAdmin = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
 
-        expect($this->policy->viewAny($reviewerMunicipalityAdmin))->toBeTrue();
+        expect($this->policy->viewAny($reviewerMunicipalityAdmin))->toBeFalse();
     });
 
     it('denies organiser to view any advisor users', function () {
@@ -44,18 +60,76 @@ describe('viewAny', function () {
 });
 
 describe('view', function () {
-    it('allows admin to view specific advisor user', function () {
+    it('allows admin to view any advisor user', function () {
         $admin = User::factory()->create(['role' => Role::Admin]);
         $advisor = User::factory()->create(['role' => Role::Advisor]);
 
         expect($this->policy->view($admin, $advisor))->toBeTrue();
     });
 
-    it('allows municipality admin to view specific advisor user', function () {
-        $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+    it('allows advisor to view their own profile', function () {
         $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisory = Advisory::factory()->create();
+        $advisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
+
+        expect($this->policy->view($advisor, $advisor))->toBeTrue();
+    });
+
+    it('allows advisor to view another advisor in the same advisory', function () {
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $otherAdvisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisory = Advisory::factory()->create();
+        $advisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
+        $otherAdvisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
+
+        expect($this->policy->view($advisor, $otherAdvisor))->toBeTrue();
+    });
+
+    it('denies advisor to view an advisor from a different advisory', function () {
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $otherAdvisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisory1 = Advisory::factory()->create();
+        $advisory2 = Advisory::factory()->create();
+        $advisor->advisories()->attach($advisory1, ['role' => AdvisoryRole::Member]);
+        $otherAdvisor->advisories()->attach($advisory2, ['role' => AdvisoryRole::Member]);
+
+        expect($this->policy->view($advisor, $otherAdvisor))->toBeFalse();
+    });
+
+    it('denies advisor without any advisory to view another advisor', function () {
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $otherAdvisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisory = Advisory::factory()->create();
+        $otherAdvisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
+
+        expect($this->policy->view($advisor, $otherAdvisor))->toBeFalse();
+    });
+
+    it('allows municipality admin to view advisor in their municipality advisory', function () {
+        $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+        $municipality = Municipality::factory()->create();
+        $municipalityAdmin->municipalities()->attach($municipality);
+
+        $advisory = Advisory::factory()->create();
+        $advisory->municipalities()->attach($municipality);
+
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
 
         expect($this->policy->view($municipalityAdmin, $advisor))->toBeTrue();
+    });
+
+    it('denies municipality admin to view advisor from unrelated advisory', function () {
+        $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+        $municipality = Municipality::factory()->create();
+        $municipalityAdmin->municipalities()->attach($municipality);
+
+        $advisory = Advisory::factory()->create();
+
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
+
+        expect($this->policy->view($municipalityAdmin, $advisor))->toBeFalse();
     });
 
     it('denies organiser to view specific advisor user', function () {

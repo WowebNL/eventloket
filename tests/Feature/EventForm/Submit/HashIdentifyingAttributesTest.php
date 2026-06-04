@@ -17,6 +17,8 @@
  *   - De job is idempotent: opnieuw uitvoeren dubbelhasht niet.
  *   - Lege/ontbrekende velden worden genegeerd, niet vervangen door
  *     een betekenisloze hash van een lege string.
+ *   - De activity-log bevat geen form_state_snapshot (AVG: geen BSN/KvK
+ *     in audit-trail, ook niet via Spatie ActivityLog).
  */
 
 use App\Jobs\Submit\HashIdentifyingAttributes;
@@ -24,6 +26,7 @@ use App\Models\Municipality;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Activitylog\Models\Activity;
 
 uses(RefreshDatabase::class);
 
@@ -115,4 +118,54 @@ test('lege of ontbrekende velden worden niet stilletjes vervangen door een hash'
 
     expect($fresh['watIsHetKamerVanKoophandelNummerVanUwOrganisatie'])->toBe('');
     expect($fresh)->not->toHaveKey('bsn');
+});
+
+test('activity-log bevat geen form_state_snapshot zodat BSN/KvK nooit in de audit-trail belanden', function () {
+    $zaak = zaakMetFormStateValues([
+        'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+        'bsn' => '123456789',
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest Testlaan',
+    ]);
+
+    // Verifieer dat de 'created'-log-entry geen form_state_snapshot bevat.
+    $logEntry = Activity::where('subject_type', Zaak::class)
+        ->where('subject_id', $zaak->id)
+        ->where('event', 'created')
+        ->first();
+
+    expect($logEntry)->not->toBeNull();
+
+    $properties = $logEntry->properties->toArray();
+    $attributes = $properties['attributes'] ?? [];
+
+    expect($attributes)->not->toHaveKey('form_state_snapshot',
+        'form_state_snapshot mag nooit in de activity-log staan — bevat mogelijk plain BSN/KvK'
+    );
+});
+
+test('activity-log bevat geen form_state_snapshot na HashIdentifyingAttributes', function () {
+    $zaak = zaakMetFormStateValues([
+        'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+        'bsn' => '123456789',
+    ]);
+
+    (new HashIdentifyingAttributes($zaak))->handle();
+
+    // De update-log-entry (door forceFill + save in de job) mag ook
+    // geen form_state_snapshot bevatten — niet in 'attributes' en niet
+    // in 'old' (want dat zou de plaintext-waarde blootgeven).
+    $logEntries = Activity::where('subject_type', Zaak::class)
+        ->where('subject_id', $zaak->id)
+        ->get();
+
+    foreach ($logEntries as $entry) {
+        $properties = $entry->properties->toArray();
+
+        expect($properties['attributes'] ?? [])->not->toHaveKey('form_state_snapshot',
+            "activity-log entry '{$entry->event}' bevat form_state_snapshot in attributes"
+        );
+        expect($properties['old'] ?? [])->not->toHaveKey('form_state_snapshot',
+            "activity-log entry '{$entry->event}' bevat form_state_snapshot in old"
+        );
+    }
 });

@@ -536,7 +536,7 @@ class EventFormPage extends Page implements HasForms
             Notification::make()
                 ->danger()
                 ->title('Aanvraag niet ingediend')
-                ->body('Er ging iets mis bij het indienen: '.$e->getMessage())
+                ->body('Er is een fout opgetreden bij het indienen. Probeer het opnieuw of neem contact op met de beheerder.')
                 ->persistent()
                 ->send();
 

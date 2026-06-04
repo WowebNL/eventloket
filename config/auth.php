@@ -118,4 +118,39 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login Rate Limiting
+    |--------------------------------------------------------------------------
+    |
+    | Configure how many failed login attempts are allowed before a lockout,
+    | and how long the lockout period lasts in seconds. Defaults enforce a
+    | 15-minute lockout after 5 failed attempts (OWASP recommendation for
+    | government-facing applications).
+    |
+    */
+
+    'throttle' => [
+        'login' => [
+            'max_attempts' => env('LOGIN_MAX_ATTEMPTS', 5),
+            'decay_seconds' => env('LOGIN_DECAY_SECONDS', 900),
+        ],
+        'mfa' => [
+            'max_attempts' => env('MFA_MAX_ATTEMPTS', 5),
+            'decay_seconds' => env('MFA_DECAY_SECONDS', 900),
+        ],
+        'password_reset_request' => [
+            'max_attempts' => env('PASSWORD_RESET_REQUEST_MAX_ATTEMPTS', 5),
+            'decay_seconds' => env('PASSWORD_RESET_REQUEST_DECAY_SECONDS', 900),
+        ],
+        'password_reset' => [
+            'max_attempts' => env('PASSWORD_RESET_MAX_ATTEMPTS', 5),
+            'decay_seconds' => env('PASSWORD_RESET_DECAY_SECONDS', 900),
+        ],
+        'registration' => [
+            'max_attempts' => env('REGISTRATION_MAX_ATTEMPTS', 5),
+            'decay_seconds' => env('REGISTRATION_DECAY_SECONDS', 900),
+        ],
+    ],
+
 ];

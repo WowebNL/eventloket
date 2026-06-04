@@ -42,7 +42,17 @@ class ReviewerUserPolicy
      */
     public function update(User $user, ReviewerUser $reviewerUser): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user->role === Role::MunicipalityAdmin || $user->role === Role::ReviewerMunicipalityAdmin) {
+            $adminMunicipalityIds = $user->municipalities()->pluck('municipalities.id');
+
+            return $reviewerUser->municipalities()->whereIn('municipalities.id', $adminMunicipalityIds)->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -50,10 +60,6 @@ class ReviewerUserPolicy
      */
     public function delete(User $user, ReviewerUser $reviewerUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         // Admin and ReviewerMunicipalityAdmin can always delete
         if (in_array($user->role, [Role::Admin])) {
@@ -75,10 +81,6 @@ class ReviewerUserPolicy
      */
     public function restore(User $user, ReviewerUser $reviewerUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         return false;
     }
@@ -88,10 +90,6 @@ class ReviewerUserPolicy
      */
     public function forceDelete(User $user, ReviewerUser $reviewerUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         return false;
     }

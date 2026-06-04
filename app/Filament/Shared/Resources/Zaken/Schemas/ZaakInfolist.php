@@ -369,7 +369,7 @@ class ZaakInfolist
                                         $user = $record->handledStatusSetByUser;
                                         if ($user) {
                                             $state .= new HtmlString(Blade::render(
-                                                '<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">'.__('municipality/resources/zaak.infolist.sections.actions.handled_status_set_by.label', ['user' => '<span class="font-medium">'.$user->name.'</span>']).'</p>'
+                                                '<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">'.__('municipality/resources/zaak.infolist.sections.actions.handled_status_set_by.label', ['user' => '<span class="font-medium">'.e($user->name).'</span>']).'</p>'
                                             ));
                                         }
 

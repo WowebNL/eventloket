@@ -614,8 +614,7 @@ test('Advisory cannot add message to advice thread from another advisory', funct
         'record' => $otherAdviceThread->id,
         'parentRecord' => $this->zaak,
     ])
-        ->assertSuccessful()
-        ->assertDontSeeLivewire(MessageForm::class);
+        ->assertForbidden();
 });
 
 test('unassigned advisor cannot submit message in MessageForm', function () {

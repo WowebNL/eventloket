@@ -7,7 +7,6 @@ use App\Models\ReportQuestion;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Database\QueryException;
-use Laravel\Passport\Client;
 
 use function Pest\Livewire\livewire;
 
@@ -21,73 +20,6 @@ test('report questions are automatically seeded when municipality is created', f
     expect($questions->last()->order)->toBe(array_key_last($defaultQuestions));
     expect($questions->every(fn ($q) => $q->is_active))->toBeTrue();
     expect($questions->pluck('question', 'order')->all())->toBe($defaultQuestions);
-});
-
-test('report questions API returns questions for municipalities with new system', function () {
-    $municipality = Municipality::factory()->create(['use_new_report_questions' => true]);
-
-    // Delete auto-seeded questions and add custom test questions
-    $municipality->reportQuestions()->delete();
-
-    ReportQuestion::factory()->create([
-        'municipality_id' => $municipality->id,
-        'order' => 1,
-        'question' => 'Question 1?',
-        'is_active' => true,
-    ]);
-
-    ReportQuestion::factory()->create([
-        'municipality_id' => $municipality->id,
-        'order' => 2,
-        'question' => 'Question 2?',
-        'is_active' => true,
-    ]);
-
-    ReportQuestion::factory()->create([
-        'municipality_id' => $municipality->id,
-        'order' => 3,
-        'question' => 'Question 3?',
-        'is_active' => false,
-    ]);
-
-    $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
-    $response = $this->postJson(route('passport.token'), [
-        'grant_type' => 'client_credentials',
-        'client_id' => $client->id,
-        'client_secret' => '12345678',
-    ]);
-    $accessToken = $response->json('access_token');
-
-    $response = $this->getJson(route('api.report-questions', $municipality->brk_identification), [
-        'Authorization' => 'Bearer '.$accessToken,
-    ]);
-
-    $response->assertStatus(200);
-    $data = $response->json('data');
-    expect($data)->toHaveCount(2);
-    expect($data)->toHaveKeys(['1', '2']);
-    expect($data['1'])->toBe('Question 1?');
-    expect($data['2'])->toBe('Question 2?');
-    expect(array_key_exists('3', $data))->toBeFalse();
-});
-
-test('report questions API returns empty for municipalities with old system', function () {
-    $municipality = Municipality::factory()->create(['use_new_report_questions' => false]);
-
-    $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
-    $response = $this->postJson(route('passport.token'), [
-        'grant_type' => 'client_credentials',
-        'client_id' => $client->id,
-        'client_secret' => '12345678',
-    ]);
-    $accessToken = $response->json('access_token');
-
-    $response = $this->getJson(route('api.report-questions', $municipality->brk_identification), [
-        'Authorization' => 'Bearer '.$accessToken,
-    ]);
-
-    $response->assertStatus(200);
-    expect($response->json('data'))->toBeEmpty();
 });
 
 test('admin users can view report questions', function () {
@@ -149,53 +81,6 @@ test('different municipalities can have same order numbers', function () {
 
     expect($question1)->toBeInstanceOf(ReportQuestion::class);
     expect($question2)->toBeInstanceOf(ReportQuestion::class);
-});
-
-test('report questions are properly ordered in API response', function () {
-    $municipality = Municipality::factory()->create(['use_new_report_questions' => true]);
-
-    // Delete auto-seeded questions and create questions out of order
-    $municipality->reportQuestions()->delete();
-
-    ReportQuestion::factory()->create([
-        'municipality_id' => $municipality->id,
-        'order' => 3,
-        'question' => 'Third question?',
-        'is_active' => true,
-    ]);
-
-    ReportQuestion::factory()->create([
-        'municipality_id' => $municipality->id,
-        'order' => 1,
-        'question' => 'First question?',
-        'is_active' => true,
-    ]);
-
-    ReportQuestion::factory()->create([
-        'municipality_id' => $municipality->id,
-        'order' => 2,
-        'question' => 'Second question?',
-        'is_active' => true,
-    ]);
-
-    $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
-    $response = $this->postJson(route('passport.token'), [
-        'grant_type' => 'client_credentials',
-        'client_id' => $client->id,
-        'client_secret' => '12345678',
-    ]);
-    $accessToken = $response->json('access_token');
-
-    $response = $this->getJson(route('api.report-questions', $municipality->brk_identification), [
-        'Authorization' => 'Bearer '.$accessToken,
-    ]);
-
-    $data = $response->json('data');
-    $keys = array_keys($data);
-    expect($keys)->toBe([1, 2, 3]);
-    expect($data['1'])->toBe('First question?');
-    expect($data['2'])->toBe('Second question?');
-    expect($data['3'])->toBe('Third question?');
 });
 
 test('reordering report questions persists new order', function () {

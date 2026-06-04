@@ -19,4 +19,6 @@ jobs:
         uses: ramsey/composer-install@v3
 
       - name: Run PHPStan
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
         run: ./vendor/bin/phpstan analyse --error-format=github --debug

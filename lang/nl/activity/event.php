@@ -2,10 +2,14 @@
 
 return [
     'login' => 'Ingelogd',
-    'login_failed' => 'Inlog mislukt',
+    'login_failed' => 'Inlogpoging mislukt',
+    'logout' => 'Uitgelogd',
+    'password_reset' => 'Wachtwoord opnieuw ingesteld',
+    'mfa_failed' => 'Twee-factor verificatie mislukt',
     'lockout' => 'Geblokkeerd',
 
     'view' => 'Bekeken',
+    'download' => 'Gedownload',
 
     'sent' => 'Verzonden',
 

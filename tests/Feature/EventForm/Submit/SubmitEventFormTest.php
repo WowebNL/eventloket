@@ -162,28 +162,27 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     // 4. Draft is leeggemaakt.
     expect(Draft::where('user_id', $sc['user']->id)->count())->toBe(0);
 
-    // 5. De 6 jobs zitten samen in één Bus::chain() in de juiste volgorde.
-    //    SetInitialStatusZGW staat als eerste; HashIdentifyingAttributes is
-    //    tijdelijk uitgeschakeld.
+    // 5. De 8 jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    //    GenerateSubmissionPdf staat als eerste zodat de bevestigingsmail zo
+    //    snel mogelijk verstuurd wordt. HashIdentifyingAttributes loopt als
+    //    allerlaatste zodat alle eerdere jobs de plain BSN/KvK kunnen lezen.
     Bus::assertChained([
+        GenerateSubmissionPdf::class,
         SetInitialStatusZGW::class,
         AddZaakeigenschappenZGW::class,
         AddEinddatumZGW::class,
         UpdateInitiatorZGW::class,
         AddGeometryZGW::class,
         CreateDoorkomstZaken::class,
+        HashIdentifyingAttributes::class,
     ]);
 
-    // 6. PDF en bijlagen-upload draaien onafhankelijk (niet in de ketting)
-    //    zodat ze bij een faal van een ZGW-job niet mee-vallen.
-    //    De PDF-job dispatcht zelf UploadSubmissionPdfToZGW na de write,
-    //    dus die toetsen we daar.
-    Bus::assertDispatched(GenerateSubmissionPdf::class,
-        fn (GenerateSubmissionPdf $job) => $job->zaak->is($zaak)
-    );
+    // 6. Bijlagen-upload draait onafhankelijk (niet in de ketting).
     Bus::assertDispatched(UploadFormBijlagenToZGW::class,
         fn (UploadFormBijlagenToZGW $job) => $job->zaak->is($zaak)
     );
+
+    // 7. HashIdentifyingAttributes is NIET los gedispatcht — zit in de chain.
     Bus::assertNotDispatched(HashIdentifyingAttributes::class);
 });
 

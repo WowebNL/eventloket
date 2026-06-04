@@ -496,7 +496,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return Select::make('reference_data.status_name')
             ->label('Status')
             ->options(function () {
-                return Cache::remember('zaak_status_name_options', 60 * 60 * 24, function () {
+                $tenantId = Filament::getTenant()?->getKey() ?? 'global';
+
+                return Cache::remember("zaak_status_name_options_{$tenantId}", 60 * 60 * 24, function () {
                     return Zaak::all()
                         ->pluck('reference_data.status_name')
                         ->unique()

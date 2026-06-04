@@ -3,10 +3,15 @@
 use App\Jobs\DocumentNotificationReceived;
 use App\Jobs\Zaak\ClearZaakCache;
 use App\Jobs\ZaakStatusNotificationReceived;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
 
 beforeEach(function () {
+    // Bestaande tests gebruiken example.com als host; de host-validatie
+    // in OpenNotificationRequest controleert tegen deze waarde.
+    Config::set('openzaak.url', 'https://example.com/');
+
     $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
 
     $response = $this->postJson(route('passport.token'), [
@@ -135,4 +140,36 @@ test('Open notifications endpoint handles document update notification', functio
     $response->assertStatus(200);
     Queue::assertPushed(DocumentNotificationReceived::class);
 
+});
+
+test('hoofdObject met vreemde host wordt geweigerd (SSRF-bescherming)', function () {
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'http://169.254.169.254/latest/meta-data/',
+        'resourceUrl' => 'https://example.com/zaak/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['hoofdObject']);
+});
+
+test('resourceUrl met vreemde host wordt geweigerd (SSRF-bescherming)', function () {
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'http://internal.attacker.com/steal-credentials',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['resourceUrl']);
 });

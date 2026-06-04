@@ -42,7 +42,17 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function update(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user->role === Role::MunicipalityAdmin || $user->role === Role::ReviewerMunicipalityAdmin) {
+            $adminMunicipalityIds = $user->municipalities()->pluck('municipalities.id');
+
+            return $reviewerMunicipalityAdminUser->municipalities()->whereIn('municipalities.id', $adminMunicipalityIds)->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -50,12 +60,18 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function delete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
+
+        if ($user->role === Role::Admin) {
+            return true;
         }
 
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        if ($user->role === Role::MunicipalityAdmin || $user->role === Role::ReviewerMunicipalityAdmin) {
+            $adminMunicipalityIds = $user->municipalities()->pluck('municipalities.id');
+
+            return $reviewerMunicipalityAdminUser->municipalities()->whereIn('municipalities.id', $adminMunicipalityIds)->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -63,12 +79,18 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function restore(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
+
+        if ($user->role === Role::Admin) {
+            return true;
         }
 
-        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        if ($user->role === Role::MunicipalityAdmin || $user->role === Role::ReviewerMunicipalityAdmin) {
+            $adminMunicipalityIds = $user->municipalities()->pluck('municipalities.id');
+
+            return $reviewerMunicipalityAdminUser->municipalities()->whereIn('municipalities.id', $adminMunicipalityIds)->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -76,10 +98,6 @@ class ReviewerMunicipalityAdminUserPolicy
      */
     public function forceDelete(User $user, ReviewerMunicipalityAdminUser $reviewerMunicipalityAdminUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }

@@ -2,9 +2,14 @@
 
 namespace App\Policies;
 
+use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Models\Thread;
+use App\Models\Threads\AdviceThread;
 use App\Models\User;
+use App\Models\Users\AdminUser;
+use App\Models\Users\AdvisorUser;
+use App\Models\Users\MunicipalityUser;
 
 class ThreadPolicy
 {
@@ -21,11 +26,20 @@ class ThreadPolicy
      */
     public function view(User $user, Thread $thread): bool
     {
-        return match ($user->role) {
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
-            default => false,
-        };
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
+        if ($user instanceof MunicipalityUser) {
+            return $user->canAccessMunicipality($thread->zaak->zaaktype->municipality_id);
+        }
+
+        if ($user instanceof AdvisorUser && $thread instanceof AdviceThread) {
+            return $thread->advice_status !== AdviceStatus::Concept
+                && $user->canAccessAdvisory($thread->advisory_id);
+        }
+
+        return false;
     }
 
     /**
@@ -35,7 +49,6 @@ class ThreadPolicy
     {
         return match ($user->role) {
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
             default => false,
         };
     }

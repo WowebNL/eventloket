@@ -289,6 +289,8 @@ class Zaak extends Model implements Eventable
     {
         return LogOptions::defaults()
             ->logFillable()
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->logExcept(['form_state_snapshot']);
     }
 }

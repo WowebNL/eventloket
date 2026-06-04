@@ -77,5 +77,16 @@ class NewDocumentVersionAction
         Storage::delete($data['file']);
 
         Cache::forget("zaak.{$zaak->id}.documenten");
+
+        activity('document')
+            ->event('updated')
+            ->causedBy(auth()->user())
+            ->performedOn($zaak)
+            ->withProperties([
+                'document_uuid' => $documentUuid,
+                'filename' => $data['file_name'],
+                'titel' => $data['titel'],
+            ])
+            ->log(__('activity/event.updated'));
     }
 }

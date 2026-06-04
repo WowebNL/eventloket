@@ -5,6 +5,7 @@ use App\Providers\Filament\AdminPanelProvider;
 use App\Providers\Filament\AdvisorPanelProvider;
 use App\Providers\Filament\MunicipalityPanelProvider;
 use App\Providers\Filament\OrganiserPanelProvider;
+use App\Providers\GuavaCalendarServiceProvider;
 use App\Providers\HorizonServiceProvider;
 
 return [
@@ -13,5 +14,6 @@ return [
     AdvisorPanelProvider::class,
     MunicipalityPanelProvider::class,
     OrganiserPanelProvider::class,
+    GuavaCalendarServiceProvider::class,
     HorizonServiceProvider::class,
 ];

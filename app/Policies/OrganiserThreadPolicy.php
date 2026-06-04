@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Models\Thread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\User;
+use App\Models\Users\AdminUser;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 
@@ -28,11 +29,19 @@ class OrganiserThreadPolicy
      */
     public function view(User $user, OrganiserThread $organiserThread): bool
     {
-        return match ($user->role) {
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Organiser => true,
-            default => false,
-        };
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
+        if ($user instanceof MunicipalityUser) {
+            return $user->canAccessMunicipality($organiserThread->zaak->zaaktype->municipality_id);
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return $user->canAccessOrganisation($organiserThread->zaak->organisation_id);
+        }
+
+        return false;
     }
 
     /**

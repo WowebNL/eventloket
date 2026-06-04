@@ -37,16 +37,17 @@ use Illuminate\Support\Facades\Log;
  *   5. Audit-log-entry
  *
  * Async (queue, in dispatch-volgorde):
+ *   - GenerateSubmissionPdf  (eerste in chain, hoge prioriteit; de organisator
+ *     wacht op de bevestigingsmail met PDF-bijlage)
  *   - SetInitialStatusZGW  (statustype volgnummer 1 zetten)
  *   - AddZaakeigenschappenZGW
  *   - AddEinddatumZGW
  *   - UpdateInitiatorZGW
  *   - AddGeometryZGW
  *   - CreateDoorkomstZaken  (alleen bij route-events)
- *   - HashIdentifyingAttributes  (laatste in chain; anonimiseert BSN/KVK zodat
- *     eerder liggende jobs bij retry nog de originele data kunnen lezen)
- *   - GenerateSubmissionPdf  (los, hoge prioriteit)
- *   - UploadFormBijlagenToZGW  (los)
+ *   - HashIdentifyingAttributes  (laatste in chain; anonimiseert BSN/KvK zodat
+ *     alle eerdere jobs bij retry nog de originele data kunnen lezen)
+ *   - UploadFormBijlagenToZGW  (los, geen plain BSN/KvK nodig)
  */
 final class SubmitEventForm
 {
@@ -106,27 +107,25 @@ final class SubmitEventForm
     private function dispatchAsyncChain(Zaak $zaak): void
     {
         Bus::chain([
+            // PDF staat als eerste zodat de bevestigingsmail zo snel mogelijk
+            // verstuurd wordt. Leest alleen form_state_snapshot + lokale relaties,
+            // dus geen afhankelijkheid van de ZGW-jobs die erna lopen.
+            // HashIdentifyingAttributes blijft laatste: pas hashen als alle jobs
+            // die de plain BSN/KvK nodig hebben klaar zijn.
+            (new GenerateSubmissionPdf($zaak))->onQueue('high'),
             new SetInitialStatusZGW($zaak),
             new AddZaakeigenschappenZGW($zaak),
             new AddEinddatumZGW($zaak),
             new UpdateInitiatorZGW($zaak),
             new AddGeometryZGW($zaak),
             new CreateDoorkomstZaken($zaak),
-            // new HashIdentifyingAttributes($zaak),
+            new HashIdentifyingAttributes($zaak),
         ])->dispatch();
 
-        // PDF + email komen als losse (niet-ketende) jobs zodat ze
-        // onafhankelijk kunnen falen/retrien. De Mailable hangt aan de
-        // PDF-job (die dispatched 'm nadat de PDF klaar is). De PDF-job
-        // dispatcht óók UploadSubmissionPdfToZGW, dus daar hoeven we hier
-        // niets voor te regelen.
-        GenerateSubmissionPdf::dispatch($zaak)->onQueue('high');
-
         // Upload alle FileUpload-bijlagen die de organisator heeft
-        // toegevoegd als zaakinformatieobject naar OpenZaak. Apart van
-        // de PDF-job omdat hier geen volgorde-afhankelijkheid is — de
-        // bijlagen liggen al op disk vanaf het moment dat de organisator
-        // ze uploadde tijdens het invullen.
+        // toegevoegd als zaakinformatieobject naar OpenZaak. Staat bewust
+        // los van de chain: bijlagen hebben geen plain BSN/KvK nodig en
+        // mogen onafhankelijk falen/retrien.
         UploadFormBijlagenToZGW::dispatch($zaak);
     }
 }

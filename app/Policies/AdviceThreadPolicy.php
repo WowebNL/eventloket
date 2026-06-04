@@ -8,6 +8,7 @@ use App\Enums\Role;
 use App\Models\Thread;
 use App\Models\Threads\AdviceThread;
 use App\Models\User;
+use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
 use App\Models\Users\MunicipalityUser;
 
@@ -26,11 +27,20 @@ class AdviceThreadPolicy
      */
     public function view(User $user, AdviceThread $adviceThread): bool
     {
-        return match ($user->role) {
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => $adviceThread->advice_status != AdviceStatus::Concept,
-            default => false,
-        };
+        if ($user instanceof AdminUser) {
+            return true;
+        }
+
+        if ($user instanceof MunicipalityUser) {
+            return $user->canAccessMunicipality($adviceThread->zaak->zaaktype->municipality_id);
+        }
+
+        if ($user instanceof AdvisorUser) {
+            return $adviceThread->advice_status !== AdviceStatus::Concept
+                && $user->canAccessAdvisory($adviceThread->advisory_id);
+        }
+
+        return false;
     }
 
     /**

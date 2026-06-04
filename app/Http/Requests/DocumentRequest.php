@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\Role;
+use App\Models\Zaak;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -13,8 +13,9 @@ class DocumentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        // TODO refactor this later
-        return auth()->check() && in_array(auth()->user()->role, [Role::Reviewer, Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Organiser, Role::Advisor]);
+        $zaak = $this->route('zaak');
+
+        return $zaak instanceof Zaak && $this->user()?->can('view', $zaak) === true;
     }
 
     /**

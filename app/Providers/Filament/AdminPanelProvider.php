@@ -2,9 +2,12 @@
 
 namespace App\Providers\Filament;
 
+use App\AvatarProviders\LocalSvgAvatarProvider;
 use App\Filament\Admin\Pages\Dashboard;
 use App\Filament\Shared\Pages\EditProfile;
 use App\Filament\Shared\Pages\Login;
+use App\Filament\Shared\Pages\PasswordReset\RequestPasswordReset;
+use App\Filament\Shared\Pages\PasswordReset\ResetPassword;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
 use Filament\Http\Middleware\Authenticate;
@@ -16,7 +19,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -43,9 +46,10 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->globalSearch(false)
+            ->defaultAvatarProvider(LocalSvgAvatarProvider::class)
             ->databaseNotifications()
             ->login(Login::class)
-            ->passwordReset()
+            ->passwordReset(requestAction: RequestPasswordReset::class, resetAction: ResetPassword::class)
             ->profile(EditProfile::class)
             ->multiFactorAuthentication([
                 AppAuthentication::make()
@@ -59,7 +63,7 @@ class AdminPanelProvider extends PanelProvider
                 StartSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
+                PreventRequestForgery::class,
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,

@@ -15,7 +15,7 @@ use App\Models\Municipality;
  * Wanneer een gemeente migrated is naar het ReportQuestion-systeem
  * (`use_new_report_questions === true`) filteren we de
  * `report_question`-typed variabelen weg — die worden dan via de
- * aparte `ReportQuestion`-tabel + ReportQuestionController geserveerd.
+ * aparte `ReportQuestion`-tabel geserveerd.
  */
 class MunicipalityVariablesService
 {

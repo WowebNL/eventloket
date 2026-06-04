@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Models\User;
 use App\Models\Users\AdvisorUser;
@@ -31,9 +32,21 @@ class ZaakPolicy
             return $user->canAccessOrganisation($zaak->organisation_id);
         }
 
+        if ($user instanceof AdvisorUser) {
+            if ($user->advisories->where('can_view_any_zaak', true)->isNotEmpty()) {
+                return true;
+            }
+
+            $advisoryIds = $zaak->adviceThreads()
+                ->where('advice_status', '!=', AdviceStatus::Concept)
+                ->pluck('advisory_id');
+
+            return $user->advisories->pluck('id')->intersect($advisoryIds)->isNotEmpty();
+        }
+
         return match ($user->role) {
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
-            Role::Advisor => true,
+            /** @phpstan-ignore-next-line */
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => $user->canAccessMunicipality($zaak->zaaktype->municipality_id),
             Role::Admin => true,
             default => false,
         };

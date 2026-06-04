@@ -30,6 +30,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
+use Tests\Feature\EventForm\Pages\FakeSubmitEventForm;
 
 uses(RefreshDatabase::class);
 
@@ -44,34 +45,6 @@ beforeEach(function () {
     $this->actingAs($this->user);
     Filament::setTenant($this->organisation);
 });
-
-/**
- * Stub die het concrete SubmitEventForm vervangt: telt aanroepen en
- * laat de test zelf bepalen wat er gebeurt (zaak teruggeven of falen).
- * SubmitEventForm zelf is `final`, dus we kunnen 'm niet via Mockery
- * mocken — een eigen stub-class is hier de cleanste route. De Laravel-
- * container mag prima een ander type aan `SubmitEventForm::class`
- * koppelen omdat het call-pad het resultaat als `mixed` ziet.
- */
-class FakeSubmitEventForm
-{
-    public int $aantalAanroepen = 0;
-
-    public function __construct(
-        public ?Throwable $gooitException = null,
-        public mixed $resultaat = null,
-    ) {}
-
-    public function execute(...$args): mixed
-    {
-        $this->aantalAanroepen++;
-        if ($this->gooitException) {
-            throw $this->gooitException;
-        }
-
-        return $this->resultaat;
-    }
-}
 
 test('twee submit-aanroepen achter elkaar maken maximaal één zaak aan', function () {
     // ZaakObserver dispatcht jobs en verstuurt mails; we hoeven die

@@ -7,7 +7,7 @@ use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
 use App\Livewire\AcceptInvites\AcceptOrganisationInvite;
 use App\Settings\WelcomeSettings;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -48,5 +48,5 @@ if (app()->environment(['local', 'testing'])) {
             ->delete();
 
         return response()->json(['ok' => true, 'deleted' => $deleted]);
-    })->name('test.reset-draft')->withoutMiddleware([VerifyCsrfToken::class]);
+    })->name('test.reset-draft')->withoutMiddleware([PreventRequestForgery::class]);
 }

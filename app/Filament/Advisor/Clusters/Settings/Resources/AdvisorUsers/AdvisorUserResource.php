@@ -2,7 +2,6 @@
 
 namespace App\Filament\Advisor\Clusters\Settings\Resources\AdvisorUsers;
 
-use App\Enums\AdvisoryRole;
 use App\Filament\Advisor\Clusters\Settings\Resources\AdvisorUsers\Pages\ListAdvisorUsers;
 use App\Filament\Advisor\Clusters\Settings\SettingsCluster;
 use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserInviteAction;
@@ -11,7 +10,6 @@ use App\Filament\Shared\Resources\AdvisorUsers\Schemas\AdvisorUserForm;
 use App\Filament\Shared\Resources\AdvisorUsers\Tables\AdvisorUserTable;
 use App\Models\Advisory;
 use App\Models\Users\AdvisorUser;
-use App\Models\Users\OrganiserUser;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
@@ -30,22 +28,6 @@ class AdvisorUserResource extends Resource
     protected static ?string $tenantOwnershipRelationshipName = 'advisories';
 
     protected static ?string $recordTitleAttribute = 'name';
-
-    /**
-     * Access check for the resource
-     * custom override because the resource is using the UserPolicy which is not correct for this resource
-     * maybe refactor later by using a custom model for example OrganiserUser and related policy
-     */
-    public static function canAccess(): bool
-    {
-        /** @var Advisory $tenant */
-        $tenant = Filament::getTenant();
-
-        /** @var AdvisorUser $user */
-        $user = auth()->user();
-
-        return $user->canAccessAdvisory($tenant->id, AdvisoryRole::Admin);
-    }
 
     public static function getModelLabel(): string
     {

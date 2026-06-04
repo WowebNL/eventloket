@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Activitylog\Models\Activity;
 use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
@@ -407,4 +408,64 @@ test('reviewer can manually choose confidentiality level', function () {
         && $request->method() === 'POST'
         && $request->data()['vertrouwelijkheidaanduiding'] === DocumentVertrouwelijkheden::Confidentieel->value
     );
+});
+
+test('uploading a document creates a document activity log entry', function () {
+    Storage::fake('local');
+    Storage::put('documents/test.pdf', '%PDF-1.4 fake pdf content');
+
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/log-doc-1',
+            'uuid' => 'log-doc-1',
+            'identificatie' => 'DOC-LOG-1',
+            'titel' => 'Log testbestand',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'auteur' => $this->organiser->name,
+            'versie' => 1,
+            'bestandsnaam' => 'test.pdf',
+            'inhoud' => '',
+            'beschrijving' => '',
+            'formaat' => 'application/pdf',
+            'locked' => false,
+            'bestandsgrootte' => 0,
+            'creatiedatum' => now()->format('Y-m-d'),
+            'wijzigingsdatum' => now()->toIso8601String(),
+            'informatieobjecttype' => $documentTypeUrl,
+            'indicatieGebruiksrecht' => false,
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/log-1',
+            'zaak' => $zgwZaakUrl,
+            'informatieobject' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/log-doc-1',
+        ], 201),
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+    ]);
+
+    $this->actingAs($this->organiser);
+
+    UploadDocumentAction::uploadDocument([
+        'titel' => 'Log testbestand',
+        'informatieobjecttype' => $documentTypeUrl,
+        'file' => 'documents/test.pdf',
+        'file_name' => 'test.pdf',
+    ], $zaak);
+
+    $activity = Activity::where('log_name', 'document')->where('event', 'created')->first();
+
+    expect($activity)->not->toBeNull()
+        ->and($activity->description)->toBe('Aangemaakt')
+        ->and($activity->causer_id)->toEqual($this->organiser->id)
+        ->and($activity->subject_id)->toEqual($zaak->id)
+        ->and($activity->properties->get('document_uuid'))->toBe('log-doc-1')
+        ->and($activity->properties->get('filename'))->toBe('test.pdf')
+        ->and($activity->properties->get('titel'))->toBe('Log testbestand');
 });
