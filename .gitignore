@@ -27,3 +27,7 @@ Thumbs.db
 /public/js/filament
 /tests/coverage
 /database/openforms_migrations
+/storage/phpstan
+/.claude/
+.mcp.json
+boost.json

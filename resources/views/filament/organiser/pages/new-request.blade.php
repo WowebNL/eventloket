@@ -90,6 +90,16 @@
         <link rel="stylesheet" href="{{ config('services.open_forms.base_url') }}/static/sdk/open-forms-sdk.css" />
     @endpush
     
+    <x-filament::section
+        class="mb-6"
+    >
+        <div class="space-y-3 text-sm">
+            <p>Beste organisator,</p>
+            <br><p>Wij werken voortdurend aan het verbeteren van onze dienstverlening. Daarom introduceren wij op <b>24 juni 2026</b> een nieuwe versie van het vragenformulier. Deze nieuwe versie biedt onder andere de mogelijkheid om ingediende aanvragen te kopiëren voor een volgende aanvraag.</p>
+            <br><p>U heeft de mogelijkheid om tot uiterlijk <b>23 juni 2026</b> openstaande vragenlijsten volledig in te vullen en uw aanvraag in te dienen. Indien dit niet tijdig lukt, zullen niet-ingediende vragenlijsten komen te vervallen en dient de aanvraag opnieuw te worden ingevoerd in het nieuwe verbeterde vragenformulier.</p>
+        </div>
+    </x-filament::section>
+
     <div wire:ignore>
         <div
             id="openforms-root"
