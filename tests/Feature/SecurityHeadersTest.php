@@ -33,7 +33,7 @@ test('CSP contains required directives', function () {
         ->toContain("style-src 'self' 'unsafe-inline'")
         ->toContain("img-src 'self' data: blob: https://tile.openstreetmap.org")
         ->toContain("font-src 'self'")
-        ->toContain("connect-src 'self'")
+        ->toContain("connect-src 'self' https://api.pdok.nl")
         ->toContain("frame-ancestors 'none'")
         ->toContain("frame-src 'none'")
         ->toContain("object-src 'none'")

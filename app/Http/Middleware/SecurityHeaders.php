@@ -36,8 +36,8 @@ class SecurityHeaders
 
     private function buildCsp(): string
     {
-        // connect-src must allow the Vite HMR WebSocket in local dev.
-        $connectSrc = "'self'";
+        // connect-src must allow the Vite HMR WebSocket in local dev and the PDOK Locatieserver API.
+        $connectSrc = "'self' https://api.pdok.nl";
         if (config('app.debug')) {
             $connectSrc .= ' ws://localhost:5173 ws://127.0.0.1:5173 http://localhost:5173';
         }
