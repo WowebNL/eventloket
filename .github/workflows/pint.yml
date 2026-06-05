@@ -4,14 +4,14 @@ jobs:
   phplint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       # Explicit PHP 8.4 + Pint uit project-vendor i.p.v. de aglipanci-
       # action: die draait op `composer:latest` (PHP 8.3) en faalde dan
       # op format-issues die Pint 1.29.0 onder PHP 8.4 lokaal niet ziet.
       # Zo matcht CI exact de lokale Sail-environment (PHP 8.4 + composer.lock).
       - name: Setup PHP 8.4
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
         with:
           php-version: '8.4'
           tools: composer:v2
