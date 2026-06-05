@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.6.5 - 2026-06-04
+
+### What's Changed
+
+#### Other changes
+
+* Chore: added temporary information message for upcomming new form (#367) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.6.4...v0.6.5
+
 ## v0.6.3 - 2026-06-02
 
 ### What's Changed
@@ -198,6 +208,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
