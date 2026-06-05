@@ -240,6 +240,19 @@ return [
             ],
         ],
 
+        'staging' => [
+            'supervisor-high' => [
+                'maxProcesses' => 1,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+            'supervisor-default' => [
+                'maxProcesses' => 2,
+                'balanceMaxShift' => 1,
+                'balanceCooldown' => 3,
+            ],
+        ],
+
         'local' => [
             'supervisor-high' => [
                 'maxProcesses' => 1,
