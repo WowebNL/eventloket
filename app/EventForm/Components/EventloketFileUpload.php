@@ -17,7 +17,7 @@ use Filament\Forms\Components\FileUpload;
  * dezelfde restricties krijgt als een document dat de behandelaar
  * later via de zaak-actie zou uploaden:
  *
- * - max 30 MB
+ * - max 60 MB
  * - mime-type-mapping uit `config/app.php` (eml/emlx/msg met
  *   passende mime-types ipv `application/octet-stream`)
  * - executable / script-uploads geweigerd via

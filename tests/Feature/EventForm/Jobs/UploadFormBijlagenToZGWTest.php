@@ -210,7 +210,38 @@ test('security: bijlage-pad buiten de eigen organisatie-map wordt geweigerd', fu
 
     (new UploadFormBijlagenToZGW($zaak))->handle();
 
-    Log::shouldHaveReceived('warning')
+    Log::shouldHaveReceived('critical')
+        ->withArgs(fn (string $message) => str_contains($message, 'buiten de eigen upload-map geweigerd'))
+        ->once();
+    Http::assertNothingSent();
+});
+
+test('security: path traversal via ../ in pad wordt geweigerd', function () {
+    Log::spy();
+
+    $orgA = Organisation::factory()->create();
+    $orgB = Organisation::factory()->create();
+
+    // Het doelbestand van organisatie B bestaat op disk — aanvaller kent het pad.
+    $doelPad = "event-form-uploads/{$orgB->uuid}/geheim.pdf";
+    Storage::disk('local')->put($doelPad, 'geheim document');
+
+    // Traversal-pad dat via ../ de map van org B bereikt, maar str_starts_with
+    // op de prefix van org A passeert als er geen normalisatie plaatsvindt.
+    $traversalPad = "event-form-uploads/{$orgA->uuid}/../{$orgB->uuid}/geheim.pdf";
+
+    $zaak = Zaak::factory()->create([
+        'zgw_zaak_url' => 'https://zgw.example.com/zaken/api/v1/zaken/uuid-1',
+        'organisation_id' => $orgA->id,
+        'zaaktype_id' => Zaaktype::factory()->create()->id,
+        'form_state_snapshot' => ['values' => [
+            'bijlagen1' => $traversalPad,
+        ]],
+    ]);
+
+    (new UploadFormBijlagenToZGW($zaak))->handle();
+
+    Log::shouldHaveReceived('critical')
         ->withArgs(fn (string $message) => str_contains($message, 'buiten de eigen upload-map geweigerd'))
         ->once();
     Http::assertNothingSent();

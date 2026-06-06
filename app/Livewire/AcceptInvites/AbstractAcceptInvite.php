@@ -49,6 +49,10 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
             throw new InviteNotFoundException;
         }
 
+        if ($invite->created_at->addDays(config('invites.expiration_days'))->isPast()) {
+            throw new InviteNotFoundException;
+        }
+
         $this->invite = $invite;
 
         /** @phpstan-ignore-next-line */

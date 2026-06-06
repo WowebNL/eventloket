@@ -13,6 +13,11 @@ declare(strict_types=1);
  * component-lifetime ziet de vlag en doet niets. Een succesvolle
  * submit redirect direct weg, en bij een fout wordt de vlag gereset
  * zodat de organisator kan retry'en.
+ *
+ * Server-side hervalidatie wordt per applicabele wizard-stap uitgevoerd
+ * vóór de idempotency-guard. De guard-tests gebruiken het
+ * 'vooraankondiging'-pad om alleen de basisstappen te valideren en
+ * de conditionele vergunning-stappen te omzeilen.
  */
 
 use App\Enums\OrganisationRole;
@@ -29,6 +34,7 @@ use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\Feature\EventForm\Pages\FakeSubmitEventForm;
 
@@ -45,6 +51,89 @@ beforeEach(function () {
     $this->actingAs($this->user);
     Filament::setTenant($this->organisation);
 });
+
+/**
+ * Geeft de minimale geldige formulierdata terug voor een
+ * 'vooraankondiging'-aanvraag. Dit pad maakt alle conditionele
+ * vergunning-stappen (RisicoscanStep, Vragenboom2Step, etc.) niet
+ * applicable, zodat alleen de verplichte basisstappen gevalideerd worden.
+ *
+ * @return array<string, mixed>
+ */
+function minimalVooraankondigingData(): array
+{
+    $morgen = now()->addDay()->format('Y-m-d');
+
+    return [
+        // ContactgegevensStep — altijd applicable, altijd zichtbare verplichte velden
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Test',
+        'watIsUwEMailadres' => 'jan@example.com',
+        'watIsUwTelefoonnummer' => '0612345678',
+
+        // NaamVanHetEvenementStep — naam vereist; omschrijving + soort zichtbaar ná naam
+        'watIsDeNaamVanHetEvenementVergunning' => 'Test Evenement',
+        'geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning' => 'Een omschrijving van het test-evenement.',
+        'soortEvenement' => 'Festival',
+
+        // LocatieVanHetEvenement2Step — 'gebouw' toont het Repeater-veld (geen kaart nodig);
+        // 'buiten' vereist een Map-tekening die niet in unit-tests te vullen is.
+        'waarVindtHetEvenementPlaats' => ['gebouw'],
+        'adresVanDeGebouwEn' => [
+            ['naamVanDeLocatieGebouw' => 'Stadhuis Heerlen'],
+        ],
+
+        // TijdenStep — datum + 4 radios altijd zichtbaar en vereist
+        'EvenementStart' => $morgen.' 10:00',
+        'EvenementEind' => $morgen.' 18:00',
+        'zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten' => 'Nee',
+        'zijnErTijdensHetEvenementXOpbouwactiviteiten' => 'Nee',
+        'zijnErAansluitendAanHetEvenementAfbouwactiviteiten' => 'Nee',
+        'zijnErTijdensHetEvenementXAfbouwactiviteiten3' => 'Nee',
+
+        // OrganisatieInformatieFieldset — zichtbaar omdat eventloketSession.kvk truthy is.
+        // Adres komt niet uit de session (organisation_address is leeg in tests).
+        'postcode1' => '6411CD',
+        'straatnaam1' => 'Teststraat',
+        'huisnummer1' => '1',
+        'plaatsnaam1' => 'Heerlen',
+
+        // WaarvoorWiltUHetEventloketGebruikenStep — 'vooraankondiging' maakt alle
+        // conditionele stappen niet applicable (RisicoscanStep, Vragenboom2Step, etc.)
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+
+        // SamenvattingStep — AVG-akkoord verplicht accepted
+        'akkoordVerwerkingGegevens' => true,
+    ];
+}
+
+/**
+ * Bereidt de page voor zodat submit() doorkomt:
+ *   - $data bevat geldige form-waarden voor het vooraankondiging-pad
+ *   - state absorbeert die waarden (voor isStepApplicable)
+ *   - authUser/authOrganisation zijn gezet als OrganiserUser/Organisation
+ *
+ * Direct op de page-instantie — niet via call(), dat gebruikt de Livewire-snapshot
+ * die niet de in-memory mutaties ziet.
+ */
+function setupValidSubmit(EventFormPage $page, User $user, Organisation $organisation): void
+{
+    // Zet de geldige data direct op de component-eigenschap; dit omzeilt
+    // updated()-throttling en draft-persistence, maar geeft validateApplicableSteps()
+    // de waarden die het nodig heeft om door te komen.
+    $data = minimalVooraankondigingData();
+    $page->data = array_merge($page->data ?? [], $data);
+
+    // Absorbeer in state zodat isStepApplicable('vooraankondiging') de conditionele
+    // stappen als niet-van-toepassing markeert.
+    $page->state()->absorbFields($page->data);
+
+    // OrganiserUser nodig voor de instanceof-check in submit(); hydrate() zou
+    // dit normaal invullen maar dat veronderstelt een correcte Filament-panel-
+    // context die in tests niet gegarandeerd is.
+    $page->state()->setSystem('authUser', OrganiserUser::find($user->id));
+    $page->state()->setSystem('authOrganisation', $organisation);
+}
 
 test('twee submit-aanroepen achter elkaar maken maximaal één zaak aan', function () {
     // ZaakObserver dispatcht jobs en verstuurt mails; we hoeven die
@@ -66,22 +155,18 @@ test('twee submit-aanroepen achter elkaar maken maximaal één zaak aan', functi
     $component = Livewire::test(EventFormPage::class);
     /** @var EventFormPage $page */
     $page = $component->instance();
-
-    // Forceer een geldige user/org-context op de state — mount zet die
-    // al, maar we maken 't expliciet voor de leesbaarheid.
-    $page->state()->setSystem('authUser', OrganiserUser::find($this->user->id));
-    $page->state()->setSystem('authOrganisation', $this->organisation);
+    setupValidSubmit($page, $this->user, $this->organisation);
 
     // Eerste submit: SubmitEventForm wordt aangeroepen, page zet
     // submitting=true, redirect naar de zaak-view.
-    $component->call('submit');
+    $page->submit();
 
     // Tweede submit: guard kicked in, SubmitEventForm wordt NIET
     // opnieuw aangeroepen. (In de praktijk landt deze tweede call
     // bijna nooit, want de eerste submit triggert een redirect; we
     // simuleren hier de race waarbij twee POSTs binnenkomen voor
     // de redirect het effect heeft.)
-    $component->call('submit');
+    $page->submit();
 
     expect($fake->aantalAanroepen)->toBe(1);
 });
@@ -95,13 +180,33 @@ test('na een mislukte submit kan de organisator opnieuw proberen', function () {
     $component = Livewire::test(EventFormPage::class);
     /** @var EventFormPage $page */
     $page = $component->instance();
-    $page->state()->setSystem('authUser', OrganiserUser::find($this->user->id));
-    $page->state()->setSystem('authOrganisation', $this->organisation);
+    setupValidSubmit($page, $this->user, $this->organisation);
 
     // Eerste poging mislukt; guard moet de `submitting`-vlag terugzetten
     // op false zodat een retry-klik wel doorgaat.
-    $component->call('submit');
-    $component->call('submit');
+    $page->submit();
+    $page->submit();
 
     expect($fake->aantalAanroepen)->toBe(2);
+});
+
+test('submit() op leeg formulier gooit validatiefouten en roept SubmitEventForm niet aan', function () {
+    $fake = new FakeSubmitEventForm;
+    app()->instance(SubmitEventForm::class, $fake);
+
+    $component = Livewire::test(EventFormPage::class);
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
+    // Geen form-data — de server-side validatie moet dit onderscheppen vóórdat
+    // SubmitEventForm wordt aangeroepen.
+    expect(fn () => $page->submit())
+        ->toThrow(ValidationException::class);
+
+    // SubmitEventForm mag niet aangeroepen zijn.
+    expect($fake->aantalAanroepen)->toBe(0);
+
+    // De $submitting-vlag mag niet permanent op true staan na een validatiefout;
+    // anders is de submit-knop onterecht permanent uitgeschakeld.
+    expect($page->submitting)->toBeFalse();
 });

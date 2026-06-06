@@ -109,3 +109,80 @@ test('unauthenticated document access is not logged', function () {
 
     expect(Activity::where('log_name', 'document')->first())->toBeNull();
 });
+
+// Security: Content-Type header validation (A03)
+
+test('allowed mime type is passed through as Content-Type', function () {
+    ['zaak' => $zaak, 'municipality' => $municipality] = makeZaakWithDocument();
+    $user = User::factory()->create(['role' => Role::Reviewer]);
+    $user->municipalities()->attach($municipality);
+
+    $response = $this->actingAs($user)
+        ->get(route('zaak.documents.view', [$zaak, 'doc-uuid-1', 'view']));
+
+    expect($response->headers->get('Content-Type'))->toStartWith('application/pdf');
+});
+
+test('disallowed mime type is replaced with application/octet-stream', function () {
+    $municipality = Municipality::factory()->create();
+    $zaaktype = Zaaktype::factory()->create(['municipality_id' => $municipality->id]);
+    $zaak = Zaak::factory()->create(['zaaktype_id' => $zaaktype->id]);
+
+    $document = new Informatieobject(
+        uuid: 'doc-html',
+        url: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/doc-html',
+        creatiedatum: now()->toIso8601String(),
+        titel: 'Malicious Document',
+        vertrouwelijkheidaanduiding: DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+        auteur: 'Attacker',
+        versie: 1,
+        bestandsnaam: 'evil.html',
+        inhoud: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/doc-html/download',
+        beschrijving: 'XSS payload',
+        informatieobjecttype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
+        formaat: 'text/html',
+        locked: false,
+    );
+
+    Cache::forever("zaak.{$zaak->id}.documenten", collect([$document]));
+
+    $user = User::factory()->create(['role' => Role::Reviewer]);
+    $user->municipalities()->attach($municipality);
+
+    $response = $this->actingAs($user)
+        ->get(route('zaak.documents.view', [$zaak, 'doc-html', 'view']));
+
+    expect($response->headers->get('Content-Type'))->toStartWith('application/octet-stream');
+});
+
+test('javascript mime type is replaced with application/octet-stream', function () {
+    $municipality = Municipality::factory()->create();
+    $zaaktype = Zaaktype::factory()->create(['municipality_id' => $municipality->id]);
+    $zaak = Zaak::factory()->create(['zaaktype_id' => $zaaktype->id]);
+
+    $document = new Informatieobject(
+        uuid: 'doc-js',
+        url: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/doc-js',
+        creatiedatum: now()->toIso8601String(),
+        titel: 'JS Document',
+        vertrouwelijkheidaanduiding: DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+        auteur: 'Attacker',
+        versie: 1,
+        bestandsnaam: 'script.js',
+        inhoud: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/doc-js/download',
+        beschrijving: 'JS payload',
+        informatieobjecttype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
+        formaat: 'application/javascript',
+        locked: false,
+    );
+
+    Cache::forever("zaak.{$zaak->id}.documenten", collect([$document]));
+
+    $user = User::factory()->create(['role' => Role::Reviewer]);
+    $user->municipalities()->attach($municipality);
+
+    $response = $this->actingAs($user)
+        ->get(route('zaak.documents.view', [$zaak, 'doc-js', 'view']));
+
+    expect($response->headers->get('Content-Type'))->toStartWith('application/octet-stream');
+});

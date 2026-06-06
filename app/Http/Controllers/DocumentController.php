@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DocumentRequest;
 use App\Models\Zaak;
+use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Woweb\Openzaak\Openzaak;
@@ -36,10 +37,14 @@ class DocumentController extends Controller
 
         $dispositionType = $type === 'download' ? HeaderUtils::DISPOSITION_ATTACHMENT : HeaderUtils::DISPOSITION_INLINE;
 
+        $contentType = DocumentUploadType::storedMimeTypeIsAllowed($document->formaat)
+            ? $document->formaat
+            : 'application/octet-stream';
+
         return response((new Openzaak)->getRaw($document->inhoud))->withHeaders([
             'Content-Disposition' => HeaderUtils::makeDisposition($dispositionType, $document->bestandsnaam),
             'Access-Control-Expose-Headers' => 'Content-Disposition',
-            'Content-Type' => $document->formaat,
+            'Content-Type' => $contentType,
         ]);
     }
 }

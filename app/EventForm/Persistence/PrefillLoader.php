@@ -26,8 +26,8 @@ use App\Models\Zaak;
  * de user vult bij "Herhaal" eventuele missende stukken handmatig aan.
  *
  * Eigenaarschap (Zaak hoort bij dezelfde organisatie als de ingelogde
- * user) wordt door `ValidatePrefillOwnership`-middleware afgedwongen
- * vóórdat deze klas wordt aangeroepen.
+ * user) wordt afgedwongen via ->where('organisation_id', $organisation->id)
+ * in load(). Verwijder die where-clause NIET: er is geen middleware die dit overneemt.
  */
 class PrefillLoader
 {

@@ -124,7 +124,7 @@ test('existing user can accept an invite', function () {
 
     // Act
     $this->actingAs($user);
-    $signedUrl = URL::signedRoute('organisation-invites.accept', [
+    $signedUrl = URL::temporarySignedRoute('organisation-invites.accept', now()->addDays(config('invites.expiration_days')), [
         'token' => $invite->token,
     ]);
 
@@ -160,7 +160,7 @@ test('new user can register and accept an invite', function () {
         'token' => Str::uuid(),
     ]);
 
-    $signedUrl = URL::signedRoute('organisation-invites.accept', [
+    $signedUrl = URL::temporarySignedRoute('organisation-invites.accept', now()->addDays(config('invites.expiration_days')), [
         'token' => $invite->token,
     ]);
 
@@ -229,6 +229,26 @@ test('invite cannot be accepted by wrong user', function () {
     $this->assertDatabaseHas('organisation_invites', [
         'id' => $invite->id,
     ]);
+});
+
+test('expired invite link is rejected', function () {
+    // Arrange
+    $invite = OrganisationInvite::create([
+        'organisation_id' => $this->organisation->id,
+        'email' => 'expireduser@example.com',
+        'role' => OrganisationRole::Member->value,
+        'token' => Str::uuid(),
+    ]);
+
+    $signedUrl = URL::temporarySignedRoute('organisation-invites.accept', now()->addDays(config('invites.expiration_days')), [
+        'token' => $invite->token,
+    ]);
+
+    // Travel past the expiry window to simulate a late click
+    $this->travelTo(now()->addDays(config('invites.expiration_days') + 1));
+
+    // The signed middleware rejects the expired URL before mount() is reached
+    $this->get($signedUrl)->assertStatus(403);
 });
 
 test('admin can invite a user with admin role', function () {

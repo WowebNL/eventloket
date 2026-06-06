@@ -43,8 +43,9 @@ class AdvisoryInviteMail extends Mailable
             markdown: 'mail.advisory-invite',
             with: [
                 'advisory' => $this->advisoryInvite->advisory,
-                'acceptUrl' => URL::signedRoute(
+                'acceptUrl' => URL::temporarySignedRoute(
                     'advisory-invites.accept',
+                    now()->addDays(config('invites.expiration_days')),
                     ['token' => $this->advisoryInvite->token],
                 ),
             ]
