@@ -317,7 +317,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                                     return [
                                         'type' => 'Feature',
                                         'geometry' => $geometry,
-                                        'properties' => $zaak->toArray(), // change this
+                                        'properties' => $zaak->makeHidden(['zgw_zaak_url', 'organiser_user_id', 'imported_data'])->toArray(),
                                     ];
                                 }
 
@@ -329,8 +329,6 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
                             $filename = 'export_evenementen_'.now()->format('Y-m-d_H-i-s').'.geojson';
-
-                            file_put_contents(storage_path('app/public/'.$filename), $geojson);
 
                             return response()->streamDownload(function () use ($geojson) {
                                 echo $geojson;

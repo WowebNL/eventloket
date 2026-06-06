@@ -51,8 +51,9 @@ class MunicipalityInviteMail extends Mailable
             with: [
                 'role' => strtolower($role->getLabel()),
                 'municipalities' => $this->municipalityInvite->municipalities,
-                'acceptUrl' => URL::signedRoute(
+                'acceptUrl' => URL::temporarySignedRoute(
                     'municipality-invites.accept',
+                    now()->addDays(config('invites.expiration_days')),
                     ['token' => $this->municipalityInvite->token],
                 ),
             ]

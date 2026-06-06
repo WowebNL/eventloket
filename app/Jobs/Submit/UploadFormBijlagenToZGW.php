@@ -100,8 +100,8 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         /** @var array<string, string> $aanwezig  pad => originele naam */
         $aanwezig = [];
         foreach ($bestandPaden as $pad => $origineleNaam) {
-            if (! str_starts_with($pad, $toegestanePrefix)) {
-                Log::warning('UploadFormBijlagenToZGW: bijlage-pad buiten de eigen upload-map geweigerd', [
+            if (str_contains($pad, '..') || ! str_starts_with($pad, $toegestanePrefix)) {
+                Log::critical('UploadFormBijlagenToZGW: bijlage-pad buiten de eigen upload-map geweigerd', [
                     'zaak_id' => $this->zaak->id,
                     'organisation_uuid' => $this->zaak->organisation?->uuid,
                     'pad' => $pad,

@@ -491,6 +491,17 @@ class EventFormPage extends Page implements HasForms
         if ($this->submitting) {
             return;
         }
+
+        // Server-side hervalidatie vóór verwerking. De wizard valideert
+        // stap-voor-stap bij navigatie, maar een directe Livewire-aanroep
+        // van submit() kan die stappen omzeilen.
+        // Alleen applicabele stappen worden gevalideerd: niet-applicabele
+        // stappen (bijv. vergunning-stappen in een melding-flow) hebben
+        // lege verplichte velden die een geldige indiening zouden blokkeren.
+        // Bewust VOOR $this->submitting = true: bij een validatiefout
+        // mag de knop niet permanent uitgeschakeld blijven.
+        $this->validateApplicableSteps();
+
         $this->submitting = true;
 
         // `getStateSnapshot()` roept intern NIET `callBeforeStateDehydrated()`
@@ -553,6 +564,37 @@ class EventFormPage extends Page implements HasForms
             ZaakResource::getUrl('view', ['record' => $zaak]),
             navigate: true,
         );
+    }
+
+    /**
+     * Valideer alle applicabele wizard-stappen. Stappen die op basis van
+     * `FormState::isStepApplicable()` niet van toepassing zijn (bijv.
+     * vergunning-stappen in een melding-flow) worden overgeslagen zodat lege
+     * verplichte velden in die stappen een geldige indiening niet blokkeren.
+     *
+     * Werpt een `ValidationException` zodra een stap met fouten stuit; Livewire
+     * vangt dat af en stuurt de fouten naar de client.
+     */
+    private function validateApplicableSteps(): void
+    {
+        $components = $this->form->getComponents(withHidden: true);
+        $wizard = $components[0] ?? null;
+        if ($wizard === null) {
+            return;
+        }
+
+        foreach ($wizard->getChildSchema()->getComponents() as $step) {
+            // Filament prefixeert de step-key met "form." (de naam van de form-schema-
+            // binding); COMPUTED_STEPS bevat alleen de kale UUID's. Dezelfde strip
+            // staat in vertical-wizard.blade.php.
+            $rawKey = $step->getKey();
+            $stepUuid = str_starts_with($rawKey, 'form.') ? substr($rawKey, 5) : $rawKey;
+
+            if (! $this->state->isStepApplicable($stepUuid)) {
+                continue;
+            }
+            $step->getChildSchema()->validate();
+        }
     }
 
     public function getTitle(): string

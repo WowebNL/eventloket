@@ -95,7 +95,7 @@ test('existing user can accept an admin invite', function () {
 
     // Act
     $this->actingAs($user);
-    $signedUrl = URL::signedRoute('admin-invites.accept', [
+    $signedUrl = URL::temporarySignedRoute('admin-invites.accept', now()->addDays(config('invites.expiration_days')), [
         'token' => $invite->token,
     ]);
 
@@ -127,7 +127,7 @@ test('new user can register and accept an admin invite', function () {
         'token' => Str::uuid(),
     ]);
 
-    $signedUrl = URL::signedRoute('admin-invites.accept', [
+    $signedUrl = URL::temporarySignedRoute('admin-invites.accept', now()->addDays(config('invites.expiration_days')), [
         'token' => $invite->token,
     ]);
 
@@ -206,7 +206,7 @@ test('deleted invite shows not found page', function () {
         'token' => Str::uuid(),
     ]);
 
-    $signedUrl = URL::signedRoute('admin-invites.accept', [
+    $signedUrl = URL::temporarySignedRoute('admin-invites.accept', now()->addDays(config('invites.expiration_days')), [
         'token' => $invite->token,
     ]);
 
