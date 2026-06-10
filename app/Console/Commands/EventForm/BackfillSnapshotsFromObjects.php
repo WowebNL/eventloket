@@ -170,7 +170,70 @@ final class BackfillSnapshotsFromObjects extends Command
         $values = [];
         $this->collectKnownKeys($data, $bekendeKeys, $values);
 
+        // Map-velden: de OF-data heeft de oude Repeater-shape
+        // (`[{innerKey: {Polygon|LineString}}]`), maar het nieuwe Map-veld
+        // leest `state.geojson.features`. Zonder transform blijft de kaart
+        // bij prefill leeg. Zet om naar de canonieke veld-shape.
+        foreach (self::MAP_FIELDS as $mapKey) {
+            if (isset($values[$mapKey])) {
+                $values[$mapKey] = $this->toMapState($values[$mapKey]);
+            }
+        }
+
         return $values;
+    }
+
+    /**
+     * Map-veld-keys waarvan de waarde een geometrie-tekening is. De OF-data
+     * levert die in de oude geneste Repeater-shape aan; het nieuwe Map-veld
+     * verwacht `{lat, lng, zoom, geojson: FeatureCollection}`.
+     *
+     * @var list<string>
+     */
+    private const MAP_FIELDS = ['locatieSOpKaart', 'routesOpKaart'];
+
+    /**
+     * Zet een oude OF-kaart-waarde om naar de Map-veld-shape die de
+     * dotswan-component bij prefill leest: `{geojson: {type: FeatureCollection,
+     * features: [...]}}`. Verzamelt recursief elke ruwe GeoJSON-geometrie
+     * (Polygon/LineString/etc.) en wrapt 'm als Feature. Is de waarde al een
+     * `{geojson: ...}`-object (nieuwe shape), dan blijft 'ie ongemoeid.
+     */
+    private function toMapState(mixed $value): mixed
+    {
+        if (is_array($value) && isset($value['geojson'])) {
+            return $value;
+        }
+
+        $features = [];
+        $this->collectGeometries($value, $features);
+        if ($features === []) {
+            return $value;
+        }
+
+        return ['geojson' => ['type' => 'FeatureCollection', 'features' => $features]];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $out
+     */
+    private function collectGeometries(mixed $node, array &$out): void
+    {
+        if (! is_array($node)) {
+            return;
+        }
+        // Een ruwe geometrie: heeft `type` + `coordinates`.
+        $type = $node['type'] ?? null;
+        if (is_string($type) && isset($node['coordinates'])
+            && in_array($type, ['Point', 'LineString', 'Polygon', 'MultiPoint', 'MultiLineString', 'MultiPolygon'], strict: true)
+        ) {
+            $out[] = ['type' => 'Feature', 'properties' => new \stdClass, 'geometry' => $node];
+
+            return;
+        }
+        foreach ($node as $child) {
+            $this->collectGeometries($child, $out);
+        }
     }
 
     /**

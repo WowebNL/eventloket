@@ -88,6 +88,47 @@ test('extraheert herkende keys recursief, mapt legacy-keys, negeert onbekend', f
     expect($values)->not->toHaveKey('losVeld');
 });
 
+test('map-velden: oude Repeater-shape wordt omgezet naar geojson FeatureCollection', function () {
+    // OF levert de tekening in de oude geneste shape; het nieuwe Map-veld
+    // leest state.geojson.features. Zonder transform blijft de kaart leeg.
+    Http::fake([
+        '*objects/*' => Http::response([
+            'record' => ['data' => ['data' => [
+                'locatie-van-het-evenement' => [
+                    'locatieSOpKaart' => [[
+                        'buitenLocatieVanHetEvenement' => [
+                            'type' => 'Polygon',
+                            'coordinates' => [[[5.84, 50.90], [5.80, 50.89], [5.86, 50.87], [5.84, 50.90]]],
+                        ],
+                    ]],
+                    'route' => [
+                        'routesOpKaart' => [[
+                            'routeVanHetEvenement' => [
+                                'type' => 'LineString',
+                                'coordinates' => [[5.87, 50.90], [5.88, 50.91]],
+                            ],
+                        ]],
+                    ],
+                ],
+            ]]],
+        ], 200),
+    ]);
+    $zaak = oudeZaak();
+
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    $zaak->refresh();
+    $values = $zaak->form_state_snapshot['values'];
+
+    // Polygon → FeatureCollection met één Polygon-Feature.
+    expect($values['locatieSOpKaart']['geojson']['type'])->toBe('FeatureCollection')
+        ->and($values['locatieSOpKaart']['geojson']['features'])->toHaveCount(1)
+        ->and($values['locatieSOpKaart']['geojson']['features'][0]['geometry']['type'])->toBe('Polygon');
+    // LineString → FeatureCollection met één LineString-Feature.
+    expect($values['routesOpKaart']['geojson']['features'][0]['geometry']['type'])->toBe('LineString');
+});
+
 test('FileUpload-velden (bijlagen) worden niet in de snapshot gezet — files komen uit OpenZaak', function () {
     // De OF-bijlage is een {url,name,size}-object naar een (dode) OF-
     // submission-URL. De echte files leven in OpenZaak's Documenten-API en
