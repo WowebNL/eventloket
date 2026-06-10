@@ -28,15 +28,26 @@ function fakeObjectsRecord(): void
     Http::fake([
         '*objects/*' => Http::response([
             'record' => ['data' => ['data' => [
-                // Twee stap-secties (associatieve maps) ...
+                // Stap-sectie met direct herkende form-keys ...
                 'contactgegevens' => [
-                    'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest',
                     'soortEvenement' => 'festival',
                 ],
-                'tijden' => [
-                    'EvenementStart' => '2026-06-01',
+                // ... een container-fieldset met een genest herkend veld
+                // (route → routesOpKaart is een echte form-key) ...
+                'locatie-van-het-evenement' => [
+                    'route' => [
+                        'routesOpKaart' => [['routeVanHetEvenement' => ['type' => 'LineString']]],
+                    ],
                 ],
-                // ... en één los top-level veld.
+                // ... legacy-keys uit de oude formulier-generatie ...
+                'vragenboom-2' => [
+                    'watIsDeNaamVanHetEvenement' => 'Buurtfeest',
+                    'watIsDeStarttijdVanHetEvenement' => '2026-06-01',
+                ],
+                'vragenboom-3' => [
+                    'voornaamIngelogdePersoon' => 'Eva',
+                ],
+                // ... en een onbekend veld dat genegeerd moet worden.
                 'losVeld' => 'waarde',
             ]]],
         ], 200),
@@ -53,7 +64,7 @@ function oudeZaak(array $overrides = []): Zaak
     ], $overrides));
 }
 
-test('zet de Objects-submission plat om naar form_state_snapshot.values', function () {
+test('extraheert herkende keys recursief, mapt legacy-keys, negeert onbekend', function () {
     fakeObjectsRecord();
     $zaak = oudeZaak();
 
@@ -61,14 +72,20 @@ test('zet de Objects-submission plat om naar form_state_snapshot.values', functi
         ->assertSuccessful();
 
     $zaak->refresh();
+    $values = $zaak->form_state_snapshot['values'];
 
-    expect($zaak->form_state_snapshot)->toHaveKey('values');
-    expect($zaak->form_state_snapshot['values'])->toMatchArray([
-        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest',
-        'soortEvenement' => 'festival',
-        'EvenementStart' => '2026-06-01',
-        'losVeld' => 'waarde',
+    // Direct herkende form-key.
+    expect($values)->toHaveKey('soortEvenement', 'festival');
+    // Genest binnen een container-fieldset (route → routesOpKaart).
+    expect($values)->toHaveKey('routesOpKaart');
+    // Legacy-keys omgezet naar de nieuwe form-keys.
+    expect($values)->toMatchArray([
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest', // was watIsDeNaamVanHetEvenement
+        'EvenementStart' => '2026-06-01',                       // was watIsDeStarttijdVanHetEvenement
+        'watIsUwVoornaam' => 'Eva',                             // was voornaamIngelogdePersoon
     ]);
+    // Onbekend veld wordt niet overgenomen.
+    expect($values)->not->toHaveKey('losVeld');
 });
 
 test('--dry-run slaat niets op', function () {

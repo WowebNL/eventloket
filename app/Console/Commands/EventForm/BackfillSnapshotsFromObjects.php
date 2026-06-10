@@ -18,12 +18,15 @@ use Woweb\Openzaak\ObjectsApi;
  * samenvatting voor die zaken via het standaard-snapshotpad en is de Objects
  * API voor hen niet meer nodig.
  *
- * Bron-structuur (bewezen door de oude `ViewZaak::prefil_new_request` op de
- * main-branch, die exact deze omzetting live deed): het Objects-record bevat
- * onder `record.data.data` de volledige submission, genest per stap-sectie.
- * Plat geslagen levert dat `{ <of-component-key>: <waarde> }` — en die keys
- * komen 1-op-1 overeen met de FormState-keys, omdat het nieuwe formulier uit
- * dezelfde OF-definitie is afgeleid.
+ * Bron-structuur: het Objects-record bevat onder `record.data.data` de
+ * submission, diep genest — secties (kebab-case) → soms container-fieldsets
+ * (`route`, `adresgegevens`, …) → de eigenlijke velden. De Objects API bevat
+ * bovendien submissions van twee formulier-generaties; de meeste OF-keys
+ * matchen de FormState-keys, maar een handvol is hernoemd (zie
+ * LEGACY_KEY_MAP). `fetchSubmissionValues` lost beide op: het loopt recursief
+ * door de boom, pakt élke key die het huidige formulier kent, en mapt de
+ * legacy-keys. Onbekende/onzekere velden (en OF-bijlage-URL-objecten) vallen
+ * weg — voor een prefill acceptabel: de organisator vult die opnieuw in.
  *
  * Bewust een command en geen migration: het doet per zaak een externe Objects-
  * API-call. Dat hoort niet in `artisan migrate` (breekt de deploy als de API
@@ -80,7 +83,7 @@ final class BackfillSnapshotsFromObjects extends Command
 
         foreach ($zaken as $zaak) {
             try {
-                $values = $this->fetchSubmissionValues($zaak);
+                $values = $this->fetchSubmissionValues($zaak, $bekendeKeys);
             } catch (Throwable $e) {
                 $this->error(sprintf('Zaak %s: ophalen Objects-record mislukt — %s', $zaak->public_id ?? $zaak->id, $e->getMessage()));
                 $fouten++;
@@ -116,14 +119,41 @@ final class BackfillSnapshotsFromObjects extends Command
     }
 
     /**
-     * Haal het Objects-record op en sla `record.data.data` plat tot een
-     * `{ key: value }`-map. Repliceert de bewezen ViewZaak-logica: secties
-     * (geneste arrays van velden) worden gemerged; losse top-level velden
-     * behouden hun key.
+     * Legacy OF-veldnamen die in het nieuwe Filament-formulier hernoemd zijn.
+     * De Objects API bevat submissions van twee formulier-generaties; de
+     * oude generatie gebruikt deze keys, het nieuwe formulier de waarde.
+     * Alleen 1-op-1 zekere hernoemingen — onzekere/samengestelde velden
+     * (bv. aantal-aanwezigen-varianten, publieke-toegankelijkheid) staan
+     * hier bewust NIET in en gaan bij prefill verloren (de organisator vult
+     * die opnieuw in).
      *
+     * @var array<string, string>
+     */
+    private const LEGACY_KEY_MAP = [
+        'watIsDeNaamVanHetEvenement' => 'watIsDeNaamVanHetEvenementVergunning',
+        'watIsDeStarttijdVanHetEvenement' => 'EvenementStart',
+        'wanneerIsHetEindeVanHetEvenement' => 'EvenementEind',
+        'voornaamIngelogdePersoon' => 'watIsUwVoornaam',
+        'achternaamIngelogdePersoon' => 'watIsUwAchternaam',
+    ];
+
+    /**
+     * Haal het Objects-record op en bouw een `{ FormState-key: waarde }`-map.
+     *
+     * De OF-submission is diep genest: secties (kebab-case) → soms nog
+     * container-fieldsets (`route`, `adresgegevens`, `kolommen`, …) → de
+     * eigenlijke velden. Plat-slaan op één niveau (de oude aanpak) miste
+     * daardoor alle velden binnen die containers. We lopen daarom recursief
+     * door de hele boom en pakken élke dict-key die het huidige formulier
+     * kent. Dat filtert vanzelf de container-keys, geojson-internals
+     * (`type`/`coordinates`) en checkbox-opties weg, en haalt geneste velden
+     * als `route.routesOpKaart` of `adresgegevens.kolommen.0.<veld>` naar
+     * boven. Legacy-hernoemingen worden via LEGACY_KEY_MAP omgezet.
+     *
+     * @param  array<string, true>  $bekendeKeys
      * @return array<string, mixed>|null null als er geen submission in zit
      */
-    private function fetchSubmissionValues(Zaak $zaak): ?array
+    private function fetchSubmissionValues(Zaak $zaak, array $bekendeKeys): ?array
     {
         $uuid = $this->uuidFromUrl((string) $zaak->data_object_url);
         if ($uuid === '') {
@@ -137,18 +167,34 @@ final class BackfillSnapshotsFromObjects extends Command
         }
 
         $values = [];
-        foreach ($data as $key => $item) {
-            if (is_array($item) && $this->isAssoc($item)) {
-                // Stap-sectie: een associatieve map van veld → waarde.
-                $values = array_merge($values, $item);
-
-                continue;
-            }
-            // Los top-level veld (scalar of lijst): key behouden.
-            $values[$key] = $item;
-        }
+        $this->collectKnownKeys($data, $bekendeKeys, $values);
 
         return $values;
+    }
+
+    /**
+     * Loop recursief door de OF-data en verzamel waarden voor elke key die
+     * het formulier kent (direct of via LEGACY_KEY_MAP). Bij dubbele keys
+     * wint de laatst-gevonden waarde — acceptabel voor een prefill.
+     *
+     * @param  array<string, true>  $bekendeKeys
+     * @param  array<string, mixed>  $out
+     */
+    private function collectKnownKeys(mixed $node, array $bekendeKeys, array &$out): void
+    {
+        if (! is_array($node)) {
+            return;
+        }
+
+        foreach ($node as $key => $value) {
+            $target = self::LEGACY_KEY_MAP[$key] ?? (is_string($key) && isset($bekendeKeys[$key]) ? $key : null);
+            if ($target !== null && $value !== null && $value !== '' && $value !== [] && $value !== ['']) {
+                $out[$target] = $value;
+            }
+            // Ook bij een match doordalen: een container kan zowel zelf een
+            // bekende key zijn als geneste bekende velden bevatten.
+            $this->collectKnownKeys($value, $bekendeKeys, $out);
+        }
     }
 
     private function uuidFromUrl(string $url): string
@@ -156,18 +202,6 @@ final class BackfillSnapshotsFromObjects extends Command
         $path = (string) parse_url($url, PHP_URL_PATH);
 
         return trim(basename($path));
-    }
-
-    /**
-     * @param  array<int|string, mixed>  $array
-     */
-    private function isAssoc(array $array): bool
-    {
-        if ($array === []) {
-            return false;
-        }
-
-        return array_keys($array) !== range(0, count($array) - 1);
     }
 
     /**
