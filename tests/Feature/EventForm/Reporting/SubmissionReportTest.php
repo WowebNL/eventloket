@@ -363,7 +363,7 @@ test('Tijden-tabel: niet-parseerbare datetime → rij weggefilterd, geen raw ISO
     expect($alleCellen)->not->toContain('null');
 });
 
-test('Zelf-te-regelen: items komen onder elkaar (newlines), niet comma-separated (#15 Michel)', function () {
+test('Zelf-te-regelen: items zitten in `list` zodat de views ze als opsomming renderen (#15 Michel)', function () {
     // Trigger ≥2 items via TypeAanvraagOnderdelen::buildZelfTeRegelenList:
     //   alcoholvergunning='Ja'                → Ontheffing Alcoholwet
     //   kruisAanWatVanToepassing...A3=true    → Gebruiksmelding brandveilig
@@ -385,12 +385,13 @@ test('Zelf-te-regelen: items komen onder elkaar (newlines), niet comma-separated
     );
 
     expect($zelf)->not->toBeNull();
-    // 3 items uit deze state → 2 newlines als separator. Niet meer comma-
-    // joined (één item bevat zelf ', ' in z'n tekst — vandaar count-check
-    // i.p.v. not->toContain(', ')).
-    expect(substr_count($zelf['value'], "\n"))->toBe(2);
-    // Concrete eerste regel-grens: item 2 begint na een newline.
-    expect($zelf['value'])->toContain("\nGebruiksmelding");
+    // De losse items staan in `list` — samenvatting.blade + pdf-report
+    // renderen die als opsomming (ieder item z'n eigen regel), dus de
+    // entry hoeft zelf geen newlines meer te bevatten (#15 Michel).
+    expect($zelf['list'])->toHaveCount(3)
+        ->and(collect($zelf['list'])->first(fn (string $i) => str_starts_with($i, 'Gebruiksmelding')))->not->toBeNull();
+    // `value` blijft als compacte comma-joined fallback bestaan.
+    expect($zelf['value'])->toBe(implode(', ', $zelf['list']));
 });
 
 test('Radio met Closure-options resolveert label uit dynamische bron (#2 Michel: gemeentenaam ipv brk-code)', function () {

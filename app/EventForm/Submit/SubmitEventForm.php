@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Submit;
 
+use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\Steps\CreateLocalZaak;
@@ -33,7 +34,7 @@ use Illuminate\Support\Facades\Log;
  *   1. Juiste zaaktype resolven (gemeente + aard)
  *   2. ZGW-zaak aanmaken bij OpenZaak
  *   3. Lokale `Zaak`-row aanmaken met reference_data + form_state_snapshot
- *   4. Draft leegmaken
+ *   4. Het actieve concept verwijderen (andere concepten blijven staan)
  *   5. Audit-log-entry
  *
  * Async (queue, in dispatch-volgorde):
@@ -58,7 +59,7 @@ final class SubmitEventForm
         private readonly DraftStore $draftStore,
     ) {}
 
-    public function execute(FormState $state, OrganiserUser $user, Organisation $organisation): Zaak
+    public function execute(FormState $state, OrganiserUser $user, Organisation $organisation, ?Draft $draft = null): Zaak
     {
         // 1. Zaaktype bepalen op basis van gemeente + aard.
         $zaaktype = $this->resolveZaaktype->forState($state);
@@ -80,9 +81,11 @@ final class SubmitEventForm
             );
         });
 
-        // 4. Draft leegmaken zodat een volgende aanvraag met een leeg
-        //    formulier start.
-        $this->draftStore->clear($user, $organisation);
+        // 4. Het ingediende concept verwijderen; andere concepten van de
+        //    gebruiker (parallelle aanvragen) blijven staan.
+        if ($draft !== null) {
+            $this->draftStore->delete($draft);
+        }
 
         // 5. Audit-log voor compliance — equivalent van OF's
         //    FORM_SUBMIT_SUCCESS_EVENT.

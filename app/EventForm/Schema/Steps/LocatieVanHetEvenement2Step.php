@@ -21,9 +21,9 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
-use Illuminate\Support\Str;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
+use Illuminate\Support\Str;
 
 /**
  * @openforms-step-uuid 2186344f-9821-45d1-bd52-9900ae15fcb6

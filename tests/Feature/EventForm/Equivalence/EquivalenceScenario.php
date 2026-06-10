@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\EventForm\Equivalence;
 
+use App\EventForm\Persistence\Draft;
 use App\EventForm\Reporting\FieldCatalog;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormPage;
+use Filament\Facades\Filament;
 use Illuminate\Support\Arr;
 use Livewire\Livewire;
 
@@ -176,7 +178,24 @@ final class EquivalenceScenario
      */
     public static function runViaLivewireDetailed(array $scenario): array
     {
-        $test = Livewire::test(EventFormPage::class);
+        // De pagina vereist een bestaand concept (route-param {draft}).
+        // firstOrCreate zodat opeenvolgende scenario's binnen één test
+        // dezelfde rij hergebruiken; de state wordt wel altijd gereset —
+        // de autosave van een eerder scenario mag niet doorlekken in de
+        // mount van het volgende.
+        $draft = Draft::firstOrCreate(
+            [
+                'user_id' => Filament::auth()->id(),
+                'organisation_id' => Filament::getTenant()?->getKey(),
+            ],
+            ['state' => FormState::empty()->toSnapshot()],
+        );
+        $draft->update([
+            'state' => FormState::empty()->toSnapshot(),
+            'current_step_key' => null,
+        ]);
+
+        $test = Livewire::test(EventFormPage::class, ['draft' => $draft->id]);
 
         /** @var EventFormPage $page */
         $page = $test->instance();

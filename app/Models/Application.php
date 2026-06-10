@@ -25,10 +25,6 @@ class Application extends Model
         'all_endpoints',
     ];
 
-    protected $casts = [
-        'all_endpoints' => 'boolean',
-    ];
-
     public function clients()
     {
         return $this->morphMany(Client::class, 'owner');
@@ -40,5 +36,12 @@ class Application extends Model
             'owner_type',
             array_search(static::class, Relation::morphMap()) ?: static::class
         );
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'all_endpoints' => 'boolean',
+        ];
     }
 }

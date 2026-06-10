@@ -22,6 +22,8 @@ declare(strict_types=1);
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\EventForm\Persistence\Draft;
+use App\EventForm\State\FormState;
 use App\EventForm\Submit\SubmitEventForm;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Municipality;
@@ -50,6 +52,13 @@ beforeEach(function () {
 
     $this->actingAs($this->user);
     Filament::setTenant($this->organisation);
+
+    // De pagina vereist een bestaand concept (route-param {draft}).
+    $this->draft = Draft::create([
+        'user_id' => $this->user->id,
+        'organisation_id' => $this->organisation->id,
+        'state' => FormState::empty()->toSnapshot(),
+    ]);
 });
 
 /**
@@ -152,7 +161,7 @@ test('twee submit-aanroepen achter elkaar maken maximaal één zaak aan', functi
     $fake = new FakeSubmitEventForm(resultaat: $zaak);
     app()->instance(SubmitEventForm::class, $fake);
 
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
     /** @var EventFormPage $page */
     $page = $component->instance();
     setupValidSubmit($page, $this->user, $this->organisation);
@@ -177,7 +186,7 @@ test('na een mislukte submit kan de organisator opnieuw proberen', function () {
     );
     app()->instance(SubmitEventForm::class, $fake);
 
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
     /** @var EventFormPage $page */
     $page = $component->instance();
     setupValidSubmit($page, $this->user, $this->organisation);
@@ -194,7 +203,7 @@ test('submit() op leeg formulier gooit validatiefouten en roept SubmitEventForm 
     $fake = new FakeSubmitEventForm;
     app()->instance(SubmitEventForm::class, $fake);
 
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
     /** @var EventFormPage $page */
     $page = $component->instance();
 
