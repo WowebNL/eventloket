@@ -20,8 +20,10 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
+use Illuminate\Support\Str;
 
 /**
  * @openforms-step-uuid 2186344f-9821-45d1-bd52-9900ae15fcb6
@@ -58,10 +60,23 @@ final class LocatieVanHetEvenement2Step
                         'route' => 'Op een route',
                     ])
                     ->required()
-                    ->live(),
+                    ->live()
+                    ->afterStateUpdated(function (Get $get, Set $set, ?array $state): void {
+                        if (in_array('gebouw', $state ?? [], true) && empty($get('adresVanDeGebouwEn'))) {
+                            $set('adresVanDeGebouwEn', [(string) Str::uuid() => []]);
+                        }
+
+                        if (in_array('buiten', $state ?? [], true) && empty($get('locatieSOpKaart'))) {
+                            $set('locatieSOpKaart', [(string) Str::uuid() => []]);
+                        }
+
+                        if (in_array('route', $state ?? [], true) && empty($get('routesOpKaart'))) {
+                            $set('routesOpKaart', [(string) Str::uuid() => []]);
+                        }
+                    }),
                 Repeater::make('adresVanDeGebouwEn')
                     ->label('Adres van de gebouw(en)')
-                    ->addActionLabel('Adres toevoegen')
+                    ->addActionLabel('Nog een adres toevoegen')
                     ->schema([
                         TextInput::make('naamVanDeLocatieGebouw')
                             ->label('Naam van de locatie')
@@ -72,6 +87,7 @@ final class LocatieVanHetEvenement2Step
                     ->hidden(Hidden::rule('adresVanDeGebouwEn')),
                 Repeater::make('locatieSOpKaart')
                     ->label('Locatie(s) op kaart')
+                    ->addActionLabel('Nog een locatie toevoegen')
                     ->schema([
                         TextInput::make('naamVanDeLocatieKaart')
                             ->label('Naam van de locatie')
@@ -81,6 +97,7 @@ final class LocatieVanHetEvenement2Step
                             ->label('Buiten locatie van het evenement')
                             ->defaultLocation(50.8514, 5.6910)
                             ->zoom(11)
+                            ->maxZoom(19)
                             ->geoMan(true)
                             ->geoManEditable(true)
                             ->drawPolygon(true)
@@ -103,11 +120,13 @@ final class LocatieVanHetEvenement2Step
                         InfoText::info('infoGpx1', '<p>Wanneer het een eenvoudige route betreft (bijvoorbeeld voor een processie), dan kun je hieronder de route intekenen op de kaart.</p><p>Ingeval het een complexe route betreft (bijvoorbeeld een wielertocht), dan wordt aanbevolen om de route op de kaart globaal in te tekenen, zodat de applicatie kan herkennen door welke gemeenten de route gaat (en deze daarover informeren). Voor de detailroute bieden we hieronder de mogelijkheid voor het uploaden van een GPX bestand.</p>'),
                         Repeater::make('routesOpKaart')
                             ->label('Route op kaart')
+                            ->addActionLabel('Nog een route toevoegen')
                             ->schema([
                                 Map::make('routeVanHetEvenement')
                                     ->label('Route van het evenement')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)
+                                    ->maxZoom(19)
                                     ->geoMan(true)
                                     ->geoManEditable(true)
                                     ->drawPolygon(false)

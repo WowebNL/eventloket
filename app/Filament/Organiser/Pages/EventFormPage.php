@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Filament\Organiser\Pages;
 
 use App\EventForm\Components\VerticalWizard;
+use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
-use App\EventForm\Persistence\PrefillLoader;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
@@ -16,12 +16,14 @@ use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
+use Carbon\CarbonInterface;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Panel;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Locked;
 
@@ -66,6 +68,22 @@ class EventFormPage extends Page implements HasForms
     #[Locked]
     public bool $submitting = false;
 
+    /** Id van het actieve concept (route-param `{draft}`). */
+    #[Locked]
+    public ?int $draftId = null;
+
+    /**
+     * Pure UUID (zonder `form.`-prefix) van de stap waar de gebruiker
+     * is. Server-side bijgehouden via updateCurrentStep() omdat
+     * `request()->query('step')` tijdens Livewire-roundtrips naar
+     * `/livewire/update` wijst en de browser-query-string daar ontbreekt.
+     */
+    #[Locked]
+    public ?string $currentStepKey = null;
+
+    /** Weergavetekst van de laatste autosave, voor de indicator in de wizard. */
+    public ?string $lastSavedLabel = null;
+
     protected FormState $state;
 
     public function state(): FormState
@@ -73,31 +91,46 @@ class EventFormPage extends Page implements HasForms
         return $this->state;
     }
 
-    protected static ?string $slug = 'aanvraag';
+    protected static ?string $slug = 'aanvraag/{draft}';
 
-    protected static ?int $navigationSort = 1;
-
-    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-document-plus';
+    /**
+     * Bereikbaar via het concepten-overzicht (EventFormDraftsPage), niet
+     * via de navigatie — de route heeft immers een draft-id nodig.
+     */
+    protected static bool $shouldRegisterNavigation = false;
 
     protected string $view = 'filament.organiser.pages.event-form-page';
 
-    public function mount(): void
+    /**
+     * De default route-naam zou `aanvraag.{draft}` worden (slug met `/`
+     * vervangen door `.`); dit geeft een nette, stabiele naam.
+     */
+    public static function getRelativeRouteName(Panel $panel): string
+    {
+        return 'aanvraag.formulier';
+    }
+
+    public function mount(int|string $draft): void
     {
         /** @var User $user */
         $user = Filament::auth()->user();
         /** @var Organisation $tenant */
         $tenant = Filament::getTenant();
 
-        $prefill = app(PrefillLoader::class)->load(
-            request()->query('prefill_from_zaak'),
-            $user,
-            $tenant,
-        );
-        $draft = app(DraftStore::class)->load($user, $tenant);
+        $draftModel = app(DraftStore::class)->findFor($user, $tenant, $draft);
+        if (! $draftModel instanceof Draft) {
+            // 404 i.p.v. 403: lekt niet of een concept van iemand anders bestaat.
+            abort(404);
+        }
 
-        $this->state = $prefill ?? $draft ?? FormState::empty();
+        $this->draftId = $draftModel->id;
+        $this->currentStepKey = $draftModel->current_step_key;
+
+        $this->state = FormState::fromSnapshot($draftModel->state ?? []);
         $this->state->setSystem('authUser', $user);
         $this->state->setSystem('authOrganisation', $tenant);
+
+        $this->notifyResumedDraft($draftModel);
 
         $this->state->setVariable('alleGemeenteNamen', Municipality::orderBy('name')->pluck('name')->implode(', '));
 
@@ -138,6 +171,53 @@ class EventFormPage extends Page implements HasForms
                 $this->data[$mapKey] = $values[$mapKey];
             }
         }
+    }
+
+    /**
+     * Maak de stille autosave expliciet wanneer de gebruiker een eerder
+     * gevuld concept opent: een notificatie met naam + laatste
+     * bewerkingsmoment, en een initiële waarde voor de autosave-
+     * indicator. Een vers (leeg) concept krijgt geen melding.
+     *
+     * Komt de gebruiker via "Nieuwe aanvraag met deze gegevens"
+     * (`?bron=hergebruik`, gezet door EventFormDraftsPage), dan is het
+     * concept weliswaar gevuld maar gloednieuw — de melding benoemt dan
+     * het hergebruik van een eerdere aanvraag i.p.v. "Concept hervat".
+     */
+    private function notifyResumedDraft(Draft $draft): void
+    {
+        $values = $draft->state['values'] ?? [];
+        if (! is_array($values) || $values === []) {
+            return;
+        }
+
+        $this->lastSavedLabel = $this->formatSavedAt($draft->updated_at ?? now());
+
+        if (request()->query('bron') === 'hergebruik') {
+            Notification::make()
+                ->info()
+                ->title('Eerdere aanvraag hergebruikt')
+                ->body('Dit formulier is vooraf ingevuld met de gegevens van uw eerdere aanvraag. Controleer alle stappen en pas aan waar nodig. Uw antwoorden worden automatisch opgeslagen als nieuw concept.')
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->info()
+            ->title('Concept hervat')
+            ->body(sprintf(
+                'U gaat verder met uw concept "%s", laatst bewerkt op %s. Uw antwoorden worden automatisch opgeslagen.',
+                $draft->display_name,
+                $draft->updated_at?->format('d-m-Y \o\m H:i'),
+            ))
+            ->send();
+    }
+
+    /** Tijd voor de autosave-indicator: alleen tijdstip als 't vandaag is. */
+    private function formatSavedAt(CarbonInterface $moment): string
+    {
+        return $moment->isToday() ? $moment->format('H:i') : $moment->format('d-m-Y H:i');
     }
 
     /**
@@ -258,10 +338,10 @@ class EventFormPage extends Page implements HasForms
                     // Resume bij terugkeer: als de organisator weg is geweest
                     // (bv. naar Dashboard) en geen `?step=`-query-param meer
                     // heeft, opent de wizard op de step waar 'ie gebleven
-                    // was via `DraftStore::currentStepKey()`. Filament's
-                    // eigen `getStartStep()` checkt eerst de query-param;
-                    // alleen wanneer die afwezig is wordt deze closure
-                    // geëvalueerd.
+                    // was via de in mount() geladen `currentStepKey`.
+                    // Filament's eigen `getStartStep()` checkt eerst de
+                    // query-param; alleen wanneer die afwezig is wordt deze
+                    // closure geëvalueerd.
                     ->startOnStep(fn (): int => $this->resolveStartStep())
                     ->submitAction(
                         Action::make('submit')
@@ -327,47 +407,68 @@ class EventFormPage extends Page implements HasForms
 
     private function persistDraft(): void
     {
-        $user = $this->state->get('authUser');
-        $org = $this->state->get('authOrganisation');
-        if (! ($user instanceof User) || ! ($org instanceof Organisation)) {
+        $draft = $this->activeDraft();
+        if ($draft === null) {
+            // Concept in een andere tab verwijderd: stil overslaan, de
+            // gebruiker krijgt bij z'n volgende page-load een 404.
             return;
         }
-        app(DraftStore::class)->save($user, $org, $this->state, $this->currentStepUuid());
+
+        app(DraftStore::class)->save($draft, $this->state, $this->currentStepKey);
+
+        $this->lastSavedLabel = $this->formatSavedAt(now());
+        $this->dispatch('event-form-draft-saved', time: $this->lastSavedLabel);
     }
 
-    private function currentStepUuid(): ?string
+    /**
+     * Het actieve concept, ownership-scoped opgehaald zodat een
+     * gemanipuleerd draftId nooit andermans concept raakt.
+     */
+    private function activeDraft(): ?Draft
     {
-        // Filament's wizard zet `?step=form.<step-uuid>` in de URL — de
-        // `form.`-prefix is hun interne encoding voor "dit is een step-key
-        // van de Wizard-component". Stripppen voor draft-save metadata.
-        $step = request()->query('step');
-        if (! is_string($step) || $step === '') {
+        $user = $this->state->get('authUser');
+        $org = $this->state->get('authOrganisation');
+        if (! ($user instanceof User) || ! ($org instanceof Organisation) || $this->draftId === null) {
             return null;
         }
 
-        return str_starts_with($step, 'form.') ? substr($step, 5) : $step;
+        return app(DraftStore::class)->findFor($user, $org, $this->draftId);
+    }
+
+    /**
+     * Door de wizard-JS aangeroepen bij elke stap-wissel (Volgende,
+     * Vorige én sidebar-kliks). Houdt de huidige stap server-side bij
+     * en persisteert 'm zodat hervatten op de juiste stap opent.
+     */
+    public function updateCurrentStep(string $stepKey): void
+    {
+        $clean = str_starts_with($stepKey, 'form.') ? substr($stepKey, 5) : $stepKey;
+        if (! in_array($clean, EventFormSchema::stepUuidsInOrder(), true)) {
+            return; // onbekende key uit een gemanipuleerde call negeren
+        }
+
+        $this->currentStepKey = $clean;
+
+        $draft = $this->activeDraft();
+        if ($draft !== null) {
+            app(DraftStore::class)->saveStep($draft, $clean);
+        }
     }
 
     /**
      * 1-based positie van de step waar de wizard moet openen. Wordt
      * door Filament's `Wizard::getStartStep()` aangeroepen wanneer
      * 'r geen `?step=`-query-param in de URL staat — dat is precies
-     * de "resume bij terugkeer"-case waarvoor we hier de bewaarde
-     * step uit de draft willen pakken.
+     * de "resume bij terugkeer"-case waarvoor we hier de in mount()
+     * geladen `currentStepKey` uit het concept pakken.
      *
-     * Defaultet naar 1 (Contactgegevens) bij geen draft / onbekende
+     * Defaultet naar 1 (Contactgegevens) bij geen bewaarde / onbekende
      * step-key zodat een verse organisator gewoon vanaf het begin
      * start.
      */
     private function resolveStartStep(): int
     {
-        $user = $this->state->get('authUser');
-        $organisation = $this->state->get('authOrganisation');
-        if (! $user instanceof User || ! $organisation instanceof Organisation) {
-            return 1;
-        }
-
-        $key = app(DraftStore::class)->currentStepKey($user, $organisation);
+        $key = $this->currentStepKey;
         if ($key === null || $key === '') {
             return 1;
         }
@@ -537,7 +638,7 @@ class EventFormPage extends Page implements HasForms
         }
 
         try {
-            $zaak = app(SubmitEventForm::class)->execute($this->state, $user, $org);
+            $zaak = app(SubmitEventForm::class)->execute($this->state, $user, $org, $this->activeDraft());
         } catch (\Throwable $e) {
             report($e);
             // Reset zodat de gebruiker kan retry'en nu de fout zichtbaar is —
@@ -599,7 +700,7 @@ class EventFormPage extends Page implements HasForms
 
     public function getTitle(): string
     {
-        return 'Nieuwe evenement-aanvraag';
+        return 'Nieuwe aanvraag';
     }
 
     public static function getNavigationLabel(): string
@@ -613,38 +714,33 @@ class EventFormPage extends Page implements HasForms
     }
 
     /**
-     * Header-actions op de aanvraag-pagina. "Begin opnieuw" leegt de
-     * draft + state zodat de organisator een halfingevuld formulier
-     * weg kan gooien en met een schoon formulier kan starten — handig
-     * bij testen, bij wijziging van plan, of na een gedeelde sessie.
+     * Header-actions op de aanvraag-pagina. "Concept verwijderen" gooit
+     * alleen het actieve concept weg en stuurt terug naar het concepten-
+     * overzicht; opnieuw of parallel beginnen loopt via dat overzicht,
+     * zodat een nieuwe aanvraag nooit een ander concept sloopt.
      *
      * @return array<int, Action>
      */
     protected function getHeaderActions(): array
     {
         return [
-            Action::make('beginOpnieuw')
-                ->label('Begin opnieuw')
+            Action::make('conceptVerwijderen')
+                ->label('Concept verwijderen')
                 ->icon('heroicon-o-trash')
                 ->color('gray')
                 ->requiresConfirmation()
-                ->modalHeading('Begin opnieuw met een leeg formulier')
-                ->modalDescription('Hierdoor verdwijnen alle ingevulde gegevens van deze aanvraag en begint u met een leeg formulier. Dit kan niet ongedaan gemaakt worden.')
-                ->modalSubmitActionLabel('Ja, begin opnieuw')
+                ->modalHeading('Concept verwijderen?')
+                ->modalDescription('Hiermee verwijdert u dit concept en alle ingevulde gegevens. Dit kan niet ongedaan gemaakt worden.')
+                ->modalSubmitActionLabel('Ja, verwijderen')
                 ->action(function () {
-                    $user = $this->state->get('authUser');
-                    $org = $this->state->get('authOrganisation');
-                    if ($user instanceof User && $org instanceof Organisation) {
-                        app(DraftStore::class)->clear($user, $org);
+                    $draft = $this->activeDraft();
+                    if ($draft !== null) {
+                        app(DraftStore::class)->delete($draft);
                     }
-                    // Volledige page-reload zodat mount() opnieuw draait en
-                    // alle session/state opnieuw wordt opgebouwd zonder resten
-                    // van de oude wizard. NB: `request()->url()` werkt hier
-                    // niet — tijdens een Livewire-action wijst die naar
-                    // `/livewire/update` (de POST-endpoint), niet naar de
-                    // browser-URL. Reconstrueer de aanvraag-URL via Filament's
-                    // eigen route-resolver.
-                    $this->redirect(static::getUrl(['tenant' => Filament::getTenant()]), navigate: false);
+                    // Volledige page-reload naar het overzicht zodat de
+                    // gebruiker daar een schoon concept kan starten of een
+                    // ander concept kan kiezen.
+                    $this->redirect(EventFormDraftsPage::getUrl(['tenant' => Filament::getTenant()]), navigate: false);
                 }),
         ];
     }

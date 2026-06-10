@@ -2,6 +2,7 @@
 
 namespace App\Filament\Organiser\Resources\Zaken\Pages;
 
+use App\Filament\Organiser\Pages\EventFormDraftsPage;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Jobs\Zaak\AddFinalStatusZGW;
 use App\Jobs\Zaak\AddResultaatZGW;
@@ -25,7 +26,9 @@ class ViewZaak extends ViewRecord
     {
         return [
             // "Herhaal aanvraag" — start een nieuwe aanvraag voorgevuld met de
-            // gegevens van deze zaak. PrefillLoader valt stil terug op lege
+            // gegevens van deze zaak. Landt op het concepten-overzicht, dat
+            // de prefill in een nieuw concept zet (bestaande concepten worden
+            // dus nooit overschreven). PrefillLoader valt stil terug op lege
             // waarden voor velden die inmiddels uit het schema zijn.
             Action::make('prefil_new_request')
                 ->label('Nieuwe aanvraag met deze gegevens')
@@ -33,7 +36,7 @@ class ViewZaak extends ViewRecord
                 ->tooltip('Start een nieuwe aanvraag waarbij de ingevulde gegevens uit deze zaak vooraf zijn ingevuld. U kunt alles aanpassen voordat u opnieuw indient.')
                 ->visible(fn (Zaak $record): bool => $record->form_state_snapshot !== null)
                 ->action(function (Zaak $record) {
-                    $this->redirect(route('filament.organiser.pages.aanvraag', [
+                    $this->redirect(EventFormDraftsPage::getUrl([
                         'tenant' => Filament::getTenant(),
                         'prefill_from_zaak' => $record->id,
                     ]));

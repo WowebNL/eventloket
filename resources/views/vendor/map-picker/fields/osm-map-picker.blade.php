@@ -165,7 +165,11 @@
         x-on:click.outside="open = false; activeIndex = -1"
     >
         {{-- Input wrapper met Filament-stijl + informatie-knop naast het zoekveld --}}
-        @php $isRouteMap = str_contains($getStatePath(), 'routes'); @endphp
+        @php
+            $isRouteMap = str_contains($getStatePath(), 'routes');
+            $_geoMan = json_decode($getMapConfig(), true)['geoMan'] ?? [];
+            $isMarkerMap = ($_geoMan['drawMarker'] ?? false) && !($_geoMan['drawPolygon'] ?? false) && !($_geoMan['drawPolyline'] ?? false);
+        @endphp
         <div class="flex items-center gap-x-2">
             <div class="fi-input-wrp flex-1">
                 <div class="fi-input-wrp-content-ctn min-w-0 flex-1">
@@ -193,8 +197,8 @@
                 type="button"
                 x-on:click="infoOpen = true"
                 class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                title="{{ $isRouteMap ? 'Informatie: hoe teken ik een route in?' : 'Informatie: hoe teken ik een locatie in?' }}"
-                aria-label="{{ $isRouteMap ? 'Informatie: hoe teken ik een route in?' : 'Informatie: hoe teken ik een locatie in?' }}"
+                title="{{ $isRouteMap ? 'Informatie: hoe teken ik een route in?' : ($isMarkerMap ? 'Informatie: hoe markeer ik een exacte locatie?' : 'Informatie: hoe teken ik een locatie in?') }}"
+                aria-label="{{ $isRouteMap ? 'Informatie: hoe teken ik een route in?' : ($isMarkerMap ? 'Informatie: hoe markeer ik een exacte locatie?' : 'Informatie: hoe teken ik een locatie in?') }}"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
@@ -249,7 +253,7 @@
              Position:fixed zodat de overlay altijd de hele viewport bedekt,
              ook als de kaart scrolt. z-index hoger dan de kaart (9999) en
              de dropdown (9999) zodat de modal daar altijd boven zweeft.
-             De content is specifiek per kaarttype (route vs. locatievlak). --}}
+             De content is specifiek per kaarttype (route vs. markering vs. locatievlak). --}}
         <div
             x-show="infoOpen"
             x-on:keydown.escape.window="infoOpen = false"
@@ -271,6 +275,8 @@
                     <h2 class="text-base font-semibold text-gray-900 dark:text-white">
                         @if($isRouteMap)
                             Hoe teken ik een route in?
+                        @elseif($isMarkerMap)
+                            Hoe markeer ik een exacte locatie?
                         @else
                             Hoe teken ik een locatie in?
                         @endif
@@ -301,6 +307,17 @@
                         <p>Een route verwijderen: klik op het <strong>gum-icoontje</strong> in de werkbalk en klik daarna op de route die u wilt verwijderen.</p>
                         <p class="rounded-lg bg-amber-50 dark:bg-amber-900/30 px-4 py-3 text-amber-700 dark:text-amber-300 font-medium">
                             Let op: op deze kaart kunt u alleen routes (lijnen) intekenen. Vlakken en andere vormen zijn hier niet toegestaan.
+                        </p>
+                    @elseif($isMarkerMap)
+                        <p>Op deze kaart geeft u de <strong>exacte positie</strong> aan door een pin op de kaart te plaatsen.</p>
+                        <ol class="list-decimal list-outside ml-4 space-y-2">
+                            <li>Gebruik de <strong>zoekbalk</strong> hierboven om de kaart te verplaatsen naar de gewenste locatie.</li>
+                            <li>Klik op het <strong>pin-icoontje</strong> (markering) in de werkbalk aan de linkerkant van de kaart.</li>
+                            <li>Klik op de kaart op de <strong>exacte plek</strong> waar u de markering wilt plaatsen. De pin verschijnt direct.</li>
+                        </ol>
+                        <p>Een markering verwijderen: klik op het <strong>gum-icoontje</strong> in de werkbalk en klik daarna op de pin die u wilt verwijderen.</p>
+                        <p class="rounded-lg bg-amber-50 dark:bg-amber-900/30 px-4 py-3 text-amber-700 dark:text-amber-300 font-medium">
+                            Let op: op deze kaart kunt u alleen een markering (pin) plaatsen. Vlakken en lijnen zijn hier niet toegestaan.
                         </p>
                     @else
                         <p>Op deze kaart tekent u het <strong>gebied</strong> af waar uw evenement plaatsvindt, bijvoorbeeld een festivalterrein of marktplein. U tekent de buitengrens van uw locatie als een <strong>vlak</strong> op de kaart.</p>
@@ -466,6 +483,35 @@
 
                 if (initialGeoJson.features && initialGeoJson.features.length) {
                     try { map.fitBounds(fg.getBounds()); } catch (e) { /* empty bounds */ }
+                } else {
+                    // Nieuw leeg item in een Repeater: overneem center + zoom van het
+                    // meest recente sibling-item. Filament gebruikt UUIDs als repeater-keys,
+                    // geen integers — zoek daarom naar het UUID-segment en vind alle andere
+                    // maps met hetzelfde prefix en suffix.
+                    const pathParts = _expectedStatePath.split('.');
+                    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                    let uuidIdx = -1;
+                    for (let i = pathParts.length - 1; i >= 0; i--) {
+                        if (uuidRe.test(pathParts[i])) { uuidIdx = i; break; }
+                    }
+                    if (uuidIdx !== -1) {
+                        const keyPrefix = 'osm-map-picker-' + pathParts.slice(0, uuidIdx).join('.') + '.';
+                        const keySuffix = '.' + pathParts.slice(uuidIdx + 1).join('.');
+                        const myKey = 'osm-map-picker-' + _expectedStatePath;
+                        let siblingMapEl = null;
+                        for (const el of document.querySelectorAll('[wire\\:key]')) {
+                            const k = el.getAttribute('wire:key') || '';
+                            if (k !== myKey && k.startsWith(keyPrefix) && k.endsWith(keySuffix)) {
+                                const candidate = el.querySelector('[x-ref=map]');
+                                if (candidate && candidate.__leafletMap) {
+                                    siblingMapEl = candidate;
+                                }
+                            }
+                        }
+                        if (siblingMapEl && siblingMapEl.__leafletMap) {
+                            map.setView(siblingMapEl.__leafletMap.getCenter(), siblingMapEl.__leafletMap.getZoom());
+                        }
+                    }
                 }
 
                 // Verwijder dotswan's eigen pm:create/edit/remove/update

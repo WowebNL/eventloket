@@ -8,7 +8,7 @@
  *   - ResolveZaaktype (gemeente × aard)
  *   - CreateZaakInZGW   (HTTP POST naar OpenZaak — gefaked)
  *   - CreateLocalZaak   (rij in `zaken`-tabel)
- *   - DraftStore::clear()
+ *   - DraftStore::delete() van het actieve concept
  *   - Audit-log regel
  *   - Async dispatch van 6 ZGW-jobs + PDF + bijlagen
  *
@@ -125,11 +125,17 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     $expectedZaakUrl = fakeOpenzaakZaakCreate();
 
     // Vul een bestaande draft zodat we kunnen verifiëren dat 'ie wordt
-    // geleegd na submit.
-    Draft::create([
+    // verwijderd na submit — en een tweede (parallel) concept dat moet
+    // blijven staan.
+    $activeDraft = Draft::create([
         'user_id' => $sc['user']->id,
         'organisation_id' => $sc['organisation']->id,
         'state' => $sc['state']->toSnapshot(),
+    ]);
+    $otherDraft = Draft::create([
+        'user_id' => $sc['user']->id,
+        'organisation_id' => $sc['organisation']->id,
+        'state' => FormState::empty()->toSnapshot(),
     ]);
 
     Bus::fake();
@@ -138,6 +144,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
         $sc['state'],
         $sc['user'],
         $sc['organisation'],
+        $activeDraft,
     );
 
     // 1. Lokale Zaak is aangemaakt met verwijzing naar de ZGW-zaak.
@@ -159,8 +166,10 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
         ->and($zaak->form_state_snapshot['values']['watIsDeNaamVanHetEvenementVergunning'])
         ->toBe('Buurtfeest Testlaan');
 
-    // 4. Draft is leeggemaakt.
-    expect(Draft::where('user_id', $sc['user']->id)->count())->toBe(0);
+    // 4. Alleen het ingediende concept is verwijderd; het parallelle
+    //    concept van dezelfde gebruiker blijft staan.
+    expect(Draft::whereKey($activeDraft->id)->exists())->toBeFalse()
+        ->and(Draft::whereKey($otherDraft->id)->exists())->toBeTrue();
 
     // 5. De 8 jobs zitten samen in één Bus::chain() in de juiste volgorde.
     //    GenerateSubmissionPdf staat als eerste zodat de bevestigingsmail zo

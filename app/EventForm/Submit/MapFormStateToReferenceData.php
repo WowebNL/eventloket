@@ -39,6 +39,7 @@ final class MapFormStateToReferenceData
             eind_opbouw: $this->iso8601OrNull($state->get('OpbouwEind')),
             start_afbouw: $this->iso8601OrNull($state->get('AfbouwStart')),
             eind_afbouw: $this->iso8601OrNull($state->get('AfbouwEind')),
+            locaties_evenement: $this->locatiesEvenement($state),
         );
     }
 
@@ -70,6 +71,32 @@ final class MapFormStateToReferenceData
         }
 
         return null;
+    }
+
+    private function locatiesEvenement(FormState $state): ?string
+    {
+        $names = [];
+
+        $gebouwen = $state->get('adresVanDeGebouwEn');
+        if (is_array($gebouwen)) {
+            foreach ($gebouwen as $entry) {
+                if (is_array($entry) && ! empty($entry['naamVanDeLocatieGebouw'])) {
+                    $names[] = (string) $entry['naamVanDeLocatieGebouw'];
+                }
+            }
+        }
+
+        $kaart = $this->stringOrNull($state->get('naamVanDeLocatieKaart'));
+        if ($kaart !== null) {
+            $names[] = $kaart;
+        }
+
+        $route = $this->stringOrNull($state->get('naamVanDeRoute'));
+        if ($route !== null) {
+            $names[] = $route;
+        }
+
+        return $names !== [] ? implode(', ', $names) : null;
     }
 
     private function naamLocatie(FormState $state): ?string

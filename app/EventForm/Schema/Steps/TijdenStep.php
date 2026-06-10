@@ -8,7 +8,10 @@ use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
+use App\EventForm\State\FormState;
 use App\EventForm\Template\LabelRenderer;
+use App\Filament\Organiser\Pages\Calendar;
+use App\Models\Organisation;
 use Carbon\Carbon;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
@@ -74,7 +77,29 @@ final class TijdenStep
                             ])
                             ->live(),
                     ]),
-                InfoText::info('evenmentenInDeBuurtContent', '<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p><p>Controleer <a href="https://eventloket.vrzl-test.woweb.app/organiser/{{eventloketSession.organiser_uuid}}/calendar" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>')
+                InfoText::info('evenmentenInDeBuurtContent', function (FormState $state): string {
+                    $html = app(LabelRenderer::class)->renderHtml(
+                        '<p>Uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} heeft o.a. de volgende gelijktijdig geplande evenementen <strong>{{ evenementenInDeGemeente }} </strong>binnen de gemeente {% get_value evenementInGemeente \'name\' %}.&nbsp;</p>',
+                        $state,
+                    );
+
+                    // Link naar de evenementenkalender via de route i.p.v.
+                    // een hardcoded omgevings-URL. De tenant komt uit de
+                    // form-state; buiten een ingelogde organiser-context
+                    // (bv. PDF-rendering in een queue-job) laten we de
+                    // link weg en blijft alleen de tekst over.
+                    $organisation = $state->get('authOrganisation');
+                    if ($organisation instanceof Organisation) {
+                        $html .= sprintf(
+                            '<p>Controleer <a href="%s" target="_blank" rel="noopener noreferrer">de evenementen kalender</a> om te bepalen of u uw planning wilt aanpassen.</p>',
+                            e(Calendar::getUrl(panel: 'organiser', tenant: $organisation)),
+                        );
+                    } else {
+                        $html .= '<p>Controleer de evenementen kalender om te bepalen of u uw planning wilt aanpassen.</p>';
+                    }
+
+                    return $html;
+                })
                     ->hidden(Hidden::rule('evenmentenInDeBuurtContent')),
                 Radio::make('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten')
                     ->label(Label::render('Zijn er voorafgaand aan het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?'))

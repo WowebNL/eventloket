@@ -39,6 +39,21 @@ describe('LabelRenderer', function () {
             ->toBe('Eind opbouw: 15 augustus 2026 · 15:30');
     });
 
+    test('datetime-strings met spatie als separator (PHP-formaat van Filament) worden ook human-readable geformatteerd', function () {
+        // Filament's DateTimePicker slaat waarden op als `Y-m-d H:i` (spatie, geen T).
+        // EvenementStart/EvenementEind komen zo uit de picker; de regex moet
+        // beide varianten matchen zodat de tabel consistent is.
+        $renderer = new LabelRenderer;
+        $state = FormState::empty();
+        $state->setField('EvenementStart', '2026-04-30 14:00');
+        $state->setField('EvenementEind', '2026-04-30 22:00:00');
+
+        expect($renderer->render('{{ EvenementStart }}', $state))
+            ->toBe('30 april 2026 · 14:00')
+            ->and($renderer->render('{{ EvenementEind }}', $state))
+            ->toBe('30 april 2026 · 22:00');
+    });
+
     test('strings die NIET op ISO-datum lijken blijven onaangeraakt', function () {
         $renderer = new LabelRenderer;
         $state = FormState::empty();
