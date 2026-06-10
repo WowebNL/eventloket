@@ -49,4 +49,42 @@ if (app()->environment(['local', 'testing'])) {
 
         return response()->json(['ok' => true, 'deleted' => $deleted]);
     })->name('test.reset-draft')->withoutMiddleware([PreventRequestForgery::class]);
+
+    // Test-only: maak een Zaak met een form_state_snapshot zoals de
+    // backfill-command die produceert (legacy-gemapte velden + kaart als
+    // geojson), zodat een Playwright-scenario de "herhaal aanvraag"-prefill
+    // in de browser kan verifiëren. Geeft het zaak-id terug.
+    Route::post('/_test/seed-prefill-zaak', function (Request $request) {
+        $email = (string) $request->input('email', '');
+        $user = \App\Models\User::where('email', $email)->first();
+        if (! $user) {
+            return response()->json(['ok' => false, 'reason' => 'user not found'], 422);
+        }
+        $organisation = $user->organisations()->first();
+        if (! $organisation) {
+            return response()->json(['ok' => false, 'reason' => 'no organisation'], 422);
+        }
+        $zaaktype = \App\Models\Zaaktype::query()->first();
+
+        $zaak = \App\Models\Zaak::factory()->create([
+            'organisation_id' => $organisation->id,
+            'organiser_user_id' => $user->id,
+            'zaaktype_id' => $zaaktype?->id,
+            'form_state_snapshot' => ['values' => [
+                'watIsUwVoornaam' => 'PrefillEva',
+                'watIsUwAchternaam' => 'PrefillTest',
+                'watIsDeNaamVanHetEvenementVergunning' => 'Hergebruikte Aanvraag',
+                'locatieSOpKaart' => ['geojson' => [
+                    'type' => 'FeatureCollection',
+                    'features' => [[
+                        'type' => 'Feature',
+                        'properties' => new stdClass,
+                        'geometry' => ['type' => 'Polygon', 'coordinates' => [[[5.84, 50.90], [5.80, 50.89], [5.86, 50.87], [5.84, 50.90]]]],
+                    ]],
+                ]],
+            ]],
+        ]);
+
+        return response()->json(['ok' => true, 'zaak_id' => $zaak->id]);
+    })->name('test.seed-prefill-zaak')->withoutMiddleware([PreventRequestForgery::class]);
 }
