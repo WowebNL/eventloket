@@ -50,6 +50,7 @@ final class VergunningaanvraagMaatregelenStep
                         InfoText::info('content30', '<p><strong>U heeft aangegeven, dat er extra afval ontstaat op uw Evenement {{ watIsDeNaamVanHetEvenementVergunning }}. Hieronder volgen een aantal vragen daarover.</strong></p>'),
                         Repeater::make('wieMaaktDeLocatiesEnDeOmgevingDaarvanSchoonEnWanneerGebeurtDat')
                             ->label('Wie maakt de locaties en de omgeving daarvan schoon, en wanneer gebeurt dat?')
+                            ->addActionLabel('Nog een schoonmaakmoment toevoegen')
                             ->schema([
                                 TextInput::make('locatieAfval')
                                     ->label('Locatie')
@@ -66,6 +67,10 @@ final class VergunningaanvraagMaatregelenStep
                                 DateTimePicker::make('eindtijdSchoonmaak')
                                     ->label('Eindtijd schoonmaak')
                                     ->seconds(false)
+                                    ->afterOrEqual('starttijdSchoonmaak')
+                                    ->validationMessages([
+                                        'after_or_equal' => 'De eindtijd van de schoonmaak moet op of na de starttijd liggen.',
+                                    ])
                                     ->required(),
                             ]),
                         TextInput::make('hoeveelExtraAfvalinzamelpuntenGaatUOpLocatieEvenementXPlaatsen')

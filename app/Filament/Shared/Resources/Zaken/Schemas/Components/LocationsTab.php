@@ -28,6 +28,9 @@ class LocationsTab
                         TextEntry::make('reference_data.naam_locatie_evenement')
                             ->label(__('municipality/resources/zaak.infolist.tabs.locations.information.location_name.label'))
                             ->hidden(fn (?string $state) => empty($state)),
+                        TextEntry::make('reference_data.locaties_evenement')
+                            ->label(__('municipality/resources/zaak.infolist.tabs.locations.information.locaties_evenement.label'))
+                            ->hidden(fn (?string $state) => empty($state)),
                     ])
                     ->columns(1)
                     ->columnSpan(4),

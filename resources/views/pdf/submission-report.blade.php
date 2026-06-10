@@ -125,6 +125,13 @@
                                             <li>{{ $bestand }}</li>
                                         @endforeach
                                     </ul>
+                                @elseif (! empty($entry['list']))
+                                    @php $lijstTelt = count($entry['list']); @endphp
+                                    <ul style="margin: 0; padding-left: {{ $lijstTelt > 1 ? '1.1em' : '0' }}; list-style: {{ $lijstTelt > 1 ? 'disc' : 'none' }};">
+                                        @foreach ($entry['list'] as $item)
+                                            <li>{{ $item }}</li>
+                                        @endforeach
+                                    </ul>
                                 @else
                                     {!! nl2br(e($entry['value'])) !!}
                                 @endif

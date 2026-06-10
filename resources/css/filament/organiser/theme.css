@@ -216,3 +216,7 @@
     text-decoration: underline;
 }
 :is(.dark .eventform-alert a) { color: #93c5fd; }
+
+.leaflet-pm-action.action-finishMode, .leaflet-pm-action.action-finish {
+    display: none!important;
+}

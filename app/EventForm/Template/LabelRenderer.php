@@ -352,7 +352,7 @@ class LabelRenderer
      */
     private function looksLikeIsoDateTime(string $value): bool
     {
-        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/', $value);
+        return (bool) preg_match('/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:?\d{2})?$/', $value);
     }
 
     private function humanizeIsoDateTime(string $value): string

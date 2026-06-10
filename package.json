@@ -18,6 +18,7 @@
         "concurrently": "^9.0.1",
         "json-logic-js": "^2.0.5",
         "laravel-vite-plugin": "^1.2.0",
+        "leaflet": "^1.9.4",
         "tailwindcss": "^4.1.12",
         "vite": "^6.2.4"
     }
