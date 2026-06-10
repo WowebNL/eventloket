@@ -88,6 +88,38 @@ test('extraheert herkende keys recursief, mapt legacy-keys, negeert onbekend', f
     expect($values)->not->toHaveKey('losVeld');
 });
 
+test('FileUpload-velden (bijlagen) worden niet in de snapshot gezet — files komen uit OpenZaak', function () {
+    // De OF-bijlage is een {url,name,size}-object naar een (dode) OF-
+    // submission-URL. De echte files leven in OpenZaak's Documenten-API en
+    // worden via Zaak::documenten gelezen. De backfill moet bijlagen1 (een
+    // FileUpload-veld) daarom NIET overnemen.
+    Http::fake([
+        '*objects/*' => Http::response([
+            'record' => ['data' => ['data' => [
+                'bijlagen' => [
+                    'bijlagen1' => [[
+                        'url' => 'https://open-formulieren.test/api/v2/submissions/files/abc',
+                        'name' => 'test-uuid.pdf',
+                        'originalName' => 'test.pdf',
+                        'size' => 6409,
+                    ]],
+                ],
+                'contactgegevens' => ['soortEvenement' => 'festival'],
+            ]]],
+        ], 200),
+    ]);
+    $zaak = oudeZaak();
+
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    $zaak->refresh();
+    $values = $zaak->form_state_snapshot['values'];
+
+    expect($values)->not->toHaveKey('bijlagen1')
+        ->and($values)->toHaveKey('soortEvenement', 'festival');
+});
+
 test('--dry-run slaat niets op', function () {
     fakeObjectsRecord();
     $zaak = oudeZaak();

@@ -6,6 +6,7 @@ namespace App\Console\Commands\EventForm;
 
 use App\EventForm\Schema\EventFormSchema;
 use App\Models\Zaak;
+use Filament\Forms\Components\FileUpload;
 use Illuminate\Console\Command;
 use ReflectionObject;
 use Throwable;
@@ -235,12 +236,23 @@ final class BackfillSnapshotsFromObjects extends Command
      * formulier daadwerkelijk herkent (en welke bij prefill wegvallen) —
      * los van een eventueel ontbrekende veldenkaart-dump.
      *
+     * FileUpload-velden worden bewust overgeslagen: de bijbehorende
+     * bestanden leven niet in de OF-submission maar in OpenZaak's
+     * Documenten-API (gekoppeld via zaakinformatieobjecten; `bestandsnaam`
+     * matcht OF's `originalName`). Ze worden al gelezen via
+     * `Zaak::documenten` en horen dus niet in de snapshot. Zonder deze
+     * uitsluiting zou de backfill het OF-`{url,name,size}`-object (een dode
+     * submission-URL) als veldwaarde opslaan.
+     *
      * @return array<string, true>
      */
     private function knownFormKeys(): array
     {
         $keys = [];
         $walk = function (object $component) use (&$walk, &$keys): void {
+            if ($component instanceof FileUpload) {
+                return;
+            }
             if (method_exists($component, 'getName')) {
                 $name = (string) $component->getName();
                 if ($name !== '') {
