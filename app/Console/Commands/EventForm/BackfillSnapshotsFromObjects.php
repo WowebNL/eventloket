@@ -131,11 +131,24 @@ final class BackfillSnapshotsFromObjects extends Command
      * @var array<string, string>
      */
     private const LEGACY_KEY_MAP = [
+        // Zeker — 1-op-1 hernoemingen.
         'watIsDeNaamVanHetEvenement' => 'watIsDeNaamVanHetEvenementVergunning',
         'watIsDeStarttijdVanHetEvenement' => 'EvenementStart',
         'wanneerIsHetEindeVanHetEvenement' => 'EvenementEind',
         'voornaamIngelogdePersoon' => 'watIsUwVoornaam',
         'achternaamIngelogdePersoon' => 'watIsUwAchternaam',
+        // Zeker — bijna-identieke naam.
+        'aantalGelijktijdigAanwezigePersonen' => 'watIsHetAantalGelijktijdigAanwezigPersonen',
+        'watVoorSoortEvenementIsUwEvenement' => 'soortEvenement',
+        // Aanname — het oude generieke locatie-naam-veld op het nieuwe
+        // generieke `naamVanDeLocatie`. Medium zekerheid: er zijn ook
+        // `naamVanDeLocatieGebouw`/`...Kaart`, maar de oude key is de
+        // generieke variant.
+        'watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt' => 'naamVanDeLocatie',
+        // Bewust NIET gemapt: `isUwActiviteitPubliekelijkToegankelijk` heeft
+        // geen schone tegenhanger in het nieuwe formulier (alle "activiteit"-
+        // /"publiek"-velden gaan over iets anders). Forceren zou de prefill
+        // corrumperen; de organisator vult dit veld opnieuw in.
     ];
 
     /**

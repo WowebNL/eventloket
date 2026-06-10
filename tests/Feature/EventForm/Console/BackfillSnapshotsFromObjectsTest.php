@@ -28,9 +28,9 @@ function fakeObjectsRecord(): void
     Http::fake([
         '*objects/*' => Http::response([
             'record' => ['data' => ['data' => [
-                // Stap-sectie met direct herkende form-keys ...
+                // Stap-sectie met direct herkende form-key ...
                 'contactgegevens' => [
-                    'soortEvenement' => 'festival',
+                    'watIsUwTelefoonnummer' => '0612345678',
                 ],
                 // ... een container-fieldset met een genest herkend veld
                 // (route → routesOpKaart is een echte form-key) ...
@@ -46,6 +46,11 @@ function fakeObjectsRecord(): void
                 ],
                 'vragenboom-3' => [
                     'voornaamIngelogdePersoon' => 'Eva',
+                    'aantalGelijktijdigAanwezigePersonen' => '5000',
+                ],
+                'naam-van-het-evenement' => [
+                    'watVoorSoortEvenementIsUwEvenement' => 'muziekevenement',
+                    'watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt' => 'Plein 123',
                 ],
                 // ... en een onbekend veld dat genegeerd moet worden.
                 'losVeld' => 'waarde',
@@ -75,14 +80,17 @@ test('extraheert herkende keys recursief, mapt legacy-keys, negeert onbekend', f
     $values = $zaak->form_state_snapshot['values'];
 
     // Direct herkende form-key.
-    expect($values)->toHaveKey('soortEvenement', 'festival');
+    expect($values)->toHaveKey('watIsUwTelefoonnummer', '0612345678');
     // Genest binnen een container-fieldset (route → routesOpKaart).
     expect($values)->toHaveKey('routesOpKaart');
     // Legacy-keys omgezet naar de nieuwe form-keys.
     expect($values)->toMatchArray([
-        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest', // was watIsDeNaamVanHetEvenement
-        'EvenementStart' => '2026-06-01',                       // was watIsDeStarttijdVanHetEvenement
-        'watIsUwVoornaam' => 'Eva',                             // was voornaamIngelogdePersoon
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest',          // was watIsDeNaamVanHetEvenement
+        'EvenementStart' => '2026-06-01',                                // was watIsDeStarttijdVanHetEvenement
+        'watIsUwVoornaam' => 'Eva',                                      // was voornaamIngelogdePersoon
+        'watIsHetAantalGelijktijdigAanwezigPersonen' => '5000',          // was aantalGelijktijdigAanwezigePersonen
+        'soortEvenement' => 'muziekevenement',                          // was watVoorSoortEvenementIsUwEvenement
+        'naamVanDeLocatie' => 'Plein 123',                              // was watIsDeNaamVanDeLocatieSWaar...
     ]);
     // Onbekend veld wordt niet overgenomen.
     expect($values)->not->toHaveKey('losVeld');
