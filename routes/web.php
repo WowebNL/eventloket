@@ -6,6 +6,9 @@ use App\Livewire\AcceptInvites\AcceptAdminInvite;
 use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
 use App\Livewire\AcceptInvites\AcceptOrganisationInvite;
+use App\Models\User;
+use App\Models\Zaak;
+use App\Models\Zaaktype;
 use App\Settings\WelcomeSettings;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
@@ -56,7 +59,7 @@ if (app()->environment(['local', 'testing'])) {
     // in de browser kan verifiëren. Geeft het zaak-id terug.
     Route::post('/_test/seed-prefill-zaak', function (Request $request) {
         $email = (string) $request->input('email', '');
-        $user = \App\Models\User::where('email', $email)->first();
+        $user = User::where('email', $email)->first();
         if (! $user) {
             return response()->json(['ok' => false, 'reason' => 'user not found'], 422);
         }
@@ -64,9 +67,9 @@ if (app()->environment(['local', 'testing'])) {
         if (! $organisation) {
             return response()->json(['ok' => false, 'reason' => 'no organisation'], 422);
         }
-        $zaaktype = \App\Models\Zaaktype::query()->first();
+        $zaaktype = Zaaktype::query()->first();
 
-        $zaak = \App\Models\Zaak::factory()->create([
+        $zaak = Zaak::factory()->create([
             'organisation_id' => $organisation->id,
             'organiser_user_id' => $user->id,
             'zaaktype_id' => $zaaktype?->id,
