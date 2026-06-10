@@ -20,6 +20,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Support\Str;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
 
@@ -58,7 +60,20 @@ final class LocatieVanHetEvenement2Step
                         'route' => 'Op een route',
                     ])
                     ->required()
-                    ->live(),
+                    ->live()
+                    ->afterStateUpdated(function (Get $get, Set $set, ?array $state): void {
+                        if (in_array('gebouw', $state ?? [], true) && empty($get('adresVanDeGebouwEn'))) {
+                            $set('adresVanDeGebouwEn', [(string) Str::uuid() => []]);
+                        }
+
+                        if (in_array('buiten', $state ?? [], true) && empty($get('locatieSOpKaart'))) {
+                            $set('locatieSOpKaart', [(string) Str::uuid() => []]);
+                        }
+
+                        if (in_array('route', $state ?? [], true) && empty($get('routesOpKaart'))) {
+                            $set('routesOpKaart', [(string) Str::uuid() => []]);
+                        }
+                    }),
                 Repeater::make('adresVanDeGebouwEn')
                     ->label('Adres van de gebouw(en)')
                     ->addActionLabel('Nog een adres toevoegen')

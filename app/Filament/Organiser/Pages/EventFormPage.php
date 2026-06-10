@@ -599,7 +599,7 @@ class EventFormPage extends Page implements HasForms
 
     public function getTitle(): string
     {
-        return 'Nieuwe evenement-aanvraag';
+        return 'Nieuwe aanvraag';
     }
 
     public static function getNavigationLabel(): string
