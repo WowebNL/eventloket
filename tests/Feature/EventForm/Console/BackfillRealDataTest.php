@@ -11,7 +11,13 @@ declare(strict_types=1);
  * alleen op hand-gemaakte fixtures.
  */
 
+use App\Enums\OrganisationRole;
+use App\Enums\Role;
+use App\EventForm\Persistence\PrefillLoader;
+use App\EventForm\State\FormState;
 use App\Models\Organisation;
+use App\Models\User;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -83,4 +89,42 @@ test('echte submission met bijlage: OF-file-object belandt niet in de snapshot',
     expect(array_keys($values))->not->toContain('bijlagen1');
     // Maar de rest van de submission is wél verwerkt.
     expect(array_keys($values))->toContain('watIsDeNaamVanHetEvenementVergunning');
+});
+
+test('VOLLEDIGE KETEN: oude Objects-data -> command -> prefill van een nieuw formulier', function () {
+    // Dit is waar het command voor bestaat: een aanvraag die als oude
+    // submission in de Objects API zit, herbruikbaar maken in het nieuwe
+    // formulier. Deze test draait de hele keten:
+    //   oude OF-data -> backfill-command -> form_state_snapshot ->
+    //   PrefillLoader -> FormState die het nieuwe formulier zou vullen.
+    fakeFromFixture('poly_old');
+
+    $org = Organisation::factory()->create();
+    /** @var OrganiserUser $user */
+    $user = User::factory()->state(['role' => Role::Organiser])->create();
+    $user->organisations()->attach($org, ['role' => OrganisationRole::Admin->value]);
+
+    $zaak = Zaak::factory()->create([
+        'organisation_id' => $org->id,
+        'organiser_user_id' => $user->id,
+        'zaaktype_id' => Zaaktype::factory()->create()->id,
+        'data_object_url' => 'https://objects.test/api/v2/objects/real-uuid',
+        'form_state_snapshot' => null,
+    ]);
+
+    // 1. Command zet de oude Objects-submission om naar een snapshot.
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    // 2. PrefillLoader bouwt — net als EventFormPage::mount() bij
+    //    ?prefill_from_zaak — een FormState uit die snapshot.
+    $state = (new PrefillLoader)->load($zaak->refresh()->id, $user, $org);
+
+    // 3. Het nieuwe formulier krijgt de oude (gemapte) waarden binnen.
+    expect($state)->toBeInstanceOf(FormState::class);
+    expect($state->get('watIsDeNaamVanHetEvenementVergunning'))->not->toBeNull(); // legacy-key, nu gevuld
+    expect($state->get('EvenementStart'))->not->toBeNull();
+    expect($state->get('watIsUwVoornaam'))->not->toBeNull();
+    // De kaart-tekening is als geojson FeatureCollection beschikbaar voor het Map-veld.
+    expect($state->get('locatieSOpKaart.geojson.type'))->toBe('FeatureCollection');
 });
