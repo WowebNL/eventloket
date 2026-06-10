@@ -208,7 +208,14 @@ test('deleting intern zaaknummer removes the zaakeigenschap and clears reference
     ]);
 
     Http::fake([
-        $existingEigenschapUrl => Http::response('', 204),
+        $existingEigenschapUrl => Http::response([
+            'url' => $existingEigenschapUrl,
+            'uuid' => 'existing-eigenschap',
+            'zaak' => $zgwZaakUrl,
+            'eigenschap' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/intern-zaaknummer',
+            'naam' => 'intern_zaaknummer',
+            'waarde' => '',
+        ], 200),
     ]);
 
     ZgwHttpFake::wildcardFake();
@@ -227,4 +234,8 @@ test('deleting intern zaaknummer removes the zaakeigenschap and clears reference
         ->assertNotified();
 
     expect($zaak->refresh()->reference_data->intern_zaaknummer)->toBeNull();
+
+    Http::assertSent(fn (Request $request) => $request->url() === $existingEigenschapUrl
+        && $request->method() === 'PATCH'
+        && $request['waarde'] === '');
 });

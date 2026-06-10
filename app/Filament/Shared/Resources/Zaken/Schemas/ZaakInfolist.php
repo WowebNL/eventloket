@@ -15,7 +15,6 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
-use App\Support\Openzaak\DeletableZaakeigenschappen;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\StatusType;
@@ -39,7 +38,6 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
-use Woweb\Openzaak\Connection\OpenzaakConnection;
 use Woweb\Openzaak\Openzaak;
 
 class ZaakInfolist
@@ -377,7 +375,9 @@ class ZaakInfolist
                                                 $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
 
                                                 if ($eigenschap) {
-                                                    (new DeletableZaakeigenschappen(new OpenzaakConnection, $record->openzaak->uuid))->delete($eigenschap->uuid);
+                                                    (new Openzaak)->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschap->uuid, [
+                                                        'waarde' => '',
+                                                    ]);
                                                 }
 
                                                 $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => null]));
