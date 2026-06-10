@@ -15,6 +15,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
+use App\Support\Openzaak\DeletableZaakeigenschappen;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\StatusType;
@@ -23,6 +24,7 @@ use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -37,6 +39,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Woweb\Openzaak\Connection\OpenzaakConnection;
 use Woweb\Openzaak\Openzaak;
 
 class ZaakInfolist
@@ -302,6 +305,89 @@ class ZaakInfolist
                                                         ->title(__('Er is iets misgegaan bij het wijzigen van de risico classificatie'))
                                                         ->send();
                                                 }
+                                            }),
+                                    ])),
+                                TextEntry::make('reference_data.intern_zaaknummer')
+                                    ->label(__('resources/zaak.columns.intern_zaaknummer.label'))
+                                    ->placeholder(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.placeholder'))
+                                    ->afterLabel(Schema::end([
+                                        Icon::make('heroicon-o-pencil-square'),
+                                        Action::make('editInternZaaknummer')
+                                            ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.label'))
+                                            ->fillForm(function (Zaak $record): array {
+                                                /** @var ZaakReferenceData $referenceData */
+                                                $referenceData = $record->reference_data;
+
+                                                return [
+                                                    'intern_zaaknummer' => $referenceData->intern_zaaknummer,
+                                                ];
+                                            })
+                                            ->schema([
+                                                TextInput::make('intern_zaaknummer')
+                                                    ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.fields.intern_zaaknummer.label'))
+                                                    ->maxLength(255)
+                                                    ->required(),
+                                            ])
+                                            ->action(function (array $data, Zaak $record) {
+                                                $openzaak = new Openzaak;
+                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
+
+                                                if ($eigenschap) {
+                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschap->uuid, [
+                                                        'waarde' => $data['intern_zaaknummer'],
+                                                    ]);
+                                                } else {
+                                                    $catalogiEigenschap = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])
+                                                        ->map(fn ($item) => new CatalogiEigenschap(...$item))
+                                                        ->firstWhere('naam', 'intern_zaaknummer');
+
+                                                    if (! $catalogiEigenschap) {
+                                                        Notification::make()
+                                                            ->danger()
+                                                            ->title(__('Er is iets misgegaan bij het wijzigen van het interne zaaknummer'))
+                                                            ->send();
+
+                                                        return;
+                                                    }
+
+                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
+                                                        'zaak' => $record->openzaak->url,
+                                                        'eigenschap' => $catalogiEigenschap->url,
+                                                        'waarde' => $data['intern_zaaknummer'],
+                                                    ]);
+                                                }
+
+                                                $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => $data['intern_zaaknummer']]));
+                                                $record->save();
+                                                $record->clearZgwCache();
+
+                                                Notification::make()
+                                                    ->success()
+                                                    ->title(__('Intern zaaknummer is gewijzigd'))
+                                                    ->send();
+                                            }),
+                                        Action::make('deleteInternZaaknummer')
+                                            ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.delete_intern_zaaknummer.label'))
+                                            ->icon('heroicon-o-trash')
+                                            ->color('danger')
+                                            ->iconButton()
+                                            ->requiresConfirmation()
+                                            ->visible(fn (Zaak $record) => ! empty($record->reference_data->intern_zaaknummer))
+                                            ->action(function (Zaak $record) {
+                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
+
+                                                if ($eigenschap) {
+                                                    (new DeletableZaakeigenschappen(new OpenzaakConnection, $record->openzaak->uuid))->delete($eigenschap->uuid);
+                                                }
+
+                                                $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => null]));
+                                                $record->save();
+                                                $record->clearZgwCache();
+
+                                                Notification::make()
+                                                    ->success()
+                                                    ->title(__('Intern zaaknummer is verwijderd'))
+                                                    ->send();
                                             }),
                                     ])),
                                 TextEntry::make('reference_data.status_name')

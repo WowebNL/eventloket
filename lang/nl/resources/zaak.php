@@ -23,6 +23,9 @@ return [
         'risico_classificatie' => [
             'label' => 'Risicoclassificatie',
         ],
+        'intern_zaaknummer' => [
+            'label' => 'Intern zaaknummer',
+        ],
         'start_evenement' => [
             'label' => 'Start evenement',
         ],
