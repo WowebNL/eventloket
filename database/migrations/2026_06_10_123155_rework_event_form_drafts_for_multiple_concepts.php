@@ -14,10 +14,21 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Voeg eerst de vervangende index + kolom toe. Op MySQL fungeert de
+        // bestaande unique-index (user_id, organisation_id) tegelijk als
+        // backing-index voor de user_id foreign key (leftmost prefix).
+        // Zonder een alternatieve index weigert MySQL die unique te droppen
+        // (error 1553: needed in a foreign key constraint). PostgreSQL heeft
+        // dat probleem niet, vandaar dat het lokaal wel werkte. Door de
+        // index vóór de drop aan te maken blijft de FK op beide drivers
+        // backed.
         Schema::table('event_form_drafts', function (Blueprint $table) {
-            $table->dropUnique(['user_id', 'organisation_id']);
             $table->index(['user_id', 'organisation_id']);
             $table->string('name')->nullable()->after('state');
+        });
+
+        Schema::table('event_form_drafts', function (Blueprint $table) {
+            $table->dropUnique(['user_id', 'organisation_id']);
         });
     }
 
