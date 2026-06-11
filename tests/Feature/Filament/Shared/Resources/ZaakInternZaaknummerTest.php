@@ -236,6 +236,5 @@ test('deleting intern zaaknummer removes the zaakeigenschap and clears reference
     expect($zaak->refresh()->reference_data->intern_zaaknummer)->toBeNull();
 
     Http::assertSent(fn (Request $request) => $request->url() === $existingEigenschapUrl
-        && $request->method() === 'PATCH'
-        && $request['waarde'] === '');
+        && $request->method() === 'DELETE');
 });

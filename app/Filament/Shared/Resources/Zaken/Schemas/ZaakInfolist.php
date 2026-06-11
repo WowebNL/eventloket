@@ -375,9 +375,7 @@ class ZaakInfolist
                                                 $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
 
                                                 if ($eigenschap) {
-                                                    (new Openzaak)->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschap->uuid, [
-                                                        'waarde' => '',
-                                                    ]);
+                                                    (new Openzaak)->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->delete($eigenschap->uuid);
                                                 }
 
                                                 $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => null]));
