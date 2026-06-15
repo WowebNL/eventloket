@@ -469,3 +469,62 @@ test('uploading a document creates a document activity log entry', function () {
         ->and($activity->properties->get('filename'))->toBe('test.pdf')
         ->and($activity->properties->get('titel'))->toBe('Log testbestand');
 });
+
+test('upload action appends an extension to the bestandsnaam when the uploaded file has none', function () {
+    Storage::fake('local');
+
+    $filePath = 'documents/extensieloos';
+    Storage::put($filePath, '%PDF-1.4 fake pdf content for testing');
+
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
+    $documentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/new-doc-noext';
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
+            'url' => $documentUrl,
+            'uuid' => 'new-doc-noext',
+            'identificatie' => 'DOC-NOEXT',
+            'titel' => 'Extensieloos',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'auteur' => $this->organiser->name,
+            'versie' => 1,
+            'bestandsnaam' => 'extensieloos.pdf',
+            'inhoud' => '',
+            'beschrijving' => '',
+            'formaat' => 'application/pdf',
+            'locked' => false,
+            'bestandsgrootte' => 0,
+            'creatiedatum' => now()->format('Y-m-d'),
+            'wijzigingsdatum' => now()->toIso8601String(),
+            'informatieobjecttype' => $documentTypeUrl,
+            'indicatieGebruiksrecht' => false,
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/6',
+            'zaak' => $zgwZaakUrl,
+            'informatieobject' => $documentUrl,
+        ], 201),
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+    ]);
+
+    $this->actingAs($this->organiser);
+
+    UploadDocumentAction::uploadDocument([
+        'titel' => 'Extensieloos',
+        'informatieobjecttype' => $documentTypeUrl,
+        'file' => $filePath,
+        'file_name' => 'extensieloos',
+    ], $zaak);
+
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && $request->method() === 'POST'
+        && $request->data()['bestandsnaam'] === 'extensieloos.pdf'
+        && $request->data()['formaat'] === 'application/pdf'
+    );
+});
