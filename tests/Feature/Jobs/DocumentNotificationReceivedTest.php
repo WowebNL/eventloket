@@ -149,3 +149,46 @@ test('Advisors of a concept advice request are not notified, but advisors of a s
     Notification::assertNotSentTo([$conceptAdvisor], NewZaakDocument::class);
     Notification::assertSentTo([$askedAdvisor], NewZaakDocument::class);
 });
+
+test('Advisors of an advice request in a final status are no longer notified about documents', function (AdviceStatus $finalStatus) {
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument();
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    $zaak = Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'public_id' => 'ZAAK-123',
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    $advisory = Advisory::factory()->create();
+    $advisor = User::factory()->create(['role' => Role::Advisor]);
+    $advisory->users()->attach($advisor, ['role' => AdvisoryRole::Admin]);
+    AdviceThread::forceCreate([
+        'zaak_id' => $zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $advisory->id,
+        'advice_status' => $finalStatus,
+        'created_by' => null,
+        'title' => 'Finalized advice thread',
+    ]);
+
+    $newDocumentNotification = new OpenNotification(
+        actie: 'create',
+        kanaal: 'documenten',
+        resource: 'enkelvoudiginformatieobject',
+        hoofdObject: $documentUrl,
+        resourceUrl: $documentUrl,
+        aanmaakdatum: now(),
+    );
+
+    dispatch(new DocumentNotificationReceived($newDocumentNotification, true));
+
+    Notification::assertNotSentTo([$advisor], NewZaakDocument::class);
+})->with([
+    'approved' => AdviceStatus::Approved,
+    'approved with conditions' => AdviceStatus::ApprovedWithConditions,
+    'rejected' => AdviceStatus::Rejected,
+    'no reaction' => AdviceStatus::NoReaction,
+]);

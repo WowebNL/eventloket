@@ -123,10 +123,13 @@ class Zaak extends Model implements Eventable
         return array_merge(
             $this->organisation?->users->all() ?? [],
             $this->adviceThreads
-                // Advisors linked through a concept advice request must not be notified yet,
-                // since the request has not actually been sent. This mirrors the panel
-                // visibility rule where advisors only see a zaak once it is no longer concept.
-                ->where('advice_status', '!=', AdviceStatus::Concept)
+                // Only notify advisors while the advice request is active. A concept
+                // request has not been sent yet, and a finalized one (approved, rejected,
+                // etc.) is done, so in both cases the advisory must no longer be notified.
+                ->filter(function ($thread): bool {
+                    /** @var AdviceThread $thread */
+                    return in_array($thread->advice_status, AdviceStatus::activeStatuses(), true);
+                })
                 ->map(function ($thread) {
                     /** @var AdviceThread $thread */
                     return $thread->advisory->users->all();
