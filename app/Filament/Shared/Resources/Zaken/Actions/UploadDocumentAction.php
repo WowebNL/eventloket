@@ -97,6 +97,9 @@ class UploadDocumentAction
             default => DocumentVertrouwelijkheden::Vertrouwelijk->value,
         };
 
+        $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
+        $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
+
         $informatieobject = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
@@ -104,9 +107,9 @@ class UploadDocumentAction
             'titel' => $data['titel'],
             'auteur' => auth()->user()->name,
             'taal' => 'dut',
-            'bestandsnaam' => $data['file_name'],
+            'bestandsnaam' => $bestandsnaam,
             'bestandsomvang' => Storage::size($data['file']),
-            'formaat' => DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null),
+            'formaat' => $formaat,
             'inhoud' => base64_encode(Storage::get($data['file'])),
             'informatieobjecttype' => $data['informatieobjecttype'],
             'indicatieGebruiksrecht' => false,
