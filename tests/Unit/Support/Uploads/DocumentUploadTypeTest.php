@@ -127,3 +127,18 @@ test('determineFormaat prefers extension mapping over storage mime detection', f
 
     expect($formaat)->toBe('message/rfc822');
 });
+
+test('extensionForMimeType resolves standard and custom mime types', function () {
+    expect(DocumentUploadType::extensionForMimeType('application/pdf'))->toBe('pdf')
+        ->and(DocumentUploadType::extensionForMimeType('message/rfc822'))->toBe('eml')
+        ->and(DocumentUploadType::extensionForMimeType('application/vnd.ms-outlook'))->toBe('msg')
+        ->and(DocumentUploadType::extensionForMimeType('application/octet-stream-unknown'))->toBeNull()
+        ->and(DocumentUploadType::extensionForMimeType(''))->toBeNull();
+});
+
+test('ensureFileNameHasExtension appends an extension only when missing', function () {
+    expect(DocumentUploadType::ensureFileNameHasExtension('Vergunningaanvraag', 'application/pdf'))->toBe('Vergunningaanvraag.pdf')
+        ->and(DocumentUploadType::ensureFileNameHasExtension('rapport.pdf', 'application/pdf'))->toBe('rapport.pdf')
+        ->and(DocumentUploadType::ensureFileNameHasExtension('', 'application/pdf'))->toBe('document.pdf')
+        ->and(DocumentUploadType::ensureFileNameHasExtension('naamloos', 'application/octet-stream-unknown'))->toBe('naamloos');
+});
