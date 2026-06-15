@@ -1,11 +1,16 @@
 <?php
 
+use App\Enums\AdviceStatus;
+use App\Enums\AdvisoryRole;
 use App\Enums\OrganisationRole;
 use App\Enums\OrganisationType;
 use App\Enums\Role;
+use App\Enums\ThreadType;
 use App\Jobs\DocumentNotificationReceived;
+use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\Organisation;
+use App\Models\Threads\AdviceThread;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
@@ -90,4 +95,57 @@ test('Organisation users are notified on new document', function () {
 
     Notification::assertSentTo($organisation->users, NewZaakDocument::class);
 
+});
+
+test('Advisors of a concept advice request are not notified, but advisors of a sent request are', function () {
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument();
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    $zaak = Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'public_id' => 'ZAAK-123',
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    // Advisory linked through a concept advice request: must NOT be notified.
+    $conceptAdvisory = Advisory::factory()->create();
+    $conceptAdvisor = User::factory()->create(['role' => Role::Advisor]);
+    $conceptAdvisory->users()->attach($conceptAdvisor, ['role' => AdvisoryRole::Admin]);
+    AdviceThread::forceCreate([
+        'zaak_id' => $zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $conceptAdvisory->id,
+        'advice_status' => AdviceStatus::Concept,
+        'created_by' => null,
+        'title' => 'Concept advice thread',
+    ]);
+
+    // Advisory linked through a sent (asked) advice request: must be notified.
+    $askedAdvisory = Advisory::factory()->create();
+    $askedAdvisor = User::factory()->create(['role' => Role::Advisor]);
+    $askedAdvisory->users()->attach($askedAdvisor, ['role' => AdvisoryRole::Admin]);
+    AdviceThread::forceCreate([
+        'zaak_id' => $zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $askedAdvisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'created_by' => null,
+        'title' => 'Asked advice thread',
+    ]);
+
+    $newDocumentNotification = new OpenNotification(
+        actie: 'create',
+        kanaal: 'documenten',
+        resource: 'enkelvoudiginformatieobject',
+        hoofdObject: $documentUrl,
+        resourceUrl: $documentUrl,
+        aanmaakdatum: now(),
+    );
+
+    dispatch(new DocumentNotificationReceived($newDocumentNotification, true));
+
+    Notification::assertNotSentTo([$conceptAdvisor], NewZaakDocument::class);
+    Notification::assertSentTo([$askedAdvisor], NewZaakDocument::class);
 });

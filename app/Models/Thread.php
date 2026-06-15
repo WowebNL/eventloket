@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Enums\ThreadType;
 use App\Models\Threads\AdviceThread;
@@ -117,7 +118,11 @@ class Thread extends Model
     public function getParticipants(): Collection
     {
         $threadParticipants = match (get_class($this)) {
-            AdviceThread::class => $this->assignedUsers->count() ? $this->assignedUsers : $this->advisory->adminUsers,
+            // A concept advice request has not been sent yet, so the advisory's
+            // users are not participants and must not be notified.
+            AdviceThread::class => $this->advice_status === AdviceStatus::Concept
+                ? collect()
+                : ($this->assignedUsers->count() ? $this->assignedUsers : $this->advisory->adminUsers),
             OrganiserThread::class => $this->zaak->organisation->users,
             default => collect(),
         };

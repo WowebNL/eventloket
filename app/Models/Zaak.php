@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AdviceStatus;
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
@@ -121,10 +122,15 @@ class Zaak extends Model implements Eventable
 
         return array_merge(
             $this->organisation?->users->all() ?? [],
-            $this->adviceThreads->map(function ($thread) {
-                /** @var AdviceThread $thread */
-                return $thread->advisory->users->all();
-            })->flatten(1)->all(),
+            $this->adviceThreads
+                // Advisors linked through a concept advice request must not be notified yet,
+                // since the request has not actually been sent. This mirrors the panel
+                // visibility rule where advisors only see a zaak once it is no longer concept.
+                ->where('advice_status', '!=', AdviceStatus::Concept)
+                ->map(function ($thread) {
+                    /** @var AdviceThread $thread */
+                    return $thread->advisory->users->all();
+                })->flatten(1)->all(),
             $handlers ? $handlers : []
         );
     }
