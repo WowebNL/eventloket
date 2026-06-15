@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.6.6 - 2026-06-15
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Fix documents stored without a file extension (#380) @Michel-Verhoeven
+* Stop notifying advisors about concept advice requests (#379) @Michel-Verhoeven
+
+#### Other changes
+
+* Add v0.6.6 release notes (#385) @Michel-Verhoeven
+* Update npm dependencies to resolve security advisories (#382) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v0.6.5...v0.6.6
+
 ## v0.6.5 - 2026-06-04
 
 ### What's Changed
@@ -208,6 +224,7 @@
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
