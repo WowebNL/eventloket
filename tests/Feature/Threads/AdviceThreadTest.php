@@ -698,6 +698,77 @@ test('sends new advice thread notifications to all advisory admins who have it e
     );
 });
 
+test('does not notify advisory users about messages on a concept advice thread', function () {
+    // Concept advice request that has not been sent to the advisory yet.
+    $conceptThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Concept,
+        'created_by' => $this->reviewer->id,
+        'title' => 'Concept advice thread',
+    ]);
+
+    // Municipality posts messages while preparing the concept request.
+    Message::factory()->create([
+        'thread_id' => $conceptThread->id,
+        'user_id' => $this->reviewer->id,
+    ]);
+    $message = Message::factory()->create([
+        'thread_id' => $conceptThread->id,
+        'user_id' => $this->reviewer->id,
+    ]);
+
+    // Advisory users must not be notified nor get unread entries for a concept request.
+    Notification::assertNotSentTo(
+        [$this->advisoryAdmin, $this->advisor, $this->advisor2],
+        NewAdviceThreadMessage::class,
+    );
+
+    $this->assertDatabaseMissing('unread_messages', [
+        'user_id' => $this->advisoryAdmin->id,
+        'message_id' => $message->id,
+    ]);
+});
+
+test('does not notify advisory users about messages on a finalized advice thread', function (AdviceStatus $finalStatus) {
+    // Advice request that has reached a final status.
+    $finalizedThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => $finalStatus,
+        'created_by' => $this->reviewer->id,
+        'title' => 'Finalized advice thread',
+    ]);
+
+    // Municipality posts a follow-up message after the advice was finalized.
+    Message::factory()->create([
+        'thread_id' => $finalizedThread->id,
+        'user_id' => $this->reviewer->id,
+    ]);
+    $message = Message::factory()->create([
+        'thread_id' => $finalizedThread->id,
+        'user_id' => $this->reviewer->id,
+    ]);
+
+    // The advisory must no longer be notified nor get unread entries.
+    Notification::assertNotSentTo(
+        [$this->advisoryAdmin, $this->advisor, $this->advisor2],
+        NewAdviceThreadMessage::class,
+    );
+
+    $this->assertDatabaseMissing('unread_messages', [
+        'user_id' => $this->advisoryAdmin->id,
+        'message_id' => $message->id,
+    ]);
+})->with([
+    'approved' => AdviceStatus::Approved,
+    'approved with conditions' => AdviceStatus::ApprovedWithConditions,
+    'rejected' => AdviceStatus::Rejected,
+    'no reaction' => AdviceStatus::NoReaction,
+]);
+
 test('sends new advice thread message notifications to all advisory admins of unassigned threads who have it enabled', function () {
     // Create unassigned advice thread
     $adviceThread2 = AdviceThread::forceCreate([
