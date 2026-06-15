@@ -58,7 +58,8 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->date(config('app.date_format'))
                     ->sortable(),
                 TextColumn::make('versie')
-                    ->sortable(),
+                    ->sortable()
+                    ->visible(fn (): bool => auth()->user()->role !== Role::Organiser),
                 TextColumn::make('auteur')
                     ->sortable(),
                 TextColumn::make('bestandsnaam'),
