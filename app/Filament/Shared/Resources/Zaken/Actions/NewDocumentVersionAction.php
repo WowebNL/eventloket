@@ -59,15 +59,17 @@ class NewDocumentVersionAction
     public static function createNewDocumentVersion(string $documentUuid, array $data, Zaak $zaak)
     {
         $oz = new Openzaak;
+        $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
+        $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
         $lockString = $oz->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
         $oz->documenten()->enkelvoudiginformatieobjecten()->patch($documentUuid,
             [
                 'inhoud' => base64_encode(Storage::get($data['file'])),
                 'titel' => $data['titel'],
                 'auteur' => auth()->user()->name,
-                'bestandsnaam' => $data['file_name'],
+                'bestandsnaam' => $bestandsnaam,
                 'bestandsomvang' => Storage::size($data['file']),
-                'formaat' => DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null),
+                'formaat' => $formaat,
                 'lock' => $lockString,
                 'indicatieGebruiksrecht' => false,
             ]
