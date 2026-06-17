@@ -1,21 +1,31 @@
 /**
  * Gedeelde login-flow voor de walkthrough-tests.
+ *
+ * Normaal is de organiser al ingelogd via de opgeslagen sessie
+ * (auth.setup.mjs + storageState in playwright.config.mjs): dan volstaat
+ * navigeren naar `/organiser` en doorredirecten naar de tenant. Alleen als
+ * die sessie ontbreekt/verlopen is, vallen we terug op het login-formulier.
+ * Zo logt de suite niet bij élke test opnieuw in — wat de login-rate-
+ * limiter tripte zodra je de hele suite achter elkaar draaide.
  */
 export async function loginAlsOrganiser(page, user = 'noah.degraaf@example.net', pass = 'password') {
-    console.log(`  → GET ${await baseUrl(page)}/organiser/login`);
+    await page.goto('/organiser');
+    try {
+        await page.waitForURL(/\/organiser\/[0-9a-f]{8}/i, { timeout: 8_000 });
+        console.log(`  ✅ hergebruik sessie, landing URL: ${page.url()}`);
+
+        return;
+    } catch {
+        // Geen geldige sessie → val terug op het login-formulier.
+    }
+
+    console.log(`  → form-login: ${user}`);
     await page.goto('/organiser/login');
     await page.waitForLoadState('networkidle', { timeout: 15_000 });
-
-    console.log(`  → invullen: ${user}`);
     await page.locator('input[wire\\:model="data.email"]').fill(user);
     await page.locator('input[wire\\:model="data.password"]').fill(pass);
-
-    console.log('  → klik Inloggen');
     await page.getByRole('button', { name: /inloggen/i }).click();
 
-    // Wacht expliciet op een post-login-URL die een tenant-segment bevat.
-    // Zonder dit timeout'de `waitForLoadState('networkidle')` bij trage
-    // service-fetches of redirect-ketens.
     try {
         await page.waitForURL(/\/organiser\/[0-9a-f]{8}/i, { timeout: 15_000 });
     } catch (e) {
