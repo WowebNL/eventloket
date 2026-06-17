@@ -207,8 +207,14 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->options([
                                         'palenInDeGrond' => 'Palen in de grond',
                                         'betonblokken' => 'Betonblokken',
+                                        'anders' => 'Anders',
                                     ])
-                                    ->required(),
+                                    ->required()
+                                    ->live(),
+                                TextInput::make('wijzeVanVerankeringAnders')
+                                    ->label('Hoe verankert u de tent?')
+                                    ->required()
+                                    ->visible(fn (Get $get): bool => $get('wijzeVanVerankering') === 'anders'),
                             ])
                             ->hidden(Hidden::rule('tenten')),
                         Repeater::make('podia')
@@ -235,6 +241,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->hidden(Hidden::rule('podia')),
                         Repeater::make('overkappingen')
                             ->label('Welke overkappingen plaatst u?')
+                            ->addActionLabel('Nog een overkapping toevoegen')
                             ->schema([
                                 TextInput::make('overkappingnummer')
                                     ->label('Overkapping nummer')
@@ -398,6 +405,7 @@ final class VergunningaanvraagVervolgvragenStep
                             }),
                         Repeater::make('watZijnDeLocatiesWaarUDrankenEnOfVoedselGaatVerstrekken')
                             ->label('Op hoeveel punten en op welke locaties gaat u dranken en voedsel verstrekken?')
+                            ->addActionLabel('Nog een locatie toevoegen')
                             ->schema([
                                 TextInput::make('naamVanDeLocatie')
                                     ->label('Naam van de locatie')
@@ -513,14 +521,17 @@ final class VergunningaanvraagVervolgvragenStep
                         InfoText::info('content20', '<p>U heeft aangegeven, dat u een (deel van-) de doorgaande weg of vaarweg wilt afsluiten voor doorgaand verkeer. Hieronder volgt een aantal vragen hierover.</p>'),
                         Repeater::make('welkeDoorgangenWiltUAfsluiten')
                             ->label('Welke doorgangen wilt u afsluiten?')
+                            ->addActionLabel('Wilt u nog een afsluiting toevoegen?')
                             ->schema([
                                 Map::make('positieVanDeDoorgang')
                                     ->label('Positie van de doorgang')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)
+                                    ->maxZoom(19)
                                     ->geoMan(true)
                                     ->geoManEditable(true)
                                     ->drawPolygon(false)
+                                    ->editPolygon(false)
                                     ->drawPolyline(false)
                                     ->drawMarker(true)
                                     ->drawCircle(false)
@@ -530,8 +541,12 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->dragMode(false)
                                     ->rotateMode(false)
                                     ->showMarker(false)
+                                    ->drawText(false)
+                                    ->deleteLayer(true)
+                                    ->showFullscreenControl(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
+                                    ->showMyLocationButton(false)
                                     ->required(),
                                 TextInput::make('naamVanDeDoorgang')
                                     ->label('Naam van de doorgang')
@@ -544,6 +559,10 @@ final class VergunningaanvraagVervolgvragenStep
                                 DateTimePicker::make('eindVanDeAfsluiting')
                                     ->label('Eind van de afsluiting')
                                     ->seconds(false)
+                                    ->afterOrEqual('startVanDeAfsluiting')
+                                    ->validationMessages([
+                                        'after_or_equal' => 'Het einde van de afsluiting moet op of na het begin liggen.',
+                                    ])
                                     ->required(),
                             ]),
                     ])

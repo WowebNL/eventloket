@@ -37,12 +37,21 @@ class DocumentController extends Controller
 
         $dispositionType = $type === 'download' ? HeaderUtils::DISPOSITION_ATTACHMENT : HeaderUtils::DISPOSITION_INLINE;
 
-        $contentType = DocumentUploadType::storedMimeTypeIsAllowed($document->formaat)
-            ? $document->formaat
-            : 'application/octet-stream';
+        // Only trust the stored MIME type when it is on the upload allowlist;
+        // anything else is served as a generic binary so disallowed content can
+        // never be rendered under a permissive Content-Type.
+        $mimeIsTrusted = DocumentUploadType::storedMimeTypeIsAllowed($document->formaat);
+        $contentType = $mimeIsTrusted ? $document->formaat : 'application/octet-stream';
+
+        // Existing documents may have been stored without a file extension in
+        // their bestandsnaam, which makes them impossible to open after download.
+        // When we have a trusted MIME type we reconstruct a usable filename from it.
+        $fileName = $mimeIsTrusted
+            ? DocumentUploadType::ensureFileNameHasExtension($document->bestandsnaam, $document->formaat)
+            : $document->bestandsnaam;
 
         return response((new Openzaak)->getRaw($document->inhoud))->withHeaders([
-            'Content-Disposition' => HeaderUtils::makeDisposition($dispositionType, $document->bestandsnaam),
+            'Content-Disposition' => HeaderUtils::makeDisposition($dispositionType, $fileName),
             'Access-Control-Expose-Headers' => 'Content-Disposition',
             'Content-Type' => $contentType,
         ]);

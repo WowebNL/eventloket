@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Enums\Role;
+use App\EventForm\Persistence\Draft;
+use App\EventForm\Persistence\DraftLimitReached;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\State\FormState;
 use App\Models\Organisation;
@@ -15,88 +17,163 @@ beforeEach(function () {
     $this->user->organisations()->attach($this->organisation->id, ['role' => 'admin']);
 });
 
-test('load returns null when no draft exists for this user+organisation', function () {
-    $result = $this->store->load($this->user, $this->organisation);
-
-    expect($result)->toBeNull();
+test('listFor returns no drafts when none exist for this user+organisation', function () {
+    expect($this->store->listFor($this->user, $this->organisation))->toBeEmpty();
 });
 
-test('save persists a FormState that load can restore', function () {
+test('create + save persist a FormState that can be restored via findFor', function () {
     $state = FormState::empty();
     $state->setField('soortEvenement', 'Markt of braderie');
     $state->setVariable('gemeenteVariabelen', ['aanwezigen' => 500]);
 
-    $this->store->save($this->user, $this->organisation, $state, currentStepKey: 'stap-2-locatie');
+    $draft = $this->store->create($this->user, $this->organisation, FormState::empty());
+    $this->store->save($draft, $state, currentStepKey: 'stap-2-locatie');
 
-    $loaded = $this->store->load($this->user, $this->organisation);
+    $found = $this->store->findFor($this->user, $this->organisation, $draft->id);
+    $loaded = FormState::fromSnapshot($found->state ?? []);
 
-    expect($loaded)->not->toBeNull()
+    expect($found)->not->toBeNull()
         ->and($loaded->get('soortEvenement'))->toBe('Markt of braderie')
-        ->and($loaded->get('gemeenteVariabelen.aanwezigen'))->toBe(500);
+        ->and($loaded->get('gemeenteVariabelen.aanwezigen'))->toBe(500)
+        ->and($found->current_step_key)->toBe('stap-2-locatie');
 });
 
-test('save stores the current step key so resume starts at the right place', function () {
+test('save derives the draft name from the event name field', function () {
+    $draft = $this->store->create($this->user, $this->organisation, FormState::empty());
+
     $state = FormState::empty();
-    $this->store->save($this->user, $this->organisation, $state, currentStepKey: 'stap-9-kenmerken');
+    $state->setField('watIsDeNaamVanHetEvenementVergunning', 'Buurtfeest Testlaan');
+    $this->store->save($draft, $state, currentStepKey: null);
 
-    expect($this->store->currentStepKey($this->user, $this->organisation))->toBe('stap-9-kenmerken');
+    expect($draft->refresh()->name)->toBe('Buurtfeest Testlaan')
+        ->and($draft->display_name)->toBe('Buurtfeest Testlaan');
 });
 
-test('save called twice for same user+organisation updates the existing draft', function () {
-    $state1 = FormState::empty();
-    $state1->setField('name', 'first');
-    $this->store->save($this->user, $this->organisation, $state1, currentStepKey: 'stap-1');
+test('display_name falls back to creation date when the event name is empty', function () {
+    $draft = $this->store->create($this->user, $this->organisation, FormState::empty());
 
-    $state2 = FormState::empty();
-    $state2->setField('name', 'second');
-    $this->store->save($this->user, $this->organisation, $state2, currentStepKey: 'stap-2');
-
-    $loaded = $this->store->load($this->user, $this->organisation);
-    expect($loaded->get('name'))->toBe('second')
-        ->and($this->store->currentStepKey($this->user, $this->organisation))->toBe('stap-2');
+    expect($draft->name)->toBeNull()
+        ->and($draft->display_name)->toBe('Concept van '.$draft->created_at->format('d-m-Y'));
 });
 
-test('clear removes the draft', function () {
-    $this->store->save($this->user, $this->organisation, FormState::empty(), currentStepKey: null);
-    expect($this->store->load($this->user, $this->organisation))->not->toBeNull();
-
-    $this->store->clear($this->user, $this->organisation);
-
-    expect($this->store->load($this->user, $this->organisation))->toBeNull();
-});
-
-test('clear is a no-op when no draft exists', function () {
-    expect(fn () => $this->store->clear($this->user, $this->organisation))->not->toThrow(Exception::class);
-});
-
-test('different organisations get separate drafts for the same user', function () {
-    $orgB = Organisation::factory()->create();
-    $this->user->organisations()->attach($orgB->id, ['role' => 'admin']);
-
+test('a user can have multiple drafts for the same organisation', function () {
+    $first = $this->store->create($this->user, $this->organisation, FormState::empty());
     $stateA = FormState::empty();
     $stateA->setField('marker', 'A');
-    $this->store->save($this->user, $this->organisation, $stateA, currentStepKey: null);
+    $this->store->save($first, $stateA, currentStepKey: null);
 
+    $second = $this->store->create($this->user, $this->organisation, FormState::empty());
     $stateB = FormState::empty();
     $stateB->setField('marker', 'B');
-    $this->store->save($this->user, $orgB, $stateB, currentStepKey: null);
+    $this->store->save($second, $stateB, currentStepKey: null);
 
-    expect($this->store->load($this->user, $this->organisation)->get('marker'))->toBe('A')
-        ->and($this->store->load($this->user, $orgB)->get('marker'))->toBe('B');
+    expect($first->id)->not->toBe($second->id)
+        ->and($this->store->listFor($this->user, $this->organisation))->toHaveCount(2);
 });
 
-test('different users get separate drafts for the same organisation', function () {
+test('create reuses an existing empty draft instead of stacking junk rows', function () {
+    $first = $this->store->create($this->user, $this->organisation, FormState::empty());
+    $second = $this->store->create($this->user, $this->organisation, FormState::empty());
+
+    expect($second->id)->toBe($first->id)
+        ->and(Draft::count())->toBe(1);
+});
+
+test('create with a prefilled state always makes a new row', function () {
+    $empty = $this->store->create($this->user, $this->organisation, FormState::empty());
+
+    $prefill = FormState::empty();
+    $prefill->setField('watIsDeNaamVanHetEvenementVergunning', 'Hergebruikte aanvraag');
+    $prefilled = $this->store->create($this->user, $this->organisation, $prefill);
+
+    expect($prefilled->id)->not->toBe($empty->id)
+        ->and($prefilled->name)->toBe('Hergebruikte aanvraag');
+});
+
+test('create throws DraftLimitReached when the cap is hit', function () {
+    foreach (range(1, DraftStore::MAX_DRAFTS) as $i) {
+        $state = FormState::empty();
+        $state->setField('marker', "concept-{$i}");
+        Draft::create([
+            'user_id' => $this->user->id,
+            'organisation_id' => $this->organisation->id,
+            'state' => $state->toSnapshot(),
+        ]);
+    }
+
+    expect($this->store->hasCapacity($this->user, $this->organisation))->toBeFalse()
+        ->and(fn () => $this->store->create($this->user, $this->organisation, FormState::empty()))
+        ->toThrow(DraftLimitReached::class);
+});
+
+test('saveStep only updates the current step key', function () {
+    $state = FormState::empty();
+    $state->setField('marker', 'blijft');
+    $draft = $this->store->create($this->user, $this->organisation, FormState::empty());
+    $this->store->save($draft, $state, currentStepKey: 'stap-1');
+
+    $this->store->saveStep($draft, 'stap-9-kenmerken');
+
+    $draft->refresh();
+    expect($draft->current_step_key)->toBe('stap-9-kenmerken')
+        ->and(FormState::fromSnapshot($draft->state)->get('marker'))->toBe('blijft');
+});
+
+test('delete removes the draft', function () {
+    $draft = $this->store->create($this->user, $this->organisation, FormState::empty());
+
+    $this->store->delete($draft);
+
+    expect($this->store->findFor($this->user, $this->organisation, $draft->id))->toBeNull();
+});
+
+test('findFor scopes ownership: drafts of other users or organisations stay hidden', function () {
+    $orgB = Organisation::factory()->create();
+    $this->user->organisations()->attach($orgB->id, ['role' => 'admin']);
     $userB = User::factory()->create(['role' => Role::Organiser]);
     $userB->organisations()->attach($this->organisation->id, ['role' => 'admin']);
 
-    $stateA = FormState::empty();
-    $stateA->setField('by', 'A');
-    $this->store->save($this->user, $this->organisation, $stateA, currentStepKey: null);
+    $own = $this->store->create($this->user, $this->organisation, FormState::empty());
+    $otherOrg = $this->store->create($this->user, $orgB, FormState::empty());
+    $otherUser = $this->store->create($userB, $this->organisation, FormState::empty());
 
-    $stateB = FormState::empty();
-    $stateB->setField('by', 'B');
-    $this->store->save($userB, $this->organisation, $stateB, currentStepKey: null);
+    expect($this->store->findFor($this->user, $this->organisation, $own->id))->not->toBeNull()
+        ->and($this->store->findFor($this->user, $this->organisation, $otherOrg->id))->toBeNull()
+        ->and($this->store->findFor($this->user, $this->organisation, $otherUser->id))->toBeNull()
+        ->and($this->store->listFor($this->user, $this->organisation)->pluck('id')->all())->toBe([$own->id]);
+});
 
-    expect($this->store->load($this->user, $this->organisation)->get('by'))->toBe('A')
-        ->and($this->store->load($userB, $this->organisation)->get('by'))->toBe('B');
+test('pruneExpired removes drafts untouched for the expiry window, keeps recent ones', function () {
+    $expired = $this->store->create($this->user, $this->organisation, FormState::empty());
+    Draft::whereKey($expired->id)->update([
+        'updated_at' => now()->subMonths(DraftStore::EXPIRY_MONTHS)->subDay(),
+    ]);
+
+    $state = FormState::empty();
+    $state->setField('marker', 'recent');
+    $recent = Draft::create([
+        'user_id' => $this->user->id,
+        'organisation_id' => $this->organisation->id,
+        'state' => $state->toSnapshot(),
+    ]);
+    // Grensgeval: exact op de rand (niet ouder dan) blijft staan.
+    Draft::whereKey($recent->id)->update([
+        'updated_at' => now()->subMonths(DraftStore::EXPIRY_MONTHS)->addHour(),
+    ]);
+
+    $deleted = $this->store->pruneExpired();
+
+    expect($deleted)->toBe(1)
+        ->and(Draft::whereKey($expired->id)->exists())->toBeFalse()
+        ->and(Draft::whereKey($recent->id)->exists())->toBeTrue();
+});
+
+test('listFor prunes expired drafts before listing', function () {
+    $expired = $this->store->create($this->user, $this->organisation, FormState::empty());
+    Draft::whereKey($expired->id)->update([
+        'updated_at' => now()->subMonths(DraftStore::EXPIRY_MONTHS)->subDay(),
+    ]);
+
+    expect($this->store->listFor($this->user, $this->organisation))->toBeEmpty()
+        ->and(Draft::whereKey($expired->id)->exists())->toBeFalse();
 });

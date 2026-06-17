@@ -22,16 +22,25 @@ beforeEach(function () {
     $this->user->organisations()->attach($this->organisation->id, ['role' => 'admin']);
 
     $this->actingAs($this->user);
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
     Filament::setTenant($this->organisation);
+
+    // De pagina vereist een bestaand concept (route-param {draft}).
+    $this->draft = Draft::create([
+        'user_id' => $this->user->id,
+        'organisation_id' => $this->organisation->id,
+        'state' => FormState::empty()->toSnapshot(),
+        'current_step_key' => null,
+    ]);
 });
 
 test('the page mounts for an authenticated user', function () {
-    Livewire::test(EventFormPage::class)
+    Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])
         ->assertOk();
 });
 
 test('mount seeds FormState with authUser and authOrganisation', function () {
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -42,7 +51,7 @@ test('mount seeds FormState with authUser and authOrganisation', function () {
 });
 
 test('mount hydrates eventloketSession via ServiceFetcher', function () {
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -51,20 +60,15 @@ test('mount hydrates eventloketSession via ServiceFetcher', function () {
         ->and($page->state()->get('eventloketSession.organiser_uuid'))->toBe($this->organisation->uuid);
 });
 
-test('mount loads an existing draft if present for user + organisation', function () {
+test('mount loads the draft state for the given draft id', function () {
     // Gebruik een veld-key die GEEN session-prefill voor zich heeft (zie
     // EventFormPage::applySessionPrefill), zodat de prefill de draft-
     // waarde niet alsnog overschrijft.
     $state = FormState::empty();
     $state->setField('watIsDeNaamVanHetEvenementVergunning', 'Eva se feest');
-    Draft::create([
-        'user_id' => $this->user->id,
-        'organisation_id' => $this->organisation->id,
-        'state' => $state->toSnapshot(),
-        'current_step_key' => null,
-    ]);
+    $this->draft->update(['state' => $state->toSnapshot()]);
 
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -72,16 +76,100 @@ test('mount loads an existing draft if present for user + organisation', functio
     expect($page->state()->get('watIsDeNaamVanHetEvenementVergunning'))->toBe('Eva se feest');
 });
 
-test('mount opent op de step waar de gebruiker gebleven was (uit draft)', function () {
-    // De gebruiker stopte op de Tijden-stap (index 4 in EventFormSchema::steps()).
-    Draft::create([
-        'user_id' => $this->user->id,
+test('mount toont een hervat-notificatie bij een eerder gevuld concept', function () {
+    $state = FormState::empty();
+    $state->setField('watIsDeNaamVanHetEvenementVergunning', 'Eva se feest');
+    $this->draft->update(['state' => $state->toSnapshot(), 'name' => 'Eva se feest']);
+
+    Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])
+        ->assertNotified('Concept hervat');
+});
+
+test('mount toont een hergebruik-melding bij bron=hergebruik (i.p.v. "Concept hervat")', function () {
+    // De flow "Nieuwe aanvraag met deze gegevens": EventFormDraftsPage
+    // maakt een nieuw, gevuld concept en redirect met ?bron=hergebruik.
+    $state = FormState::empty();
+    $state->setField('watIsDeNaamVanHetEvenementVergunning', 'Buurtfeest 2027');
+    $this->draft->update(['state' => $state->toSnapshot(), 'name' => 'Buurtfeest 2027']);
+
+    Livewire::withQueryParams(['bron' => 'hergebruik'])
+        ->test(EventFormPage::class, ['draft' => $this->draft->id])
+        ->assertNotified('Eerdere aanvraag hergebruikt');
+});
+
+test('mount toont géén hervat-notificatie bij een leeg (vers) concept', function () {
+    Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])
+        ->assertNotNotified();
+});
+
+test('mount geeft 404 voor een concept van een andere gebruiker', function () {
+    $otherUser = User::factory()->create(['role' => Role::Organiser]);
+    $otherUser->organisations()->attach($this->organisation->id, ['role' => 'admin']);
+    $otherDraft = Draft::create([
+        'user_id' => $otherUser->id,
         'organisation_id' => $this->organisation->id,
         'state' => FormState::empty()->toSnapshot(),
-        'current_step_key' => TijdenStep::UUID,
     ]);
 
-    $component = Livewire::test(EventFormPage::class);
+    $this->get(EventFormPage::getUrl(['draft' => $otherDraft->id, 'tenant' => $this->organisation]))
+        ->assertNotFound();
+});
+
+test('mount geeft 404 voor een onbekend concept-id', function () {
+    $this->get(EventFormPage::getUrl(['draft' => 999999, 'tenant' => $this->organisation]))
+        ->assertNotFound();
+});
+
+test('updateCurrentStep persisteert de stap in de database (resume-schrijfpad)', function () {
+    // Directe instance-call (zoals de andere tests in dit bestand): een
+    // volledige Livewire-roundtrip rendert de hele 18-staps wizard
+    // opnieuw en loopt in de testsuite tegen de memory-limit aan.
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    $page->updateCurrentStep('form.'.TijdenStep::UUID);
+
+    expect($this->draft->refresh()->current_step_key)->toBe(TijdenStep::UUID);
+});
+
+test('updateCurrentStep negeert onbekende step-keys', function () {
+    $this->draft->update(['current_step_key' => TijdenStep::UUID]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    $page->updateCurrentStep('gemanipuleerde-key');
+
+    expect($this->draft->refresh()->current_step_key)->toBe(TijdenStep::UUID);
+});
+
+test('saveDraftNow persisteert direct en zet het autosave-label voor de indicator', function () {
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    $page->data['watIsDeNaamVanHetEvenementVergunning'] = 'Tussentijds opgeslagen';
+    $page->saveDraftNow();
+
+    expect($page->lastSavedLabel)->not->toBeNull()
+        ->and($this->draft->refresh()->name)->toBe('Tussentijds opgeslagen');
+});
+
+test('conceptVerwijderen verwijdert het concept en stuurt terug naar het overzicht', function () {
+    Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])
+        ->callAction('conceptVerwijderen')
+        ->assertRedirect();
+
+    expect(Draft::whereKey($this->draft->id)->exists())->toBeFalse();
+});
+
+test('mount opent op de step waar de gebruiker gebleven was (uit draft)', function () {
+    // De gebruiker stopte op de Tijden-stap (index 4 in EventFormSchema::steps()).
+    $this->draft->update(['current_step_key' => TijdenStep::UUID]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -99,14 +187,7 @@ test('mount opent op de step waar de gebruiker gebleven was (uit draft)', functi
 });
 
 test('mount valt terug op stap 1 zonder current_step_key', function () {
-    Draft::create([
-        'user_id' => $this->user->id,
-        'organisation_id' => $this->organisation->id,
-        'state' => FormState::empty()->toSnapshot(),
-        'current_step_key' => null,
-    ]);
-
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -117,14 +198,9 @@ test('mount valt terug op stap 1 zonder current_step_key', function () {
 });
 
 test('mount valt terug op stap 1 bij onbekende current_step_key', function () {
-    Draft::create([
-        'user_id' => $this->user->id,
-        'organisation_id' => $this->organisation->id,
-        'state' => FormState::empty()->toSnapshot(),
-        'current_step_key' => 'this-is-not-a-real-step-uuid',
-    ]);
+    $this->draft->update(['current_step_key' => 'this-is-not-a-real-step-uuid']);
 
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -141,7 +217,7 @@ test('route die start+eindigt in dezelfde gemeente maar door ≥2 gemeenten gaat
     // dan opnieuw bevestigd te worden — anders blijft 't gebaseerd op
     // een outdated route-state. Migreert OF-rule
     // be547255-4a1b-4f37-96e8-919d5351e7a5.
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -166,7 +242,7 @@ test('route die start+eindigt in dezelfde gemeente maar door ≥2 gemeenten gaat
 
 test('zonder ≥2 gemeenten of zonder eerdere keuze → geen reset', function () {
     // Conditie 1: maar 1 gemeente in de response → niets te resetten
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
@@ -222,7 +298,7 @@ test('na adres-invul → gemeenteVariabelen wordt automatisch gefetched (label-p
         ],
     );
 
-    $component = Livewire::test(EventFormPage::class);
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();

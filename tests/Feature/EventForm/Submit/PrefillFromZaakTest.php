@@ -8,8 +8,10 @@
  * De flow in de UI is:
  *   1. ViewZaak-pagina → klik "Nieuwe aanvraag met deze gegevens"
  *   2. Redirect naar /organiser/{tenant}/aanvraag?prefill_from_zaak=<uuid>
- *   3. `EventFormPage::mount()` roept `PrefillLoader::load(<uuid>, user, org)`
- *   4. PrefillLoader levert een FormState met veldwaarden uit de bron-zaak
+ *   3. `EventFormDraftsPage::mount()` roept `PrefillLoader::load(<uuid>, user, org)`
+ *   4. PrefillLoader levert een FormState met veldwaarden uit de bron-zaak;
+ *      de overzichtspagina zet die in een níéuw concept en stuurt door naar
+ *      het formulier (bestaande concepten blijven onaangetast)
  *
  * Deze tests dekken:
  *   - Happy-path: snapshot komt uit de Zaak terug in FormState (rijkste bron)

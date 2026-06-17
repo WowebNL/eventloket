@@ -65,7 +65,9 @@ class ZaakPolicy
     public function uploadDocument(User $user, Zaak $zaak)
     {
         if ($user instanceof AdvisorUser) {
-            $advisoryIds = $zaak->adviceThreads->pluck('advisory_id');
+            $advisoryIds = $zaak->adviceThreads
+                ->where('advice_status', '!=', AdviceStatus::Concept)
+                ->pluck('advisory_id');
             $userAdvisoryIds = $user->advisories->pluck('id');
 
             return $advisoryIds->intersect($userAdvisoryIds)->isNotEmpty();

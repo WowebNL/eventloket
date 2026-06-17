@@ -200,7 +200,7 @@ final class SubmissionReport
      * regelen (niet via Eventloket). Retourneert null als er niets
      * zelf geregeld hoeft te worden.
      *
-     * @return array{label: string, value: string}|null
+     * @return array{label: string, value: string, list: list<string>}|null
      */
     private function buildZelfTeRegelenEntry(FormState $state): ?array
     {
@@ -212,11 +212,8 @@ final class SubmissionReport
 
         return [
             'label' => 'Zelf te regelen (niet via Eventloket)',
-            // Items onder elkaar via linebreak — blade rendert via nl2br()
-            // dus elke regel komt als eigen <br>-line. De stap-info in
-            // TypeAanvraagStep gebruikt al een <ul>; nu is samenvatting/
-            // PDF visueel consistent (Michel #15).
-            'value' => implode("\n", $items),
+            'value' => implode(', ', $items),
+            'list' => $items,
         ];
     }
 
@@ -226,7 +223,7 @@ final class SubmissionReport
      * `TypeAanvraagOnderdelen` zodat de UI-stap en de samenvatting/PDF
      * niet uit elkaar lopen.
      *
-     * @return array{label: string, value: string}|null
+     * @return array{label: string, value: string, list: list<string>}|null
      */
     private function buildTypeAanvraagEntry(FormState $state): ?array
     {
@@ -236,12 +233,10 @@ final class SubmissionReport
             return null;
         }
 
-        // Comma-separated voor samenvatting + PDF — beide schermen tonen
-        // dat compact en leesbaar. Per regel zou ook kunnen, maar
-        // behandelaars willen 'm vooral snel kunnen scannen.
         return [
             'label' => 'Onderdelen van uw aanvraag',
             'value' => implode(', ', $items),
+            'list' => $items,
         ];
     }
 
