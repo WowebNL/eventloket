@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AdviceStatus;
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
@@ -123,10 +124,18 @@ class Zaak extends Model implements Eventable
 
         return array_merge(
             $this->organisation?->users->all() ?? [],
-            $this->adviceThreads->map(function ($thread) {
-                /** @var AdviceThread $thread */
-                return $thread->advisory->users->all();
-            })->flatten(1)->all(),
+            $this->adviceThreads
+                // Only notify advisors while the advice request is active. A concept
+                // request has not been sent yet, and a finalized one (approved, rejected,
+                // etc.) is done, so in both cases the advisory must no longer be notified.
+                ->filter(function ($thread): bool {
+                    /** @var AdviceThread $thread */
+                    return in_array($thread->advice_status, AdviceStatus::activeStatuses(), true);
+                })
+                ->map(function ($thread) {
+                    /** @var AdviceThread $thread */
+                    return $thread->advisory->users->all();
+                })->flatten(1)->all(),
             $handlers ? $handlers : []
         );
     }

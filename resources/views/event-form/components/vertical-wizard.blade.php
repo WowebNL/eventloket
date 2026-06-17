@@ -219,6 +219,16 @@
                         this.$watch('step', () => {
                             this.updateQueryString();
                             this.autofocusFields();
+                            // Houd de huidige stap server-side bij voor de
+                            // draft (resume-bij-stap). `request()->query('step')`
+                            // is server-side niet bruikbaar: Livewire-roundtrips
+                            // POSTen naar /livewire/update zonder de query-string
+                            // van de browser-URL. Fire-and-forget; dekt Volgende,
+                            // Vorige én sidebar-kliks. Vuurt niet bij init —
+                            // this.step wordt vóór registratie van de watcher gezet.
+                            if (typeof this.$wire.updateCurrentStep === 'function') {
+                                this.$wire.updateCurrentStep(this.step);
+                            }
                         });
                         this.autofocusFields(true);
                     },

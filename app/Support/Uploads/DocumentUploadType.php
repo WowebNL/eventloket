@@ -4,6 +4,7 @@ namespace App\Support\Uploads;
 
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\Mime\MimeTypes;
 
 final class DocumentUploadType
 {
@@ -200,6 +201,62 @@ final class DocumentUploadType
         }
 
         return (string) Storage::mimeType($storedPath);
+    }
+
+    /**
+     * Derives a file extension (without leading dot) for a given MIME type.
+     *
+     * Prefers the application's own ext => mime mappings so that custom types
+     * (e.g. message/rfc822 => eml, application/vnd.ms-outlook => msg) round-trip
+     * correctly, then falls back to Symfony's MIME database for standard types.
+     */
+    public static function extensionForMimeType(string $mimeType): ?string
+    {
+        $mimeType = strtolower(trim($mimeType));
+
+        if ($mimeType === '') {
+            return null;
+        }
+
+        $map = config('app.document_mime_type_mappings', []);
+
+        if (is_array($map)) {
+            foreach ($map as $extension => $mappedMime) {
+                if (is_string($mappedMime) && strtolower($mappedMime) === $mimeType) {
+                    return (string) $extension;
+                }
+            }
+        }
+
+        $extensions = MimeTypes::getDefault()->getExtensions($mimeType);
+
+        return $extensions[0] ?? null;
+    }
+
+    /**
+     * Ensures a filename carries an extension, deriving one from the MIME type
+     * when it is missing. Filenames that already have an extension are returned
+     * unchanged; an empty filename falls back to "document".
+     */
+    public static function ensureFileNameHasExtension(string $fileName, string $mimeType): string
+    {
+        $fileName = trim($fileName);
+
+        if ($fileName === '') {
+            $fileName = 'document';
+        }
+
+        if (pathinfo($fileName, PATHINFO_EXTENSION) !== '') {
+            return $fileName;
+        }
+
+        $extension = self::extensionForMimeType($mimeType);
+
+        if ($extension === null || $extension === '') {
+            return $fileName;
+        }
+
+        return $fileName.'.'.$extension;
     }
 
     private static function looksLikeRfc822Email(UploadedFile $file): bool

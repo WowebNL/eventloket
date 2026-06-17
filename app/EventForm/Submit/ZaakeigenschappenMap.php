@@ -60,12 +60,43 @@ final class ZaakeigenschappenMap
             $out[] = [$eigenschap => $value];
         }
 
+        $locaties = $this->buildLocatiesEvenement($state);
+        if ($locaties !== null && $locaties !== '') {
+            $out[] = ['locaties_evenement' => $locaties];
+        }
+
         // formsubmission_id: OF gebruikte hiervoor `submission.kenmerk` —
         // wij hebben geen submission-object, dus dit wordt het lokale
         // zaak-public_id (= OpenZaak identificatie). Wordt door de caller
         // toegevoegd want op build-tijd is dat nog niet bekend.
 
         return $out;
+    }
+
+    private function buildLocatiesEvenement(FormState $state): ?string
+    {
+        $names = [];
+
+        $gebouwen = $state->get('adresVanDeGebouwEn');
+        if (is_array($gebouwen)) {
+            foreach ($gebouwen as $entry) {
+                if (is_array($entry) && ! empty($entry['naamVanDeLocatieGebouw'])) {
+                    $names[] = (string) $entry['naamVanDeLocatieGebouw'];
+                }
+            }
+        }
+
+        $kaart = $this->stringOrNull($state->get('naamVanDeLocatieKaart'));
+        if ($kaart !== null) {
+            $names[] = $kaart;
+        }
+
+        $route = $this->stringOrNull($state->get('naamVanDeRoute'));
+        if ($route !== null) {
+            $names[] = $route;
+        }
+
+        return $names !== [] ? implode(', ', $names) : null;
     }
 
     /**

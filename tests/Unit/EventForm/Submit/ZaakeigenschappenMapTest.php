@@ -122,3 +122,52 @@ test('lege event_location → lege array', function () {
 
     expect($this->map->buildEventLocation($state))->toBe([]);
 });
+
+test('locaties_evenement combineert gebouw, kaart en route tot kommagescheiden string', function () {
+    $state = new FormState(values: [
+        'adresVanDeGebouwEn' => [
+            ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+            ['naamVanDeLocatieGebouw' => 'Gymzaal West'],
+        ],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+    ]);
+
+    $plat = collect($this->map->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toHaveKey('locaties_evenement', 'Sporthal Noord, Gymzaal West, Stadspark, Route Centrum');
+});
+
+test('locaties_evenement met alleen gebouwen', function () {
+    $state = new FormState(values: [
+        'adresVanDeGebouwEn' => [
+            ['naamVanDeLocatieGebouw' => 'Cultuurcentrum'],
+        ],
+    ]);
+
+    $plat = collect($this->map->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toHaveKey('locaties_evenement', 'Cultuurcentrum');
+});
+
+test('locaties_evenement ontbreekt als geen locatienamen zijn ingevuld', function () {
+    $state = new FormState(values: [
+        'adresVanDeGebouwEn' => [
+            ['naamVanDeLocatieGebouw' => ''],
+        ],
+        'naamVanDeLocatieKaart' => null,
+        'naamVanDeRoute' => '',
+    ]);
+
+    $naden = collect($this->map->buildEigenschappen($state))->map(fn ($e) => key($e))->all();
+
+    expect($naden)->not->toContain('locaties_evenement');
+});
+
+test('locaties_evenement ontbreekt als geen locatie-velden zijn opgegeven', function () {
+    $state = FormState::empty();
+
+    $naden = collect($this->map->buildEigenschappen($state))->map(fn ($e) => key($e))->all();
+
+    expect($naden)->not->toContain('locaties_evenement');
+});

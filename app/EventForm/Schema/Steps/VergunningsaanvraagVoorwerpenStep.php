@@ -32,6 +32,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('verkooppuntenToegangsKaarten')
                             ->minItems(1)
                             ->label('Verkooppunten toegangs-kaarten')
+                            ->addActionLabel('Nog een verkooppunt toevoegen')
                             ->schema([
                                 TextInput::make('locatieVerkooppuntToegangskaart')
                                     ->label('Locatie')
@@ -46,6 +47,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('verkooppuntenMuntenEnBonnen')
                             ->minItems(1)
                             ->label('Verkooppunten munten en bonnen')
+                            ->addActionLabel('Nog een verkooppunt toevoegen')
                             ->schema([
                                 TextInput::make('locatieVerkooppuntMuntenBonnen')
                                     ->label('Locatie')
@@ -59,6 +61,7 @@ final class VergunningsaanvraagVoorwerpenStep
                             ->hidden(Hidden::rule('verkooppuntenMuntenEnBonnen')),
                         Repeater::make('verkooppuntenCashless')
                             ->label('Verkooppunten cashless')
+                            ->addActionLabel('Nog een verkooppunt toevoegen')
                             ->schema([
                                 TextInput::make('locatieVerkooppuntCashless')
                                     ->label('Locatie')
@@ -73,6 +76,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('Speeltoestellen')
                             ->label('Speeltoestellen')
                             ->minItems(1)
+                            ->addActionLabel('Nog een speeltoestel toevoegen')
                             ->schema([
                                 TextInput::make('locatiespeeltoestellen')
                                     ->label('Locatie')
@@ -87,6 +91,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('brandstofopslag')
                             ->label('Brandstofopslag')
                             ->minItems(1)
+                            ->addActionLabel('Nog een brandstofopslag toevoegen')
                             ->schema([
                                 TextInput::make('locatiebrandstofopslag')
                                     ->label('Locatie')
@@ -101,6 +106,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('geluidstorens')
                             ->label('Geluidstorens')
                             ->minItems(1)
+                            ->addActionLabel('Nog een geluidstoren toevoegen')
                             ->schema([
                                 TextInput::make('locatieGeluidstoren')
                                     ->label('Locatie')
@@ -115,6 +121,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('Lichtmasten')
                             ->label('Lichtmasten')
                             ->minItems(1)
+                            ->addActionLabel('Nog een lichtmast toevoegen')
                             ->schema([
                                 TextInput::make('locatieLichtmast')
                                     ->label('Locatie')
@@ -129,6 +136,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('marktkramen')
                             ->label('Marktkramen')
                             ->minItems(1)
+                            ->addActionLabel('Nog een marktkraam toevoegen')
                             ->schema([
                                 TextInput::make('locatieMarktkraam')
                                     ->label('Locatie')
@@ -143,6 +151,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('andersGroup')
                             ->label('Anders')
                             ->minItems(1)
+                            ->addActionLabel('Nog een item toevoegen')
                             ->schema([
                                 TextInput::make('locatieAnders')
                                     ->label('Locatie')
@@ -162,6 +171,7 @@ final class VergunningsaanvraagVoorwerpenStep
                         Repeater::make('welkeStoffenGebruiktU')
                             ->label('Welke stoffen gebruikt u?')
                             ->minItems(1)
+                            ->addActionLabel('Nog een stof toevoegen')
                             ->schema([
                                 TextInput::make('typeStof')
                                     ->label('Type stof')

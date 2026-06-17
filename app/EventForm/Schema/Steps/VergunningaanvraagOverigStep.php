@@ -40,6 +40,7 @@ final class VergunningaanvraagOverigStep
                         InfoText::info('content32', '<p>U hebt aangegeven grote voortuigen of andere voorwerpen op de weg te willen plaatsen.</p>'),
                         Repeater::make('geefAanOpWelkeDataEnTijdenUDeVoorwerpenWiltPlaatsenOpDeOpenbareWegOfGroteVoertuigenWiltParkerenInDeBuurtVanHetEvenement')
                             ->label('Geef aan op welke data en tijden u de voorwerpen wilt plaatsen op de openbare weg of grote voertuigen wilt parkeren in de buurt van het evenement')
+                            ->addActionLabel('Nog een voorwerp of voertuig toevoegen')
                             ->schema([
                                 TextInput::make('voorwerp')
                                     ->label('Voorwerp')
@@ -49,9 +50,11 @@ final class VergunningaanvraagOverigStep
                                     ->label('Positie van het voorwerp')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)
+                                    ->maxZoom(19)
                                     ->geoMan(true)
                                     ->geoManEditable(true)
                                     ->drawPolygon(false)
+                                    ->editPolygon(false)
                                     ->drawPolyline(false)
                                     ->drawMarker(true)
                                     ->drawCircle(false)
@@ -61,8 +64,12 @@ final class VergunningaanvraagOverigStep
                                     ->dragMode(false)
                                     ->rotateMode(false)
                                     ->showMarker(false)
+                                    ->drawText(false)
+                                    ->deleteLayer(true)
+                                    ->showFullscreenControl(false)
                                     ->extraStyles(['min-height: 25rem', 'border-radius: 0.5rem'])
                                     ->columnSpanFull()
+                                    ->showMyLocationButton(false)
                                     ->required(),
                                 DateTimePicker::make('startTijdstipVoorwerp')
                                     ->label('Start tijdstip')
@@ -71,6 +78,10 @@ final class VergunningaanvraagOverigStep
                                 DateTimePicker::make('eindTijdstipVoorwerp')
                                     ->label('Eind tijdstip')
                                     ->seconds(false)
+                                    ->afterOrEqual('startTijdstipVoorwerp')
+                                    ->validationMessages([
+                                        'after_or_equal' => 'Het eind tijdstip moet op of na het start tijdstip liggen.',
+                                    ])
                                     ->required(),
                             ]),
                         Textarea::make('vulHierEventueelInformatieInOverHetPlaatsenVanVoorwerpenOpDeOpenbareWegOfHetParkerenVanGroteVoertuigen')
