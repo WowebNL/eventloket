@@ -149,6 +149,9 @@ return [
                     'location_name' => [
                         'label' => 'Locatienaam',
                     ],
+                    'locaties_evenement' => [
+                        'label' => 'Locaties evenement',
+                    ],
                 ],
                 'map' => [
                     'label' => 'Kaart',

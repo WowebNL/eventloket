@@ -93,6 +93,9 @@ class ZaakInfolist
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_afbouw.label'))
                 ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.locaties_evenement')
+                ->label(__('resources/zaak.columns.locaties_evenement.label'))
+                ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('reference_data.aanwezigen')
                 ->label(__('resources/zaak.columns.aanwezigen.label'))
                 ->visible(fn ($state) => ! empty($state)),

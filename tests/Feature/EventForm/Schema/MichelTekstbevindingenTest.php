@@ -15,10 +15,10 @@ declare(strict_types=1);
  * label-strings is exact-match precies wat we willen testen, en 't
  * loopt ms-snel.
  */
-test('#1 Repeater adresVanDeGebouwEn heeft addActionLabel "Adres toevoegen"', function () {
+test('#1 Repeater adresVanDeGebouwEn heeft addActionLabel "Nog een adres toevoegen"', function () {
     $code = file_get_contents(app_path('EventForm/Schema/Steps/LocatieVanHetEvenement2Step.php'));
     expect($code)->toContain("Repeater::make('adresVanDeGebouwEn')")
-        ->and($code)->toContain("->addActionLabel('Adres toevoegen')");
+        ->and($code)->toContain("->addActionLabel('Nog een adres toevoegen')");
 });
 
 test('#9 Repeater tenten heeft addActionLabel "Wilt u nog een tent toevoegen?"', function () {
@@ -47,6 +47,14 @@ test('#16 typo "aanraag" niet langer in content200; "aanvraag" wel', function ()
     expect($code)->not->toContain('aanraag');
     // Wel de juiste tekst — bewaakt ook dat de regel zelf niet per ongeluk verwijderd is.
     expect($code)->toContain('U gaat verder met deze aanvraag voor de gemeente');
+});
+
+test('kalender-link in TijdenStep gebruikt de route i.p.v. een hardcoded omgevings-URL', function () {
+    $code = file_get_contents(app_path('EventForm/Schema/Steps/TijdenStep.php'));
+    // Geen omgevings-specifieke URL meer in de broncode.
+    expect($code)->not->toContain('woweb.app');
+    // De link wordt opgebouwd via de Calendar-page-route van het organiser-panel.
+    expect($code)->toContain("Calendar::getUrl(panel: 'organiser'");
 });
 
 test('#3 Geoman gummetje-tooltip "Bewaar" wordt overschreven naar "Klaar"', function () {
