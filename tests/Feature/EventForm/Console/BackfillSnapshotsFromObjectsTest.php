@@ -28,15 +28,31 @@ function fakeObjectsRecord(): void
     Http::fake([
         '*objects/*' => Http::response([
             'record' => ['data' => ['data' => [
-                // Twee stap-secties (associatieve maps) ...
+                // Stap-sectie met direct herkende form-key ...
                 'contactgegevens' => [
-                    'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest',
-                    'soortEvenement' => 'festival',
+                    'watIsUwTelefoonnummer' => '0612345678',
                 ],
-                'tijden' => [
-                    'EvenementStart' => '2026-06-01',
+                // ... een container-fieldset met een genest herkend veld
+                // (route → routesOpKaart is een echte form-key) ...
+                'locatie-van-het-evenement' => [
+                    'route' => [
+                        'routesOpKaart' => [['routeVanHetEvenement' => ['type' => 'LineString']]],
+                    ],
                 ],
-                // ... en één los top-level veld.
+                // ... legacy-keys uit de oude formulier-generatie ...
+                'vragenboom-2' => [
+                    'watIsDeNaamVanHetEvenement' => 'Buurtfeest',
+                    'watIsDeStarttijdVanHetEvenement' => '2026-06-01',
+                ],
+                'vragenboom-3' => [
+                    'voornaamIngelogdePersoon' => 'Eva',
+                    'aantalGelijktijdigAanwezigePersonen' => '5000',
+                ],
+                'naam-van-het-evenement' => [
+                    'watVoorSoortEvenementIsUwEvenement' => 'muziekevenement',
+                    'watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt' => 'Plein 123',
+                ],
+                // ... en een onbekend veld dat genegeerd moet worden.
                 'losVeld' => 'waarde',
             ]]],
         ], 200),
@@ -53,7 +69,7 @@ function oudeZaak(array $overrides = []): Zaak
     ], $overrides));
 }
 
-test('zet de Objects-submission plat om naar form_state_snapshot.values', function () {
+test('extraheert herkende keys recursief, mapt legacy-keys, negeert onbekend', function () {
     fakeObjectsRecord();
     $zaak = oudeZaak();
 
@@ -61,14 +77,96 @@ test('zet de Objects-submission plat om naar form_state_snapshot.values', functi
         ->assertSuccessful();
 
     $zaak->refresh();
+    $values = $zaak->form_state_snapshot['values'];
 
-    expect($zaak->form_state_snapshot)->toHaveKey('values');
-    expect($zaak->form_state_snapshot['values'])->toMatchArray([
-        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest',
-        'soortEvenement' => 'festival',
-        'EvenementStart' => '2026-06-01',
-        'losVeld' => 'waarde',
+    // Direct herkende form-key.
+    expect($values)->toHaveKey('watIsUwTelefoonnummer', '0612345678');
+    // Genest binnen een container-fieldset (route → routesOpKaart).
+    expect($values)->toHaveKey('routesOpKaart');
+    // Legacy-keys omgezet naar de nieuwe form-keys.
+    expect($values)->toMatchArray([
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest',          // was watIsDeNaamVanHetEvenement
+        'EvenementStart' => '2026-06-01',                                // was watIsDeStarttijdVanHetEvenement
+        'watIsUwVoornaam' => 'Eva',                                      // was voornaamIngelogdePersoon
+        'watIsHetAantalGelijktijdigAanwezigPersonen' => '5000',          // was aantalGelijktijdigAanwezigePersonen
+        'soortEvenement' => 'muziekevenement',                          // was watVoorSoortEvenementIsUwEvenement
+        'naamVanDeLocatie' => 'Plein 123',                              // was watIsDeNaamVanDeLocatieSWaar...
     ]);
+    // Onbekend veld wordt niet overgenomen.
+    expect($values)->not->toHaveKey('losVeld');
+});
+
+test('map-velden: oude Repeater-shape wordt omgezet naar geojson FeatureCollection', function () {
+    // OF levert de tekening in de oude geneste shape; het nieuwe Map-veld
+    // leest state.geojson.features. Zonder transform blijft de kaart leeg.
+    Http::fake([
+        '*objects/*' => Http::response([
+            'record' => ['data' => ['data' => [
+                'locatie-van-het-evenement' => [
+                    'locatieSOpKaart' => [[
+                        'buitenLocatieVanHetEvenement' => [
+                            'type' => 'Polygon',
+                            'coordinates' => [[[5.84, 50.90], [5.80, 50.89], [5.86, 50.87], [5.84, 50.90]]],
+                        ],
+                    ]],
+                    'route' => [
+                        'routesOpKaart' => [[
+                            'routeVanHetEvenement' => [
+                                'type' => 'LineString',
+                                'coordinates' => [[5.87, 50.90], [5.88, 50.91]],
+                            ],
+                        ]],
+                    ],
+                ],
+            ]]],
+        ], 200),
+    ]);
+    $zaak = oudeZaak();
+
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    $zaak->refresh();
+    $values = $zaak->form_state_snapshot['values'];
+
+    // Polygon → FeatureCollection met één Polygon-Feature.
+    expect($values['locatieSOpKaart']['geojson']['type'])->toBe('FeatureCollection')
+        ->and($values['locatieSOpKaart']['geojson']['features'])->toHaveCount(1)
+        ->and($values['locatieSOpKaart']['geojson']['features'][0]['geometry']['type'])->toBe('Polygon');
+    // LineString → FeatureCollection met één LineString-Feature.
+    expect($values['routesOpKaart']['geojson']['features'][0]['geometry']['type'])->toBe('LineString');
+});
+
+test('FileUpload-velden (bijlagen) worden niet in de snapshot gezet — files komen uit OpenZaak', function () {
+    // De OF-bijlage is een {url,name,size}-object naar een (dode) OF-
+    // submission-URL. De echte files leven in OpenZaak's Documenten-API en
+    // worden via Zaak::documenten gelezen. De backfill moet bijlagen1 (een
+    // FileUpload-veld) daarom NIET overnemen.
+    Http::fake([
+        '*objects/*' => Http::response([
+            'record' => ['data' => ['data' => [
+                'bijlagen' => [
+                    'bijlagen1' => [[
+                        'url' => 'https://open-formulieren.test/api/v2/submissions/files/abc',
+                        'name' => 'test-uuid.pdf',
+                        'originalName' => 'test.pdf',
+                        'size' => 6409,
+                    ]],
+                ],
+                'contactgegevens' => ['soortEvenement' => 'festival'],
+            ]]],
+        ], 200),
+    ]);
+    $zaak = oudeZaak();
+
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    $zaak->refresh();
+    $values = $zaak->form_state_snapshot['values'];
+
+    expect($values)->not->toHaveKey('bijlagen1')
+        ->and($values)->toHaveKey('soortEvenement', 'festival');
 });
 
 test('--dry-run slaat niets op', function () {

@@ -1,0 +1,79 @@
+{
+  "record": {
+    "data": {
+      "data": {
+        "bijlagen": {
+          "bijlagen1": [],
+          "inzendingIdentificatie": "X"
+        },
+        "vragenboom-2": {
+          "watIsDeNaamVanHetEvenement": "X",
+          "watIsDeStarttijdVanHetEvenement": "X",
+          "wanneerIsHetEindeVanHetEvenement": "X"
+        },
+        "vragenboom-3": {
+          "voornaamIngelogdePersoon": "X",
+          "achternaamIngelogdePersoon": "X",
+          "aantalGelijktijdigAanwezigePersonen": "X"
+        },
+        "locatie-van-het-evenement": {
+          "locatieSOpKaart": [
+            {
+              "buitenLocatieVanHetEvenement": {
+                "type": "Polygon",
+                "coordinates": [
+                  [
+                    [
+                      5.849332,
+                      50.903799
+                    ],
+                    [
+                      5.80799,
+                      50.893567
+                    ],
+                    [
+                      5.800196,
+                      50.875957
+                    ],
+                    [
+                      5.869514,
+                      50.879675
+                    ],
+                    [
+                      5.849332,
+                      50.903799
+                    ]
+                  ]
+                ]
+              }
+            }
+          ],
+          "adresVanDeGebouwEn": [
+            {
+              "adresVanHetGebouwWaarUwEvenementPlaatsvindt1": {
+                "city": "X",
+                "postcode": "X",
+                "streetName": "X",
+                "houseLetter": "",
+                "houseNumber": "X",
+                "secretStreetCity": "X",
+                "houseNumberAddition": ""
+              }
+            }
+          ],
+          "userSelectGemeente": "",
+          "routeVanHetEvenement": null,
+          "waarVindtHetEvenementPlaats": {
+            "route": false,
+            "buiten": false,
+            "gebouw": true
+          },
+          "isUwActiviteitPubliekelijkToegankelijk": "X"
+        },
+        "waarvoor-wilt-u-het-eventloket-gebruiken": {
+          "waarvoorWiltUEventloketGebruiken": "evenement"
+        }
+      }
+    }
+  }
+}

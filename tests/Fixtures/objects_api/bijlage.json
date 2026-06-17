@@ -1,0 +1,82 @@
+{
+  "record": {
+    "data": {
+      "data": {
+        "bijlagen": {
+          "bijlagen1": [
+            {
+              "url": "https://example.test/file",
+              "data": {
+                "url": "https://example.test/file",
+                "form": "",
+                "name": "X",
+                "size": 6409,
+                "baseUrl": "https://example.test/file",
+                "project": ""
+              },
+              "name": "X",
+              "size": 6409,
+              "type": "application/pdf",
+              "storage": "url",
+              "originalName": "X"
+            }
+          ],
+          "inzendingIdentificatie": "X"
+        },
+        "vragenboom-2": {
+          "watIsDeNaamVanHetEvenement": "X",
+          "watIsDeStarttijdVanHetEvenement": "X",
+          "wanneerIsHetEindeVanHetEvenement": "X"
+        },
+        "vragenboom-3": {
+          "voornaamIngelogdePersoon": "X",
+          "achternaamIngelogdePersoon": "X",
+          "aantalGelijktijdigAanwezigePersonen": "X"
+        },
+        "locatie-van-het-evenement": {
+          "locatieSOpKaart": [],
+          "adresVanDeGebouwEn": [
+            {
+              "adresVanHetGebouwWaarUwEvenementPlaatsvindt1": {
+                "city": "X",
+                "postcode": "X",
+                "streetName": "X",
+                "houseLetter": "",
+                "houseNumber": "X",
+                "secretStreetCity": "X",
+                "houseNumberAddition": ""
+              }
+            }
+          ],
+          "userSelectGemeente": "X",
+          "routeVanHetEvenement": {
+            "type": "LineString",
+            "coordinates": [
+              [
+                5.878986,
+                50.908396
+              ],
+              [
+                5.78968,
+                50.895572
+              ],
+              [
+                5.791196,
+                50.872372
+              ]
+            ]
+          },
+          "waarVindtHetEvenementPlaats": {
+            "route": true,
+            "buiten": false,
+            "gebouw": true
+          },
+          "isUwActiviteitPubliekelijkToegankelijk": "X"
+        },
+        "waarvoor-wilt-u-het-eventloket-gebruiken": {
+          "waarvoorWiltUEventloketGebruiken": "evenement"
+        }
+      }
+    }
+  }
+}
