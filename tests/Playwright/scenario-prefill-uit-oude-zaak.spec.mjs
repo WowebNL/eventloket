@@ -1,6 +1,7 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
 import { loginAlsOrganiser } from './helpers/login.mjs';
-import { endsWithSelector } from './helpers/form-invullen.mjs';
+import { endsWithSelector, klikVolgende } from './helpers/form-invullen.mjs';
+import { aantalShapesOpKaart } from './helpers/map-tekenen.mjs';
 
 /**
  * Browser-bewijs van het bestaansdoel van de Objects-backfill:
@@ -44,4 +45,23 @@ test('herhaal aanvraag: formulier start gevuld met gegevens uit een oude zaak', 
 
     const achternaam = page.locator(endsWithSelector('input', '.watIsUwAchternaam')).first();
     await expect(achternaam).toHaveValue('PrefillTest');
+
+    // Navigeer naar de Locatie-stap (stap 1 + 2 zijn geprefilled, dus
+    // Volgende slaagt). Daar moet de kaart-tekening uit de oude zaak
+    // renderen — dít was het echte gat: een CheckboxList-boolean-map uit
+    // de OF-data hield de "buiten"-sectie (en dus de kaart) verborgen.
+    await klikVolgende(page); // stap 1 → 2
+    await page.waitForTimeout(800);
+    await klikVolgende(page); // stap 2 → 3 (Locatie)
+    await page.waitForTimeout(1500);
+
+    // De "buiten"-checkbox is uit de prefill aangevinkt ...
+    await expect(
+        page.getByRole('checkbox', { name: /Buiten op één of meerdere plaatsen/i }),
+    ).toBeChecked();
+
+    // ... en de getekende polygon rendert op de kaart.
+    await page.locator('.leaflet-container').first().waitFor({ state: 'visible', timeout: 10_000 });
+    await page.waitForTimeout(1000);
+    expect(await aantalShapesOpKaart(page, 0)).toBeGreaterThan(0);
 });

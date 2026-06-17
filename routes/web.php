@@ -69,14 +69,29 @@ if (app()->environment(['local', 'testing'])) {
         }
         $zaaktype = Zaaktype::query()->first();
 
+        // Realistische snapshot zoals de backfill die produceert: genoeg om
+        // door de wizard te navigeren (stap 1 + 2 gevuld) plus een buiten-
+        // locatie met een getekende polygon, zodat een Playwright-scenario
+        // kan verifiëren of de prefill óók de kaart-tekening rendert.
         $zaak = Zaak::factory()->create([
             'organisation_id' => $organisation->id,
             'organiser_user_id' => $user->id,
             'zaaktype_id' => $zaaktype?->id,
             'form_state_snapshot' => ['values' => [
+                // Stap 1 — Contactgegevens
                 'watIsUwVoornaam' => 'PrefillEva',
                 'watIsUwAchternaam' => 'PrefillTest',
+                'postcode1' => '6411CD',
+                'huisnummer1' => '1',
+                'straatnaam1' => 'Marktplein',
+                'plaatsnaam1' => 'Heerlen',
+                // Stap 2 — Het evenement
                 'watIsDeNaamVanHetEvenementVergunning' => 'Hergebruikte Aanvraag',
+                'geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning' => 'Prefill-omschrijving.',
+                'soortEvenement' => 'Sportevenement',
+                // Stap 3 — Locatie: buiten, met een getekende polygon
+                'waarVindtHetEvenementPlaats' => ['buiten'],
+                'naamVanDeLocatieKaart' => 'Festivalweide',
                 'locatieSOpKaart' => ['geojson' => [
                     'type' => 'FeatureCollection',
                     'features' => [[

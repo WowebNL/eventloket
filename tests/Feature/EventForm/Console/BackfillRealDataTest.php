@@ -74,6 +74,11 @@ test('echte oude-generatie submission met polygon: legacy-mapping + kaart-transf
     expect($geojson['features'][0]['geometry']['type'])->toBe('Polygon');
     // De echte coördinaten zijn intact gebleven.
     expect($geojson['features'][0]['geometry']['coordinates'])->not->toBeEmpty();
+
+    // CheckboxList: de OF-boolean-map {gebouw:true, buiten:false, route:false}
+    // is omgezet naar Filament's array-shape ['gebouw']. Zonder dit rendert
+    // het vinkje niet bij prefill en blijven afhankelijke secties verborgen.
+    expect($values['waarVindtHetEvenementPlaats'])->toBe(['gebouw']);
 });
 
 test('echte submission met bijlage: OF-file-object belandt niet in de snapshot', function () {

@@ -6,6 +6,7 @@ namespace App\Console\Commands\EventForm;
 
 use App\EventForm\Schema\EventFormSchema;
 use App\Models\Zaak;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Console\Command;
 use ReflectionObject;
@@ -51,6 +52,7 @@ final class BackfillSnapshotsFromObjects extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
         $bekendeKeys = $this->knownFormKeys();
+        $checkboxKeys = $this->checkboxFormKeys();
 
         $query = Zaak::query()
             ->whereNotNull('data_object_url')
@@ -84,7 +86,7 @@ final class BackfillSnapshotsFromObjects extends Command
 
         foreach ($zaken as $zaak) {
             try {
-                $values = $this->fetchSubmissionValues($zaak, $bekendeKeys);
+                $values = $this->fetchSubmissionValues($zaak, $bekendeKeys, $checkboxKeys);
             } catch (Throwable $e) {
                 $this->error(sprintf('Zaak %s: ophalen Objects-record mislukt — %s', $zaak->public_id ?? $zaak->id, $e->getMessage()));
                 $fouten++;
@@ -165,9 +167,10 @@ final class BackfillSnapshotsFromObjects extends Command
      * boven. Legacy-hernoemingen worden via LEGACY_KEY_MAP omgezet.
      *
      * @param  array<string, true>  $bekendeKeys
+     * @param  array<string, true>  $checkboxKeys
      * @return array<string, mixed>|null null als er geen submission in zit
      */
-    private function fetchSubmissionValues(Zaak $zaak, array $bekendeKeys): ?array
+    private function fetchSubmissionValues(Zaak $zaak, array $bekendeKeys, array $checkboxKeys): ?array
     {
         $uuid = $this->uuidFromUrl((string) $zaak->data_object_url);
         if ($uuid === '') {
@@ -193,7 +196,33 @@ final class BackfillSnapshotsFromObjects extends Command
             }
         }
 
+        // CheckboxList-velden: de OF-data slaat aangevinkte opties op als
+        // boolean-map (`{gebouw: true, buiten: false}`), maar Filament's
+        // CheckboxList verwacht een array van geselecteerde keys
+        // (`['gebouw']`). Zonder deze omzetting renderen de vinkjes niet bij
+        // prefill — en blijven afhankelijke secties (zoals de kaart onder
+        // "buiten") onzichtbaar.
+        foreach (array_keys($checkboxKeys) as $cbKey) {
+            if (isset($values[$cbKey])) {
+                $values[$cbKey] = $this->toCheckboxArray($values[$cbKey]);
+            }
+        }
+
         return $values;
+    }
+
+    /**
+     * Zet een OF-checkbox-waarde om naar Filament's array-shape. Een
+     * boolean-map `{a: true, b: false}` wordt `['a']`. Een waarde die al een
+     * lijst is, blijft ongemoeid.
+     */
+    private function toCheckboxArray(mixed $value): mixed
+    {
+        if (! is_array($value) || $value === [] || array_is_list($value)) {
+            return $value;
+        }
+
+        return array_keys(array_filter($value, static fn ($v): bool => $v === true));
     }
 
     /**
@@ -330,6 +359,53 @@ final class BackfillSnapshotsFromObjects extends Command
                 return;
             }
             if (method_exists($component, 'getName')) {
+                $name = (string) $component->getName();
+                if ($name !== '') {
+                    $keys[$name] = true;
+                }
+            }
+            if (! property_exists($component, 'childComponents')) {
+                return;
+            }
+            $reflection = new ReflectionObject($component);
+            $prop = $reflection->getProperty('childComponents');
+            $prop->setAccessible(true);
+            $children = $prop->getValue($component);
+            if (! is_array($children)) {
+                return;
+            }
+            foreach ($children as $list) {
+                if (! is_array($list)) {
+                    continue;
+                }
+                foreach ($list as $child) {
+                    if (is_object($child)) {
+                        $walk($child);
+                    }
+                }
+            }
+        };
+
+        foreach (EventFormSchema::steps() as $step) {
+            $walk($step);
+        }
+
+        return $keys;
+    }
+
+    /**
+     * De veld-keys van alle CheckboxList-componenten in het formulier. De
+     * OF-data slaat aangevinkte opties op als boolean-map; voor die keys zet
+     * de backfill de waarde om naar Filament's array-shape (zie
+     * `toCheckboxArray`).
+     *
+     * @return array<string, true>
+     */
+    private function checkboxFormKeys(): array
+    {
+        $keys = [];
+        $walk = function (object $component) use (&$walk, &$keys): void {
+            if ($component instanceof CheckboxList) {
                 $name = (string) $component->getName();
                 if ($name !== '') {
                     $keys[$name] = true;
