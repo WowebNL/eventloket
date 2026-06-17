@@ -3,6 +3,7 @@
 namespace App\Livewire\Zaken;
 
 use App\Enums\Role;
+use App\Filament\Shared\Resources\Zaken\Actions\DownloadDocumentsAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Zaak;
@@ -47,7 +48,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (): Collection => $this->zaak->documenten->map(fn ($item) => $item->toArray()))
+            ->records(fn (): Collection => $this->zaak->documenten->mapWithKeys(fn ($item) => [$item->uuid => $item->toArray()]))
             ->defaultSort('created_at', direction: 'desc')
             ->columns([
                 TextColumn::make('titel'),
@@ -131,6 +132,9 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
             ])
             ->headerActions([
                 UploadDocumentAction::make($this->zaak),
+            ])
+            ->toolbarActions([
+                DownloadDocumentsAction::make($this->zaak),
             ])
             ->emptyStateHeading('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...')
             ->emptyStateDescription(null);

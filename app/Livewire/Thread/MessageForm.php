@@ -161,7 +161,7 @@ class MessageForm extends Component implements HasActions, HasSchemas
                 Section::make()
                     ->contained(false)
                     ->visible(fn (Get $get): bool => $get('type') === 'new')
-                    ->schema(UploadDocumentAction::schema($zaak)),
+                    ->schema(UploadDocumentAction::singleFileSchema($zaak)),
 
                 Select::make('existing_document')
                     ->label('Selecteer bestaand document')
