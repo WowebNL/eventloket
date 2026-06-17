@@ -14,23 +14,69 @@ declare(strict_types=1);
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\EventForm\Persistence\PrefillLoader;
+use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\State\FormState;
-use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
-use Filament\Facades\Filament;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     Http::preventStrayRequests();
 });
+
+/**
+ * Verzamelt uit het echte EventFormSchema de keys per component-type, zodat
+ * het corpus-test de snapshot-waarde-shape tegen het veldtype kan checken.
+ *
+ * @return array{0: array<string, true>, 1: array<string, true>} [singleSelect, checkbox]
+ */
+function schemaComponentKeys(): array
+{
+    $single = [];
+    $checkbox = [];
+    $walk = function (object $c) use (&$walk, &$single, &$checkbox): void {
+        if ($c instanceof Select || $c instanceof Radio) {
+            $single[(string) $c->getName()] = true;
+        }
+        if ($c instanceof CheckboxList) {
+            $checkbox[(string) $c->getName()] = true;
+        }
+        if (! property_exists($c, 'childComponents')) {
+            return;
+        }
+        $reflection = new ReflectionObject($c);
+        $prop = $reflection->getProperty('childComponents');
+        $prop->setAccessible(true);
+        $children = $prop->getValue($c);
+        if (! is_array($children)) {
+            return;
+        }
+        foreach ($children as $list) {
+            if (! is_array($list)) {
+                continue;
+            }
+            foreach ($list as $child) {
+                if (is_object($child)) {
+                    $walk($child);
+                }
+            }
+        }
+    };
+    foreach (EventFormSchema::steps() as $step) {
+        $walk($step);
+    }
+
+    return [$single, $checkbox];
+}
 
 function fakeFromFixture(string $name): void
 {
@@ -137,42 +183,72 @@ test('VOLLEDIGE KETEN: oude Objects-data -> command -> prefill van een nieuw for
     expect($state->get('locatieSOpKaart.geojson.type'))->toBe('FeatureCollection');
 });
 
-test('REPRODUCTIE prod-crash: form->fill() van een gebackfillde zaak met soortEvenement-boolean-map crasht niet', function () {
+test('REPRODUCTIE prod-crash: soortEvenement-boolean-map wordt geen array in de snapshot', function () {
     // Productie-error na de backfill: "Array to string conversion" in
     // OptionStateCast bij EventFormPage::mount() -> form->fill(). Oorzaak:
     // soortEvenement was een multi-checkbox (OF) en is nu een single Select;
-    // de OF-boolean-map belandde ongecoerced in de snapshot. Deze test draait
-    // de ECHTE keten — backfill -> mount -> fill — die de unit-tests misten
-    // doordat het seed-endpoint handmatig de juiste shape zette.
+    // de OF-boolean-map belandde ongecoerced in de snapshot. De crash-conditie
+    // is exact "een single-option-veld krijgt een array" — dus assert hier dat
+    // die conditie niet ontstaat (geverifieerd dat dit zonder de fix faalt).
     fakeFromFixture('soort_checkboxmap');
-
-    $org = Organisation::factory()->create();
-    /** @var OrganiserUser $user */
-    $user = User::factory()->state(['role' => Role::Organiser])->create();
-    $user->organisations()->attach($org, ['role' => OrganisationRole::Admin->value]);
-
-    $zaak = Zaak::factory()->create([
-        'organisation_id' => $org->id,
-        'organiser_user_id' => $user->id,
-        'zaaktype_id' => Zaaktype::factory()->create()->id,
-        'data_object_url' => 'https://objects.test/api/v2/objects/real-uuid',
-        'form_state_snapshot' => null,
-    ]);
+    $zaak = backfillZaak();
 
     $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
         ->assertSuccessful();
 
-    // Geen array meer op een single-select-key in de snapshot.
     $values = $zaak->refresh()->form_state_snapshot['values'];
     expect($values['soortEvenement'] ?? null)->not->toBeArray();
+});
 
-    // De echte reproductie: EventFormPage mounten met ?prefill_from_zaak
-    // triggert form->fill() met de snapshot. Vóór de fix knalde dit op
-    // OptionStateCast; nu moet het schoon mounten.
-    $this->actingAs($user);
-    Filament::setTenant($org);
+test('VOLLEDIG CORPUS: alle echte staging-submissions backfillen zonder shape-mismatch met hun veldtype', function () {
+    // De échte "volledige test": draai de backfill over ÁLLE staging-
+    // submissions (PII gescrubd, shape intact) en controleer voor elke key of
+    // de waarde-shape past bij het component-type in het nieuwe formulier.
+    //   - Select/Radio (single-option) -> moet een scalar zijn; een array
+    //     crasht Filament's OptionStateCast bij form->fill() (de soort-
+    //     Evenement-bug).
+    //   - CheckboxList -> moet een lijst zijn; een boolean-map rendert niet.
+    // Dit vangt elk veld dat tussen OF en het nieuwe formulier van type
+    // veranderde — niet alleen de gevallen die we toevallig als fixture pakten.
+    $corpus = json_decode((string) file_get_contents(base_path('tests/Fixtures/objects_api/staging_corpus.json')), true);
+    expect($corpus)->toBeArray()->not->toBeEmpty();
 
-    Livewire::withQueryParams(['prefill_from_zaak' => $zaak->id])
-        ->test(EventFormPage::class)
-        ->assertOk();
+    [$singleKeys, $checkboxKeys] = schemaComponentKeys();
+
+    // Eén fake met een callback die op de URL-index de juiste submission
+    // teruggeeft. Belangrijk: bij herhaald `Http::fake([...])` met hetzelfde
+    // patroon wint de éérste stub — dan zou elke zaak entry 0 krijgen. Een
+    // index-in-URL + callback is volgorde-onafhankelijk en robuust.
+    Http::fake(function ($request) use ($corpus) {
+        preg_match('/objects\/(\d+)$/', (string) $request->url(), $m);
+        $submission = $corpus[(int) ($m[1] ?? 0)] ?? [];
+
+        return Http::response(['record' => ['data' => ['data' => $submission]]], 200);
+    });
+
+    $orgId = Organisation::factory()->create()->id;
+    $zaaktypeId = Zaaktype::factory()->create()->id;
+
+    $violations = [];
+    foreach ($corpus as $i => $submission) {
+        $zaak = Zaak::factory()->create([
+            'organisation_id' => $orgId,
+            'zaaktype_id' => $zaaktypeId,
+            'data_object_url' => "https://objects.test/api/v2/objects/{$i}",
+            'form_state_snapshot' => null,
+        ]);
+        $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])->assertSuccessful();
+
+        $values = $zaak->refresh()->form_state_snapshot['values'] ?? [];
+        foreach ($values as $key => $value) {
+            if (isset($singleKeys[$key]) && is_array($value)) {
+                $violations[] = "#{$i} {$key}: single-select met array → ".json_encode($value);
+            }
+            if (isset($checkboxKeys[$key]) && ! (is_array($value) && array_is_list($value))) {
+                $violations[] = "#{$i} {$key}: checkbox is geen lijst → ".json_encode($value);
+            }
+        }
+    }
+
+    expect($violations)->toBe([], "Shape-mismatches gevonden:\n".implode("\n", $violations));
 });
