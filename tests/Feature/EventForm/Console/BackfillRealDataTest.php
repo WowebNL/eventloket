@@ -15,13 +15,16 @@ use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\EventForm\Persistence\PrefillLoader;
 use App\EventForm\State\FormState;
+use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -132,4 +135,44 @@ test('VOLLEDIGE KETEN: oude Objects-data -> command -> prefill van een nieuw for
     expect($state->get('watIsUwVoornaam'))->not->toBeNull();
     // De kaart-tekening is als geojson FeatureCollection beschikbaar voor het Map-veld.
     expect($state->get('locatieSOpKaart.geojson.type'))->toBe('FeatureCollection');
+});
+
+test('REPRODUCTIE prod-crash: form->fill() van een gebackfillde zaak met soortEvenement-boolean-map crasht niet', function () {
+    // Productie-error na de backfill: "Array to string conversion" in
+    // OptionStateCast bij EventFormPage::mount() -> form->fill(). Oorzaak:
+    // soortEvenement was een multi-checkbox (OF) en is nu een single Select;
+    // de OF-boolean-map belandde ongecoerced in de snapshot. Deze test draait
+    // de ECHTE keten — backfill -> mount -> fill — die de unit-tests misten
+    // doordat het seed-endpoint handmatig de juiste shape zette.
+    fakeFromFixture('soort_checkboxmap');
+
+    $org = Organisation::factory()->create();
+    /** @var OrganiserUser $user */
+    $user = User::factory()->state(['role' => Role::Organiser])->create();
+    $user->organisations()->attach($org, ['role' => OrganisationRole::Admin->value]);
+
+    $zaak = Zaak::factory()->create([
+        'organisation_id' => $org->id,
+        'organiser_user_id' => $user->id,
+        'zaaktype_id' => Zaaktype::factory()->create()->id,
+        'data_object_url' => 'https://objects.test/api/v2/objects/real-uuid',
+        'form_state_snapshot' => null,
+    ]);
+
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    // Geen array meer op een single-select-key in de snapshot.
+    $values = $zaak->refresh()->form_state_snapshot['values'];
+    expect($values['soortEvenement'] ?? null)->not->toBeArray();
+
+    // De echte reproductie: EventFormPage mounten met ?prefill_from_zaak
+    // triggert form->fill() met de snapshot. Vóór de fix knalde dit op
+    // OptionStateCast; nu moet het schoon mounten.
+    $this->actingAs($user);
+    Filament::setTenant($org);
+
+    Livewire::withQueryParams(['prefill_from_zaak' => $zaak->id])
+        ->test(EventFormPage::class)
+        ->assertOk();
 });

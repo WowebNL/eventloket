@@ -1,0 +1,379 @@
+{
+  "record": {
+    "data": {
+      "data": {
+        "tijden": {
+          "kolommen3": {
+            "0": {
+              "EvenementStart": "X"
+            },
+            "1": {
+              "EvenementEind": "X"
+            }
+          },
+          "opbouwperiode": {
+            "0": {
+              "OpbouwStart": "X"
+            },
+            "1": {
+              "OpbouwEind": "X"
+            }
+          },
+          "opbouwperiode1": {
+            "0": {
+              "AfbouwStart": "X"
+            },
+            "1": {
+              "AfbouwEind": "X"
+            }
+          },
+          "zijnErTijdensHetEvenementXOpbouwactiviteiten": "X",
+          "zijnErTijdensHetEvenementXAfbouwactiviteiten3": "X",
+          "zijnErAansluitendAanHetEvenementAfbouwactiviteiten": "X",
+          "zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten": "X"
+        },
+        "bijlagen": {
+          "bijlagen1": [],
+          "veiligheidsplan": [],
+          "deelplanTijdelijkeConstructies": [],
+          "bebordingsEnBewegwijzeringsplan": []
+        },
+        "risicoscan": {
+          "isErSprakeVanOvernachten": "X",
+          "isErGebruikVanAlcoholEnDrugs": "X",
+          "watIsDeTijdsduurVanHetEvenement": "X",
+          "inWelkSeizoenVindtHetEvenementPlaats": "X",
+          "inWelkeLocatieVindtHetEvenementPlaats": "X",
+          "watIsDeAantrekkingskrachtVanHetEvenement": "X",
+          "watIsHetAantalGelijktijdigAanwezigPersonen": "X",
+          "isEenDeelVanDeDoelgroepVerminderdZelfredzaam": "X",
+          "opWelkSoortOndergrondVindtHetEvenementPlaats": "X",
+          "isErSprakeVanAanwezigheidVanRisicovolleActiviteiten": "X",
+          "watIsDeBelangrijksteLeeftijdscategorieVanDeDoelgroep": "X",
+          "watIsHetGrootsteDeelVanDeSamenstellingVanDeDoelgroep": "X",
+          "welkeBeschikbaarheidVanAanEnAfvoerwegenIsVanToepassing": "X",
+          "isErSprakeVanZanwezigheidVanPolitiekeAandachtEnOfMediageniekheid": "X"
+        },
+        "vragenboom-2": {
+          "welkActiviteitBetreftUwEvenementX": "",
+          "welkeOverigeBouwwerkenGaatUPlaatsen": "",
+          "kruisAanWatVanToepassingIsVoorUwEvenementX": {
+            "A1": false,
+            "A2": false,
+            "A3": false,
+            "A4": false,
+            "A5": false,
+            "A6": false,
+            "A7": false,
+            "A8": false,
+            "A9": false,
+            "A10": false,
+            "A11": false
+          },
+          "welkeVoorwerpenGaatUPlaatsenBijUwEvenementX": {
+            "A23": false,
+            "A24": false,
+            "A25": false,
+            "A26": false,
+            "A27": false,
+            "A28": true,
+            "A29": false,
+            "A30": false
+          },
+          "welkeVoorzieningenZijnAanwezigBijUwEvenement": {
+            "A12": true,
+            "A13": false,
+            "A14": false,
+            "A15": false,
+            "A16": false,
+            "A17": false,
+            "A18": false,
+            "A19": false,
+            "A20": false,
+            "A21": false,
+            "A22": false,
+            "A53": false
+          },
+          "isUwEvenementXGratisToegankelijkVoorHetPubliek": "X",
+          "welkeAnderVoorwerpenGaatUPlaatsenBijEvenementX": "",
+          "isUwEvenementToegankelijkVoorMensenMetEenBeperking": "",
+          "kruisAanWatVoorOverigeKenmerkenVanToepassingZijnVoorUwEvenementX": {
+            "A48": false,
+            "A49": false,
+            "A50": false,
+            "A51": false,
+            "A52": false
+          },
+          "kruisAanWelkeOverigeMaatregelenGevolgenVanToepassingZijnVoorUwEvenementX": {
+            "A31": false,
+            "A32": false,
+            "A33": false,
+            "A34": false,
+            "A35": false,
+            "A36": false
+          },
+          "watZijnDeBelangrijksteLeeftijdscategorieenVanHetPubliekTijdensUwEvenement": "X",
+          "welkeVanDeOnderstaandeActiviteitenVindenVerderNogPlaatsTijdensUwEvenementX": {
+            "A37": true,
+            "A38": false,
+            "A39": false,
+            "A40": false,
+            "A41": false,
+            "A42": false,
+            "A43": false,
+            "A44": false,
+            "A45": false,
+            "A46": false,
+            "A106": false
+          },
+          "watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX": 123,
+          "voorHoeveelMensenMetEenLichamelijkeOfGeestelijkeBeperkingVerzorgtUOpvangTijdensUwEvenementX": null,
+          "welkeMaatregelenHeeftUGenomenOmMensenMetEenBeperkingOngehinderdDeelTeLatenNemenAanUwEvenement": "",
+          "watIsTijdensDeHeleDuurVanUwEvenementXHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld": 123
+        },
+        "contactgegevens": {
+          "adresgegevens": {
+            "kolommen": {
+              "0": {
+                "land": "",
+                "postcode": "",
+                "huisletter": "",
+                "straatnaam": ""
+              },
+              "1": {
+                "huisnummer": "",
+                "plaatsnaam": "",
+                "huisnummertoevoeging": ""
+              }
+            }
+          },
+          "watIsUwVoornaam": "X",
+          "watIsUwAchternaam": "X",
+          "watIsUwEMailadres": "X",
+          "organisatieInformatie": {
+            "kolommen1": {
+              "0": {
+                "postcode1": "X",
+                "huisletter1": "",
+                "straatnaam1": "X"
+              },
+              "1": {
+                "huisnummer1": "X",
+                "plaatsnaam1": "X",
+                "huisnummertoevoeging1": ""
+              }
+            },
+            "emailadresOrganisatie": "",
+            "telefoonnummerOrganisatie": "",
+            "watIsDeNaamVanUwOrganisatie": "X",
+            "watIsHetKamerVanKoophandelNummerVanUwOrganisatie": "X"
+          },
+          "watIsUwTelefoonnummer": "X",
+          "extraContactpersonenToevoegen": {
+            "vooraf": true,
+            "tijdens": false,
+            "achteraf": true
+          },
+          "contactpersoonVoorafgaandAanHetEvenement": {
+            "naam": "X",
+            "eMailadres": "X",
+            "telefoonnummer": "X"
+          },
+          "contactpersoonVoorafgaandAanHetEvenement1": {
+            "naam1": "",
+            "eMailadres1": "",
+            "telefoonnummer1": ""
+          },
+          "contactpersoonVoorafgaandAanHetEvenement2": {
+            "naam2": "X",
+            "eMailadres2": "X",
+            "telefoonnummer2": "X"
+          }
+        },
+        "aanvraag-of-melding": {
+          "algemeneVragen": {
+            "meldingvraag1": "",
+            "meldingvraag2": "",
+            "meldingvraag3": "",
+            "meldingvraag4": "",
+            "meldingvraag5": "",
+            "IsdeGeluidsproductieLagerDan": "",
+            "WordtErAlleenMuziekGeluidGeproduceerdTussen": "",
+            "isHetAantalAanwezigenBijUwEvenementMinderDanSdf": "X",
+            "indienErObjectenGeplaatstWordenZijnDezeDanKleiner": "",
+            "wordenErMinderDanObjectenBijvTentSpringkussenGeplaatst": "",
+            "vindenDeActiviteitenVanUwEvenementPlaatsTussenTijdstippen": "X",
+            "wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer": "",
+            "erVindenGeenActiviteitenPlaatsOpDeRijbaanBromFietspadOfParkeerplaatsOfAnderszinsEenBelemmeringVormenVoorHetVerkeerEnDeHulpdiensten": ""
+          }
+        },
+        "naam-van-het-evenement": {
+          "soortEvenement": {
+            "Anders": false,
+            "Circus": false,
+            "Kermis": false,
+            "Festival": false,
+            "Vliegshow": false,
+            "Dierenshow": false,
+            "Truck event": false,
+            "Sportevenement": false,
+            "Beurs of Congres": false,
+            "Halloweenfeesten": false,
+            "Verkeerseducatie": false,
+            "Markt of braderie": false,
+            "Culinair evenement": false,
+            "Scoutingwedstrijden": false,
+            "Evenement op het water": false,
+            "Auto- scooter- of motorshow": false,
+            "Optocht, processie of corso": false,
+            "Muziekevenement Cultuur- of kunstevenement of toneelvoorstellingen": false,
+            "Buurt-, barbecue of straatfeest, buitenspeeldagen, (eindejaars-)feesten, garagesales": true
+          },
+          "omschrijfHetSoortEvenement": "",
+          "watIsDeNaamVanHetEvenementVergunning": "X",
+          "geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning": "X",
+          "gaatHetHierOmEenPeriodiekTerugkerendeMarktJaarmarktOfWeekmarktWaarvoorDeGemeenteEenBesluitHeeftGenomenMetBetrekkingTotDeMarktdagen": ""
+        },
+        "locatie-van-het-evenement-2": {
+          "route": {
+            "routesOpKaart": [
+              {
+                "routeVanHetEvenement": {
+                  "type": "LineString",
+                  "coordinates": [
+                    [
+                      5.852688,
+                      50.886292
+                    ],
+                    [
+                      5.83258,
+                      50.879606
+                    ],
+                    [
+                      5.779366,
+                      50.906619
+                    ]
+                  ]
+                }
+              }
+            ],
+            "naamVanDeRoute": "X",
+            "gpxBestandVanDeRoute": [],
+            "watVoorEvenementGaatPlaatsvindenOpDeRoute1": "X",
+            "komtUwRouteOverWegenVanWegbeheerdersAndersDanDeBetreffendeGemeenteZoJaKruisDezeDanAan": {
+              "provincie": false,
+              "waterschap": false,
+              "rijkswaterstaat": false,
+              "staatsbosbeheer": true
+            }
+          },
+          "veldengroep": {},
+          "locatieSOpKaart": [],
+          "adresVanDeGebouwEn": [
+            {
+              "naamVanDeLocatieGebouw": "X",
+              "adresVanHetGebouwWaarUwEvenementPlaatsvindt1": {
+                "city": "X",
+                "postcode": "X",
+                "streetName": "X",
+                "houseLetter": "",
+                "houseNumber": "X",
+                "secretStreetCity": "X",
+                "houseNumberAddition": ""
+              }
+            }
+          ],
+          "userSelectGemeente": "X",
+          "waarVindtHetEvenementPlaats": {
+            "route": true,
+            "buiten": false,
+            "gebouw": true
+          },
+          "buitenOpEenOfMeerderePlaatsen": {}
+        },
+        "vergunningsaanvraag-voorwerpen": {
+          "voorwerpen": {
+            "Lichtmasten": [
+              {
+                "aantalLichtmast": 1,
+                "locatieLichtmast": "X"
+              }
+            ],
+            "andersGroup": [],
+            "marktkramen": [],
+            "geluidstorens": [],
+            "Speeltoestellen": [],
+            "brandstofopslag": [],
+            "verkooppuntenCashless": [],
+            "verkooppuntenMuntenEnBonnen": [],
+            "verkooppuntenToegangsKaarten": []
+          },
+          "brandgevaarlijkeStoffen": {
+            "welkeStoffenGebruiktU": []
+          }
+        },
+        "vergunningsaanvraag-voorzieningen": {
+          "wCs": {
+            "handenwaspunten": 1,
+            "aantalToilettenMiva": 1,
+            "aantalToilettenDamen": 1,
+            "hoeveelVasteToilettenZijnBeschikbaar": 1,
+            "welkPercentageVanDeToilettenIsVoorHeren": 1,
+            "hoeveelTijdelijkeDixiToilettenZijnErBeschikbaar": 1,
+            "hoeveelTijdelijkeChemischeToilettenZijnErBeschikbaar": 1,
+            "reinigtUDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunning": "X",
+            "gebruikenDeTijdelijkeToilettenOpLocatieEvenementWatIsDeNaamVanHetEvenementVergunningVoorHetSpoelenOppervlaktewater": "X"
+          },
+          "ehbo": {
+            "aantalVasteEersteHulpposten": null,
+            "aantalMobieleEersteHulpteams": null,
+            "welkeOrganisatieVerzorgtDeEersteHulp": "",
+            "aantalZorgprofessionalsMetNiveauBasisZorg": null,
+            "aantalZorgprofessionalsMetNiveauSpoedZorg": null,
+            "aantalZorgprofessionalsMetNiveauMedischeZorg": null,
+            "aantalEersteHulpverlenersMetNiveauBasisEersteHulp": null,
+            "aantalEersteHulpverlenersMetNiveauEvenementenEersteHulp": null,
+            "aantalZorgprofessionalsMetNiveauSpecialistischeSpoedzorg": null,
+            "aantalZorgprofessionalsMetNiveauArtsenSpecialistischeSpoedzorg": null
+          },
+          "douches": {
+            "wordenDeDouchesTussentijdsSchoonGemaakt": "",
+            "hoeveelVasteDouchevoorzieningenZijnBeschikbaar": null,
+            "hoeveelTijdelijkeDouchevoorzieningenZijnBeschikbaar": null
+          },
+          "bouwsels": {
+            "watIsHetMaximaleAantalPersonenDatTijdensUwEvenementXAanwezigIsInEenTentOfAndereBeslotenRuimtePodiumBouwwerkEtc": null
+          },
+          "beveiligers1": {
+            "aantalBeveiligersOpLocatieEvenementX1": null,
+            "vergunningnummerBeveiligingsorganisatie1": null,
+            "vestigingsplaatsBeveiligingsorganisatie1": "",
+            "gegevensBeveiligingsorganisatieOpLocatieEvenementX1": ""
+          },
+          "overnachtingen": {
+            "isErSprakeVanOvernachtenDoorPubliekDeelnemers": "",
+            "isErSprakeVanOvernachtenDoorPubliekDeelnemers1": "",
+            "voorHoeveelMensenVerzorgtUOvernachtingenTijdensUwEvenement1": null,
+            "opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPubliekDeelnemers1": [],
+            "opWelkeLocatieOfLocatiesIsErSprakeVanOvernachtenDoorPersoneelOrganisatie2": []
+          },
+          "verzorgingVanKinderenJongerDan12Jaar": {
+            "voorHoeveelKinderenInTotaalJongerDan12JaarIsVerzorgingNodig": null,
+            "opWelkeLocatieOfLocatiesVindErOpvangVanDeKinderenOnder12JaarPlaats": [],
+            "hoeveelVanHetTotaalAantalKinderenOnder12JaarValtInDeLeeftijdscategorieVan04Jaar": null,
+            "hoeveelVanHetTotaalAantalKinderenOnder12JaarValtInDeLeeftijdscategorieVan512Jaar": null
+          }
+        },
+        "vergunningsaanvraag-extra-activiteiten": {
+          "welkeShoweffectenBentUVanPlanTeOrganiserenVoorUwEvenement": ""
+        },
+        "waarvoor-wilt-u-het-eventloket-gebruiken": {
+          "vooraankondiginggroep": {
+            "aantalVerwachteAanwezigen": null
+          },
+          "waarvoorWiltUEventloketGebruiken": "X"
+        }
+      }
+    }
+  }
+}

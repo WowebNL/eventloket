@@ -8,6 +8,8 @@ use App\EventForm\Schema\EventFormSchema;
 use App\Models\Zaak;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Illuminate\Console\Command;
 use ReflectionObject;
 use Throwable;
@@ -53,6 +55,7 @@ final class BackfillSnapshotsFromObjects extends Command
         $dryRun = (bool) $this->option('dry-run');
         $bekendeKeys = $this->knownFormKeys();
         $checkboxKeys = $this->checkboxFormKeys();
+        $singleKeys = $this->singleSelectFormKeys();
 
         $query = Zaak::query()
             ->whereNotNull('data_object_url')
@@ -86,7 +89,7 @@ final class BackfillSnapshotsFromObjects extends Command
 
         foreach ($zaken as $zaak) {
             try {
-                $values = $this->fetchSubmissionValues($zaak, $bekendeKeys, $checkboxKeys);
+                $values = $this->fetchSubmissionValues($zaak, $bekendeKeys, $checkboxKeys, $singleKeys);
             } catch (Throwable $e) {
                 $this->error(sprintf('Zaak %s: ophalen Objects-record mislukt — %s', $zaak->public_id ?? $zaak->id, $e->getMessage()));
                 $fouten++;
@@ -168,9 +171,10 @@ final class BackfillSnapshotsFromObjects extends Command
      *
      * @param  array<string, true>  $bekendeKeys
      * @param  array<string, true>  $checkboxKeys
+     * @param  array<string, true>  $singleKeys
      * @return array<string, mixed>|null null als er geen submission in zit
      */
-    private function fetchSubmissionValues(Zaak $zaak, array $bekendeKeys, array $checkboxKeys): ?array
+    private function fetchSubmissionValues(Zaak $zaak, array $bekendeKeys, array $checkboxKeys, array $singleKeys): ?array
     {
         $uuid = $this->uuidFromUrl((string) $zaak->data_object_url);
         if ($uuid === '') {
@@ -208,7 +212,50 @@ final class BackfillSnapshotsFromObjects extends Command
             }
         }
 
+        // Single-select/radio-velden: sommige velden waren in het oude OF-
+        // formulier een multi-checkbox en zijn nu een enkele Select (bv.
+        // `soortEvenement` → OF-data is `{Festival: true, Circus: false}`).
+        // Filament's OptionStateCast doet `strval()` op de waarde en knalt op
+        // een array ("Array to string conversion") bij form->fill(). Coerce
+        // daarom naar één scalar — de geselecteerde key.
+        foreach (array_keys($singleKeys) as $selKey) {
+            if (array_key_exists($selKey, $values)) {
+                $coerced = $this->toSingleOption($values[$selKey]);
+                if ($coerced === null) {
+                    unset($values[$selKey]);
+                } else {
+                    $values[$selKey] = $coerced;
+                }
+            }
+        }
+
         return $values;
+    }
+
+    /**
+     * Coerce een OF-waarde naar één scalar voor een single-select/radio-veld.
+     * Een boolean-map `{a: false, b: true}` → `'b'` (de geselecteerde key);
+     * een lijst → het eerste element; een scalar blijft ongemoeid; niets
+     * geselecteerd → null (veld wordt overgeslagen).
+     */
+    private function toSingleOption(mixed $value): mixed
+    {
+        if (! is_array($value)) {
+            return $value;
+        }
+        if ($value === []) {
+            return null;
+        }
+        if (array_is_list($value)) {
+            return $value[0] ?? null;
+        }
+        foreach ($value as $key => $selected) {
+            if ($selected === true) {
+                return $key;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -406,6 +453,53 @@ final class BackfillSnapshotsFromObjects extends Command
         $keys = [];
         $walk = function (object $component) use (&$walk, &$keys): void {
             if ($component instanceof CheckboxList) {
+                $name = (string) $component->getName();
+                if ($name !== '') {
+                    $keys[$name] = true;
+                }
+            }
+            if (! property_exists($component, 'childComponents')) {
+                return;
+            }
+            $reflection = new ReflectionObject($component);
+            $prop = $reflection->getProperty('childComponents');
+            $prop->setAccessible(true);
+            $children = $prop->getValue($component);
+            if (! is_array($children)) {
+                return;
+            }
+            foreach ($children as $list) {
+                if (! is_array($list)) {
+                    continue;
+                }
+                foreach ($list as $child) {
+                    if (is_object($child)) {
+                        $walk($child);
+                    }
+                }
+            }
+        };
+
+        foreach (EventFormSchema::steps() as $step) {
+            $walk($step);
+        }
+
+        return $keys;
+    }
+
+    /**
+     * De veld-keys van alle Select/Radio (single-option) componenten. Voor
+     * die keys coerced de backfill een eventuele array/boolean-map-waarde
+     * naar één scalar (zie `toSingleOption`), omdat Filament's
+     * OptionStateCast bij `form->fill()` op een array crasht.
+     *
+     * @return array<string, true>
+     */
+    private function singleSelectFormKeys(): array
+    {
+        $keys = [];
+        $walk = function (object $component) use (&$walk, &$keys): void {
+            if ($component instanceof Select || $component instanceof Radio) {
                 $name = (string) $component->getName();
                 if ($name !== '') {
                     $keys[$name] = true;
