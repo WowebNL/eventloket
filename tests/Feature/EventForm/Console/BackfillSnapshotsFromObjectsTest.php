@@ -137,6 +137,53 @@ test('map-velden: oude Repeater-shape wordt omgezet naar geojson FeatureCollecti
     expect($values['routesOpKaart']['geojson']['features'][0]['geometry']['type'])->toBe('LineString');
 });
 
+test('single-select met OF-boolean-map wordt gecoerced naar één scalar (#soortEvenement)', function () {
+    // soortEvenement was in het oude OF-formulier een multi-checkbox en is nu
+    // een enkele Select. De OF-data is daardoor een boolean-map; zonder
+    // coercie krijgt Filament's OptionStateCast een array en crasht bij
+    // form->fill() ("Array to string conversion").
+    Http::fake([
+        '*objects/*' => Http::response([
+            'record' => ['data' => ['data' => [
+                'naam-van-het-evenement' => [
+                    'soortEvenement' => ['Anders' => false, 'Festival' => true, 'Circus' => false],
+                ],
+            ]]],
+        ], 200),
+    ]);
+    $zaak = oudeZaak();
+
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    $values = $zaak->refresh()->form_state_snapshot['values'];
+
+    // De geselecteerde key wordt één scalar — geen array.
+    expect($values['soortEvenement'])->toBe('Festival')
+        ->and($values['soortEvenement'])->toBeString();
+});
+
+test('single-select met alleen-false boolean-map wordt overgeslagen (geen array in snapshot)', function () {
+    Http::fake([
+        '*objects/*' => Http::response([
+            'record' => ['data' => ['data' => [
+                'naam-van-het-evenement' => [
+                    'soortEvenement' => ['Anders' => false, 'Festival' => false],
+                ],
+            ]]],
+        ], 200),
+    ]);
+    $zaak = oudeZaak();
+
+    $this->artisan('eventform:backfill-snapshots-from-objects', ['--zaak' => $zaak->id])
+        ->assertSuccessful();
+
+    $values = $zaak->refresh()->form_state_snapshot['values'];
+
+    // Niets geselecteerd → key valt weg (geen lege array die fill() laat crashen).
+    expect($values)->not->toHaveKey('soortEvenement');
+});
+
 test('FileUpload-velden (bijlagen) worden niet in de snapshot gezet — files komen uit OpenZaak', function () {
     // De OF-bijlage is een {url,name,size}-object naar een (dode) OF-
     // submission-URL. De echte files leven in OpenZaak's Documenten-API en
