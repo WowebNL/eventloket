@@ -6,6 +6,7 @@ use App\Http\Requests\DocumentRequest;
 use App\Models\Zaak;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Woweb\Openzaak\Openzaak;
 
@@ -51,9 +52,34 @@ class DocumentController extends Controller
             : $document->bestandsnaam;
 
         return response((new Openzaak)->getRaw($document->inhoud))->withHeaders([
-            'Content-Disposition' => HeaderUtils::makeDisposition($dispositionType, $fileName),
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                $dispositionType,
+                $fileName,
+                $this->asciiFileNameFallback($fileName),
+            ),
             'Access-Control-Expose-Headers' => 'Content-Disposition',
             'Content-Type' => $contentType,
         ]);
+    }
+
+    /**
+     * Builds an ASCII-only fallback filename for the Content-Disposition header.
+     *
+     * HTTP headers may only carry ASCII, so a bestandsnaam containing characters
+     * such as "ö" makes {@see HeaderUtils::makeDisposition()} throw unless an ASCII
+     * fallback is supplied. The full UTF-8 name is still sent via the RFC 6266
+     * "filename*" field, so modern browsers keep the original characters; this
+     * fallback is only used by legacy clients.
+     */
+    private function asciiFileNameFallback(string $fileName): string
+    {
+        // Transliterate accented characters (ö -> o), then strip anything Symfony
+        // rejects in the fallback: non-printable ASCII, "%", and path separators.
+        $fallback = Str::ascii($fileName);
+        $fallback = (string) preg_replace('/[^\x20-\x7e]/', '', $fallback);
+        $fallback = str_replace(['%', '/', '\\'], '', $fallback);
+        $fallback = trim($fallback);
+
+        return $fallback !== '' ? $fallback : 'document';
     }
 }
