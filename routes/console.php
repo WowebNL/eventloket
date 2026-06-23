@@ -8,6 +8,9 @@ use App\Jobs\SendAdviceReminders;
 use App\Models\Municipality;
 use Illuminate\Support\Facades\Schedule;
 
+// Capture Horizon queue metrics so the dashboard charts populate
+Schedule::command('horizon:snapshot')->everyFiveMinutes();
+
 // Sync with Kadaster
 Schedule::call(function () {
     foreach (Municipality::all() as $municipality) {
