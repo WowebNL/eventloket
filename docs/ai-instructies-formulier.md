@@ -198,9 +198,8 @@ npx playwright test                                # 3 scenario-walkthroughs + r
 
 5. **PDF-content is geen render-test.** Asserties in Playwright
    gebruiken `php artisan eventform:dump-pdf-content` (= dezelfde data
-   die de Blade krijgt). Visuele PDF-output testen we niet — wijzigingen
-   aan de Blade vereist visuele review via `php artisan
-   eventform:genereer-demo-pdf`.
+   die de Blade krijgt). Visuele PDF-output testen we niet; wijzigingen
+   aan de Blade vereisen handmatige visuele review.
 
 6. **De OF-export blijft als referentie.** `docker/local-data/open-formulier/`
    bevat de originele JsonLogic + step-definities — door
