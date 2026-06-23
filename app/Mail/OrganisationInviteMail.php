@@ -43,8 +43,9 @@ class OrganisationInviteMail extends Mailable
             markdown: 'mail.organisation-invite',
             with: [
                 'organisation' => $this->organisationInvite->organisation,
-                'acceptUrl' => URL::signedRoute(
+                'acceptUrl' => URL::temporarySignedRoute(
                     'organisation-invites.accept',
+                    now()->addDays(config('invites.expiration_days')),
                     ['token' => $this->organisationInvite->token],
                 ),
             ]

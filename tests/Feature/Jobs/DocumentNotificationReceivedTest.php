@@ -97,6 +97,101 @@ test('Organisation users are notified on new document', function () {
 
 });
 
+test('No notification is sent for the aanvraagformulier PDF on initial upload', function () {
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument('1', ['bestandsnaam' => 'aanvraagformulier.pdf']);
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $organisation = Organisation::factory(['type' => OrganisationType::Business])->create();
+    $users = User::factory(['role' => Role::Organiser])->createMany(2);
+    $organisation->users()->attach($users, ['role' => OrganisationRole::Admin]);
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'organisation_id' => $organisation->id,
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    dispatch(new DocumentNotificationReceived(
+        new OpenNotification(
+            actie: 'create',
+            kanaal: 'documenten',
+            resource: 'enkelvoudiginformatieobject',
+            hoofdObject: $documentUrl,
+            resourceUrl: $documentUrl,
+            aanmaakdatum: now(),
+        ),
+        true
+    ));
+
+    Notification::assertNothingSent();
+});
+
+test('No notification is sent for form bijlagen on initial upload', function () {
+    $bijlageNaam = 'plattegrond.png';
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument('1', ['bestandsnaam' => $bijlageNaam]);
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $organisation = Organisation::factory(['type' => OrganisationType::Business])->create();
+    $users = User::factory(['role' => Role::Organiser])->createMany(2);
+    $organisation->users()->attach($users, ['role' => OrganisationRole::Admin]);
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'organisation_id' => $organisation->id,
+        'zaaktype_id' => $zaaktype->id,
+        'form_state_snapshot' => ['values' => ['bijlageVeld' => 'livewire-tmp/'.$bijlageNaam]],
+    ]);
+
+    dispatch(new DocumentNotificationReceived(
+        new OpenNotification(
+            actie: 'create',
+            kanaal: 'documenten',
+            resource: 'enkelvoudiginformatieobject',
+            hoofdObject: $documentUrl,
+            resourceUrl: $documentUrl,
+            aanmaakdatum: now(),
+        ),
+        true
+    ));
+
+    Notification::assertNothingSent();
+});
+
+test('A notification IS sent when the aanvraagformulier PDF is updated (versie 2+)', function () {
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument('1', ['bestandsnaam' => 'aanvraagformulier.pdf']);
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $organisation = Organisation::factory(['type' => OrganisationType::Business])->create();
+    $users = User::factory(['role' => Role::Organiser])->createMany(2);
+    $organisation->users()->attach($users, ['role' => OrganisationRole::Admin]);
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'organisation_id' => $organisation->id,
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    dispatch(new DocumentNotificationReceived(
+        new OpenNotification(
+            actie: 'partial_update',
+            kanaal: 'documenten',
+            resource: 'enkelvoudiginformatieobject',
+            hoofdObject: $documentUrl,
+            resourceUrl: $documentUrl,
+            aanmaakdatum: now(),
+        ),
+        false // isNew=false => update/versie 2+
+    ));
+
+    Notification::assertSentTo($organisation->users, NewZaakDocument::class);
+});
+
 test('Advisors of a concept advice request are not notified, but advisors of a sent request are', function () {
     $zaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentUrl = ZgwHttpFake::fakeSingleDocument();

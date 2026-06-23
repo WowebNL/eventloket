@@ -25,7 +25,6 @@ class ListDocumentAuditTrails extends Component implements HasActions, HasSchema
     public function mount($audittrail)
     {
         $this->audittrail = $audittrail;
-        // dd($this->audittrail);
     }
 
     public function table(Table $table): Table

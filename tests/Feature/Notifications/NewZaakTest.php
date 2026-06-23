@@ -64,7 +64,7 @@ beforeEach(function () {
     $this->municipality->users()->attach($this->municipalityAdmin);
 });
 
-test('when zaak is created, organiser who created it and reviewer users should be notified', function () {
+test('when zaak is created, only reviewer users should be notified (not the organiser)', function () {
     $zaak = Zaak::factory()->create([
         'organisation_id' => $this->organisation->id,
         'zaaktype_id' => $this->zaaktype->id,
@@ -81,13 +81,10 @@ test('when zaak is created, organiser who created it and reviewer users should b
         ),
     ]);
 
-    // Organiser who created the zaak should be notified
-    Notification::assertSentTo(
+    // Organiser should NOT be notified — zij krijgt SendSubmissionConfirmationEmail
+    Notification::assertNotSentTo(
         [$this->organiser],
-        NewZaak::class,
-        function (NewZaak $notification, $channels) {
-            return in_array('mail', $channels) && in_array('database', $channels);
-        }
+        NewZaak::class
     );
 
     // Reviewer and ReviewerMunicipalityAdmin should be notified
@@ -172,9 +169,9 @@ test('users who unsubscribed from notification should not receive it', function 
         NewZaak::class
     );
 
-    // Organiser and ReviewerMunicipalityAdmin should still be notified
+    // ReviewerMunicipalityAdmin should still be notified
     Notification::assertSentTo(
-        [$this->organiser, $this->reviewerMunicipalityAdmin],
+        [$this->reviewerMunicipalityAdmin],
         NewZaak::class
     );
 });

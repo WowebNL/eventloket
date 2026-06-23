@@ -17,6 +17,8 @@ class EventPolicy
 
     /**
      * Determine whether the user can view the model.
+     *
+     * @note auth check in App\Models\Scopes\ZaakEventScope
      */
     public function view(User $user, Event $event): bool
     {

@@ -151,7 +151,9 @@ class ZakenTable
                 SelectFilter::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
                     ->options(function () {
-                        return Cache::remember('zaak_status_name_options', 60 * 60 * 24, function () {
+                        $tenantId = Filament::getTenant()?->getKey() ?? 'global';
+
+                        return Cache::remember("zaak_status_name_options_{$tenantId}", 60 * 60 * 24, function () {
                             return Zaak::all()
                                 ->pluck('reference_data.status_name')
                                 ->unique()

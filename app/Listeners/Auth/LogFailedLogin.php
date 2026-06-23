@@ -33,6 +33,6 @@ class LogFailedLogin
                 'login_path' => request()->path(),
                 'panel' => Filament::getCurrentPanel()?->getId(),
             ])
-            ->log('Failed login attempt');
+            ->log(__('activity/event.login_failed'));
     }
 }

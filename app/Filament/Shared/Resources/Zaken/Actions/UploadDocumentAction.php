@@ -124,6 +124,18 @@ class UploadDocumentAction
 
         Cache::forget("zaak.{$zaak->id}.documenten");
 
+        activity('document')
+            ->event('created')
+            ->causedBy(auth()->user())
+            ->performedOn($zaak)
+            ->withProperties([
+                'document_uuid' => $informatieobject->uuid,
+                'filename' => $informatieobject->bestandsnaam,
+                'titel' => $informatieobject->titel,
+                'vertrouwelijkheidaanduiding' => $informatieobject->vertrouwelijkheidaanduiding,
+            ])
+            ->log(__('activity/event.created'));
+
         return $informatieobject;
     }
 }

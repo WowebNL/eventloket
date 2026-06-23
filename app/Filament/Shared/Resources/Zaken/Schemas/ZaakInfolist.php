@@ -93,6 +93,9 @@ class ZaakInfolist
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_afbouw.label'))
                 ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.locaties_evenement')
+                ->label(__('resources/zaak.columns.locaties_evenement.label'))
+                ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('reference_data.aanwezigen')
                 ->label(__('resources/zaak.columns.aanwezigen.label'))
                 ->visible(fn ($state) => ! empty($state)),
@@ -369,7 +372,7 @@ class ZaakInfolist
                                         $user = $record->handledStatusSetByUser;
                                         if ($user) {
                                             $state .= new HtmlString(Blade::render(
-                                                '<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">'.__('municipality/resources/zaak.infolist.sections.actions.handled_status_set_by.label', ['user' => '<span class="font-medium">'.$user->name.'</span>']).'</p>'
+                                                '<p class="text-xs text-gray-500 dark:text-gray-400 mt-2">'.__('municipality/resources/zaak.infolist.sections.actions.handled_status_set_by.label', ['user' => '<span class="font-medium">'.e($user->name).'</span>']).'</p>'
                                             ));
                                         }
 

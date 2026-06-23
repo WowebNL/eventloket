@@ -42,8 +42,9 @@ class AdminInviteMail extends Mailable
         return new Content(
             markdown: 'mail.admin-invite',
             with: [
-                'acceptUrl' => URL::signedRoute(
+                'acceptUrl' => URL::temporarySignedRoute(
                     'admin-invites.accept',
+                    now()->addDays(config('invites.expiration_days')),
                     ['token' => $this->adminInvite->token],
                 ),
             ]

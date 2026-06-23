@@ -1,25 +1,17 @@
 <?php
 
-use App\Events\OpenNotification\CreateZaakNotificationReceived;
 use App\Jobs\DocumentNotificationReceived;
-use App\Jobs\Zaak\AddEinddatumZGW;
-use App\Jobs\Zaak\AddGeometryZGW;
-use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\ClearZaakCache;
-use App\Jobs\Zaak\CreateDoorkomstZaken;
-use App\Jobs\Zaak\CreateZaak;
-use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Jobs\ZaakStatusNotificationReceived;
-use App\Listeners\Zaak\ProcessCreateZaak;
-use App\ValueObjects\OpenNotification;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
 
 beforeEach(function () {
+    // Bestaande tests gebruiken example.com als host; de host-validatie
+    // in OpenNotificationRequest controleert tegen deze waarde.
+    Config::set('openzaak.url', 'https://example.com/');
+
     $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
 
     $response = $this->postJson(route('passport.token'), [
@@ -60,78 +52,11 @@ test('Open notifications endpoint is reachable with valid access key', function 
     $response->assertStatus(200);
 });
 
-test('Open notifications endpoint handles create zaak notification', function () {
-    Event::fake([
-        CreateZaakNotificationReceived::class,
-    ]);
-
-    Config::set('openzaak.objectsapi.url', 'https://example.com');
-    Http::fake([
-        'https://example.com/zaak/123' => Http::response([
-            'url' => 'https://example.com/zaak/123',
-            'identificatie' => 'ZAAK-123',
-            'omschrijving' => 'Test zaak',
-            'zaaktype' => 'https://example.com/zaaktype/1',
-            'status' => 'https://example.com/status/1',
-            'startdatum' => now()->toIso8601String(),
-            'einddatum' => null,
-            'betrokkene' => [],
-            'object' => 'https://example.com/zaakobject/1',
-            'zaakobject' => 'https://example.com/zaakobject/1',
-            'resultaat' => null,
-            'bronorganisatie' => 'https://example.com/organisatie/1',
-            'doelorganisatie' => null,
-            'toelichting' => 'This is a test zaak',
-        ], 200),
-    ]);
-
-    $response = $this->postJson(route('api.open-notifications.listen'), [
-        'actie' => 'create',
-        'kanaal' => 'zaken',
-        'resource' => 'zaakobject',
-        'hoofdObject' => 'https://example.com/zaak/123',
-        'resourceUrl' => 'https://example.com/zaak/123',
-        'aanmaakdatum' => now()->toIso8601String(),
-    ], [
-        'Authorization' => 'Bearer '.$this->access_token,
-    ]);
-
-    $response->assertStatus(200);
-
-    // check if event is dispatched
-    Event::assertDispatched(CreateZaakNotificationReceived::class);
-    // check if the event is listened by the correct listener
-    Event::assertListening(
-        CreateZaakNotificationReceived::class,
-        ProcessCreateZaak::class
-    );
-
-});
-
-test('Create zaak notifications dispatches correct jobs in bus chain', function () {
-    Bus::fake();
-
-    $listener = new ProcessCreateZaak;
-    $listener->handle(new CreateZaakNotificationReceived(
-        new OpenNotification(...[
-            'actie' => 'create',
-            'kanaal' => 'zaken',
-            'resource' => 'zaakobject',
-            'hoofdObject' => 'https://example.com/zaak/123',
-            'resourceUrl' => 'https://example.com/zaak/123',
-            'aanmaakdatum' => now()->toIso8601String(),
-        ])
-    ));
-
-    Bus::assertChained([
-        AddZaakeigenschappenZGW::class,
-        AddEinddatumZGW::class,
-        UpdateInitiatorZGW::class,
-        AddGeometryZGW::class,
-        CreateZaak::class,
-        CreateDoorkomstZaken::class,
-    ]);
-});
+// De `CreateZaak`-notificatie-tak is verwijderd: in de nieuwe Filament-
+// submit-flow maken wij zelf de zaak aan, dus er komt geen OpenZaak-
+// webhook meer binnen die een `CreateZaak`-keten hoeft te starten.
+// Status-, eigenschap- en document-notificaties blijven wel werken
+// omdat die ook bij onze eigen zaken kunnen voorkomen.
 
 test('Open notifications endpoint handles update zaak eigenschap notification', function () {
     Queue::fake([
@@ -215,4 +140,36 @@ test('Open notifications endpoint handles document update notification', functio
     $response->assertStatus(200);
     Queue::assertPushed(DocumentNotificationReceived::class);
 
+});
+
+test('hoofdObject met vreemde host wordt geweigerd (SSRF-bescherming)', function () {
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'http://169.254.169.254/latest/meta-data/',
+        'resourceUrl' => 'https://example.com/zaak/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['hoofdObject']);
+});
+
+test('resourceUrl met vreemde host wordt geweigerd (SSRF-bescherming)', function () {
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'http://internal.attacker.com/steal-credentials',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors(['resourceUrl']);
 });

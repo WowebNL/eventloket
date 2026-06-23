@@ -40,7 +40,7 @@ class OrganisationPolicy
      */
     public function create(User $user): bool
     {
-        return true;
+        return $user instanceof AdminUser || $user instanceof OrganiserUser;
     }
 
     /**

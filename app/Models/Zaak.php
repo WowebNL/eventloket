@@ -10,7 +10,6 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\ObjectsApi\FormSubmissionObject;
 use App\ValueObjects\OzStatustype;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Besluit;
@@ -31,13 +30,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Woweb\Openzaak\ObjectsApi;
 use Woweb\Openzaak\Openzaak;
 
 /**
- * @property-read ZaakReferenceData            $reference_data
+ * @property ZaakReferenceData $reference_data
+ * @property array<string, mixed> $form_state_snapshot
+ * @property array<string, mixed>|null $imported_data
  * @property-read ?Organisation                $organisation
- * @property-read Municipality                 $municipality
+ * @property-read ?Municipality                $municipality
  * @property-read Collection<Informatieobject> $documenten
  */
 #[ObservedBy(ZaakObserver::class)]
@@ -56,6 +56,7 @@ class Zaak extends Model implements Eventable
         'organiser_user_id',
         'reference_data',
         'imported_data',
+        'form_state_snapshot',
         'handled_status_set_by_user_id',
     ];
 
@@ -64,6 +65,7 @@ class Zaak extends Model implements Eventable
         return [
             'reference_data' => ZaakReferenceData::class,
             'imported_data' => 'array',
+            'form_state_snapshot' => 'array',
         ];
     }
 
@@ -258,19 +260,6 @@ class Zaak extends Model implements Eventable
         });
     }
 
-    protected function zaakdata(): Attribute
-    {
-        return Attribute::make(
-            get: function ($value, $attributes) {
-                return Cache::rememberForever("zaak.{$attributes['id']}.zaakdata", function () use ($attributes) {
-                    return new FormSubmissionObject(...(new ObjectsApi)->get(basename($attributes['data_object_url']))->toArray());
-                });
-            },
-            // set: function($value, $attributes) {
-            // }
-        );
-    }
-
     /** @return Attribute<OzStatustype, void> */
     protected function statustype(): Attribute
     {
@@ -302,7 +291,6 @@ class Zaak extends Model implements Eventable
     {
         Cache::forget("zaak.{$this->id}.openzaak");
         Cache::forget("zaak.{$this->id}.documenten");
-        Cache::forget("zaak.{$this->id}.zaakdata");
         Cache::forget("zaak.{$this->id}.besluiten");
     }
 
@@ -310,6 +298,8 @@ class Zaak extends Model implements Eventable
     {
         return LogOptions::defaults()
             ->logFillable()
-            ->logOnlyDirty();
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->logExcept(['form_state_snapshot']);
     }
 }

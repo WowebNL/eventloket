@@ -6,6 +6,7 @@ use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Models\User;
 use App\Models\Users\AdvisorUser;
+use App\Models\Users\MunicipalityUser;
 use Illuminate\Support\Facades\DB;
 
 class AdvisorUserPolicy
@@ -15,10 +16,15 @@ class AdvisorUserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return match ($user->role) {
-            Role::Admin, Role::Advisor, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => true,
-            default => false,
-        };
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user instanceof AdvisorUser) {
+            return $user->advisories()->wherePivot('role', AdvisoryRole::Admin)->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -26,10 +32,25 @@ class AdvisorUserPolicy
      */
     public function view(User $user, AdvisorUser $advisorUser): bool
     {
-        return match ($user->role) {
-            Role::Admin, Role::Advisor, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => true,
-            default => false,
-        };
+        if ($user->role === Role::Admin) {
+            return true;
+        }
+
+        if ($user instanceof AdvisorUser) {
+            return $user->advisories->pluck('id')
+                ->intersect($advisorUser->advisories->pluck('id'))
+                ->isNotEmpty();
+        }
+
+        if ($user instanceof MunicipalityUser) {
+            $municipalityIds = $user->municipalities->pluck('id');
+
+            return $advisorUser->advisories()
+                ->whereHas('municipalities', fn ($q) => $q->whereIn('municipalities.id', $municipalityIds))
+                ->exists();
+        }
+
+        return false;
     }
 
     /**
@@ -78,10 +99,6 @@ class AdvisorUserPolicy
      */
     public function delete(User $user, AdvisorUser $advisorUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         if ($user->id == $advisorUser->id) {
             return true;
@@ -121,10 +138,6 @@ class AdvisorUserPolicy
      */
     public function restore(User $user, AdvisorUser $advisorUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         return false;
     }
@@ -134,10 +147,6 @@ class AdvisorUserPolicy
      */
     public function forceDelete(User $user, AdvisorUser $advisorUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         return false;
     }

@@ -65,6 +65,9 @@ return [
         'naam_locatie_evenement' => [
             'label' => 'Naam locatie evenement',
         ],
+        'locaties_evenement' => [
+            'label' => 'Locaties evenement',
+        ],
         'start_opbouw' => [
             'label' => 'Start opbouw',
         ],

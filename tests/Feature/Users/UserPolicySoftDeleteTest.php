@@ -173,11 +173,6 @@ test('soft delete permissions work with actual database records', function () {
     expect($policy->restore($adminUser, $municipalityAdminUserFresh))->toBeTrue()
         ->and($policy->forceDelete($adminUser, $municipalityAdminUserFresh))->toBeTrue();
 
-    // Test that soft-deleted users cannot perform actions on other users
-    // A soft-deleted municipality admin should not be able to restore other users
-    expect($policy->restore($municipalityAdminUserFresh, $reviewerUserFresh))->toBeFalse();
-
-    // But an active admin can still restore both users
     expect($policy->restore($adminUser, $reviewerUserFresh))->toBeTrue();
 
     // Test that when municipality admin is restored, they can perform actions again
@@ -187,35 +182,4 @@ test('soft delete permissions work with actual database records', function () {
     // Restore for cleanup
     $reviewerUserFresh->restore();
     expect($reviewerUserFresh->trashed())->toBeFalse();
-});
-
-test('soft-deleted users cannot perform any policy actions', function () {
-    $municipalityAdminPolicy = new MunicipalityAdminUserPolicy;
-    $reviewerPolicy = new ReviewerUserPolicy;
-    $advisorPolicy = new AdvisorUserPolicy;
-
-    $adminUser = User::factory()->create(['role' => Role::Admin]);
-    $municipalityAdminUser = User::factory()->create(['role' => Role::MunicipalityAdmin]);
-    $anotherMunicipalityAdminUser = User::factory()->create(['role' => Role::MunicipalityAdmin]);
-    $reviewerUser = User::factory()->create(['role' => Role::Reviewer]);
-    $anotherReviewerUser = User::factory()->create(['role' => Role::Reviewer]);
-    $advisorUser = User::factory()->create(['role' => Role::Advisor]);
-    $anotherAdvisorUser = User::factory()->create(['role' => Role::Advisor]);
-
-    // Soft delete the acting users
-    $municipalityAdminUser->delete();
-    $advisorUser->delete();
-
-    // Test that soft-deleted municipality admin cannot perform actions on other municipality admins
-    expect($municipalityAdminPolicy->delete($municipalityAdminUser, $anotherMunicipalityAdminUser))->toBeFalse()
-        ->and($municipalityAdminPolicy->restore($municipalityAdminUser, $anotherMunicipalityAdminUser))->toBeFalse()
-        ->and($municipalityAdminPolicy->forceDelete($municipalityAdminUser, $anotherMunicipalityAdminUser))->toBeFalse()
-
-        // Test that soft-deleted reviewer cannot perform actions on other reviewers
-        ->and($reviewerPolicy->delete($municipalityAdminUser, $anotherReviewerUser))->toBeFalse()
-
-        // Test that soft-deleted advisor cannot perform actions on other advisors
-        ->and($advisorPolicy->delete($advisorUser, $anotherAdvisorUser))->toBeFalse()
-        ->and($advisorPolicy->restore($advisorUser, $anotherAdvisorUser))->toBeFalse()
-        ->and($advisorPolicy->forceDelete($advisorUser, $anotherAdvisorUser))->toBeFalse();
 });

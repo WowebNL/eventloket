@@ -6,6 +6,7 @@ use App\Http\Requests\DocumentRequest;
 use App\Models\Zaak;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\HeaderUtils;
 use Woweb\Openzaak\Openzaak;
 
@@ -20,27 +21,65 @@ class DocumentController extends Controller
             // get the specified version
             $document = new Informatieobject(...(new Openzaak)->get($document->url.'?versie='.$validated['version'])->toArray());
         }
-        $disposition = $type === 'download' ? HeaderUtils::DISPOSITION_ATTACHMENT : HeaderUtils::DISPOSITION_INLINE;
 
-        $raw = (new Openzaak)->getRaw($document->inhoud);
+        $event = $type === 'download' ? 'download' : 'view';
 
-        // Older / externally created documents may have an empty or missing MIME
-        // type, in which case we detect it from the actual content bytes.
-        $mime = $document->formaat !== '' ? $document->formaat : null;
-        if ($mime === null && $raw !== '') {
-            $mime = finfo_buffer(finfo_open(FILEINFO_MIME_TYPE), $raw) ?: null;
-        }
-        $mime ??= 'application/octet-stream';
+        activity('document')
+            ->event($event)
+            ->causedBy(auth()->user())
+            ->performedOn($zaak)
+            ->withProperties([
+                'document_uuid' => $documentuuid,
+                'filename' => $document->bestandsnaam,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ])
+            ->log(__('activity/event.'.$event));
+
+        $dispositionType = $type === 'download' ? HeaderUtils::DISPOSITION_ATTACHMENT : HeaderUtils::DISPOSITION_INLINE;
+
+        // Only trust the stored MIME type when it is on the upload allowlist;
+        // anything else is served as a generic binary so disallowed content can
+        // never be rendered under a permissive Content-Type.
+        $mimeIsTrusted = DocumentUploadType::storedMimeTypeIsAllowed($document->formaat);
+        $contentType = $mimeIsTrusted ? $document->formaat : 'application/octet-stream';
 
         // Existing documents may have been stored without a file extension in
         // their bestandsnaam, which makes them impossible to open after download.
-        // We reconstruct a usable filename from the resolved MIME type.
-        $fileName = DocumentUploadType::ensureFileNameHasExtension($document->bestandsnaam, $mime);
+        // When we have a trusted MIME type we reconstruct a usable filename from it.
+        $fileName = $mimeIsTrusted
+            ? DocumentUploadType::ensureFileNameHasExtension($document->bestandsnaam, $document->formaat)
+            : $document->bestandsnaam;
 
-        return response($raw)->withHeaders([
-            'Content-Disposition' => HeaderUtils::makeDisposition($disposition, $fileName),
+        return response((new Openzaak)->getRaw($document->inhoud))->withHeaders([
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                $dispositionType,
+                $fileName,
+                $this->asciiFileNameFallback($fileName),
+            ),
             'Access-Control-Expose-Headers' => 'Content-Disposition',
-            'Content-Type' => $mime,
+            'Content-Type' => $contentType,
         ]);
+    }
+
+    /**
+     * Builds an ASCII-only fallback filename for the Content-Disposition header.
+     *
+     * HTTP headers may only carry ASCII, so a bestandsnaam containing characters
+     * such as "ö" makes {@see HeaderUtils::makeDisposition()} throw unless an ASCII
+     * fallback is supplied. The full UTF-8 name is still sent via the RFC 6266
+     * "filename*" field, so modern browsers keep the original characters; this
+     * fallback is only used by legacy clients.
+     */
+    private function asciiFileNameFallback(string $fileName): string
+    {
+        // Transliterate accented characters (ö -> o), then strip anything Symfony
+        // rejects in the fallback: non-printable ASCII, "%", and path separators.
+        $fallback = Str::ascii($fileName);
+        $fallback = (string) preg_replace('/[^\x20-\x7e]/', '', $fallback);
+        $fallback = str_replace(['%', '/', '\\'], '', $fallback);
+        $fallback = trim($fallback);
+
+        return $fallback !== '' ? $fallback : 'document';
     }
 }

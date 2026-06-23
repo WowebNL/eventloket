@@ -18,6 +18,10 @@
         </include>
     </source>
     <php>
+        <!-- De equivalence-suite rendert het volledige 18-staps formulier
+             per scenario; dat past cumulatief niet meer in de 128M
+             CLI-default van de Sail-container. -->
+        <ini name="memory_limit" value="512M"/>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>

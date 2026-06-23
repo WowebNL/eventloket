@@ -37,4 +37,11 @@ class Application extends Model
             array_search(static::class, Relation::morphMap()) ?: static::class
         );
     }
+
+    protected function casts(): array
+    {
+        return [
+            'all_endpoints' => 'boolean',
+        ];
+    }
 }

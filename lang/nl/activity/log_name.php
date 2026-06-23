@@ -5,4 +5,5 @@ return [
     'auth' => 'Authenticatie',
     'views' => 'Bekijk',
     'notifications' => 'Notificaties',
+    'document' => 'Documenttoegang',
 ];

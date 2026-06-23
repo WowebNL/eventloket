@@ -30,6 +30,6 @@ class LogLogin
                 'login_path' => request()->path(),
                 'panel' => Filament::getCurrentPanel()?->getId(),
             ])
-            ->log('User logged in');
+            ->log(__('activity/event.login'));
     }
 }

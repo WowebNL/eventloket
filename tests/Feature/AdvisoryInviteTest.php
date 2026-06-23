@@ -128,7 +128,7 @@ test('existing user can accept an advisory invite', function () {
 
     // Act
     $this->actingAs($user);
-    $signedUrl = URL::signedRoute('advisory-invites.accept', [
+    $signedUrl = URL::temporarySignedRoute('advisory-invites.accept', now()->addDays(config('invites.expiration_days')), [
         'token' => $invite->token,
     ]);
 
@@ -165,7 +165,7 @@ test('new user can register and accept an advisory invite', function () {
         'token' => Str::uuid(),
     ]);
 
-    $signedUrl = URL::signedRoute('advisory-invites.accept', [
+    $signedUrl = URL::temporarySignedRoute('advisory-invites.accept', now()->addDays(config('invites.expiration_days')), [
         'token' => $invite->token,
     ]);
 

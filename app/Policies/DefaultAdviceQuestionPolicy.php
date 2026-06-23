@@ -43,7 +43,10 @@ class DefaultAdviceQuestionPolicy
     }
 
     /**
-     * Determine whether the user can create models.
+     * Role-level pre-filter: only municipality admins may create default advice questions.
+     * Cross-municipality creation is prevented by Filament's tenant observeTenancyModelCreation()
+     * hook, which calls municipality()->associate($tenant) on every creating event within the
+     * municipality panel — overriding any municipality_id supplied in form data.
      */
     public function create(User $user): bool
     {

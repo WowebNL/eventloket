@@ -27,22 +27,6 @@ class OrganiserUserResource extends Resource
 
     protected static ?string $tenantOwnershipRelationshipName = 'organisations';
 
-    /**
-     * Access check for the resource
-     * custom override because the resource is using the UserPolicy which is not correct for this resource
-     * maybe refactor later by using a custom model for example OrganiserUser and related policy
-     */
-    public static function canAccess(): bool
-    {
-        /** @var Organisation $tenant */
-        $tenant = Filament::getTenant();
-
-        /** @var OrganiserUser $user */
-        $user = auth()->user();
-
-        return $user->canAccessOrganisation($tenant->id, OrganisationRole::Admin);
-    }
-
     public static function getModelLabel(): string
     {
         return __('organiser/resources/user.label');

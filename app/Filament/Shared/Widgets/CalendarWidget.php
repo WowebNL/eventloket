@@ -317,7 +317,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                                     return [
                                         'type' => 'Feature',
                                         'geometry' => $geometry,
-                                        'properties' => $zaak->toArray(), // change this
+                                        'properties' => $zaak->makeHidden(['zgw_zaak_url', 'organiser_user_id', 'imported_data'])->toArray(),
                                     ];
                                 }
 
@@ -329,8 +329,6 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
                             $filename = 'export_evenementen_'.now()->format('Y-m-d_H-i-s').'.geojson';
-
-                            file_put_contents(storage_path('app/public/'.$filename), $geojson);
 
                             return response()->streamDownload(function () use ($geojson) {
                                 echo $geojson;
@@ -496,7 +494,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return Select::make('reference_data.status_name')
             ->label('Status')
             ->options(function () {
-                return Cache::remember('zaak_status_name_options', 60 * 60 * 24, function () {
+                $tenantId = Filament::getTenant()?->getKey() ?? 'global';
+
+                return Cache::remember("zaak_status_name_options_{$tenantId}", 60 * 60 * 24, function () {
                     return Zaak::all()
                         ->pluck('reference_data.status_name')
                         ->unique()

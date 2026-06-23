@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\OrganisationRole;
 use App\Models\User;
 use App\Models\Users\AdminUser;
 use App\Models\Users\OrganiserUser;
@@ -15,6 +16,10 @@ class OrganiserUserPolicy
     {
         if ($user instanceof AdminUser) {
             return true;
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return $user->organisations()->wherePivot('role', OrganisationRole::Admin)->exists();
         }
 
         return false;
@@ -61,10 +66,6 @@ class OrganiserUserPolicy
      */
     public function delete(User $user, OrganiserUser $organiserUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         if ($user instanceof AdminUser) {
             return true;
@@ -78,10 +79,6 @@ class OrganiserUserPolicy
      */
     public function restore(User $user, OrganiserUser $organiserUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         if ($user instanceof AdminUser) {
             return true;
@@ -95,10 +92,6 @@ class OrganiserUserPolicy
      */
     public function forceDelete(User $user, OrganiserUser $organiserUser): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
 
         if ($user instanceof AdminUser) {
             return true;

@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property array<string>|null $app_authentication_recovery_codes
@@ -27,7 +29,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuid, Notifiable, SoftDeletes;
+    use HasFactory, HasUuid, LogsActivity, Notifiable, SoftDeletes;
 
     protected $table = 'users';
 
@@ -85,7 +87,17 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
             'role' => Role::class,
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
+            'openzaak_jwt' => 'encrypted',
         ];
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->logExcept(['password', 'remember_token', 'app_authentication_secret', 'app_authentication_recovery_codes', 'openzaak_jwt', 'openzaak_jwt_valid_till']);
     }
 
     public function unreadMessages()

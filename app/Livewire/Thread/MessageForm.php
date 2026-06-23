@@ -30,6 +30,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Woweb\Openzaak\Openzaak;
 
@@ -41,6 +42,7 @@ class MessageForm extends Component implements HasActions, HasSchemas
     use InteractsWithActions;
     use InteractsWithSchemas;
 
+    #[Locked]
     public Thread $thread;
 
     public ?array $data = [];

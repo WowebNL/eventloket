@@ -19,7 +19,7 @@ use Filament\Facades\Filament;
 
 use function Pest\Livewire\livewire;
 
-covers(AdminCalendarWidget::class, MunicipalityCalendarPage::class, AdvisorCalendarPage::class, OrganiserCalendarPage::class);
+covers(AdminCalendarWidget::class, AdminCalendarPage::class, MunicipalityCalendarPage::class, AdvisorCalendarPage::class, OrganiserCalendarPage::class);
 
 beforeEach(function (): void {
     $this->municipality = Municipality::factory()->create(['name' => 'Test Municipality']);
@@ -310,6 +310,96 @@ test('calendar widget shows cases when zaaktype has no hidden resultaat types co
         ->callAction('toggleView')
         ->assertSet('viewMode', 'table')
         ->assertCanSeeTableRecords([$zaakWithResultaat]);
+});
+
+test('admin calendar page import action is visible to admin user', function () {
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarPage::class)
+        ->assertActionExists('import')
+        ->assertActionVisible('import');
+});
+
+test('admin calendar widget applies municipality filter in table view', function () {
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    $otherMunicipality = Municipality::factory()->create(['name' => 'Other Municipality']);
+    $otherZaaktype = Zaaktype::factory()->create(['municipality_id' => $otherMunicipality->id]);
+    $otherZaak = Zaak::factory()->create([
+        'zaaktype_id' => $otherZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'municipalities' => [$this->municipality->id],
+        ])
+        ->assertCanSeeTableRecords([$this->zaak])
+        ->assertCanNotSeeTableRecords([$otherZaak]);
+});
+
+test('admin calendar widget applies zaaktype filter in table view', function () {
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    $otherZaaktype = Zaaktype::factory()->create(['municipality_id' => $this->municipality->id]);
+    $otherZaak = Zaak::factory()->create([
+        'zaaktype_id' => $otherZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'zaaktypes' => [$this->zaaktype->id],
+        ])
+        ->assertCanSeeTableRecords([$this->zaak])
+        ->assertCanNotSeeTableRecords([$otherZaak]);
+});
+
+test('admin calendar widget applies organisations filter in table view', function () {
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    $otherOrganisation = Organisation::factory()->create();
+    $otherZaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $otherOrganisation->id,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'organisations' => [$this->organisation->id],
+        ])
+        ->assertCanSeeTableRecords([$this->zaak])
+        ->assertCanNotSeeTableRecords([$otherZaak]);
 });
 
 test('calendar widget shows cases without resultaat even when zaaktype has hidden resultaat types', function () {

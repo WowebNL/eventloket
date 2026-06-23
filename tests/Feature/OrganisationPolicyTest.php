@@ -30,11 +30,39 @@ test('allows users to view organisations they have access to', function () {
 });
 
 // Test organisation creation
-test('allows any user to create organisations', function () {
+test('organiser can create organisation', function () {
     $user = User::factory()->create(['role' => Role::Organiser]);
     $policy = new OrganisationPolicy;
 
     expect($policy->create($user))->toBeTrue();
+});
+
+test('admin can create organisation', function () {
+    $user = User::factory()->create(['role' => Role::Admin]);
+    $policy = new OrganisationPolicy;
+
+    expect($policy->create($user))->toBeTrue();
+});
+
+test('reviewer cannot create organisation', function () {
+    $user = User::factory()->create(['role' => Role::Reviewer]);
+    $policy = new OrganisationPolicy;
+
+    expect($policy->create($user))->toBeFalse();
+});
+
+test('municipality admin cannot create organisation', function () {
+    $user = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+    $policy = new OrganisationPolicy;
+
+    expect($policy->create($user))->toBeFalse();
+});
+
+test('advisor cannot create organisation', function () {
+    $user = User::factory()->create(['role' => Role::Advisor]);
+    $policy = new OrganisationPolicy;
+
+    expect($policy->create($user))->toBeFalse();
 });
 
 // Test personal organisation update restrictions

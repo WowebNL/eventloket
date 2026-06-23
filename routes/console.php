@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CleanupExpiredEventFormDrafts;
 use App\Jobs\CleanupExpiredInvites;
 use App\Jobs\CleanupExports;
 use App\Jobs\ProcessSyncGeometryOnMunicipality;
@@ -18,5 +19,4 @@ Schedule::job(new SendAdviceReminders)->dailyAt('12:00');
 
 Schedule::job(new CleanupExpiredInvites)->daily();
 Schedule::job(new CleanupExports)->daily();
-
-Schedule::command('sync:zaaktypen')->dailyAt('02:00');
+Schedule::job(new CleanupExpiredEventFormDrafts)->daily();

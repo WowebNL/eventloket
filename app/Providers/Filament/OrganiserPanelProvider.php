@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\AvatarProviders\LocalSvgAvatarProvider;
 use App\Filament\Organiser\Clusters\Settings\Pages\EditOrganisationProfile;
 use App\Filament\Organiser\Pages\Dashboard;
 use App\Filament\Organiser\Pages\EditProfile;
@@ -10,6 +11,8 @@ use App\Filament\Organiser\Pages\Tenancy\RegisterOrganisation;
 use App\Filament\Organiser\Widgets\Intro;
 use App\Filament\Organiser\Widgets\Shortlink;
 use App\Filament\Shared\Pages\Login;
+use App\Filament\Shared\Pages\PasswordReset\RequestPasswordReset;
+use App\Filament\Shared\Pages\PasswordReset\ResetPassword;
 use App\Models\Organisation;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\FontProviders\LocalFontProvider;
@@ -22,7 +25,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -50,13 +53,14 @@ class OrganiserPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->globalSearch(false)
+            ->defaultAvatarProvider(LocalSvgAvatarProvider::class)
             ->databaseNotifications()
             ->discoverClusters(in: app_path('Filament/Organiser/Clusters'), for: 'App\\Filament\\Organiser\\Clusters')
             ->login(Login::class)
             ->registration(Register::class)
             ->tenantRegistration(RegisterOrganisation::class)
             ->tenantProfile(EditOrganisationProfile::class)
-            ->passwordReset()
+            ->passwordReset(requestAction: RequestPasswordReset::class, resetAction: ResetPassword::class)
             ->emailVerification()
             ->profile(EditProfile::class)
             ->multiFactorAuthentication([
@@ -75,7 +79,7 @@ class OrganiserPanelProvider extends PanelProvider
                 StartSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
+                PreventRequestForgery::class,
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,

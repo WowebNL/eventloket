@@ -117,11 +117,6 @@ class UserPolicy
      */
     private function canManageUser(User $user, User $model, array $rolePermissions): bool
     {
-        // Soft-deleted users cannot perform actions
-        if ($user->trashed()) {
-            return false;
-        }
-
         // Check if the user's role has permission to manage the model's role
         /** @var Role $userRole */
         $userRole = $user->role;

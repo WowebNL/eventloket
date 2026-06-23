@@ -9,6 +9,7 @@ use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Woweb\Openzaak\Openzaak;
 
@@ -17,12 +18,16 @@ class Document extends Component implements HasActions, HasSchemas
     use InteractsWithActions;
     use InteractsWithSchemas;
 
+    #[Locked]
     public Zaak $zaak;
 
+    #[Locked]
     public string $documentUrl;
 
+    #[Locked]
     public int $versie;
 
+    #[Locked]
     public int $latestVersion;
 
     private Informatieobject $document;
