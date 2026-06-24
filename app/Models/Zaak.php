@@ -39,6 +39,7 @@ use Woweb\Openzaak\Openzaak;
  * @property-read ?Organisation                $organisation
  * @property-read ?Municipality                $municipality
  * @property-read Collection<Informatieobject> $documenten
+ * @property-read ?OzStatustype                $statustype
  */
 #[ObservedBy(ZaakObserver::class)]
 class Zaak extends Model implements Eventable
@@ -264,7 +265,7 @@ class Zaak extends Model implements Eventable
     protected function statustype(): Attribute
     {
         return Attribute::make(
-            get: function () {
+            get: function (): ?OzStatustype {
                 $statustypen = Cache::remember('statustypen', 60 * 60 * 24, function () {
                     return (new Openzaak)->catalogi()->statustypen()->getAll(['pageSize' => 999999999])
                         ->map(function ($statustype) {
