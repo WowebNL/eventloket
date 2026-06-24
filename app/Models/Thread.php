@@ -9,6 +9,7 @@ use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
+use App\Models\Users\CoordinatorUser;
 use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
@@ -150,12 +151,12 @@ class Thread extends Model
             ->get();
 
         // If no municipality reviewers are found and the zaak status
-        // has just been received or has been finalized, include all municipality reviewers
+        // has just been received or has been finalized, include the coordinator or all reviewers
         if (
             $municipalityReviewerUsers->isEmpty() &&
             ($this->zaak->statustype->isReceived() || $this->zaak->statustype->isFinalised())
         ) {
-            $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers()->get();
+            $municipalityReviewerUsers = collect($this->zaak->getMunicipalityHandlers());
         }
 
         return $threadParticipants->merge($municipalityReviewerUsers);
@@ -171,7 +172,7 @@ class Thread extends Model
 
         $panel = match (get_class($user)) {
             AdvisorUser::class => 'advisor',
-            ReviewerUser::class, ReviewerMunicipalityAdminUser::class, MunicipalityAdminUser::class => 'municipality',
+            ReviewerUser::class, ReviewerMunicipalityAdminUser::class, CoordinatorUser::class, MunicipalityAdminUser::class => 'municipality',
             OrganiserUser::class => 'organiser',
             AdminUser::class => 'admin',
             default => throw new \Exception('Unknown receiver class '.get_class($user)),
@@ -179,7 +180,7 @@ class Thread extends Model
 
         $tenant = match (get_class($user)) {
             AdvisorUser::class => $this->advisory_id,
-            ReviewerUser::class, ReviewerMunicipalityAdminUser::class, MunicipalityAdminUser::class => $this->zaak->municipality->id,
+            ReviewerUser::class, ReviewerMunicipalityAdminUser::class, CoordinatorUser::class, MunicipalityAdminUser::class => $this->zaak->municipality->id,
             OrganiserUser::class => $this->zaak->organisation->uuid,
             default => throw new \Exception('Unknown user class'),
         };

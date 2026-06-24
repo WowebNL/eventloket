@@ -20,6 +20,7 @@ class ReviewerUserForm
                     ->options([
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::Coordinator->value => Role::Coordinator->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                     ])
                     ->selectablePlaceholder(false)

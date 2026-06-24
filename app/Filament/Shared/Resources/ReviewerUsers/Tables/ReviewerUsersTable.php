@@ -29,6 +29,7 @@ class ReviewerUsersTable
                     ->label(__('municipality/resources/municipality_admin.columns.role.label'))
                     ->options([
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
+                        Role::Coordinator->value => Role::Coordinator->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                     ])
                     ->selectablePlaceholder(false)

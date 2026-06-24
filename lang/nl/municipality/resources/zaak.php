@@ -40,6 +40,20 @@ return [
         ],
     ],
     'header_actions' => [
+        'assign_reviewer' => [
+            'label' => 'Behandelaar toewijzen',
+            'label_change' => 'Behandelaar wijzigen',
+            'form' => [
+                'reviewer' => [
+                    'label' => 'Behandelaar',
+                    'placeholder' => 'Geen behandelaar (verwijder toewijzing)',
+                ],
+            ],
+            'notification' => [
+                'assigned' => 'Behandelaar toegewezen',
+                'unassigned' => 'Behandelaar verwijderd',
+            ],
+        ],
         'finish_zaak' => [
             'label' => 'Zaak afronden',
             'steps' => [
@@ -96,6 +110,56 @@ return [
         ],
     ],
     'infolist' => [
+        'sections' => [
+            'information' => [
+                'label' => 'Informatie',
+                'description' => 'Informatie over de zaak',
+            ],
+            'actions' => [
+                'label' => 'Acties',
+                'description' => 'Voer wijzigingen uit binnen de zaak',
+                'reviewer_user' => [
+                    'label' => 'Behandelaar',
+                    'placeholder' => 'Niet toegewezen',
+                ],
+                'handled_status_set_by' => [
+                    'label' => 'Door :user',
+                ],
+                'actions' => [
+                    'edit_risico_classificatie' => [
+                        'label' => 'Wijzigen',
+                        'fields' => [
+                            'risico_classificatie' => [
+                                'label' => 'Risicoclassificatie',
+                            ],
+                            'risico_classificatie_toelichting' => [
+                                'label' => 'Toelichting risicoclassificatie',
+                                'helper_text' => 'Beargumenteer waarom je de risico classificatie wijzigt.',
+                            ],
+                        ],
+                    ],
+                    'edit_status' => [
+                        'label' => 'Wijzigen',
+                    ],
+                ],
+            ],
+        ],
+        'tabs' => [
+            'decisions' => [
+                'label' => 'Besluiten',
+            ],
+            'documents' => [
+                'label' => 'Bestanden',
+            ],
+            'messages' => [
+                'label' => 'Organisatievragen',
+            ],
+            'advice_requests' => [
+                'label' => 'Adviesvragen',
+            ],
+        ],
+    ],
+    'infolist_legacy' => [
         'sections' => [
             'information' => [
                 'label' => 'Informatie',

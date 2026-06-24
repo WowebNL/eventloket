@@ -58,6 +58,12 @@ class ZakenTable
                     ->toggleable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
+                TextColumn::make('reviewerUser.name')
+                    ->label(__('resources/zaak.columns.reviewer_user.label'))
+                    ->sortable()
+                    ->toggleable()
+                    ->searchable()
+                    ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
                     ->sortable()
@@ -144,7 +150,7 @@ class ZakenTable
                     ->visible(fn () => auth()->user()->role === Role::Admin),
                 WorkingstockFilter::make()
                     ->columnSpan(2)
-                    ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])),
+                    ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])),
                 AdvisorWorkingstockFilter::make()
                     ->columnSpan(2)
                     ->visible(fn () => auth()->user()->role === Role::Advisor),

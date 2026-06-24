@@ -30,6 +30,7 @@ class MunicipalityAdminUserTable
                     ->label(__('resources/municipality_admin_user.columns.role.label'))
                     ->options([
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
+                        Role::Coordinator->value => Role::Coordinator->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                     ])

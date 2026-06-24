@@ -220,7 +220,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     public function getHeaderActions(): array
     {
         $exporter = match (auth()->user()->role) {
-            Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => ExtendedEventExporter::class,
+            Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer => ExtendedEventExporter::class,
             Role::Advisor => AdvisorEventExporter::class,
             default => BaseEventExporter::class,
         };
@@ -556,7 +556,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->options(function () {
                 $query = Zaaktype::query()->orderBy('name');
 
-                if (in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])) {
+                if (in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])) {
                     /** @var Municipality $municipality */
                     $municipality = Filament::getTenant();
                     $query->where('municipality_id', $municipality->id);

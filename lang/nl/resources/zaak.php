@@ -56,6 +56,9 @@ return [
         'handled_status_set_by_user' => [
             'label' => 'In behandeling door',
         ],
+        'reviewer_user' => [
+            'label' => 'Behandelaar',
+        ],
         'resultaat' => [
             'label' => 'Resultaat',
         ],

@@ -55,4 +55,10 @@ class MunicipalityUser extends User implements FilamentUser, HasTenants
     {
         $query->whereIn('role', [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
+
+    #[Scope]
+    protected function coordinators(Builder $query): void
+    {
+        $query->where('role', Role::Coordinator);
+    }
 }

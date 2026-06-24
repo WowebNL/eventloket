@@ -23,6 +23,7 @@ enum DocumentVertrouwelijkheden: string
             Role::Advisor => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value],
             Role::MunicipalityAdmin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
             Role::ReviewerMunicipalityAdmin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::Coordinator => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
             Role::Reviewer => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
             Role::Admin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value]
         };

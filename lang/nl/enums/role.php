@@ -10,6 +10,9 @@ return [
     'reviewer_municipality_admin' => [
         'label' => 'Gemeentelijk beheerder (behandelaar)',
     ],
+    'coordinator' => [
+        'label' => 'Coördinator',
+    ],
     'reviewer' => [
         'label' => 'Behandelaar',
     ],

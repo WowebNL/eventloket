@@ -11,6 +11,7 @@ use App\Jobs\Zaak\AddFinalStatusZGW;
 use App\Jobs\Zaak\AddResultaatZGW;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
+use App\Notifications\AssignedToZaak;
 use App\Notifications\Result;
 use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -80,6 +81,51 @@ class ViewZaak extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('assign_reviewer')
+                ->label(fn (Zaak $record) => $record->reviewer_user_id
+                    ? __('municipality/resources/zaak.header_actions.assign_reviewer.label_change')
+                    : __('municipality/resources/zaak.header_actions.assign_reviewer.label'))
+                ->icon('heroicon-o-user-plus')
+                ->color('gray')
+                ->visible(fn (Zaak $record) => ! $record->is_imported
+                    && ! $record->reference_data->resultaat
+                    && in_array(auth()->user()->role, [Role::Coordinator, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Admin]))
+                ->fillForm(fn (Zaak $record) => ['reviewer_user_id' => $record->reviewer_user_id])
+                ->schema(function (Zaak $record) {
+                    $municipality = $record->municipality;
+
+                    return [
+                        Select::make('reviewer_user_id')
+                            ->label(__('municipality/resources/zaak.header_actions.assign_reviewer.form.reviewer.label'))
+                            ->placeholder(__('municipality/resources/zaak.header_actions.assign_reviewer.form.reviewer.placeholder'))
+                            ->options($municipality->allReviewerUsers()->get()->pluck('name', 'id'))
+                            ->searchable()
+                            ->nullable(),
+                    ];
+                })
+                ->action(function (Zaak $record, array $data) {
+                    $previousReviewerId = $record->reviewer_user_id;
+                    $newReviewerId = $data['reviewer_user_id'] ?? null;
+
+                    $record->reviewer_user_id = $newReviewerId;
+                    $record->save();
+
+                    if ($newReviewerId && $newReviewerId !== $previousReviewerId) {
+                        $reviewer = $record->reviewerUser;
+                        if ($reviewer) {
+                            $reviewer->notify(new AssignedToZaak($record));
+                        }
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title($newReviewerId
+                            ? __('municipality/resources/zaak.header_actions.assign_reviewer.notification.assigned')
+                            : __('municipality/resources/zaak.header_actions.assign_reviewer.notification.unassigned'))
+                        ->send();
+
+                    $this->dispatch('refreshZaak');
+                }),
             Action::make('activity')
                 ->visible(fn (Zaak $record) => auth()->user()->can('viewActivity', $record))
                 ->label('Bekijk activiteiten')
