@@ -62,10 +62,12 @@ final class SamenvattingStep
     {
         $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
         $risicoClassificatie = $state->get('risicoClassificatie');
+        $indieningstermijnStatus = $state->get('indieningstermijnStatus');
 
         return view('event-form.samenvatting', [
             'sections' => $sections,
             'risicoClassificatie' => $risicoClassificatie,
+            'indieningstermijnStatus' => $indieningstermijnStatus,
         ])->render();
     }
 }

@@ -42,6 +42,7 @@ final class GenerateSubmissionPdf implements ShouldQueue
         $gemeenteNaam = is_array($evenementInGemeente) ? ($evenementInGemeente['name'] ?? null) : null;
         $risicoClassificatie = $state->get('risicoClassificatie')
             ?? $this->zaak->reference_data->risico_classificatie;
+        $indieningstermijnStatus = $state->get('indieningstermijnStatus');
         $naamEvenement = $state->get('watIsDeNaamVanHetEvenementVergunning') ?? $this->zaak->reference_data->naam_evenement;
 
         // De AVG-akkoord-checkbox staat op de aparte SamenvattingStep en
@@ -56,6 +57,7 @@ final class GenerateSubmissionPdf implements ShouldQueue
             'sections' => $sections,
             'gemeenteNaam' => $gemeenteNaam,
             'risicoClassificatie' => $risicoClassificatie,
+            'indieningstermijnStatus' => $indieningstermijnStatus,
             'naamEvenement' => $naamEvenement,
             'akkoordGegeven' => $akkoordGegeven,
         ])->setPaper('a4');

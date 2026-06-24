@@ -6,13 +6,16 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Schema\Hidden;
+use App\EventForm\State\FormState;
 use Carbon\Carbon;
 use Filament\Forms\Components\Radio;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid c75cc256-6729-4684-9f9b-ede6265b3e72
@@ -245,6 +248,34 @@ final class RisicoscanStep
                     ->live(),
                 InfoText::info('risicoClassificatieContent', '<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>')
                     ->hidden(Hidden::rule('risicoClassificatieContent')),
+                self::indieningstermijnInfoText(),
             ]);
+    }
+
+    private static function indieningstermijnInfoText(): TextEntry
+    {
+        return TextEntry::make('indieningstermijnContent')
+            ->hiddenLabel()
+            ->state(function ($livewire): ?HtmlString {
+                /** @var FormState $state */
+                $state = $livewire->state();
+                $status = $state->get('indieningstermijnStatus');
+
+                if ($status === null) {
+                    return null;
+                }
+
+                $variant = $status['withinDeadline'] ? 'success' : 'warning';
+                $text = $status['withinDeadline']
+                    ? '<p>Uw aanvraag valt binnen de indieningstermijn van <strong>'.$status['weeks'].' weken</strong> voor de startdatum van het evenement.</p>'
+                    : '<p>Let op: de indieningstermijn voor deze risicoclassificatie is <strong>'.$status['weeks'].' weken</strong> voor de startdatum van het evenement. Uw aanvraag valt buiten deze termijn. U kunt de aanvraag nog steeds indienen, maar de kans op afwijzing is groter.</p>';
+
+                return new HtmlString(sprintf(
+                    '<div class="eventform-alert eventform-alert-%s">%s</div>',
+                    $variant,
+                    $text,
+                ));
+            })
+            ->hidden(fn ($livewire): bool => $livewire->state()->get('indieningstermijnStatus') === null);
     }
 }

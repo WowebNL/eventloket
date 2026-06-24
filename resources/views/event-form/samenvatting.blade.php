@@ -30,6 +30,18 @@
     </div>
 @endif
 
+@if (! empty($indieningstermijnStatus))
+    @if ($indieningstermijnStatus['withinDeadline'])
+        <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #f0fdf4; border-left: 3px solid #16a34a; font-size: 0.9rem; color: #15803d;">
+            Uw aanvraag valt binnen de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum.
+        </div>
+    @else
+        <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #fffbeb; border-left: 3px solid #d97706; font-size: 0.9rem; color: #92400e;">
+            Let op: uw aanvraag valt buiten de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum. U kunt de aanvraag nog steeds indienen, maar de kans op afwijzing is groter.
+        </div>
+    @endif
+@endif
+
 @forelse ($sections as $section)
     <h3 style="margin-top: 1.5rem; font-size: 1rem; font-weight: 600;">{{ $section['title'] }}</h3>
     <table style="{{ $tableStyle }}">
