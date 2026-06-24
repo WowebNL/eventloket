@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.1 - 2026-06-24
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Recover v0.x zaken orphaned by failed UpdateInitiatorZGW (#406) @Michel-Verhoeven
+
+#### Other changes
+
+* Add Dutch release notes for v1.0.0 (#405) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v1.0.0...v1.0.1
+
 ## v1.0.0 - 2026-06-23
 
 ### Eventloket v1.0.0
@@ -85,6 +99,7 @@ Perform these steps in order. Steps 4 and 5 are new compared to the 0.6.x line.
 composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 
+
 ```
 This is a major framework bump (Laravel 13, Filament 5). The private VCS map
 repositories were removed, so a clean `composer install` is recommended over an
@@ -116,6 +131,7 @@ the local field map tooling, not needed in production).
 
 ```
 php artisan migrate --force
+
 
 ```
 Six new migrations run:
@@ -162,6 +178,7 @@ php artisan eventform:backfill-snapshots-from-objects --dry-run --zaak=<id>
 # then run for all eligible cases
 php artisan eventform:backfill-snapshots-from-objects
 
+
 ```
 The command is idempotent (only touches cases without a snapshot), repeatable,
 and performs one external Objects API call per case. It is intentionally a
@@ -175,6 +192,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan filament:optimize
+
 
 ```
 #### Heads-up and breaking notes
@@ -429,6 +447,7 @@ php artisan filament:optimize
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
