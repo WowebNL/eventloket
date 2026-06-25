@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fc68572f580673ed30ccb42dea3a87bf",
+    "content-hash": "66c219a21291c9c257e4f1d88f124d38",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -10894,6 +10894,113 @@
                 }
             ],
             "time": "2026-04-26T05:33:54+00:00"
+        },
+        {
+            "name": "woweb/laravel-zgw-client",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/WowebNL/laravel-zgw-client.git",
+                "reference": "7c8550d3bfe52756865f912143e8514544d6c77b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/7c8550d3bfe52756865f912143e8514544d6c77b",
+                "reference": "7c8550d3bfe52756865f912143e8514544d6c77b",
+                "shasum": ""
+            },
+            "require": {
+                "firebase/php-jwt": "^7.0",
+                "illuminate/http": "^12.0|^13.0",
+                "illuminate/support": "^12.0|^13.0",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "deptrac/deptrac": "^3.0",
+                "larastan/larastan": "^2.0|^3.0",
+                "laravel/pint": "^1.0",
+                "orchestra/testbench": "^10.0|^11.0",
+                "phpunit/phpunit": "^10.0|^11.0|^12.0",
+                "symfony/yaml": "^6.4|^7.0|^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Woweb\\Zgw\\ZgwServiceProvider"
+                    ],
+                    "aliases": {
+                        "Zgw": "Woweb\\Zgw\\Facades\\Zgw"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Woweb\\Zgw\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Woweb\\Zgw\\Tests\\": "tests/",
+                    "Woweb\\Zgw\\Dev\\": "dev/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "@php vendor/bin/phpunit"
+                ],
+                "test:coverage": [
+                    "@php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text"
+                ],
+                "test:coverage-html": [
+                    "@php -d pcov.enabled=1 vendor/bin/phpunit --coverage-html coverage"
+                ],
+                "contract:fetch": [
+                    "@php scripts/fetch-specs.php"
+                ],
+                "contract": [
+                    "@contract:fetch",
+                    "@php vendor/bin/phpunit --testsuite Contract"
+                ],
+                "contract:coverage": [
+                    "@contract:fetch",
+                    "@php vendor/bin/phpunit tests/Contract/CoverageReportTest.php"
+                ],
+                "dto:generate": [
+                    "@php scripts/generate-dtos.php",
+                    "@php vendor/bin/pint src/Data/Generated src/Data/Writes --quiet"
+                ],
+                "deptrac": [
+                    "@php vendor/bin/deptrac analyse --no-progress"
+                ]
+            },
+            "license": [
+                "EUPL-1.2"
+            ],
+            "authors": [
+                {
+                    "name": "Woweb",
+                    "email": "info@woweb.nl"
+                }
+            ],
+            "description": "Laravel package for the Dutch ZGW (Zaakgericht Werken) APIs: Zaken, Catalogi, Documenten, Besluiten, Autorisaties and Notificaties.",
+            "keywords": [
+                "autorisaties",
+                "besluiten",
+                "catalogi",
+                "documenten",
+                "laravel",
+                "notificaties",
+                "openzaak",
+                "woweb",
+                "zaken",
+                "zgw"
+            ],
+            "support": {
+                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.0.0",
+                "issues": "https://github.com/WowebNL/laravel-zgw-client/issues"
+            },
+            "time": "2026-06-25T12:42:24+00:00"
         },
         {
             "name": "woweb/openzaak",

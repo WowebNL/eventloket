@@ -20,6 +20,7 @@
         "phiki/phiki": "^2.0",
         "sentry/sentry-laravel": "^4.25",
         "spatie/laravel-activitylog": "^4.10",
+        "woweb/laravel-zgw-client": "^1.0",
         "woweb/openzaak": "dev-main"
     },
     "require-dev": {
@@ -41,6 +42,10 @@
         "woweb/openzaak": {
             "type": "vcs",
             "url": "git@github.com:WowebNL/laravel-openzaak.git"
+        },
+        "woweb/laravel-zgw-client": {
+            "type": "vcs",
+            "url": "git@github.com:WowebNL/laravel-zgw-client.git"
         }
     },
     "autoload": {
