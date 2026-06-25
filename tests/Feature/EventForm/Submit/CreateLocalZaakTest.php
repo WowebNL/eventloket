@@ -72,10 +72,10 @@ test('sets the initial statustype_url (volgnummer 1) on the local zaak', functio
     $ctx = localZaakContext();
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'In behandeling', 'volgnummer' => 2, 'isEindstatus' => false],
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'Ontvangen', 'volgnummer' => 1, 'isEindstatus' => false],
-        ], 200),
+        ]), 200),
     ]);
 
     $zaak = app(CreateLocalZaak::class)->execute(

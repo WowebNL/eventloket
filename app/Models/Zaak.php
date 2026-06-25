@@ -10,6 +10,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
 use App\Services\Zgw\ZgwConnectionResolver;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\OzStatustype;
 use App\ValueObjects\OzZaak;
@@ -31,7 +32,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * @property ZaakReferenceData $reference_data
@@ -205,7 +207,9 @@ class Zaak extends Model implements Eventable
                 }
 
                 return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
-                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype')->all());
+                    $url = $attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype';
+
+                    return new OzZaak(...ZgwResource::byUrl($this->zgwConnectionName(), $url));
                 });
             },
             // set: function($value, $attributes) {
@@ -263,17 +267,18 @@ class Zaak extends Model implements Eventable
         }
 
         return Cache::rememberForever("zaak.{$this->id}.besluiten", function () {
-            $openzaak = new Openzaak;
-            $besluiten = $openzaak->besluiten()->besluiten()->getAll(['zaak' => $this->zgw_zaak_url]);
+            $connection = Zgw::connection($this->zgwConnectionName());
+            $direct = new DirectEndpoint($connection);
+            $besluiten = $connection->besluiten()->besluiten()->index(['zaak' => $this->zgw_zaak_url]);
             $collection = collect();
             foreach ($besluiten as $besluit) {
                 $besluitDocumentenCollection = collect();
-                $besluitInformatieObjecten = $openzaak->besluiten()->besluitinformatieobjecten()->getAll(['besluit' => $besluit['url']]);
-                $besluitInformatieObjecten->each(function ($besluitInformatieObject) use ($besluitDocumentenCollection, $openzaak) {
-                    $besluitDocumentenCollection->push(new Informatieobject(...$openzaak->get($besluitInformatieObject['informatieobject'])->toArray()));
-                });
+                $besluitInformatieObjecten = $connection->besluiten()->besluitinformatieobjecten()->index(['besluit' => $besluit['url']]);
+                foreach ($besluitInformatieObjecten as $besluitInformatieObject) {
+                    $besluitDocumentenCollection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($besluitInformatieObject['informatieobject']))));
+                }
                 $collection->push(new Besluit(...array_merge($besluit, [
-                    'besluittypeObject' => new BesluitType(...$openzaak->get($besluit['besluittype'])->toArray()),
+                    'besluittypeObject' => new BesluitType(...ZgwResource::ensureUuid($direct->getByUrl($besluit['besluittype']))),
                     'besluitDocumenten' => $besluitDocumentenCollection,
                 ])));
             }
@@ -289,11 +294,12 @@ class Zaak extends Model implements Eventable
         }
 
         return Cache::rememberForever("zaak.{$this->id}.documenten", function () {
-            $openzaak = new Openzaak;
-            $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);
+            $connection = Zgw::connection($this->zgwConnectionName());
+            $direct = new DirectEndpoint($connection);
+            $zaakinformatieobjecten = $connection->zaken()->zaakinformatieobjecten()->index(['zaak' => $this->zgw_zaak_url]);
             $collection = collect();
             foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
-                $collection->push(new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
+                $collection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($zaakinformatieobject['informatieobject']))));
             }
 
             return $collection;
@@ -305,8 +311,12 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function (): ?OzStatustype {
-                $statustypen = Cache::remember('statustypen', 60 * 60 * 24, function () {
-                    return (new Openzaak)->catalogi()->statustypen()->getAll(['pageSize' => 999999999])
+                $statustypen = Cache::remember("statustypen.{$this->zgwConnectionName()}", 60 * 60 * 24, function () {
+                    return Zgw::connection($this->zgwConnectionName())
+                        ->catalogi()
+                        ->statustypen()
+                        ->index()
+                        ->collect()
                         ->map(function ($statustype) {
                             return new OzStatustype(...$statustype);
                         });

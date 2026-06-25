@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class Zaaktype extends Model
 {
@@ -89,7 +89,10 @@ class Zaaktype extends Model
     private function getDocumentTypes()
     {
         return Cache::rememberForever('zaaktype_'.$this->id.'_document_types', function () {
-            $items = (new Openzaak)->catalogi()->informatieobjecttypen()->getAll(['zaaktype' => $this->zgw_zaaktype_url]);
+            $items = Zgw::connection($this->zgwConnectionName())
+                ->catalogi()
+                ->informatieobjecttypen()
+                ->index(['zaaktype' => $this->zgw_zaaktype_url]);
             $collection = collect();
             foreach ($items as $item) {
                 $collection->push(new InformatieobjectType(...$item));
@@ -102,7 +105,11 @@ class Zaaktype extends Model
     public function getResultaatTypen()
     {
         return Cache::rememberForever('zaaktype_'.$this->id.'_resultaat_typen', function () {
-            return (new Openzaak)->catalogi()->resultaattypen()->getAll(['zaaktype' => $this->zgw_zaaktype_url]);
+            return Zgw::connection($this->zgwConnectionName())
+                ->catalogi()
+                ->resultaattypen()
+                ->index(['zaaktype' => $this->zgw_zaaktype_url])
+                ->collect();
         });
     }
 }

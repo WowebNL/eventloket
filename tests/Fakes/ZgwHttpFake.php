@@ -9,6 +9,26 @@ class ZgwHttpFake
 {
     public static $baseUrl = 'https://zgw.example.com';
 
+    /**
+     * Wrap a list of resources in the ZGW pagination envelope.
+     *
+     * The new woweb/laravel-zgw-client reads $response['results'] strictly, so list
+     * fakes must return the envelope. The legacy woweb/openzaak package is tolerant of
+     * both shapes, so this stays compatible while call sites are being migrated.
+     *
+     * @param  array<int, array<string, mixed>>  $results
+     * @return array<string, mixed>
+     */
+    public static function envelope(array $results): array
+    {
+        return [
+            'count' => count($results),
+            'next' => null,
+            'previous' => null,
+            'results' => $results,
+        ];
+    }
+
     public static function fakeSingleZaak(string $uuid = '1', array $data = []): string
     {
         $url = self::$baseUrl.'/zaken/api/v1/zaken/'.$uuid;
@@ -91,7 +111,7 @@ class ZgwHttpFake
         ];
 
         Http::fake([
-            $url.'*' => Http::response($data, 200),
+            $url.'*' => Http::response(self::envelope($data), 200),
         ]);
 
         return $url;
@@ -161,7 +181,7 @@ class ZgwHttpFake
         ];
 
         Http::fake([
-            $url.'*' => Http::response($data, 200),
+            $url.'*' => Http::response(self::envelope($data), 200),
         ]);
 
         return $url;
@@ -196,7 +216,7 @@ class ZgwHttpFake
         ];
 
         Http::fake([
-            $url.'*' => Http::response($data, 200),
+            $url.'*' => Http::response(self::envelope($data), 200),
         ]);
 
         return $url;
