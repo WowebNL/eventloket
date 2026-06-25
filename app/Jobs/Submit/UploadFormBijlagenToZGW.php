@@ -158,6 +158,17 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 'zaak' => $this->zaak->zgw_zaak_url,
                 'informatieobject' => $info->url,
             ]);
+
+            activity('document')
+                ->event('created')
+                ->causedBy($this->zaak->organiserUser)
+                ->performedOn($this->zaak)
+                ->withProperties([
+                    'document_uuid' => $info->uuid,
+                    'filename' => $info->bestandsnaam,
+                    'titel' => $info->titel,
+                ])
+                ->log(__('activity/event.created'));
         }
 
         $this->zaak->clearZgwCache();

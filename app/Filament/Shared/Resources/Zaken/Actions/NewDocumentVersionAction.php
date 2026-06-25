@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\Actions;
 
 use App\Models\Zaak;
+use App\Support\Documents\DocumentVersionAuthorizer;
 use App\Support\Uploads\DocumentUploadType;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
@@ -23,6 +24,7 @@ class NewDocumentVersionAction
             ->schema(fn (array $record) => self::schema($record['titel']))
             ->modalAutofocus(false)
             ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
+            ->visible(fn (array $record): bool => DocumentVersionAuthorizer::canAddVersion(auth()->user(), $zaak, $record['uuid']))
             ->action(function (array $record, array $data, Action $action) use ($zaak): void {
 
                 self::createNewDocumentVersion($record['uuid'], $data, $zaak);
