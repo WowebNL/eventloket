@@ -13,7 +13,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Notifications\Messages\MailMessage;
-use Woweb\Openzaak\Openzaak;
+use App\Services\Zgw\ZgwResource;
 
 /**
  * note: municipality users are only informed if organisation withdraws a pending request
@@ -63,7 +63,7 @@ class Result extends BaseNotification
         // Add attachments if they exist
         if ($this->attachmentUrls) {
             $attachments = $this->zaak->documenten->whereIn('url', $this->attachmentUrls)->map(fn ($document) => Attachment::fromData(
-                fn () => (new Openzaak)->getRaw($document->inhoud), $document->bestandsnaam)->withMime($document->formaat)
+                fn () => ZgwResource::downloadByUrl($this->zaak->zgwConnectionName(), $document->inhoud), $document->bestandsnaam)->withMime($document->formaat)
             )->toArray();
 
             $mailMessage->attachMany($attachments);

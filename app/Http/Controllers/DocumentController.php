@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DocumentRequest;
 use App\Models\Zaak;
 use App\Support\Uploads\DocumentUploadType;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\HeaderUtils;
-use Woweb\Openzaak\Openzaak;
 
 class DocumentController extends Controller
 {
@@ -19,7 +19,7 @@ class DocumentController extends Controller
         $validated = $request->validated();
         if (isset($validated['version']) && $validated['version'] != $document->versie) {
             // get the specified version
-            $document = new Informatieobject(...(new Openzaak)->get($document->url.'?versie='.$validated['version'])->toArray());
+            $document = new Informatieobject(...ZgwResource::byUrl($zaak->zgwConnectionName(), $document->url.'?versie='.$validated['version']));
         }
 
         $event = $type === 'download' ? 'download' : 'view';
@@ -51,7 +51,7 @@ class DocumentController extends Controller
             ? DocumentUploadType::ensureFileNameHasExtension($document->bestandsnaam, $document->formaat)
             : $document->bestandsnaam;
 
-        return response((new Openzaak)->getRaw($document->inhoud))->withHeaders([
+        return response(ZgwResource::downloadByUrl($zaak->zgwConnectionName(), $document->inhoud))->withHeaders([
             'Content-Disposition' => HeaderUtils::makeDisposition(
                 $dispositionType,
                 $fileName,

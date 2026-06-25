@@ -30,6 +30,21 @@ class ZgwResource
     }
 
     /**
+     * Download the raw bytes at a full ZGW URL (e.g. a document `inhoud` link).
+     *
+     * The client's typed download() helper only targets the default document download
+     * endpoint and cannot fetch a version-specific `inhoud` URL, so we use the connection's
+     * authenticated request directly. The host allowlist is still enforced.
+     */
+    public static function downloadByUrl(string $connectionName, string $url): string
+    {
+        $connection = Zgw::connection($connectionName);
+        $connection->assertUrlAllowed($url);
+
+        return $connection->request()->get($url)->body();
+    }
+
+    /**
      * Ensure a single-resource array carries a uuid derived from its url segment.
      *
      * @param  array<string, mixed>  $data

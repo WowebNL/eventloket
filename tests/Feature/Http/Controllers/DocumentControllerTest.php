@@ -35,13 +35,13 @@ function fakeZaakWithExtensionlessDocument(string $bestandsnaam, string $formaat
     $contentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/no-ext/download';
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([
             [
                 'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1',
                 'zaak' => $zgwZaakUrl,
                 'informatieobject' => $documentUrl,
             ],
-        ], 200),
+        ]), 200),
         $documentUrl => Http::response([
             'url' => $documentUrl,
             'uuid' => 'no-ext',
