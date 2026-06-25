@@ -115,6 +115,12 @@ function fakeOpenzaakZaakCreate(): string
             'toelichting' => '',
             'omschrijving' => 'Buurtfeest Testlaan',
         ], 201),
+        // CreateLocalZaak resolves the initial statustype (volgnummer 1) so the
+        // local zaak has a valid statustype_url from creation.
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response([
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'Ontvangen', 'volgnummer' => 1, 'isEindstatus' => false],
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'In behandeling', 'volgnummer' => 2, 'isEindstatus' => false],
+        ], 200),
     ]);
 
     return $zaakUrl;
@@ -160,6 +166,12 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     expect($zaak->reference_data->naam_evenement)->toBe('Buurtfeest Testlaan')
         ->and($zaak->reference_data->types_evenement)->toBe('Buurtfeest')
         ->and($zaak->reference_data->status_name)->toBe('Ingediend');
+
+    // 2b. De initiële statustype_url (volgnummer 1) is al bij aanmaak gezet,
+    //     zodat $zaak->statustype niet null is in het venster vóór de async
+    //     ZGW-statusupdate. Voorkomt de crash in Thread::getParticipants().
+    expect($zaak->reference_data->statustype_url)
+        ->toBe(ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1');
 
     // 3. form_state_snapshot is opgeslagen voor latere prefill / jobs.
     expect($zaak->form_state_snapshot)->toBeArray()

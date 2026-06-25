@@ -109,6 +109,51 @@ test('creates multiple concept threads for multiple default questions', function
     Notification::assertNothingSent();
 });
 
+test('creates concept threads without crashing when zaak has no statustype yet', function () {
+    // Regression: when a zaak is freshly created its statustype_url is still
+    // empty (the async ZGW status round-trip has not run yet), so
+    // $zaak->statustype resolves to null. The system-generated message in the
+    // concept thread triggers Thread::getParticipants(), which previously
+    // called isReceived()/isFinalised() on that null and crashed the
+    // CreateConceptAdviceQuestions job.
+    DefaultAdviceQuestion::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'advisory_id' => $this->advisory->id,
+        'risico_classificatie' => 'B',
+        'title' => 'Test Question B',
+        'description' => 'Test Description B',
+        'response_deadline_days' => 14,
+    ]);
+
+    $createZaakWithoutStatustype = fn () => Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: now()->toDateTimeString(),
+            eind_evenement: now()->addDay()->toDateTimeString(),
+            registratiedatum: now()->toDateTimeString(),
+            status_name: 'Ingediend',
+            statustype_url: '', // no status set yet
+            risico_classificatie: 'B',
+            naam_locatie_eveneme: 'Test locatie',
+            naam_evenement: 'Test event'
+        ),
+    ]);
+
+    expect($createZaakWithoutStatustype)->not->toThrow(Throwable::class);
+
+    $zaak = $createZaakWithoutStatustype();
+
+    expect($zaak->statustype)->toBeNull();
+    expect(AdviceThread::where('zaak_id', $zaak->id)->count())->toBe(1);
+
+    $thread = AdviceThread::where('zaak_id', $zaak->id)->first();
+    expect($thread->messages()->count())->toBe(1);
+    expect($thread->messages()->first()->body)->toBe('Test Description B');
+
+    // Concept thread: no notifications go out.
+    Notification::assertNothingSent();
+});
+
 test('does not create threads when no matching risico classificatie', function () {
     DefaultAdviceQuestion::factory()->create([
         'municipality_id' => $this->municipality->id,
