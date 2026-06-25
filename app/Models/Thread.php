@@ -13,6 +13,7 @@ use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
+use App\ValueObjects\OzStatustype;
 use Database\Factories\ThreadFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -150,12 +151,18 @@ class Thread extends Model
             ->get();
 
         // If no municipality reviewers are found and the zaak status
-        // has just been received or has been finalized, include all municipality reviewers
-        if (
-            $municipalityReviewerUsers->isEmpty() &&
-            ($this->zaak->statustype->isReceived() || $this->zaak->statustype->isFinalised())
-        ) {
-            $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers()->get();
+        // has just been received or has been finalized, include all municipality reviewers.
+        // The statustype is only resolved when no reviewers were found (it can trigger a
+        // ZGW lookup), and it can be null when the zaak has no (matching) statustype_url
+        // yet, for example for freshly created or imported zaken whose status has not been
+        // synced from ZGW. In that case we skip the fallback rather than crash.
+        if ($municipalityReviewerUsers->isEmpty()) {
+            /** @var OzStatustype|null $statustype */
+            $statustype = $this->zaak->statustype;
+
+            if ($statustype?->isReceived() || $statustype?->isFinalised()) {
+                $municipalityReviewerUsers = $this->zaak->municipality->allReviewerUsers()->get();
+            }
         }
 
         return $threadParticipants->merge($municipalityReviewerUsers);
