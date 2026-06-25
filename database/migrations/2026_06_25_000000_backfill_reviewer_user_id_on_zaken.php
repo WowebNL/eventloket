@@ -17,11 +17,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::table('zaken')
+        // Distinct handlers that still exist as users; restricting to existing
+        // ids guards the reviewer_user_id foreign key.
+        $handlerIds = DB::table('zaken')
             ->whereNull('reviewer_user_id')
             ->whereNotNull('handled_status_set_by_user_id')
             ->whereIn('handled_status_set_by_user_id', fn (Builder $query) => $query->select('id')->from('users'))
-            ->update(['reviewer_user_id' => DB::raw('handled_status_set_by_user_id')]);
+            ->distinct()
+            ->pluck('handled_status_set_by_user_id');
+
+        foreach ($handlerIds as $handlerId) {
+            DB::table('zaken')
+                ->whereNull('reviewer_user_id')
+                ->where('handled_status_set_by_user_id', $handlerId)
+                ->update(['reviewer_user_id' => $handlerId]);
+        }
     }
 
     /**
