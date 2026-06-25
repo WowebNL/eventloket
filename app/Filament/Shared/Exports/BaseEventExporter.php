@@ -42,6 +42,8 @@ class BaseEventExporter extends Exporter
                 ->formatStateUsing(fn ($state) => $state?->format(config('app.date_format'))),
             ExportColumn::make('reference_data.status_name')
                 ->label(__('resources/zaak.columns.status.label')),
+            ExportColumn::make('status_color')
+                ->label(__('resources/zaak.columns.status_color.label')),
         ];
     }
 

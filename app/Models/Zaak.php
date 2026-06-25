@@ -279,13 +279,27 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /** @return Attribute<?string, void> */
+    protected function statusColor(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => StatusResultaatColor::colorFor($this->reference_data->status_name, $this->reference_data->resultaat),
+        );
+    }
+
     public function toCalendarEvent(): CalendarEvent
     {
         // Status tekstueel toevoegen
-        return CalendarEvent::make($this)
+        $event = CalendarEvent::make($this)
             ->title($this->reference_data->naam_evenement ?? $this->public_id)
             ->start($this->reference_data->start_evenement)
             ->end($this->reference_data->eind_evenement);
+
+        if ($this->status_color) {
+            $event->backgroundColor($this->status_color);
+        }
+
+        return $event;
     }
 
     public function clearZgwCache(): void

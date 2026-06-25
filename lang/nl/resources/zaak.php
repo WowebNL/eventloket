@@ -14,6 +14,9 @@ return [
         'status' => [
             'label' => 'Status',
         ],
+        'status_color' => [
+            'label' => 'Kleur',
+        ],
         'registratiedatum' => [
             'label' => 'Registratiedatum',
         ],
