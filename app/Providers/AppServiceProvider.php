@@ -9,6 +9,7 @@ use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Jobs\ProcessOpenNotification;
 use App\Listeners\NotifySlackOfFailedJob;
+use App\Livewire\PersistTableStateHook;
 use App\Models\Export;
 use App\Models\Import;
 use App\Support\CarbonBusinessDaysMixin;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
+use Livewire\Livewire;
 use Woweb\Openzaak\Openzaak;
 
 class AppServiceProvider extends ServiceProvider
@@ -61,6 +63,13 @@ class AppServiceProvider extends ServiceProvider
         // schema-component-renders — anders zou de WeakMap-cache leeg
         // zijn bij elke Filament-resolution.
         $this->app->singleton(LabelRenderer::class);
+
+        // Mirrors the session-persisted table state (filters, sort, search,
+        // columns) into the database per user, so it survives a new session.
+        // Must be registered before LivewireServiceProvider::boot() calls
+        // ComponentHookRegistry::boot(), which only wires up hooks known at
+        // that point - hence registering here rather than in boot().
+        Livewire::componentHook(PersistTableStateHook::class);
     }
 
     /**
