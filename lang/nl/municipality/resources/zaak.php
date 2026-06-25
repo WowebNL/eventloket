@@ -120,6 +120,18 @@ return [
                     'edit_status' => [
                         'label' => 'Wijzigen',
                     ],
+                    'edit_intern_zaaknummer' => [
+                        'label' => 'Wijzigen',
+                        'placeholder' => 'Niet ingesteld',
+                        'fields' => [
+                            'intern_zaaknummer' => [
+                                'label' => 'Intern zaaknummer',
+                            ],
+                        ],
+                    ],
+                    'delete_intern_zaaknummer' => [
+                        'label' => 'Verwijderen',
+                    ],
                 ],
                 'handled_status_set_by' => [
                     'label' => 'Door :user',

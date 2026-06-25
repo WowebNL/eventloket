@@ -64,6 +64,13 @@ class ZakenTable
                     ->toggleable()
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
+                TextColumn::make('reference_data.intern_zaaknummer')
+                    ->label(__('resources/zaak.columns.intern_zaaknummer.label'))
+                    ->sortable()
+                    ->toggleable()
+                    ->searchable()
+                    ->forceSearchCaseInsensitive()
+                    ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
                 TextColumn::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
                     ->sortable()
