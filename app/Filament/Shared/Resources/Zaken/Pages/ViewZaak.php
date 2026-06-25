@@ -39,7 +39,8 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Woweb\Openzaak\Openzaak;
+use App\Services\Zgw\ZgwResource;
+use Woweb\Zgw\Facades\Zgw;
 
 class ViewZaak extends ViewRecord
 {
@@ -164,7 +165,7 @@ class ViewZaak extends ViewRecord
                     if (($data['delete_in_openzaak'] ?? false) && $record->zgw_zaak_url) {
                         try {
                             $uuid = basename($record->zgw_zaak_url);
-                            $deleted = (new Openzaak)->zaken()->zaken()->delete($uuid);
+                            $deleted = Zgw::connection($record->zgwConnectionName())->zaken()->zaken()->delete($uuid);
 
                             if ($deleted) {
                                 // Clear zgw_zaak_url so the zaak cannot be restored
@@ -208,15 +209,15 @@ class ViewZaak extends ViewRecord
                                 Select::make('result_type')
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.result_type.label'))
                                     ->options(function (Zaak $record) {
-                                        $this->formResultaattypen = ((new Openzaak)->catalogi()->resultaattypen()->getAll([
+                                        $this->formResultaattypen = (Zgw::connection($record->zgwConnectionName())->catalogi()->resultaattypen()->index([
                                             'zaaktype' => $record->openzaak->zaaktype,
-                                        ])->filter(fn ($item) => $item['omschrijvingGeneriek'] !== 'Ingetrokken')->pluck('omschrijving', 'url')->toArray());
+                                        ])->collect()->filter(fn ($item) => $item['omschrijvingGeneriek'] !== 'Ingetrokken')->pluck('omschrijving', 'url')->toArray());
 
                                         return $this->formResultaattypen;
                                     })
-                                    ->afterStateUpdated(function (?string $state, Set $set) {
+                                    ->afterStateUpdated(function (?string $state, Set $set, Zaak $record) {
                                         if ($state) {
-                                            $resultType = (new Openzaak)->get($state)->toArray();
+                                            $resultType = ZgwResource::byUrl($record->zgwConnectionName(), $state);
                                             $besluittypen = [];
                                             if (isset($resultType['besluittypen']) && count($resultType['besluittypen']) > 0 && isset($resultType['besluittypeOmschrijving']) && $resultType['besluittypeOmschrijving']) {
                                                 foreach ($resultType['besluittypen'] as $key => $besluittype) {
@@ -280,7 +281,7 @@ class ViewZaak extends ViewRecord
                                             if (! $get('besluit_type')) {
                                                 return [];
                                             }
-                                            $besluittype = new BesluitType(...(new Openzaak)->get($get('besluit_type'))->toArray());
+                                            $besluittype = new BesluitType(...ZgwResource::byUrl($record->zgwConnectionName(), $get('besluit_type')));
 
                                             // dd($record->documenten);
                                             return $record->documenten->filter(function ($document) use ($besluittype) {

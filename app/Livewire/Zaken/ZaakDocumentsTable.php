@@ -24,7 +24,7 @@ use Illuminate\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, HasTable
 {
@@ -93,7 +93,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                         ->label(__('Audit trail'))
                         ->icon('heroicon-o-clock')
                         ->schema(fn (array $record) => [
-                            Livewire::make(ListDocumentAuditTrails::class, ['audittrail' => (new Openzaak)->documenten()->enkelvoudiginformatieobjecten()->audittrail($record['uuid'])])->key('audit-trail-'.$record['uuid']),
+                            Livewire::make(ListDocumentAuditTrails::class, ['audittrail' => Zgw::connection($this->zaak->zgwConnectionName())->documenten()->enkelvoudiginformatieobjecten()->audittrail($record['uuid'])->all()])->key('audit-trail-'.$record['uuid']),
                         ])
                         ->modalSubmitAction(false)
                         ->modalCancelAction(false),

@@ -30,9 +30,9 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
+use App\Services\Zgw\ZgwResource;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Woweb\Openzaak\Openzaak;
 
 /**
  * @property Schema|mixed $form
@@ -67,7 +67,7 @@ class MessageForm extends Component implements HasActions, HasSchemas
             $document = $this->thread->zaak->documenten->firstWhere('url', $documentData['url']);
 
             if ($document->versie !== $documentData['versie']) {
-                $document = new Informatieobject(...(new Openzaak)->get($document->url.'?versie='.$documentData['versie'])->toArray());
+                $document = new Informatieobject(...ZgwResource::byUrl($this->thread->zaak->zgwConnectionName(), $document->url.'?versie='.$documentData['versie']));
             }
 
             return $document ? [

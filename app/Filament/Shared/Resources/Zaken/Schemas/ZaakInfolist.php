@@ -38,7 +38,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
-use Woweb\Openzaak\Openzaak;
+use App\Services\Zgw\ZgwResource;
+use Woweb\Zgw\Facades\Zgw;
 
 class ZaakInfolist
 {
@@ -228,7 +229,7 @@ class ZaakInfolist
                                                     ->required(),
                                             ])
                                             ->action(function ($data, $record) {
-                                                $openzaak = new Openzaak;
+                                                $openzaak = Zgw::connection($record->zgwConnectionName());
                                                 $success = true;
                                                 $eigenschappen = ['risico_classificatie' => null, 'risico_toelichting' => null];
 
@@ -248,7 +249,7 @@ class ZaakInfolist
                                                 // Load catalogi eigenschappen if needed
                                                 $catalogiEigenschappen = null;
                                                 if (! $eigenschappen['risico_classificatie'] || ! $eigenschappen['risico_toelichting']) {
-                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
+                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])->collect()->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
                                                 }
 
                                                 // Handle risico_classificatie
@@ -330,7 +331,7 @@ class ZaakInfolist
                                                     ->required(),
                                             ])
                                             ->action(function (array $data, Zaak $record) {
-                                                $openzaak = new Openzaak;
+                                                $openzaak = Zgw::connection($record->zgwConnectionName());
                                                 $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
 
                                                 if ($eigenschap) {
@@ -338,7 +339,8 @@ class ZaakInfolist
                                                         'waarde' => $data['intern_zaaknummer'],
                                                     ]);
                                                 } else {
-                                                    $catalogiEigenschap = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])
+                                                    $catalogiEigenschap = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])
+                                                        ->collect()
                                                         ->map(fn ($item) => new CatalogiEigenschap(...$item))
                                                         ->firstWhere('naam', 'intern_zaaknummer');
 
@@ -378,7 +380,7 @@ class ZaakInfolist
                                                 $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
 
                                                 if ($eigenschap) {
-                                                    (new Openzaak)->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->delete($eigenschap->uuid);
+                                                    Zgw::connection($record->zgwConnectionName())->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->delete($eigenschap->uuid);
                                                 }
 
                                                 $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => null]));
@@ -406,14 +408,14 @@ class ZaakInfolist
                                                 Select::make('status')
                                                     ->label(__('resources/zaak.columns.status.label'))
                                                     ->options(function () use ($zaak) {
-                                                        return (new Openzaak)->catalogi()->statustypen()->getAll(['zaaktype' => $zaak->openzaak->zaaktype])->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
+                                                        return Zgw::connection($zaak->zgwConnectionName())->catalogi()->statustypen()->index(['zaaktype' => $zaak->openzaak->zaaktype])->collect()->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
                                                     })->required(),
                                             ])
                                             ->action(function (array $data, Zaak $record) {
                                                 if ($data['status'] != $record->openzaak->status['statustype']) {
                                                     $oldStatus = $record->reference_data->status_name;
-                                                    $openzaak = new Openzaak;
-                                                    $statusType = new StatusType(...$openzaak->get($data['status'])->toArray());
+                                                    $openzaak = Zgw::connection($record->zgwConnectionName());
+                                                    $statusType = new StatusType(...ZgwResource::byUrl($record->zgwConnectionName(), $data['status']));
 
                                                     $openzaak->zaken()->statussen()->store([
                                                         'zaak' => $record->openzaak->url,
