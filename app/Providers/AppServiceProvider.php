@@ -12,6 +12,7 @@ use App\Listeners\NotifySlackOfFailedJob;
 use App\Livewire\PersistTableStateHook;
 use App\Models\Export;
 use App\Models\Import;
+use App\Services\Zgw\ZgwConnectionResolver;
 use App\Support\CarbonBusinessDaysMixin;
 use App\Support\Uploads\DocumentUploadType;
 use Carbon\Carbon;
@@ -63,6 +64,11 @@ class AppServiceProvider extends ServiceProvider
         // schema-component-renders — anders zou de WeakMap-cache leeg
         // zijn bij elke Filament-resolution.
         $this->app->singleton(LabelRenderer::class);
+
+        // Resolves the ZGW connection name per municipality. Singleton so the
+        // per-municipality memo (and, later, runtime connection registration)
+        // lives for the whole request/worker.
+        $this->app->singleton(ZgwConnectionResolver::class);
 
         // Mirrors the session-persisted table state (filters, sort, search,
         // columns) into the database per user, so it survives a new session.

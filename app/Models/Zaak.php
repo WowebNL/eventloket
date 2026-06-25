@@ -9,6 +9,7 @@ use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
+use App\Services\Zgw\ZgwConnectionResolver;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\OzStatustype;
 use App\ValueObjects\OzZaak;
@@ -75,6 +76,14 @@ class Zaak extends Model implements Eventable
     public function zaaktype(): BelongsTo
     {
         return $this->belongsTo(Zaaktype::class);
+    }
+
+    /**
+     * The ZGW connection name to use for calls about this zaak.
+     */
+    public function zgwConnectionName(): string
+    {
+        return app(ZgwConnectionResolver::class)->for($this);
     }
 
     public function organisation(): BelongsTo

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DocumentVertrouwelijkheden;
+use App\Services\Zgw\ZgwConnectionResolver;
 use App\ValueObjects\ZGW\InformatieobjectType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -45,6 +46,14 @@ class Zaaktype extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    /**
+     * The ZGW connection name to use for calls about this zaaktype.
+     */
+    public function zgwConnectionName(): string
+    {
+        return app(ZgwConnectionResolver::class)->for($this);
     }
 
     /** @return Attribute<Collection<InformatieobjectType>|null, void> */

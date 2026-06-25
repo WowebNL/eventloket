@@ -11,6 +11,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
 use App\Observers\MunicipalityObserver;
+use App\Services\Zgw\ZgwConnectionResolver;
 use Brick\Geo\Geometry;
 use Database\Factories\MunicipalityFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -94,6 +95,14 @@ class Municipality extends Model implements HasGeometry
     public function locations()
     {
         return $this->hasMany(Location::class);
+    }
+
+    /**
+     * The ZGW connection name to use for calls about this municipality.
+     */
+    public function zgwConnectionName(): string
+    {
+        return app(ZgwConnectionResolver::class)->for($this);
     }
 
     public function variables()
