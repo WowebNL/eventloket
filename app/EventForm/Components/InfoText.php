@@ -21,6 +21,7 @@ use Illuminate\Support\HtmlString;
  * Kies bewust:
  *   - `info`    → context, uitleg, achtergrond. De default voor alles wat
  *                 "goed om te weten" is maar niet acuut.
+ *   - `success` → positieve bevestiging, bijv. "u bent op tijd".
  *   - `warning` → "Let op", deadlines, consequenties, weigeringen. Spaarzaam
  *                 inzetten zodat het z'n urgentie-signaal houdt.
  *
@@ -41,6 +42,14 @@ final class InfoText
     public static function info(string $name, string|Closure $html): TextEntry
     {
         return self::build($name, $html, 'info');
+    }
+
+    /**
+     * @param  string|Closure(FormState): string  $html
+     */
+    public static function success(string $name, string|Closure $html): TextEntry
+    {
+        return self::build($name, $html, 'success');
     }
 
     /**

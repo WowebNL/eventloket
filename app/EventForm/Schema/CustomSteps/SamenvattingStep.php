@@ -62,10 +62,22 @@ final class SamenvattingStep
     {
         $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
         $risicoClassificatie = $state->get('risicoClassificatie');
+        $indieningstermijnStatus = $state->get('indieningstermijnStatus');
+
+        $gemeente = $state->get('evenementInGemeente');
+        $gemeenteNaam = is_array($gemeente) ? ($gemeente['name'] ?? null) : null;
+        $indieningstermijnen = [
+            'a' => $state->get('gemeenteVariabelen.indieningstermijn_a'),
+            'b' => $state->get('gemeenteVariabelen.indieningstermijn_b'),
+            'c' => $state->get('gemeenteVariabelen.indieningstermijn_c'),
+        ];
 
         return view('event-form.samenvatting', [
             'sections' => $sections,
             'risicoClassificatie' => $risicoClassificatie,
+            'indieningstermijnStatus' => $indieningstermijnStatus,
+            'gemeenteNaam' => $gemeenteNaam,
+            'indieningstermijnen' => $indieningstermijnen,
         ])->render();
     }
 }

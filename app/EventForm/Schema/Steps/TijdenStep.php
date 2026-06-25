@@ -38,7 +38,26 @@ final class TijdenStep
         return Step::make('Tijden')
             ->key(self::UUID)
             ->schema([
-                InfoText::warning('content2', '<p>Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-Evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</p>'),
+                InfoText::warning('content2', function (FormState $state): string {
+                    $a = $state->get('gemeenteVariabelen.indieningstermijn_a');
+                    $b = $state->get('gemeenteVariabelen.indieningstermijn_b');
+                    $c = $state->get('gemeenteVariabelen.indieningstermijn_c');
+                    $gemeente = $state->get('evenementInGemeente');
+                    $gemeenteNaam = is_array($gemeente) ? ($gemeente['name'] ?? null) : null;
+
+                    if ($gemeenteNaam && ($a || $b || $c)) {
+                        $termijnen = array_filter([
+                            $a ? 'minimaal <strong>'.((int) $a).' weken</strong> voor een A-evenement (klein)' : null,
+                            $b ? 'minimaal <strong>'.((int) $b).' weken</strong> voor een B-evenement (middelgroot)' : null,
+                            $c ? 'minimaal <strong>'.((int) $c).' weken</strong> voor een C-evenement (groot)' : null,
+                        ]);
+
+                        return '<p>Let op, de gemeente '.e($gemeenteNaam).' hanteert de volgende indieningstermijnen:</p>'
+                            .'<ul>'.implode('', array_map(fn ($t) => '<li>'.$t.'</li>', $termijnen)).'</ul>';
+                    }
+
+                    return '<p>Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</p>';
+                }),
                 Grid::make(1)
                     ->schema([
                         DateTimePicker::make('EvenementStart')

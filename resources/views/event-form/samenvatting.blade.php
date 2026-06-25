@@ -25,8 +25,37 @@
 <h2 style="font-size: 1.25rem; font-weight: 700; margin: 0 0 1rem 0;">Samenvatting</h2>
 
 @if (! empty($risicoClassificatie))
-    <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #f9f9f9; border-left: 3px solid #ccc; font-size: 0.9rem;">
+    <div style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #f9f9f9; border-left: 3px solid #ccc; font-size: 0.9rem;">
         <strong>Risicoclassificatie:</strong> {{ $risicoClassificatie }}
+        @if (! empty($indieningstermijnStatus))
+            — indieningstermijn: <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong>
+        @endif
+    </div>
+@endif
+
+@if (! empty($indieningstermijnStatus))
+    @if ($indieningstermijnStatus['withinDeadline'])
+        <div style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #f0fdf4; border-left: 3px solid #16a34a; font-size: 0.9rem; color: #15803d;">
+            Uw aanvraag valt binnen de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum.
+        </div>
+    @else
+        <div style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #fffbeb; border-left: 3px solid #d97706; font-size: 0.9rem; color: #92400e;">
+            Let op: uw aanvraag valt buiten de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum. U kunt de aanvraag nog steeds indienen, maar de kans op afwijzing is groter.
+        </div>
+    @endif
+@endif
+
+@php
+    $heeftTermijnen = ! empty($gemeenteNaam) && (! empty($indieningstermijnen['a']) || ! empty($indieningstermijnen['b']) || ! empty($indieningstermijnen['c']));
+@endphp
+@if ($heeftTermijnen)
+    <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #f9f9f9; border-left: 3px solid #ccc; font-size: 0.85rem; color: #555;">
+        Indieningstermijnen {{ $gemeenteNaam }}:
+        @if (! empty($indieningstermijnen['a']))A: <strong>{{ (int) $indieningstermijnen['a'] }} weken</strong>@endif
+        @if (! empty($indieningstermijnen['a']) && (! empty($indieningstermijnen['b']) || ! empty($indieningstermijnen['c']))) · @endif
+        @if (! empty($indieningstermijnen['b']))B: <strong>{{ (int) $indieningstermijnen['b'] }} weken</strong>@endif
+        @if (! empty($indieningstermijnen['b']) && ! empty($indieningstermijnen['c'])) · @endif
+        @if (! empty($indieningstermijnen['c']))C: <strong>{{ (int) $indieningstermijnen['c'] }} weken</strong>@endif
     </div>
 @endif
 

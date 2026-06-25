@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\State;
 
 use App\EventForm\Support\JsTruthy;
+use Carbon\Carbon;
 
 /**
  * Pure-functions-class voor afgeleide variabelen. Vervangt stuk voor
@@ -40,6 +41,7 @@ final class FormDerivedState
         'alcoholvergunning' => true,
         'isVergunningaanvraag' => true,
         'risicoClassificatie' => true,
+        'indieningstermijnStatus' => true,
         'confirmationtext' => true,
     ];
 
@@ -327,6 +329,47 @@ final class FormDerivedState
     }
 
     /**
+     * Controleert of de aanvraag binnen de indieningstermijn valt.
+     *
+     * Retourneert null als er geen termijn is ingesteld of de benodigde
+     * gegevens ontbreken; anders een array met:
+     *   - `withinDeadline` (bool)
+     *   - `weeks` (int) — de ingestelde termijn in weken
+     *   - `weeksRemaining` (int) — weken tot de start (kan negatief)
+     *
+     * @return array{withinDeadline: bool, weeks: int, weeksRemaining: int}|null
+     */
+    public function indieningstermijnStatus(): ?array
+    {
+        $classificatie = $this->risicoClassificatie();
+        if ($classificatie === null) {
+            return null;
+        }
+
+        $key = 'indieningstermijn_'.strtolower($classificatie);
+        $weeks = $this->state->get("gemeenteVariabelen.{$key}");
+
+        if (empty($weeks)) {
+            return null;
+        }
+
+        $startDatum = $this->state->get('EvenementStart');
+        if (! $startDatum) {
+            return null;
+        }
+
+        $start = Carbon::parse($startDatum);
+        $deadline = $start->copy()->subWeeks((int) $weeks);
+        $weeksRemaining = (int) now()->diffInWeeks($start, false);
+
+        return [
+            'withinDeadline' => now()->lte($deadline),
+            'weeks' => (int) $weeks,
+            'weeksRemaining' => $weeksRemaining,
+        ];
+    }
+
+    /**
      * Bedankt-tekst die op de bevestigingspagina verschijnt. Twee
      * mogelijke bronnen:
      *
@@ -370,6 +413,7 @@ final class FormDerivedState
             'alcoholvergunning' => $this->alcoholvergunning(),
             'isVergunningaanvraag' => $this->isVergunningaanvraag(),
             'risicoClassificatie' => $this->risicoClassificatie(),
+            'indieningstermijnStatus' => $this->indieningstermijnStatus(),
             'confirmationtext' => $this->confirmationtext(),
             default => null,
         };

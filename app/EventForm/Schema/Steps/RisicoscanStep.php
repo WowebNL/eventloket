@@ -6,13 +6,16 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Schema\Hidden;
+use App\EventForm\State\FormState;
 use Carbon\Carbon;
 use Filament\Forms\Components\Radio;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\HtmlString;
 
 /**
  * @openforms-step-uuid c75cc256-6729-4684-9f9b-ede6265b3e72
@@ -28,7 +31,31 @@ final class RisicoscanStep
         return Step::make('Risicoscan')
             ->key(self::UUID)
             ->schema([
-                InfoText::info('content', '<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>'),
+                InfoText::info('content', function (FormState $state): string {
+                    $intro = '<p>We stellen u nu een aantal standaard-vragen om een inschatting te maken in welke risico-categorie je evenement valt. Dit kan A-laag, B-middelmatig of C-hoog zijn. De risico-categorie is een indicator voor de hulpdiensten Politie, Brandweer en GHOR om hun inzet te bepalen.</p>';
+
+                    $a = $state->get('gemeenteVariabelen.indieningstermijn_a');
+                    $b = $state->get('gemeenteVariabelen.indieningstermijn_b');
+                    $c = $state->get('gemeenteVariabelen.indieningstermijn_c');
+                    $gemeente = $state->get('evenementInGemeente');
+                    $gemeenteNaam = is_array($gemeente) ? ($gemeente['name'] ?? null) : null;
+
+                    if ($gemeenteNaam && ($a || $b || $c)) {
+                        $intro .= '<p>De gemeente '.e($gemeenteNaam).' hanteert de volgende indieningstermijnen:</p><ul>';
+                        if ($a) {
+                            $intro .= '<li>A (klein): <strong>'.((int) $a).' weken</strong> voor de startdatum</li>';
+                        }
+                        if ($b) {
+                            $intro .= '<li>B (middelgroot): <strong>'.((int) $b).' weken</strong> voor de startdatum</li>';
+                        }
+                        if ($c) {
+                            $intro .= '<li>C (groot): <strong>'.((int) $c).' weken</strong> voor de startdatum</li>';
+                        }
+                        $intro .= '</ul>';
+                    }
+
+                    return $intro;
+                }),
                 Radio::make('watIsDeAantrekkingskrachtVanHetEvenement')
                     ->label('Wat is de aantrekkingskracht van het evenement?')
                     ->options([
@@ -243,8 +270,52 @@ final class RisicoscanStep
                         'Het is belangrijk om inzicht te hebben in de calamiteitenroute. Is de calamiteitenroute op dezelfde weg als die van de bezoekers (matig)? Is er een aparte calamiteitenroute middels een brede weg (redelijk). Of zijn er twee calamiteitenroutes afzonderlijk van bezoekers zodat je een eenrichtingsweg kunt instellen wat de doorvoer bevorderd (goed).',
                     ])
                     ->live(),
-                InfoText::info('risicoClassificatieContent', '<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>{{risicoClassificatie}}</strong></p>')
+                InfoText::info('risicoClassificatieContent', function (FormState $state): string {
+                    $classificatie = $state->get('risicoClassificatie');
+                    $html = '<p>Op basis van uw antwoorden is de voorlopige behandelclassificatie: <strong>'.e($classificatie).'</strong></p>';
+
+                    if ($classificatie) {
+                        $key = 'gemeenteVariabelen.indieningstermijn_'.strtolower($classificatie);
+                        $weeks = $state->get($key);
+                        $gemeente = $state->get('evenementInGemeente');
+                        $gemeenteNaam = is_array($gemeente) ? ($gemeente['name'] ?? null) : null;
+
+                        if ($gemeenteNaam && $weeks) {
+                            $html .= '<p>De indieningstermijn voor een '.e($classificatie).'-evenement bij de gemeente '.e($gemeenteNaam).' is <strong>'.((int) $weeks).' weken</strong> voor de startdatum van het evenement.</p>';
+                        }
+                    }
+
+                    return $html;
+                })
                     ->hidden(Hidden::rule('risicoClassificatieContent')),
+                self::indieningstermijnInfoText(),
             ]);
+    }
+
+    private static function indieningstermijnInfoText(): TextEntry
+    {
+        return TextEntry::make('indieningstermijnContent')
+            ->hiddenLabel()
+            ->state(function ($livewire): ?HtmlString {
+                /** @var FormState $state */
+                $state = $livewire->state();
+                $status = $state->get('indieningstermijnStatus');
+
+                if ($status === null) {
+                    return null;
+                }
+
+                $variant = $status['withinDeadline'] ? 'success' : 'warning';
+                $text = $status['withinDeadline']
+                    ? '<p>Uw aanvraag valt binnen de indieningstermijn van <strong>'.$status['weeks'].' weken</strong> voor de startdatum van het evenement.</p>'
+                    : '<p>Let op: de indieningstermijn voor deze risicoclassificatie is <strong>'.$status['weeks'].' weken</strong> voor de startdatum van het evenement. Uw aanvraag valt buiten deze termijn. U kunt de aanvraag nog steeds indienen, maar de kans op afwijzing is groter.</p>';
+
+                return new HtmlString(sprintf(
+                    '<div class="eventform-alert eventform-alert-%s">%s</div>',
+                    $variant,
+                    $text,
+                ));
+            })
+            ->hidden(fn ($livewire): bool => $livewire->state()->get('indieningstermijnStatus') === null);
     }
 }

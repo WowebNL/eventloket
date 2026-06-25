@@ -162,6 +162,24 @@
     font-style: italic;
 }
 
+.eventform-alert-success {
+    background: color-mix(in oklab, #16a34a 8%, transparent);
+    border-color: color-mix(in oklab, #16a34a 25%, transparent);
+    color: var(--gray-900);
+}
+
+.eventform-alert-success::before {
+    content: '✓';
+    color: #fff;
+    background: #16a34a;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 999px;
+    text-align: center;
+    line-height: 1.1rem;
+    font-weight: 700;
+}
+
 .eventform-alert-warning {
     background: color-mix(in oklab, #d97706 10%, transparent);
     border-color: color-mix(in oklab, #d97706 30%, transparent);
@@ -182,6 +200,12 @@
 :is(.dark .eventform-alert-info) {
     background: color-mix(in oklab, #60a5fa 12%, transparent);
     border-color: color-mix(in oklab, #60a5fa 35%, transparent);
+    color: var(--gray-100);
+}
+
+:is(.dark .eventform-alert-success) {
+    background: color-mix(in oklab, #4ade80 12%, transparent);
+    border-color: color-mix(in oklab, #4ade80 35%, transparent);
     color: var(--gray-100);
 }
 

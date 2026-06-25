@@ -38,6 +38,16 @@
         @if (! empty($risicoClassificatie))
             <div><strong>Risicoclassificatie:</strong> {{ $risicoClassificatie }}</div>
         @endif
+        @if (! empty($indieningstermijnStatus))
+            <div>
+                <strong>Indieningstermijn:</strong>
+                @if ($indieningstermijnStatus['withinDeadline'])
+                    Binnen termijn ({{ $indieningstermijnStatus['weeks'] }} weken)
+                @else
+                    <span style="color: #d97706;">Buiten termijn ({{ $indieningstermijnStatus['weeks'] }} weken)</span>
+                @endif
+            </div>
+        @endif
         <div><strong>Zaaktype:</strong> {{ $zaak->zaaktype?->name ?? '—' }}</div>
         @if (! empty($gemeenteNaam))
             <div><strong>Gemeente:</strong> {{ $gemeenteNaam }}</div>
