@@ -16,4 +16,8 @@ return [
     'created' => 'Aangemaakt',
     'updated' => 'Bijgewerkt',
     'deleted' => 'Verwijderd',
+
+    'multi_upload' => ':count documenten geüpload',
+    'multi_download' => ':count documenten gedownload als ZIP',
+    'multi_download_serve' => 'ZIP-download geserveerd',
 ];

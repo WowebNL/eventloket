@@ -2,6 +2,7 @@
 
 use App\EventForm\Persistence\Draft;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentZipController;
 use App\Livewire\AcceptInvites\AcceptAdminInvite;
 use App\Livewire\AcceptInvites\AcceptAdvisoryInvite;
 use App\Livewire\AcceptInvites\AcceptMunicipalityInvite;
@@ -32,6 +33,9 @@ Route::middleware('signed')
 
 // Route::get('/', Welcome::class)->name('welcome');
 Route::get('/', fn (WelcomeSettings $settings) => view('welcome')->with($settings->toArray()))->name('welcome');
+
+// auth checked in controller via cache token — must be registered before the generic document route
+Route::middleware('auth')->get('/zaak-documents/{zaak}/zip/{token}', DocumentZipController::class)->name('zaak.documents.zip');
 
 // auth in DocumentRequest
 Route::get('/zaak-documents/{zaak}/{documentuuid}/{type?}', DocumentController::class)->name('zaak.documents.view');
