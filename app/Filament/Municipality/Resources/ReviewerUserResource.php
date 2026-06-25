@@ -2,6 +2,7 @@
 
 namespace App\Filament\Municipality\Resources;
 
+use App\Enums\Role;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\CreateReviewerUser;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\EditReviewerUser;
 use App\Filament\Municipality\Resources\ReviewerUserResource\Pages\ListReviewerUsers;
@@ -56,7 +57,11 @@ class ReviewerUserResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         /** @phpstan-ignore-next-line */
-        return parent::getEloquentQuery()->reviewers();
+        return parent::getEloquentQuery()->whereIn('role', [
+            Role::Reviewer->value,
+            Role::ReviewerMunicipalityAdmin->value,
+            Role::Coordinator->value,
+        ]);
     }
 
     public static function getPages(): array

@@ -18,7 +18,7 @@ class OrganiserThreadPolicy
     public function viewAny(User $user): bool
     {
         return match ($user->role) {
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer => true,
             Role::Organiser => true,
             default => false,
         };
@@ -50,7 +50,7 @@ class OrganiserThreadPolicy
     public function create(User $user): bool
     {
         return match ($user->role) {
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer => true,
             Role::Organiser => true,
             default => false,
         };

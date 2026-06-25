@@ -59,6 +59,7 @@ class Zaak extends Model implements Eventable
         'imported_data',
         'form_state_snapshot',
         'handled_status_set_by_user_id',
+        'reviewer_user_id',
     ];
 
     protected function casts(): array
@@ -92,6 +93,12 @@ class Zaak extends Model implements Eventable
         return $this->belongsTo(MunicipalityUser::class, 'handled_status_set_by_user_id', 'id');
     }
 
+    /** @return BelongsTo<MunicipalityUser, $this> */
+    public function reviewerUser(): BelongsTo
+    {
+        return $this->belongsTo(MunicipalityUser::class, 'reviewer_user_id', 'id');
+    }
+
     public function organiserThreads()
     {
         return $this->hasMany(OrganiserThread::class, 'zaak_id')->organiser();
@@ -121,7 +128,7 @@ class Zaak extends Model implements Eventable
      */
     public function relatedUsers(): array
     {
-        $handlers = $this->handled_status_set_by_user_id ? [$this->handledStatusSetByUser] : $this->municipality->allReviewerUsers->all();
+        $handlers = $this->getMunicipalityHandlers();
 
         return array_merge(
             $this->organisation?->users->all() ?? [],
@@ -139,6 +146,29 @@ class Zaak extends Model implements Eventable
                 })->flatten(1)->all(),
             $handlers ? $handlers : []
         );
+    }
+
+    /**
+     * Returns the municipality-side users to notify for this zaak.
+     * Priority: assigned reviewer → coordinators (if present) → all reviewers (fallback).
+     */
+    public function getMunicipalityHandlers(): array
+    {
+        if ($this->reviewer_user_id) {
+            return [$this->reviewerUser];
+        }
+
+        if (! $this->municipality) {
+            return [];
+        }
+
+        $coordinators = $this->municipality->allCoordinatorUsers()->get();
+
+        if ($coordinators->isNotEmpty()) {
+            return $coordinators->all();
+        }
+
+        return $this->municipality->allReviewerUsers()->get()->all();
     }
 
     protected function eventName(): Attribute

@@ -59,7 +59,7 @@ class ZaakInfolist
                 ->label(__('Ingediend bij gemeente')),
             TextEntry::make('reference_data.organisator')
                 ->label(__('municipality/resources/zaak.columns.organisator.label'))
-                ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])),
+                ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])),
             TextEntry::make('organisation.phone')
                 ->label(__('resources/zaak.columns.telefoon.label'))
                 ->visible(fn (?string $state) => ! empty($state)),
@@ -115,7 +115,7 @@ class ZaakInfolist
                         return $user->canAccessOrganisation($record->organisation_id);
                     }
 
-                    return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Advisor, Role::Admin]);
+                    return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Advisor, Role::Admin]);
                 }),
             TextEntry::make('reference_data.resultaat')
                 ->label(__('resources/zaak.columns.resultaat.label'))
@@ -130,7 +130,7 @@ class ZaakInfolist
                         return $user->canAccessOrganisation($record->organisation_id);
                     }
 
-                    return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Advisor, Role::Admin]);
+                    return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Advisor, Role::Admin]);
                 }),
         ];
     }
@@ -176,10 +176,13 @@ class ZaakInfolist
                                     ->date(config('app.date_format'))
                                     ->label(__('municipality/resources/zaak.columns.uiterlijkeEinddatumAfdoening.label')),
                             ]))
-                            ->columnSpan(fn ($record) => ! $record->is_imported && ($record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])) ? 8 : 12),
+                            ->columnSpan(fn ($record) => ! $record->is_imported && ($record->reference_data->resultaat || in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Admin])) ? 8 : 12),
                         Section::make(__('municipality/resources/zaak.infolist.sections.actions.label'))
                             ->description(__('municipality/resources/zaak.infolist.sections.actions.description'))
                             ->schema([
+                                TextEntry::make('reviewerUser.name')
+                                    ->label(__('municipality/resources/zaak.infolist.sections.actions.reviewer_user.label'))
+                                    ->placeholder(__('municipality/resources/zaak.infolist.sections.actions.reviewer_user.placeholder')),
                                 TextEntry::make('reference_data.risico_classificatie')
                                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
                                     ->suffix(function (Zaak $record) {
@@ -476,7 +479,7 @@ class ZaakInfolist
                                 // })
                             ])
                             ->columnSpan(4)
-                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
+                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Admin])),
                         self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()

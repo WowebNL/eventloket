@@ -15,10 +15,9 @@ class ZaakObserver
     {
         CreateConceptAdviceQuestions::dispatch($zaak);
 
-        // Notify all municipality users with review rights
-        $reviewers = $zaak->zaaktype->municipality?->municipalityUsers()->reviewers()->get() ?? [];
+        $recipients = $zaak->getMunicipalityHandlers();
 
-        foreach ($reviewers as $user) {
+        foreach ($recipients as $user) {
             $user->notify(new NewZaak($zaak));
         }
     }

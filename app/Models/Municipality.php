@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\AsGeoJson;
 use App\Enums\MunicipalityVariableType;
 use App\Models\Contracts\HasGeometry;
+use App\Models\Users\CoordinatorUser;
 use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
@@ -53,6 +54,16 @@ class Municipality extends Model implements HasGeometry
     public function reviewerUsers()
     {
         return $this->belongsToMany(ReviewerUser::class, 'municipality_user');
+    }
+
+    public function coordinatorUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(CoordinatorUser::class, 'municipality_user');
+    }
+
+    public function allCoordinatorUsers(): BelongsToMany
+    {
+        return $this->municipalityUsers()->coordinators();
     }
 
     public function municipalityAdminUsers()

@@ -10,6 +10,7 @@ use App\Models\MunicipalityInvite;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Mail;
@@ -21,7 +22,7 @@ class ReviewerUserInviteAction
     {
         return InviteAction::make()
             ->modelLabel(__('resources/reviewer_user.label'))
-            ->visible(fn (): bool => in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]))
+            ->visible(fn (): bool => in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator]))
             ->schema([
                 TextInput::make('name')
                     ->label(__('admin/resources/user.actions.invite.form.name.label'))
@@ -38,6 +39,9 @@ class ReviewerUserInviteAction
                         },
                     ])
                     ->maxLength(255),
+                Checkbox::make('is_coordinator')
+                    ->label(__('resources/reviewer_user.actions.invite.form.is_coordinator.label'))
+                    ->helperText(__('resources/reviewer_user.actions.invite.form.is_coordinator.helper_text')),
             ])
             ->action(function ($data) use ($municipality) {
                 /** @var Municipality $tenant */
@@ -50,7 +54,7 @@ class ReviewerUserInviteAction
                 $municipalityInvite = MunicipalityInvite::create([
                     'name' => $data['name'],
                     'email' => $data['email'],
-                    'role' => Role::Reviewer,
+                    'role' => $data['is_coordinator'] ? Role::Coordinator : Role::Reviewer,
                     'token' => Str::uuid(),
                 ]);
 

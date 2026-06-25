@@ -40,7 +40,7 @@ class ViewAdviceThread extends ViewRecord
 
     public function loadMessageForm(): bool
     {
-        if (in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer])) {
+        if (in_array(auth()->user()->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])) {
             return true;
         }
         if (auth()->user()->role === Role::Advisor) {

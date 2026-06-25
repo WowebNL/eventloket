@@ -48,7 +48,7 @@ class ThreadPolicy
     public function create(User $user): bool
     {
         return match ($user->role) {
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer => true,
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer => true,
             default => false,
         };
     }

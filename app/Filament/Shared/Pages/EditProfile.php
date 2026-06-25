@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\NotificationPreference;
 use App\Notifications\AdviceReminder;
 use App\Notifications\AssignedToAdviceThread;
+use App\Notifications\AssignedToZaak;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
@@ -61,9 +62,16 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
         return match ($user->role) {
             Role::Admin => [],
             Role::MunicipalityAdmin => [],
+            Role::Coordinator => [
+                NewZaak::class,
+                NewOrganiserThread::class,
+                NewOrganiserThreadMessage::class,
+                NewZaakDocument::class,
+            ],
             Role::ReviewerMunicipalityAdmin,
             Role::Reviewer => [
                 NewZaak::class,
+                AssignedToZaak::class,
                 NewAdviceThreadMessage::class,
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,

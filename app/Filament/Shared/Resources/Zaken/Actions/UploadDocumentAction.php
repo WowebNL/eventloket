@@ -203,7 +203,7 @@ class UploadDocumentAction
         ];
 
         $userRole = auth()->user()->role;
-        if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Admin])) {
+        if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin])) {
             $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
                 ->options(function () {
