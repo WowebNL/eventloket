@@ -44,17 +44,30 @@ This platform streamlines the entire permit application process for events in th
    ```bash
    cp .env.example .env
    ```
-3. Install Sail:
-   ```bash
-   composer require laravel/sail --dev
-   ``` 
 
-5. Start the application using Sail:
+3. Install the PHP dependencies. This also installs Sail, so `./vendor/bin/sail` becomes available.
+
+   With PHP and Composer available locally:
+   ```bash
+   composer install
+   ```
+
+   Without a local PHP/Composer installation, run Composer through a container:
+   ```bash
+   docker run --rm \
+       -u "$(id -u):$(id -g)" \
+       -v "$(pwd):/var/www/html" \
+       -w /var/www/html \
+       laravelsail/php84-composer:latest \
+       composer install --ignore-platform-reqs
+   ```
+
+4. Start the application using Sail:
    ```bash
    ./vendor/bin/sail up -d
    ```
 
-6. Generate an app key, run migrations and install dependencies:
+5. Generate an app key, run migrations and install front-end dependencies:
    ```bash
    ./vendor/bin/sail artisan key:generate
    ./vendor/bin/sail artisan migrate
