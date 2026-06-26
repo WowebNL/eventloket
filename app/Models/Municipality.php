@@ -142,6 +142,12 @@ class Municipality extends Model implements HasGeometry
         return $this->belongsTo(Zaaktype::class, 'doorkomst_zaaktype_id');
     }
 
+    /** @return HasMany<MunicipalityZaaktypeMapping, $this> */
+    public function zaaktypeMappings(): HasMany
+    {
+        return $this->hasMany(MunicipalityZaaktypeMapping::class);
+    }
+
     public function advisories()
     {
         return $this->belongsToMany(Advisory::class);

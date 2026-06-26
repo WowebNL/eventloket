@@ -6,8 +6,10 @@ namespace App\Jobs\Zaak;
 
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Normalizers\OpenFormsNormalizer;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OzZaak;
@@ -56,8 +58,12 @@ class AddZaakeigenschappenZGW implements ShouldQueue
             $eigenschappen[] = ['formsubmission_id' => $this->zaak->public_id];
         }
 
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+
         foreach ($eigenschappen as $eigenschap) {
-            $naam = (string) key($eigenschap);
+            // The logical key maps to the concrete eigenschap naam in this
+            // catalogus via the blueprint (default: identity).
+            $naam = ZaaktypeBlueprint::eigenschapNaam($mapping, (string) key($eigenschap));
             $waarde = current($eigenschap);
 
             if (Arr::first($ozZaak->eigenschappen, fn ($e) => $e->naam === $naam)) {

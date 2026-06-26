@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Jobs\Zaak;
 
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -35,7 +37,8 @@ class SetInitialStatusZGW implements ShouldQueue
         $connection = Zgw::connection($this->zaak->zgwConnectionName());
 
         $statustypen = $connection->catalogi()->statustypen()->index(['zaaktype' => $zaaktype])->collect();
-        $initieel = $statustypen->sortBy('volgnummer')->first();
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $initieel = ZaaktypeBlueprint::initialStatustype($mapping, $statustypen);
 
         if (! $initieel) {
             Log::warning('SetInitialStatusZGW: geen statustype gevonden', [

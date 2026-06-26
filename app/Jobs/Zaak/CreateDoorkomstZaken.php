@@ -8,9 +8,11 @@ use App\Actions\Geospatial\CheckIntersects;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Normalizers\OpenFormsNormalizer;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Helpers\ArrayHelper;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -253,7 +255,8 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
 
         $roltypen = $deelConnection->catalogi()->roltypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url]);
-        $initiator = $roltypen->first(fn ($r) => ($r['omschrijvingGeneriek'] ?? null) === 'initiator');
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $initiator = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
         if (! $initiator) {
             Log::warning('CreateDoorkomstZaken: no initiator roltype', ['zaak' => $newZaakUrl]);
 
@@ -288,7 +291,8 @@ class CreateDoorkomstZaken implements ShouldQueue
     private function createInitieleStatus(ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
         $statustypen = $deelConnection->catalogi()->statustypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])->collect();
-        $initieel = $statustypen->sortBy('volgnummer')->first();
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $initieel = ZaaktypeBlueprint::initialStatustype($mapping, $statustypen);
         if (! $initieel) {
             Log::warning('CreateDoorkomstZaken: no statustype', ['zaak' => $newZaakUrl]);
 

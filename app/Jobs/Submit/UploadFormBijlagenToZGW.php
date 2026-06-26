@@ -6,7 +6,9 @@ namespace App\Jobs\Submit;
 
 use App\Enums\DocumentVertrouwelijkheden;
 use App\EventForm\Schema\EventFormSchema;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Forms\Components\FileUpload;
@@ -221,11 +223,9 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
     }
 
     /**
-     * Voor nu: zoek het informatieobjecttype waarvan de omschrijving
-     * "bijlage" bevat (case-insensitive); valt terug op het eerste type
-     * als er geen treffer is. TODO: per upload-veld instelbaar maken,
-     * waarschijnlijk via een mapping op Zaaktype (per gemeente kan het
-     * informatieobjecttype namelijk verschillen per upload-veld).
+     * Resolve the informatieobjecttype for attachments via the blueprint:
+     * the mapped bijlage-type when configured, otherwise the type whose
+     * omschrijving contains "bijlage" (case-insensitive), otherwise the first.
      */
     private function resolveInformatieobjecttype(): string
     {
@@ -238,10 +238,8 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
             );
         }
 
-        $bijlageType = $types->first(static fn ($type): bool => property_exists($type, 'omschrijving')
-            && str_contains(mb_strtolower($type->omschrijving), 'bijlage')
-        );
-        $chosen = $bijlageType ?? $types->first();
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $chosen = ZaaktypeBlueprint::bijlageInformatieobjecttype($mapping, $types);
 
         if (! $chosen || ! property_exists($chosen, 'url') || $chosen->url === '') {
             throw new RuntimeException(

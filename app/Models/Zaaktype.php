@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DocumentVertrouwelijkheden;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\ValueObjects\ZGW\InformatieobjectType;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -98,7 +99,9 @@ class Zaaktype extends Model
      */
     public function intrekkenResultaatTypeForVersion(?string $versionUrl = null): ?array
     {
-        return $this->getResultaatTypen($versionUrl)->firstWhere('omschrijvingGeneriek', 'Ingetrokken');
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this);
+
+        return ZaaktypeBlueprint::ingetrokkenResultaattype($mapping, $this->getResultaatTypen($versionUrl));
     }
 
     protected function municipalityResultaatTypen(): Attribute

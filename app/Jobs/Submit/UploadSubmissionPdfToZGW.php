@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Jobs\Submit;
 
 use App\Enums\DocumentVertrouwelijkheden;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -92,8 +94,13 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
 
     private function resolveInformatieobjecttype(): string
     {
-        $first = $this->zaak->document_types->first();
-        if (! $first || ! property_exists($first, 'url') || $first->url === '') {
+        // The aanvraagformulier PDF keeps the historical "first type" fallback
+        // (no "bijlage" omschrijving preference), but honours an explicit
+        // blueprint bijlage-type when one is configured.
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $chosen = ZaaktypeBlueprint::bijlageInformatieobjecttype($mapping, $this->zaak->document_types, matchBijlageInOmschrijving: false);
+
+        if (! $chosen || ! property_exists($chosen, 'url') || $chosen->url === '') {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
                 .($this->zaak->zaaktype->id ?? '?')
@@ -101,6 +108,6 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             );
         }
 
-        return (string) $first->url;
+        return (string) $chosen->url;
     }
 }
