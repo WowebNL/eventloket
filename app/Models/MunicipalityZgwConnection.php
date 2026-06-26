@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Observers\MunicipalityZgwConnectionObserver;
 use Database\Factories\MunicipalityZgwConnectionFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +37,7 @@ use RuntimeException;
  * @property array<string, mixed>|null $vertrouwelijkheid_map
  * @property string|null $eigenschap_date_format
  */
+#[ObservedBy(MunicipalityZgwConnectionObserver::class)]
 class MunicipalityZgwConnection extends Model
 {
     /** @use HasFactory<MunicipalityZgwConnectionFactory> */
