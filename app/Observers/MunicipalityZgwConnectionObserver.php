@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Observers;
 
 use App\Models\MunicipalityZgwConnection;
+use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -22,11 +24,21 @@ class MunicipalityZgwConnectionObserver
 {
     public function saved(MunicipalityZgwConnection $connection): void
     {
-        $this->restartWorkers();
+        $this->invalidate();
     }
 
     public function deleted(MunicipalityZgwConnection $connection): void
     {
+        $this->invalidate();
+    }
+
+    /**
+     * Drop the host-index cache (used by webhook reverse-mapping) and restart
+     * the workers so both pick up the changed connection.
+     */
+    private function invalidate(): void
+    {
+        Cache::forget(ZgwConnectionResolver::HOST_INDEX_CACHE_KEY);
         $this->restartWorkers();
     }
 

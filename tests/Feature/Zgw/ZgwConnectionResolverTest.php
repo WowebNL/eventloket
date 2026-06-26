@@ -5,10 +5,28 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Services\Zgw\ZgwConnectionResolver;
+use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
+    Cache::flush();
     $this->resolver = app(ZgwConnectionResolver::class);
 });
+
+/**
+ * @return array<string, null|array<int, string>>
+ */
+function singleHostConnection(string $zakenUrl): array
+{
+    return [
+        'zaken_url' => $zakenUrl,
+        'catalogi_url' => null,
+        'documenten_url' => null,
+        'besluiten_url' => null,
+        'autorisaties_url' => null,
+        'notificaties_url' => null,
+        'allowed_hosts' => [],
+    ];
+}
 
 it('returns the main connection for a null context', function () {
     expect($this->resolver->for(null))->toBe('main')
@@ -88,4 +106,42 @@ it('falls back to main when the connection has a too-short secret', function () 
 
     expect($this->resolver->for($municipality))->toBe('main')
         ->and(config("zgw.connections.gemeente_{$municipality->id}"))->toBeNull();
+});
+
+it('maps an incoming url to a municipality connection by its unique host', function () {
+    $municipality = Municipality::factory()->create();
+    MunicipalityZgwConnection::factory()->for($municipality)->create(
+        singleHostConnection('https://rx.gemeente-a.example.com/zaken/api/v1/'),
+    );
+
+    expect($this->resolver->forUrl('https://rx.gemeente-a.example.com/documenten/api/v1/enkelvoudiginformatieobjecten/1'))
+        ->toBe("gemeente_{$municipality->id}");
+});
+
+it('falls back to main for a host shared with the main connection', function () {
+    $municipality = Municipality::factory()->create();
+    // Same host as the main connection (phpunit OPENZAAK_URL): ambiguous.
+    MunicipalityZgwConnection::factory()->for($municipality)->create(
+        singleHostConnection('https://zgw.example.com/zaken/api/v1/'),
+    );
+
+    expect($this->resolver->forUrl('https://zgw.example.com/documenten/api/v1/enkelvoudiginformatieobjecten/1'))
+        ->toBe('main');
+});
+
+it('falls back to main for an unknown host', function () {
+    expect($this->resolver->forUrl('https://unknown.example.com/zaken/api/v1/zaken/1'))->toBe('main');
+});
+
+it('rebuilds the host index when a connection changes', function () {
+    $url = 'https://rx.gemeente-b.example.com/zaken/api/v1/zaken/1';
+
+    expect($this->resolver->forUrl($url))->toBe('main');
+
+    $municipality = Municipality::factory()->create();
+    MunicipalityZgwConnection::factory()->for($municipality)->create(
+        singleHostConnection('https://rx.gemeente-b.example.com/zaken/api/v1/'),
+    );
+
+    expect($this->resolver->forUrl($url))->toBe("gemeente_{$municipality->id}");
 });
