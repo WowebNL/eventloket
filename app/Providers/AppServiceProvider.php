@@ -2,12 +2,10 @@
 
 namespace App\Providers;
 
-use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Auth\CaseInsensitiveUserProvider;
 use App\Console\Commands\Zaaktypen\SyncZaaktypen;
 use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
-use App\Jobs\ProcessOpenNotification;
 use App\Listeners\NotifySlackOfFailedJob;
 use App\Livewire\PersistTableStateHook;
 use App\Models\Export;
@@ -128,13 +126,9 @@ class AppServiceProvider extends ServiceProvider
 
     private function bindCustomMethods(): void
     {
-        // ProcessOpenNotification blijft voor OpenZaak-notificaties (status,
-        // besluit, document). De ZGW-jobs hieronder lezen in de nieuwe flow
-        // hun input uit de lokale `Zaak` (via Laravel's SerializesModels),
-        // dus ze hebben geen ObjectsApi-argument meer nodig; de container
-        // regelt de Openzaak-injection via standaard method-resolution.
-        $this->app->bindMethod([ProcessOpenNotification::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), typeProcessor: app(GetIncommingNotificationType::class)));
-
+        // SyncZaaktypen still talks to the legacy Openzaak client (migrated in a
+        // later wave); ProcessOpenNotification and its type processor now resolve
+        // their dependencies through standard container method injection.
         $this->app->bindMethod([SyncZaaktypen::class, 'handle'], fn ($command) => $command->handle(app(Openzaak::class)));
     }
 }

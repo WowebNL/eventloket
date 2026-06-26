@@ -6,34 +6,38 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Models\Zaak;
 use App\Notifications\NewZaakDocument;
+use App\Services\Zgw\ZgwConnectionResolver;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OpenNotification;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Connection\ZgwConnection;
+use Woweb\Zgw\Facades\Zgw;
 
 class DocumentNotificationReceived implements ShouldQueue
 {
     use Queueable;
 
-    private Openzaak $openzaak;
-
     /**
      * Create a new job instance.
      */
-    public function __construct(private OpenNotification $notification, private bool $isNew)
-    {
-        $this->openzaak = new Openzaak;
-    }
+    public function __construct(private OpenNotification $notification, private bool $isNew) {}
 
     /**
      * Execute the job.
      */
     public function handle(): void
     {
-        $informatieobject = new Informatieobject(...$this->openzaak->get($this->notification->hoofdObject)->toArray());
+        // The incoming document URL determines which ZGW connection it belongs
+        // to. Resolved here (never serialized) so per-municipality connections
+        // route the read to the right instance once host matching lands.
+        $connectionName = app(ZgwConnectionResolver::class)->forUrl($this->notification->hoofdObject);
+        $connection = Zgw::connection($connectionName);
+
+        $informatieobject = new Informatieobject(...ZgwResource::byUrl($connectionName, $this->notification->hoofdObject));
 
         if ($this->isNew) {
             // ignore documents received while creating the zaak
@@ -42,15 +46,15 @@ class DocumentNotificationReceived implements ShouldQueue
                 return;
             }
 
-            $this->notifyUsers($informatieobject, true);
+            $this->notifyUsers($connection, $informatieobject, true);
         } else {
-            $this->notifyUsers($informatieobject, false);
+            $this->notifyUsers($connection, $informatieobject, false);
         }
     }
 
-    private function notifyUsers(Informatieobject $informatieobject, bool $isNew = true)
+    private function notifyUsers(ZgwConnection $connection, Informatieobject $informatieobject, bool $isNew = true)
     {
-        $zaakinformatieObject = $this->openzaak->zaken()->zaakinformatieobjecten()->getAll([
+        $zaakinformatieObject = $connection->zaken()->zaakinformatieobjecten()->index([
             'informatieobject' => $this->notification->hoofdObject,
         ])->first();
 

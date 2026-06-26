@@ -5,7 +5,6 @@ namespace App\Actions\OpenNotification;
 use App\Enums\OpenNotificationType;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Openzaak;
 
 /**
  * Check incoming notifications and dispatch correct handle event.
@@ -18,7 +17,7 @@ use Woweb\Openzaak\Openzaak;
  */
 class GetIncommingNotificationType
 {
-    public function handle(Openzaak $openzaak, OpenNotification $notification): ?OpenNotificationType
+    public function handle(OpenNotification $notification): ?OpenNotificationType
     {
         $data = $notification->toArray();
 
