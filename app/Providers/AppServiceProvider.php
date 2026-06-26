@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Auth\CaseInsensitiveUserProvider;
 use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
+use App\Listeners\LogZgwRequest;
 use App\Listeners\NotifySlackOfFailedJob;
 use App\Livewire\PersistTableStateHook;
 use App\Models\Export;
@@ -29,6 +30,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
 use Livewire\Livewire;
+use Woweb\Zgw\Events\ZgwRequestSent;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -118,5 +120,6 @@ class AppServiceProvider extends ServiceProvider
         Carbon::mixin(new CarbonBusinessDaysMixin);
 
         Event::listen(JobFailed::class, NotifySlackOfFailedJob::class);
+        Event::listen(ZgwRequestSent::class, LogZgwRequest::class);
     }
 }

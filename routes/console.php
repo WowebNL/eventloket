@@ -23,3 +23,5 @@ Schedule::job(new SendAdviceReminders)->dailyAt('12:00');
 Schedule::job(new CleanupExpiredInvites)->daily();
 Schedule::job(new CleanupExports)->daily();
 Schedule::job(new CleanupExpiredEventFormDrafts)->daily();
+
+Schedule::command('zgw:prune-request-logs')->daily();
