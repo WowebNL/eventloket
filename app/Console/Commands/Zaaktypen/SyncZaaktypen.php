@@ -33,12 +33,31 @@ class SyncZaaktypen extends Command
 
         // Fetch zaaktypen from the central ZGW (OpenZaak) catalogus.
         $zaaktypen = Zgw::connection()->catalogi()->zaaktypen()->index();
-        $updatedIds = [];
 
+        // A single identificatie spans every version of a zaaktype. We keep one
+        // logical row per identificatie holding the latest version url; the version
+        // valid on a zaak's creation date is resolved at zaak-creation time.
+        $latestByIdentificatie = [];
         foreach ($zaaktypen as $data) {
+            $identificatie = $data['identificatie'] ?? null;
+            if ($identificatie === null || $identificatie === '') {
+                $this->line("  <comment>Overgeslagen</comment> (geen identificatie): {$data['url']}");
+
+                continue;
+            }
+
+            $current = $latestByIdentificatie[$identificatie] ?? null;
+            if ($current === null || $this->isNewerVersion($data, $current)) {
+                $latestByIdentificatie[$identificatie] = $data;
+            }
+        }
+
+        $updatedIds = [];
+        foreach ($latestByIdentificatie as $identificatie => $data) {
             $zaaktype = Zaaktype::updateOrCreate(
-                ['zgw_zaaktype_url' => $data['url']],
+                ['identificatie' => $identificatie],
                 [
+                    'zgw_zaaktype_url' => $data['url'],
                     'name' => $data['omschrijving'],
                     'is_active' => true,
                 ]
@@ -55,6 +74,22 @@ class SyncZaaktypen extends Command
         $this->syncMunicipalityLinks();
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Whether $candidate is a newer version than $current, comparing the ZTC
+     * validity dates (beginGeldigheid, then versiedatum as a tiebreaker). Both are
+     * ISO Y-m-d strings, so a plain string comparison preserves chronological order.
+     *
+     * @param  array<string, mixed>  $candidate
+     * @param  array<string, mixed>  $current
+     */
+    private function isNewerVersion(array $candidate, array $current): bool
+    {
+        $candidateKey = ((string) ($candidate['beginGeldigheid'] ?? '')).'|'.((string) ($candidate['versiedatum'] ?? ''));
+        $currentKey = ((string) ($current['beginGeldigheid'] ?? '')).'|'.((string) ($current['versiedatum'] ?? ''));
+
+        return $candidateKey > $currentKey;
     }
 
     private function syncMunicipalityLinks(): void

@@ -30,7 +30,7 @@ class SetInitialStatusZGW implements ShouldQueue
         }
 
         $zaakUrl = $this->zaak->zgw_zaak_url;
-        $zaaktype = $this->zaak->zaaktype->zgw_zaaktype_url;
+        $zaaktype = $this->zaak->zgwZaaktypeVersionUrl();
 
         $connection = Zgw::connection($this->zaak->zgwConnectionName());
 

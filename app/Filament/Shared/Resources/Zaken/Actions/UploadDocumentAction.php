@@ -132,7 +132,7 @@ class UploadDocumentAction
 
         $fields[] = Select::make('bulk_informatieobjecttype')
             ->label(__('Documenttype voor alle bestanden instellen'))
-            ->options(fn () => $zaak->zaaktype->document_types->pluck('omschrijving', 'url')->toArray())
+            ->options(fn () => $zaak->document_types->pluck('omschrijving', 'url')->toArray())
             ->placeholder(__('Kies een type om dit voor alle bestanden tegelijk in te stellen'))
             ->visible(fn (Get $get): bool => ! empty($get('document_metadata')))
             ->live()
@@ -178,7 +178,7 @@ class UploadDocumentAction
                     ->maxLength(255),
                 Select::make('informatieobjecttype')
                     ->label(__('Type document'))
-                    ->options(fn () => $zaak->zaaktype->document_types->pluck('omschrijving', 'url')->toArray())
+                    ->options(fn () => $zaak->document_types->pluck('omschrijving', 'url')->toArray())
                     ->required(),
                 Hidden::make('_temp_path'),
                 Hidden::make('path'),
@@ -198,7 +198,7 @@ class UploadDocumentAction
         $fields = [
             Select::make('informatieobjecttype')
                 ->label(__('Type document'))
-                ->options(fn () => $zaak->zaaktype->document_types->pluck('omschrijving', 'url')->toArray())
+                ->options(fn () => $zaak->document_types->pluck('omschrijving', 'url')->toArray())
                 ->required(),
         ];
 

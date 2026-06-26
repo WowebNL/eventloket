@@ -92,7 +92,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
 
     private function resolveInformatieobjecttype(): string
     {
-        $first = $this->zaak->zaaktype?->document_types?->first();
+        $first = $this->zaak->document_types->first();
         if (! $first || ! property_exists($first, 'url') || $first->url === '') {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '

@@ -36,6 +36,7 @@ function zaakMetZgwUrl(?string $zgwZaakUrl = null): Zaak
     return Zaak::factory()->create([
         'zaaktype_id' => $zaaktype->id,
         'zgw_zaak_url' => $zgwZaakUrl ?? ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/test-uuid',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
     ]);
 }
 

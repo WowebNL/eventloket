@@ -55,6 +55,7 @@ class Zaak extends Model implements Eventable
         'public_id',
         'zgw_zaak_url',
         'zaaktype_id',
+        'zgw_zaaktype_url',
         'data_object_url',
         'organisation_id',
         'organiser_user_id',
@@ -86,6 +87,44 @@ class Zaak extends Model implements Eventable
     public function zgwConnectionName(): string
     {
         return app(ZgwConnectionResolver::class)->for($this);
+    }
+
+    /**
+     * The exact zaaktype version url this zaak was created against.
+     *
+     * Prefers the snapshot column; falls back to the version on the ZGW zaak DTO
+     * for rows created before the snapshot existed, and finally to the logical
+     * zaaktype's (latest) version url.
+     */
+    public function zgwZaaktypeVersionUrl(): ?string
+    {
+        if ($this->zgw_zaaktype_url) {
+            return $this->zgw_zaaktype_url;
+        }
+
+        // openzaak is only non-null when the zaak has a ZGW url; guard on that so
+        // we never dereference a null DTO.
+        if ($this->zgw_zaak_url && $this->openzaak->zaaktype) {
+            return $this->openzaak->zaaktype;
+        }
+
+        return $this->zaaktype?->zgw_zaaktype_url;
+    }
+
+    /** @return Attribute<\Illuminate\Support\Collection<int, \App\ValueObjects\ZGW\InformatieobjectType>, void> */
+    protected function documentTypes(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->zaaktype?->documentTypesForUser($this->zgwZaaktypeVersionUrl()) ?? collect(),
+        );
+    }
+
+    /** @return Attribute<array<string, mixed>|null, void> */
+    protected function intrekkenResultaatType(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->zaaktype?->intrekkenResultaatTypeForVersion($this->zgwZaaktypeVersionUrl()),
+        );
     }
 
     public function organisation(): BelongsTo

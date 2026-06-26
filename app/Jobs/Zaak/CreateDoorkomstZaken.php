@@ -178,6 +178,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             [
                 'public_id' => $newOzZaak->identificatie,
                 'zaaktype_id' => $doorkomstZaaktype->id,
+                'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
                 'data_object_url' => null, // Objects API is in nieuwe flow weg
                 'organisation_id' => $this->zaak->organisation_id,
                 'organiser_user_id' => $this->zaak->organiser_user_id,

@@ -229,7 +229,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
      */
     private function resolveInformatieobjecttype(): string
     {
-        $types = $this->zaak->zaaktype?->document_types;
+        $types = $this->zaak->document_types;
         if (! $types || $types->isEmpty()) {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '

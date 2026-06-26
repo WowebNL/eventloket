@@ -40,13 +40,14 @@ final class CreateLocalZaak
         $referenceData = $this->mapReferenceData->build(
             state: $state,
             statusName: 'Ingediend',
-            statustypeUrl: $this->resolveInitialStatustypeUrl($zaaktype),
+            statustypeUrl: $this->resolveInitialStatustypeUrl($zaaktype, $ozZaak->zaaktype),
         );
 
         return Zaak::create([
             'public_id' => $ozZaak->identificatie,
             'zgw_zaak_url' => $ozZaak->url,
             'zaaktype_id' => $zaaktype->id,
+            'zgw_zaaktype_url' => $ozZaak->zaaktype, // snapshot of the exact version used
             'data_object_url' => null, // Objects API is weg in nieuwe flow
             'organisation_id' => $organisation->id,
             'organiser_user_id' => $user->id,
@@ -69,16 +70,18 @@ final class CreateLocalZaak
      * Resolution failures must not block the submit: we fall back to an empty
      * string (the previous behaviour), and the webhook still fills it later.
      */
-    private function resolveInitialStatustypeUrl(Zaaktype $zaaktype): string
+    private function resolveInitialStatustypeUrl(Zaaktype $zaaktype, ?string $versionUrl): string
     {
-        if (! $zaaktype->zgw_zaaktype_url) {
+        $versionUrl = $versionUrl ?: $zaaktype->zgw_zaaktype_url;
+
+        if (! $versionUrl) {
             return '';
         }
 
         try {
             $statustypen = Zgw::connection($zaaktype->zgwConnectionName())
                 ->catalogi()->statustypen()
-                ->index(['zaaktype' => $zaaktype->zgw_zaaktype_url])
+                ->index(['zaaktype' => $versionUrl])
                 ->collect();
 
             $initieel = $statustypen->sortBy('volgnummer')->first();
@@ -87,7 +90,7 @@ final class CreateLocalZaak
         } catch (\Throwable $e) {
             Log::warning('CreateLocalZaak: kon initiële statustype niet bepalen', [
                 'zaaktype_id' => $zaaktype->id,
-                'zgw_zaaktype_url' => $zaaktype->zgw_zaaktype_url,
+                'zgw_zaaktype_url' => $versionUrl,
                 'exception' => $e->getMessage(),
             ]);
 

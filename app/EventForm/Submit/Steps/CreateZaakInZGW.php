@@ -9,6 +9,7 @@ use App\Models\Zaaktype;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OzZaak;
 use Carbon\Carbon;
+use Throwable;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -23,8 +24,10 @@ final class CreateZaakInZGW
 {
     public function execute(FormState $state, Zaaktype $zaaktype): OzZaak
     {
+        $connectionName = $zaaktype->zgwConnectionName();
+
         $payload = [
-            'zaaktype' => $zaaktype->zgw_zaaktype_url,
+            'zaaktype' => $this->resolveVersionUrl($connectionName, $zaaktype),
             'bronorganisatie' => $this->bronorganisatie($state, $zaaktype),
             'verantwoordelijkeOrganisatie' => $this->bronorganisatie($state, $zaaktype),
             'startdatum' => Carbon::now('Europe/Amsterdam')->toDateString(),
@@ -33,9 +36,36 @@ final class CreateZaakInZGW
             'toelichting' => $this->toelichting($state),
         ];
 
-        $data = Zgw::connection($zaaktype->zgwConnectionName())->zaken()->zaken()->store($payload);
+        $data = Zgw::connection($connectionName)->zaken()->zaken()->store($payload);
 
         return new OzZaak(...ZgwResource::ensureUuid($data));
+    }
+
+    /**
+     * Resolve the zaaktype version that is valid on the creation date.
+     *
+     * The local Zaaktype is logical (one row per identificatie); the actual ZGW
+     * version is resolved here via the standard ZTC datumGeldigheid/status filters
+     * so a zaak is always linked to the version in force today. Falls back to the
+     * stored (latest) version url when the lookup yields nothing or fails.
+     */
+    private function resolveVersionUrl(string $connectionName, Zaaktype $zaaktype): string
+    {
+        if (! $zaaktype->identificatie) {
+            return (string) $zaaktype->zgw_zaaktype_url;
+        }
+
+        try {
+            $version = Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
+                'identificatie' => $zaaktype->identificatie,
+                'datumGeldigheid' => Carbon::now('Europe/Amsterdam')->toDateString(),
+                'status' => 'definitief',
+            ])->first();
+
+            return $version['url'] ?? (string) $zaaktype->zgw_zaaktype_url;
+        } catch (Throwable) {
+            return (string) $zaaktype->zgw_zaaktype_url;
+        }
     }
 
     private function omschrijving(FormState $state): string

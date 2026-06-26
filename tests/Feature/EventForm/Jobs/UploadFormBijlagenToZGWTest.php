@@ -111,7 +111,9 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
         bronorganisatie: '820151130',
         zaakgeometrie: null,
     ));
-    Cache::put("zaaktype_{$zaaktype->id}_document_types", collect([
+    // Document types are cached per (connection, zaaktype version url). The job reads
+    // them via the zaak's version snapshot, which falls back to the OzZaak zaaktype.
+    Cache::put('zaaktype_document_types_'.md5('main|https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1'), collect([
         new InformatieobjectType(
             uuid: 'iot-1',
             url: 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',

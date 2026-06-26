@@ -94,7 +94,7 @@ class RecoverOrphanedZaken extends Command
             return false;
         }
 
-        $zaaktype = Zaaktype::where(['zgw_zaaktype_url' => $ozZaak->zaaktype, 'is_active' => true])->first();
+        $zaaktype = $this->resolveZaaktype($ozZaak->zaaktype, $openzaak);
         if (! $zaaktype) {
             $this->warn("- {$url}: zaaktype not found or inactive ({$ozZaak->zaaktype}), skipping.");
 
@@ -123,6 +123,7 @@ class RecoverOrphanedZaken extends Command
             [
                 'public_id' => $ozZaak->identificatie,
                 'zaaktype_id' => $zaaktype->id,
+                'zgw_zaaktype_url' => $ozZaak->zaaktype, // snapshot of the version used
                 'data_object_url' => $ozZaak->data_object_url,
                 'organisation_id' => $organisation?->id,
                 'organiser_user_id' => $user?->id,
@@ -145,6 +146,31 @@ class RecoverOrphanedZaken extends Command
         }
 
         return true;
+    }
+
+    /**
+     * Resolve the local logical zaaktype for a ZGW zaaktype version url.
+     *
+     * Tries an exact url match first; after version-collapsing the local row holds
+     * the latest version url, so an older version on an orphaned zaak falls back to
+     * a lookup by that version's logical identificatie.
+     */
+    private function resolveZaaktype(string $versionUrl, Openzaak $openzaak): ?Zaaktype
+    {
+        $zaaktype = Zaaktype::where(['zgw_zaaktype_url' => $versionUrl, 'is_active' => true])->first();
+        if ($zaaktype) {
+            return $zaaktype;
+        }
+
+        try {
+            $identificatie = $openzaak->get($versionUrl)->toArray()['identificatie'] ?? null;
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $identificatie
+            ? Zaaktype::where(['identificatie' => $identificatie, 'is_active' => true])->first()
+            : null;
     }
 
     /**

@@ -23,6 +23,7 @@ class Zaaktype extends Model
 
     protected $fillable = [
         'name',
+        'identificatie',
         'zgw_zaaktype_url',
         'is_active',
         'hidden_resultaat_types',
@@ -61,22 +62,43 @@ class Zaaktype extends Model
     {
         // TODO: user need to see type in zaakdocumentstable and besluiteninfolist, only need type name there
         return Attribute::make(
-            get: function () {
-                if (auth()->user()) {
-                    return $this->getDocumentTypes()->filter(fn (InformatieobjectType $type) => in_array($type->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)))->sortBy('omschrijving');
-                }
-
-                return $this->getDocumentTypes()->sortBy('omschrijving');
-            }
+            get: fn () => $this->documentTypesForUser(),
         );
+    }
+
+    /**
+     * Document types for a specific zaaktype version, filtered to what the current
+     * user may see. Defaults to this row's (latest) version when no version is given.
+     *
+     * @return Collection<int, InformatieobjectType>
+     */
+    public function documentTypesForUser(?string $versionUrl = null): Collection
+    {
+        $types = $this->getDocumentTypes($versionUrl);
+
+        if (auth()->user()) {
+            $types = $types->filter(fn (InformatieobjectType $type) => in_array($type->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
+        }
+
+        return $types->sortBy('omschrijving');
     }
 
     /** @return Attribute<Collection<array>|null, void> */
     protected function intrekkenResultaatType(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->getResultaatTypen()->firstWhere('omschrijvingGeneriek', 'Ingetrokken'),
+            get: fn () => $this->intrekkenResultaatTypeForVersion(),
         );
+    }
+
+    /**
+     * The "Ingetrokken" resultaattype for a specific zaaktype version.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function intrekkenResultaatTypeForVersion(?string $versionUrl = null): ?array
+    {
+        return $this->getResultaatTypen($versionUrl)->firstWhere('omschrijvingGeneriek', 'Ingetrokken');
     }
 
     protected function municipalityResultaatTypen(): Attribute
@@ -86,13 +108,19 @@ class Zaaktype extends Model
         );
     }
 
-    private function getDocumentTypes()
+    /**
+     * @return Collection<int, InformatieobjectType>
+     */
+    private function getDocumentTypes(?string $versionUrl = null): Collection
     {
-        return Cache::rememberForever('zaaktype_'.$this->id.'_document_types', function () {
-            $items = Zgw::connection($this->zgwConnectionName())
+        $connectionName = $this->zgwConnectionName();
+        $url = $versionUrl ?: $this->zgw_zaaktype_url;
+
+        return Cache::rememberForever('zaaktype_document_types_'.md5($connectionName.'|'.$url), function () use ($connectionName, $url) {
+            $items = Zgw::connection($connectionName)
                 ->catalogi()
                 ->informatieobjecttypen()
-                ->index(['zaaktype' => $this->zgw_zaaktype_url]);
+                ->index(['zaaktype' => $url]);
             $collection = collect();
             foreach ($items as $item) {
                 $collection->push(new InformatieobjectType(...$item));
@@ -102,13 +130,19 @@ class Zaaktype extends Model
         });
     }
 
-    public function getResultaatTypen()
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function getResultaatTypen(?string $versionUrl = null): Collection
     {
-        return Cache::rememberForever('zaaktype_'.$this->id.'_resultaat_typen', function () {
-            return Zgw::connection($this->zgwConnectionName())
+        $connectionName = $this->zgwConnectionName();
+        $url = $versionUrl ?: $this->zgw_zaaktype_url;
+
+        return Cache::rememberForever('zaaktype_resultaat_typen_'.md5($connectionName.'|'.$url), function () use ($connectionName, $url) {
+            return Zgw::connection($connectionName)
                 ->catalogi()
                 ->resultaattypen()
-                ->index(['zaaktype' => $this->zgw_zaaktype_url])
+                ->index(['zaaktype' => $url])
                 ->collect();
         });
     }
