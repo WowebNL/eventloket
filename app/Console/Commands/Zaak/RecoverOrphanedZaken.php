@@ -10,7 +10,7 @@ use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -87,7 +87,7 @@ class RecoverOrphanedZaken extends Command
         }
 
         try {
-            $ozZaak = new OzZaak(...$openzaak->get($url.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen')->toArray());
+            $ozZaak = ZaakReadModel::fromArray($openzaak->get($url.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen')->toArray());
         } catch (Throwable $e) {
             $this->error("- {$url}: failed to fetch ZGW case ({$e->getMessage()}).");
 
@@ -198,7 +198,7 @@ class RecoverOrphanedZaken extends Command
      *
      * @return array{0: ?Organisation, 1: ?OrganiserUser}
      */
-    private function resolveOrganisationAndUser(OzZaak $ozZaak, ObjectsApi $objectsapi): array
+    private function resolveOrganisationAndUser(ZaakReadModel $ozZaak, ObjectsApi $objectsapi): array
     {
         if (! $ozZaak->data_object_url) {
             return [null, null];
@@ -222,19 +222,22 @@ class RecoverOrphanedZaken extends Command
         ];
     }
 
-    private function buildOrganisatorLabel(OzZaak $ozZaak): string
+    private function buildOrganisatorLabel(ZaakReadModel $ozZaak): string
     {
         $initiator = $ozZaak->initiator;
         if (! $initiator) {
             return '';
         }
 
-        if ($initiator->betrokkeneType === 'natuurlijk_persoon') {
-            return trim(($initiator->betrokkeneIdentificatie['voornamen'] ?? '').' '.($initiator->betrokkeneIdentificatie['geslachtsnaam'] ?? ''));
+        $type = $initiator['betrokkeneType'] ?? null;
+        $id = $initiator['betrokkeneIdentificatie'] ?? [];
+
+        if ($type === 'natuurlijk_persoon') {
+            return trim(($id['voornamen'] ?? '').' '.($id['geslachtsnaam'] ?? ''));
         }
 
-        if ($initiator->betrokkeneType === 'niet_natuurlijk_persoon') {
-            return ($initiator->betrokkeneIdentificatie['statutaireNaam'] ?? '').' - '.($initiator->contactpersoonRol['naam'] ?? '');
+        if ($type === 'niet_natuurlijk_persoon') {
+            return ($id['statutaireNaam'] ?? '').' - '.($initiator['contactpersoonRol']['naam'] ?? '');
         }
 
         return '';

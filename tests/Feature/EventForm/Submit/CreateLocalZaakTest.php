@@ -23,7 +23,7 @@ use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaaktype;
 use App\Services\Zgw\StatusPhase;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
@@ -31,22 +31,22 @@ use Tests\Fakes\ZgwHttpFake;
 
 uses(RefreshDatabase::class);
 
-function makeOzZaak(): OzZaak
+function makeOzZaak(): ZaakReadModel
 {
-    return new OzZaak(
-        uuid: 'new-1',
-        url: ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/new-1',
-        identificatie: 'ZAAK-2026-0001',
-        zaaktype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
-        omschrijving: 'Test event',
-        startdatum: now()->toDateString(),
-        registratiedatum: now()->toDateString(),
-        einddatum: null,
-        einddatumGepland: null,
-        uiterlijkeEinddatumAfdoening: null,
-        bronorganisatie: '820151130',
-        zaakgeometrie: null,
-    );
+    return ZaakReadModel::fromArray([
+        'uuid' => 'new-1',
+        'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/new-1',
+        'identificatie' => 'ZAAK-2026-0001',
+        'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+        'omschrijving' => 'Test event',
+        'startdatum' => now()->toDateString(),
+        'registratiedatum' => now()->toDateString(),
+        'einddatum' => null,
+        'einddatumGepland' => null,
+        'uiterlijkeEinddatumAfdoening' => null,
+        'bronorganisatie' => '820151130',
+        'zaakgeometrie' => null,
+    ]);
 }
 
 function localZaakContext(): array

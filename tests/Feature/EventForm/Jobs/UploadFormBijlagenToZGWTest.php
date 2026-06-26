@@ -16,7 +16,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -97,20 +97,20 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
     // Skip de OpenZaak-GETs door de twee caches te seeden die de job
     // achter de schermen consumeert: zaak.openzaak (voor bronorganisatie)
     // en zaaktype_x_document_types (voor het informatieobjecttype).
-    Cache::put("zaak.{$zaak->id}.openzaak", new OzZaak(
-        uuid: 'abc-123',
-        url: $zaak->zgw_zaak_url,
-        identificatie: $zaak->public_id,
-        zaaktype: 'https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1',
-        omschrijving: 'Test',
-        startdatum: '2026-05-01',
-        registratiedatum: '2026-05-01',
-        einddatum: null,
-        einddatumGepland: null,
-        uiterlijkeEinddatumAfdoening: null,
-        bronorganisatie: '820151130',
-        zaakgeometrie: null,
-    ));
+    Cache::put("zaak.{$zaak->id}.openzaak.v2", ZaakReadModel::fromArray([
+        'uuid' => 'abc-123',
+        'url' => $zaak->zgw_zaak_url,
+        'identificatie' => $zaak->public_id,
+        'zaaktype' => 'https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1',
+        'omschrijving' => 'Test',
+        'startdatum' => '2026-05-01',
+        'registratiedatum' => '2026-05-01',
+        'einddatum' => null,
+        'einddatumGepland' => null,
+        'uiterlijkeEinddatumAfdoening' => null,
+        'bronorganisatie' => '820151130',
+        'zaakgeometrie' => null,
+    ]));
     // Document types are cached per (connection, zaaktype version url). The job reads
     // them via the zaak's version snapshot, which falls back to the OzZaak zaaktype.
     Cache::put('zaaktype_document_types_v2_'.md5('main|https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1'), collect([

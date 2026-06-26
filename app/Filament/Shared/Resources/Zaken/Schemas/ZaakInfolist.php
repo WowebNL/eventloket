@@ -401,7 +401,7 @@ class ZaakInfolist
                                             ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_status.label'))
                                             ->fillForm(function (Zaak $record): array {
                                                 return [
-                                                    'status' => $record->openzaak->status['statustype'],
+                                                    'status' => $record->openzaak->statustype_url,
                                                 ];
                                             })
                                             ->schema([
@@ -412,7 +412,7 @@ class ZaakInfolist
                                                     })->required(),
                                             ])
                                             ->action(function (array $data, Zaak $record) {
-                                                if ($data['status'] != $record->openzaak->status['statustype']) {
+                                                if ($data['status'] != $record->openzaak->statustype_url) {
                                                     $oldStatus = $record->reference_data->status_name;
                                                     $openzaak = Zgw::connection($record->zgwConnectionName());
                                                     $statusType = StatusTypeData::from(ZgwResource::byUrl($record->zgwConnectionName(), $data['status']));

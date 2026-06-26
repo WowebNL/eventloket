@@ -6,7 +6,7 @@ namespace App\Jobs\Zaak;
 
 use App\Models\Zaak;
 use App\Services\Zgw\ZgwResource;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -31,7 +31,7 @@ class AddEinddatumZGW implements ShouldQueue
         }
 
         $connectionName = $this->zaak->zgwConnectionName();
-        $ozZaak = new OzZaak(...ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url));
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url));
 
         if ($ozZaak->uiterlijkeEinddatumAfdoening || $ozZaak->einddatumGepland) {
             return;

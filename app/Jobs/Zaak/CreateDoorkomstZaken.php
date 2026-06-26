@@ -16,7 +16,7 @@ use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Helpers\ArrayHelper;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Io\GeoJsonReader;
@@ -84,7 +84,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
         $hoofdConnectionName = $this->zaak->zgwConnectionName();
 
-        $ozZaak = new OzZaak(...ZgwResource::byUrl(
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
             $hoofdConnectionName,
             $this->zaak->zgw_zaak_url.'?expand=zaakobjecten,eigenschappen,rollen,zaakinformatieobjecten,deelzaken'
         ));
@@ -114,7 +114,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         return ArrayHelper::findElementWithKey($decoded, 'coordinates');
     }
 
-    private function createDeelzaakFor(string $hoofdConnectionName, OzZaak $hoofdZaak, Municipality $muniRef, FormState $state): void
+    private function createDeelzaakFor(string $hoofdConnectionName, ZaakReadModel $hoofdZaak, Municipality $muniRef, FormState $state): void
     {
         /** @var Municipality|null $municipality */
         $municipality = Municipality::where('brk_identification', $muniRef->brk_identification)
@@ -168,7 +168,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         $this->copyDocumenten($hoofdConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl);
         $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
 
-        $newOzZaak = new OzZaak(...ZgwResource::byUrl(
+        $newOzZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
             $deelConnectionName,
             $newZaakUrl.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen'
         ));
@@ -203,21 +203,22 @@ class CreateDoorkomstZaken implements ShouldQueue
         );
     }
 
-    private function resolveOrganisatorLabel(OzZaak $ozZaak): string
+    private function resolveOrganisatorLabel(ZaakReadModel $ozZaak): string
     {
-        if (! $ozZaak->initiator) {
+        $initiator = $ozZaak->initiator;
+        if (! $initiator) {
             return '';
         }
 
-        if ($ozZaak->initiator->betrokkeneType === 'natuurlijk_persoon') {
-            $id = $ozZaak->initiator->betrokkeneIdentificatie;
+        $type = $initiator['betrokkeneType'] ?? null;
+        $id = $initiator['betrokkeneIdentificatie'] ?? [];
 
+        if ($type === 'natuurlijk_persoon') {
             return trim(($id['voornamen'] ?? '').' '.($id['geslachtsnaam'] ?? ''));
         }
 
-        if ($ozZaak->initiator->betrokkeneType === 'niet_natuurlijk_persoon') {
-            $id = $ozZaak->initiator->betrokkeneIdentificatie;
-            $contactNaam = $ozZaak->initiator->contactpersoonRol['naam'] ?? '';
+        if ($type === 'niet_natuurlijk_persoon') {
+            $contactNaam = $initiator['contactpersoonRol']['naam'] ?? '';
 
             return trim(($id['statutaireNaam'] ?? '').' - '.$contactNaam);
         }
@@ -225,7 +226,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         return '';
     }
 
-    private function copyZaakeigenschappen(ZgwConnection $deelConnection, OzZaak $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
+    private function copyZaakeigenschappen(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
         $newUuid = basename($newZaakUrl);
         $catalogi = $deelConnection->catalogi()->eigenschappen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])
@@ -248,7 +249,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
     }
 
-    private function copyInitiator(ZgwConnection $deelConnection, OzZaak $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
+    private function copyInitiator(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
         if (! $ozZaak->initiator) {
             return;
@@ -263,17 +264,18 @@ class CreateDoorkomstZaken implements ShouldQueue
             return;
         }
 
+        $source = $ozZaak->initiator;
         $deelConnection->zaken()->rollen()->store([
             'zaak' => $newZaakUrl,
-            'betrokkeneType' => $ozZaak->initiator->betrokkeneType,
+            'betrokkeneType' => $source['betrokkeneType'] ?? null,
             'roltype' => $initiator['url'],
-            'roltoelichting' => $ozZaak->initiator->omschrijving,
-            'betrokkeneIdentificatie' => $ozZaak->initiator->betrokkeneIdentificatie,
-            'contactpersoonRol' => $ozZaak->initiator->contactpersoonRol ?: null,
+            'roltoelichting' => $source['omschrijving'] ?? null,
+            'betrokkeneIdentificatie' => $source['betrokkeneIdentificatie'] ?? null,
+            'contactpersoonRol' => ($source['contactpersoonRol'] ?? null) ?: null,
         ]);
     }
 
-    private function copyDocumenten(string $hoofdConnectionName, ZgwConnection $deelConnection, OzZaak $ozZaak, string $newZaakUrl): void
+    private function copyDocumenten(string $hoofdConnectionName, ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl): void
     {
         $zios = Zgw::connection($hoofdConnectionName)->zaken()->zaakinformatieobjecten()->index(['zaak' => $ozZaak->url]);
         foreach ($zios as $zio) {

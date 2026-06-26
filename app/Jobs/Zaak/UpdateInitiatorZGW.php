@@ -10,7 +10,7 @@ use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwResource;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
@@ -52,7 +52,7 @@ class UpdateInitiatorZGW implements ShouldQueue
         $connectionName = $this->zaak->zgwConnectionName();
         $connection = Zgw::connection($connectionName);
 
-        $ozZaak = new OzZaak(...ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url.'?expand=rollen'));
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url.'?expand=rollen'));
         $roltype = $this->findInitiatorRoltype($connection, $ozZaak->zaaktype);
         if (! $roltype) {
             return;

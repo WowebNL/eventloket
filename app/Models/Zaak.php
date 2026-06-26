@@ -9,10 +9,10 @@ use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
+use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Besluit;
 use App\ValueObjects\ZGW\Informatieobject;
 use Guava\Calendar\Contracts\Eventable;
@@ -236,7 +236,7 @@ class Zaak extends Model implements Eventable
         );
     }
 
-    /** @return Attribute<OzZaak, void> */
+    /** @return Attribute<ZaakReadModel|null, void> */
     protected function openzaak(): Attribute
     {
         return Attribute::make(
@@ -245,10 +245,12 @@ class Zaak extends Model implements Eventable
                     return null;
                 }
 
-                return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
+                // Cache key bumped to .v2: the cached type changed from the old
+                // OzZaak value object to ZaakReadModel.
+                return Cache::rememberForever("zaak.{$attributes['id']}.openzaak.v2", function () use ($attributes) {
                     $url = $attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype';
 
-                    return new OzZaak(...ZgwResource::byUrl($this->zgwConnectionName(), $url));
+                    return ZaakReadModel::fromArray(ZgwResource::byUrl($this->zgwConnectionName(), $url));
                 });
             },
             // set: function($value, $attributes) {
@@ -393,7 +395,7 @@ class Zaak extends Model implements Eventable
 
     public function clearZgwCache(): void
     {
-        Cache::forget("zaak.{$this->id}.openzaak");
+        Cache::forget("zaak.{$this->id}.openzaak.v2");
         Cache::forget("zaak.{$this->id}.documenten");
         Cache::forget("zaak.{$this->id}.besluiten");
     }

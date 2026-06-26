@@ -10,7 +10,7 @@ use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Support\Facades\Log;
 use Woweb\Zgw\Facades\Zgw;
 
@@ -32,7 +32,7 @@ final class CreateLocalZaak
 
     public function execute(
         FormState $state,
-        OzZaak $ozZaak,
+        ZaakReadModel $ozZaak,
         Zaaktype $zaaktype,
         OrganiserUser $user,
         Organisation $organisation,

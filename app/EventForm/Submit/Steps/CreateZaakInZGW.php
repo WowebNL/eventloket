@@ -7,7 +7,7 @@ namespace App\EventForm\Submit\Steps;
 use App\EventForm\State\FormState;
 use App\Models\Zaaktype;
 use App\Services\Zgw\ZgwResource;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Carbon\Carbon;
 use Throwable;
 use Woweb\Zgw\Facades\Zgw;
@@ -22,7 +22,7 @@ use Woweb\Zgw\Facades\Zgw;
  */
 final class CreateZaakInZGW
 {
-    public function execute(FormState $state, Zaaktype $zaaktype): OzZaak
+    public function execute(FormState $state, Zaaktype $zaaktype): ZaakReadModel
     {
         $connectionName = $zaaktype->zgwConnectionName();
 
@@ -38,7 +38,7 @@ final class CreateZaakInZGW
 
         $data = Zgw::connection($connectionName)->zaken()->zaken()->store($payload);
 
-        return new OzZaak(...ZgwResource::ensureUuid($data));
+        return ZaakReadModel::fromArray(ZgwResource::ensureUuid($data));
     }
 
     /**

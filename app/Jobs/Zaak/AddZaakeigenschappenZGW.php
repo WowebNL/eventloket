@@ -12,7 +12,7 @@ use App\Normalizers\OpenFormsNormalizer;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
@@ -44,7 +44,7 @@ class AddZaakeigenschappenZGW implements ShouldQueue
         $connection = Zgw::connection($connectionName);
 
         $state = FormState::fromSnapshot($this->zaak->form_state_snapshot ?? []);
-        $ozZaak = new OzZaak(...ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url.'?expand=eigenschappen'));
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url.'?expand=eigenschappen'));
         $catalogiEigenschappen = $connection->catalogi()->eigenschappen()
             ->index(['zaaktype' => $ozZaak->zaaktype])
             ->collect()
