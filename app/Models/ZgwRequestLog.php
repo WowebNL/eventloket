@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property string $connection
  * @property int|null $municipality_id
+ * @property int|null $user_id
  * @property string $method
  * @property string $resource
  * @property int|null $status_code
@@ -26,6 +27,7 @@ class ZgwRequestLog extends Model
     protected $fillable = [
         'connection',
         'municipality_id',
+        'user_id',
         'method',
         'resource',
         'status_code',
@@ -48,6 +50,12 @@ class ZgwRequestLog extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     /**

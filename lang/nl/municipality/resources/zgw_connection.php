@@ -21,6 +21,10 @@ return [
     ],
 
     'fields' => [
+        'name' => [
+            'label' => 'Naam',
+            'helper' => 'Optioneel label ter herkenning (bijv. de leverancier en gemeente). Heeft geen invloed op de werking.',
+        ],
         'zaken_url' => ['label' => 'Zaken API base-URL'],
         'catalogi_url' => ['label' => 'Catalogi API base-URL'],
         'documenten_url' => ['label' => 'Documenten API base-URL'],
@@ -51,6 +55,7 @@ return [
     ],
 
     'columns' => [
+        'name' => ['label' => 'Naam'],
         'zaken_url' => ['label' => 'Zaken API'],
         'version' => ['label' => 'Versie'],
         'updated_at' => ['label' => 'Laatst gewijzigd'],

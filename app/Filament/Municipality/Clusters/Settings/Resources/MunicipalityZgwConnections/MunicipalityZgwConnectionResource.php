@@ -55,6 +55,12 @@ class MunicipalityZgwConnectionResource extends Resource
     {
         return $schema
             ->components([
+                TextInput::make('name')
+                    ->label(__('municipality/resources/zgw_connection.fields.name.label'))
+                    ->helperText(__('municipality/resources/zgw_connection.fields.name.helper'))
+                    ->maxLength(255)
+                    ->columnSpanFull(),
+
                 Section::make(__('municipality/resources/zgw_connection.sections.endpoints.heading'))
                     ->description(__('municipality/resources/zgw_connection.sections.endpoints.description'))
                     ->columns(2)
@@ -115,6 +121,9 @@ class MunicipalityZgwConnectionResource extends Resource
     {
         return $table
             ->columns([
+                TextColumn::make('name')
+                    ->label(__('municipality/resources/zgw_connection.columns.name.label'))
+                    ->placeholder('—'),
                 TextColumn::make('zaken_url')
                     ->label(__('municipality/resources/zgw_connection.columns.zaken_url.label'))
                     ->placeholder('—')

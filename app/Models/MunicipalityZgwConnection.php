@@ -21,6 +21,7 @@ use RuntimeException;
  * global "main" connection, so a partial row still produces a working config.
  *
  * @property int $municipality_id
+ * @property string|null $name
  * @property string|null $zaken_url
  * @property string|null $catalogi_url
  * @property string|null $documenten_url
@@ -45,6 +46,7 @@ class MunicipalityZgwConnection extends Model
 
     protected $fillable = [
         'municipality_id',
+        'name',
         'zaken_url',
         'catalogi_url',
         'documenten_url',

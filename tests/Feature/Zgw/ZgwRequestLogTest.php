@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Municipality;
+use App\Models\User;
 use App\Models\ZgwRequestLog;
 use Woweb\Zgw\Events\ZgwRequestSent;
 
@@ -24,6 +25,21 @@ it('logs a ZGW request, deriving the municipality and stripping the query string
         ->and($log->resource)->toBe('/catalogi/api/v1/zaaktypen')
         ->and($log->status_code)->toBe(200)
         ->and($log->failed)->toBeFalse();
+});
+
+it('records the authenticated user who triggered the call', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    event(new ZgwRequestSent('main', 'client-id', 'GET', 'https://zgw.example.com/zaken/api/v1/zaken', 200));
+
+    expect(ZgwRequestLog::firstOrFail()->user_id)->toBe($user->id);
+});
+
+it('leaves the user null for background traffic', function () {
+    event(new ZgwRequestSent('main', 'client-id', 'GET', 'https://zgw.example.com/zaken/api/v1/zaken', 200));
+
+    expect(ZgwRequestLog::firstOrFail()->user_id)->toBeNull();
 });
 
 it('flags a failed request and leaves the main connection unattributed', function () {

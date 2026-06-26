@@ -46,7 +46,9 @@ class ZgwRequestLogResource extends Resource
     {
         // Isolate each municipality to its own logs; "main"-connection logs
         // (municipality_id null) belong to no tenant and are excluded here.
-        return parent::getEloquentQuery()->where('municipality_id', Filament::getTenant()?->getKey());
+        return parent::getEloquentQuery()
+            ->where('municipality_id', Filament::getTenant()?->getKey())
+            ->with(['user', 'municipality.zgwConnection']);
     }
 
     public static function getModelLabel(): string
@@ -79,8 +81,13 @@ class ZgwRequestLogResource extends Resource
                     ->label(__('municipality/resources/zgw_request_log.columns.status_code.label'))
                     ->badge()
                     ->color(fn (ZgwRequestLog $record): string => $record->failed ? 'danger' : 'success'),
+                TextColumn::make('user.name')
+                    ->label(__('municipality/resources/zgw_request_log.columns.user.label'))
+                    ->placeholder('—'),
                 TextColumn::make('connection')
                     ->label(__('municipality/resources/zgw_request_log.columns.connection.label'))
+                    // Prefer the connection's friendly label when one is set.
+                    ->state(fn (ZgwRequestLog $record): string => $record->municipality?->zgwConnection?->name ?: $record->connection)
                     ->toggleable(),
             ])
             ->filters([

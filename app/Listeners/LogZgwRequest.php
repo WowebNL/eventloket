@@ -22,6 +22,8 @@ class LogZgwRequest
             ZgwRequestLog::create([
                 'connection' => $event->connection,
                 'municipality_id' => ZgwRequestLog::municipalityIdFromConnection($event->connection),
+                // Present for panel-initiated calls; null for queued/console traffic.
+                'user_id' => auth()->id(),
                 'method' => $event->method,
                 'resource' => $this->path($event->uri),
                 'status_code' => $event->status,

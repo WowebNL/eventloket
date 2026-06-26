@@ -10,6 +10,7 @@ return [
         'method' => ['label' => 'Methode'],
         'resource' => ['label' => 'Resource'],
         'status_code' => ['label' => 'Status'],
+        'user' => ['label' => 'Gebruiker'],
         'connection' => ['label' => 'Connectie'],
     ],
 
