@@ -92,10 +92,6 @@ return [
             // RSIN used as bronorganisatie / verantwoordelijkeOrganisatie on every zaak.
             'bronorganisatie_rsin' => env('OPENZAAK_BRONORGANISATIE_RSIN', '820151130'),
 
-            // How zaakgeometrie is sent: 'json' (encoded string, legacy OpenZaak) or 'array'
-            // (decoded GeoJSON object). RX Mission requires 'array'.
-            'geometry_format' => env('ZGW_GEOMETRY_FORMAT', 'json'),
-
             // Optional date format for zaakeigenschap string values (e.g. 'YmdHis' for RX
             // Mission). Null keeps the value as produced by the form (legacy behaviour).
             'eigenschap_date_format' => env('ZGW_EIGENSCHAP_DATE_FORMAT'),

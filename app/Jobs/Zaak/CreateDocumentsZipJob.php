@@ -7,13 +7,13 @@ namespace App\Jobs\Zaak;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Notifications\DocumentsZipReady;
+use App\Services\Zgw\ZgwResource;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Woweb\Openzaak\Openzaak;
 use ZipArchive;
 
 final class CreateDocumentsZipJob implements ShouldQueue
@@ -62,7 +62,7 @@ final class CreateDocumentsZipJob implements ShouldQueue
      */
     public static function buildZip(Zaak $zaak, array $documentUuids, int $userId): ?string
     {
-        $oz = new Openzaak;
+        $connectionName = $zaak->zgwConnectionName();
         $token = (string) Str::uuid();
         $zipPath = storage_path("app/private/zips/{$token}.zip");
 
@@ -90,7 +90,7 @@ final class CreateDocumentsZipJob implements ShouldQueue
             }
 
             try {
-                $content = $oz->getRaw($document->inhoud);
+                $content = ZgwResource::downloadByUrl($connectionName, $document->inhoud);
             } catch (\Throwable $e) {
                 Log::error('CreateDocumentsZipJob: document ophalen mislukt', [
                     'zaak_id' => $zaak->id,

@@ -7,12 +7,14 @@ namespace App\Jobs\Zaak;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OzZaak;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Connection\ZgwConnection;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Zet de initiator-rol op de ZGW-zaak op basis van het initiator-blok
@@ -33,7 +35,7 @@ class UpdateInitiatorZGW implements ShouldQueue
 
     public function __construct(public readonly Zaak $zaak) {}
 
-    public function handle(Openzaak $openzaak, ZaakeigenschappenMap $map): void
+    public function handle(ZaakeigenschappenMap $map): void
     {
         if (! $this->zaak->zgw_zaak_url) {
             return;
@@ -45,8 +47,11 @@ class UpdateInitiatorZGW implements ShouldQueue
             return;
         }
 
-        $ozZaak = new OzZaak(...$openzaak->get($this->zaak->zgw_zaak_url.'?expand=rollen')->toArray());
-        $roltype = $this->findInitiatorRoltype($openzaak, $ozZaak->zaaktype);
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
+
+        $ozZaak = new OzZaak(...ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url.'?expand=rollen'));
+        $roltype = $this->findInitiatorRoltype($connection, $ozZaak->zaaktype);
         if (! $roltype) {
             return;
         }
@@ -55,13 +60,13 @@ class UpdateInitiatorZGW implements ShouldQueue
             ? $this->buildNietNatuurlijkPersoonRol($ozZaak->url, $roltype, $initiator)
             : $this->buildNatuurlijkPersoonRol($ozZaak->url, $roltype, $state, $initiator);
 
-        $openzaak->zaken()->rollen()->store($rolData);
+        $connection->zaken()->rollen()->store($rolData);
     }
 
-    private function findInitiatorRoltype(Openzaak $openzaak, string $zaaktypeUrl): ?string
+    private function findInitiatorRoltype(ZgwConnection $connection, string $zaaktypeUrl): ?string
     {
-        $roltypen = $openzaak->catalogi()->roltypen()->getAll(['zaaktype' => $zaaktypeUrl]);
-        $initiator = collect($roltypen)->first(fn ($r) => ($r['omschrijvingGeneriek'] ?? null) === 'initiator');
+        $roltypen = $connection->catalogi()->roltypen()->index(['zaaktype' => $zaaktypeUrl]);
+        $initiator = $roltypen->first(fn ($r) => ($r['omschrijvingGeneriek'] ?? null) === 'initiator');
 
         return $initiator['url'] ?? null;
     }
@@ -75,9 +80,12 @@ class UpdateInitiatorZGW implements ShouldQueue
             'roltype' => $roltype,
             'roltoelichting' => 'inzender formulier',
             'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
+            // We send only kvkNummer as the company identifier, for every
+            // connection (OpenZaak included). annIdentificatie is deliberately
+            // omitted: not every ZGW instance accepts it and the KvK number is
+            // the canonical identifier.
             'betrokkeneIdentificatie' => array_filter([
                 'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
-                'annIdentificatie' => $initiator['kvk'],
                 'kvkNummer' => $initiator['kvk'],
             ]),
         ];

@@ -6,9 +6,10 @@ namespace App\EventForm\Submit\Steps;
 
 use App\EventForm\State\FormState;
 use App\Models\Zaaktype;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OzZaak;
 use Carbon\Carbon;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Synchrone eerste ZGW-stap van een submit: maakt een basiszaak aan bij
@@ -20,8 +21,6 @@ use Woweb\Openzaak\Openzaak;
  */
 final class CreateZaakInZGW
 {
-    public function __construct(private readonly Openzaak $openzaak) {}
-
     public function execute(FormState $state, Zaaktype $zaaktype): OzZaak
     {
         $payload = [
@@ -34,10 +33,9 @@ final class CreateZaakInZGW
             'toelichting' => $this->toelichting($state),
         ];
 
-        $response = $this->openzaak->zaken()->zaken()->store($payload);
-        $data = $response->toArray();
+        $data = Zgw::connection($zaaktype->zgwConnectionName())->zaken()->zaken()->store($payload);
 
-        return new OzZaak(...$data);
+        return new OzZaak(...ZgwResource::ensureUuid($data));
     }
 
     private function omschrijving(FormState $state): string

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ReflectionObject;
 use RuntimeException;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Upload alle FileUpload-bijlagen die de organisator op de bijlagen-
@@ -134,12 +134,12 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         }
 
         $informatieobjecttype = $this->resolveInformatieobjecttype();
-        $oz = new Openzaak;
+        $connection = Zgw::connection($this->zaak->zgwConnectionName());
 
         foreach ($aanwezig as $pad => $bestandsnaam) {
             $content = (string) $disk->get($pad);
 
-            $info = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+            $info = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
                 'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
                 'creatiedatum' => now()->format('Y-m-d'),
                 'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
@@ -154,7 +154,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 'indicatieGebruiksrecht' => false,
             ]));
 
-            $oz->zaken()->zaakinformatieobjecten()->store([
+            $connection->zaken()->zaakinformatieobjecten()->store([
                 'zaak' => $this->zaak->zgw_zaak_url,
                 'informatieobject' => $info->url,
             ]);

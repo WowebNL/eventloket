@@ -28,6 +28,5 @@ it('carries the application-level technical params with OpenZaak defaults', func
     $main = config('zgw.connections.main');
 
     expect($main['bronorganisatie_rsin'])->toBe('820151130')
-        ->and($main['geometry_format'])->toBe('json')
         ->and($main)->toHaveKey('eigenschap_date_format');
 });

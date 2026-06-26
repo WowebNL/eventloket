@@ -12,7 +12,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Upload het zojuist gegenereerde inzendingsbewijs (PDF) als
@@ -55,8 +55,8 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
         $content = (string) Storage::disk('local')->get($path);
         $informatieobjecttype = $this->resolveInformatieobjecttype();
 
-        $oz = new Openzaak;
-        $info = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+        $connection = Zgw::connection($this->zaak->zgwConnectionName());
+        $info = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
             'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
@@ -71,7 +71,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             'indicatieGebruiksrecht' => false,
         ]));
 
-        $oz->zaken()->zaakinformatieobjecten()->store([
+        $connection->zaken()->zaakinformatieobjecten()->store([
             'zaak' => $this->zaak->zgw_zaak_url,
             'informatieobject' => $info->url,
         ]);

@@ -6,7 +6,7 @@ use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ZGW\StatusType;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class AddFinalStatusZGW implements ShouldQueue
 {
@@ -20,9 +20,11 @@ class AddFinalStatusZGW implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(Openzaak $openzaak): void
+    public function handle(): void
     {
-        $finalStatusType = new StatusType(...$openzaak->catalogi()->statustypen()->getAll(['zaaktype' => $this->finishZaakObject->zaak->openzaak->zaaktype])->where('isEindstatus', true)->first());
-        $openzaak->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statustype' => $finalStatusType->url]));
+        $connection = Zgw::connection($this->finishZaakObject->zaak->zgwConnectionName());
+
+        $finalStatusType = new StatusType(...$connection->catalogi()->statustypen()->index(['zaaktype' => $this->finishZaakObject->zaak->openzaak->zaaktype])->collect()->where('isEindstatus', true)->first());
+        $connection->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statustype' => $finalStatusType->url]));
     }
 }

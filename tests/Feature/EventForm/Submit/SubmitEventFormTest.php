@@ -117,10 +117,10 @@ function fakeOpenzaakZaakCreate(): string
         ], 201),
         // CreateLocalZaak resolves the initial statustype (volgnummer 1) so the
         // local zaak has a valid statustype_url from creation.
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'Ontvangen', 'volgnummer' => 1, 'isEindstatus' => false],
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'In behandeling', 'volgnummer' => 2, 'isEindstatus' => false],
-        ], 200),
+        ]), 200),
     ]);
 
     return $zaakUrl;

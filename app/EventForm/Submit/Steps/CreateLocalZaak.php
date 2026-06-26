@@ -12,7 +12,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\OzZaak;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Synchrone stap: schrijft de lokale `zaken`-row op basis van de net
@@ -28,7 +28,6 @@ final class CreateLocalZaak
 {
     public function __construct(
         private readonly MapFormStateToReferenceData $mapReferenceData,
-        private readonly Openzaak $openzaak,
     ) {}
 
     public function execute(
@@ -77,8 +76,10 @@ final class CreateLocalZaak
         }
 
         try {
-            $statustypen = $this->openzaak->catalogi()->statustypen()
-                ->getAll(['zaaktype' => $zaaktype->zgw_zaaktype_url]);
+            $statustypen = Zgw::connection($zaaktype->zgwConnectionName())
+                ->catalogi()->statustypen()
+                ->index(['zaaktype' => $zaaktype->zgw_zaaktype_url])
+                ->collect();
 
             $initieel = $statustypen->sortBy('volgnummer')->first();
 

@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Jobs\Zaak;
 
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\OzZaaktype;
 use Carbon\Carbon;
 use Carbon\CarbonInterval;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Vult `einddatumGepland` + `uiterlijkeEinddatumAfdoening` op de ZGW-zaak
@@ -24,23 +25,24 @@ class AddEinddatumZGW implements ShouldQueue
 
     public function __construct(public readonly Zaak $zaak) {}
 
-    public function handle(Openzaak $openzaak): void
+    public function handle(): void
     {
         if (! $this->zaak->zgw_zaak_url) {
             return;
         }
 
-        $ozZaak = new OzZaak(...$openzaak->get($this->zaak->zgw_zaak_url)->toArray());
+        $connectionName = $this->zaak->zgwConnectionName();
+        $ozZaak = new OzZaak(...ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url));
 
         if ($ozZaak->uiterlijkeEinddatumAfdoening || $ozZaak->einddatumGepland) {
             return;
         }
 
-        $zaaktype = new OzZaaktype(...$openzaak->get($ozZaak->zaaktype)->toArray());
+        $zaaktype = new OzZaaktype(...ZgwResource::byUrl($connectionName, $ozZaak->zaaktype));
         $doorlooptijd = new CarbonInterval($zaaktype->doorlooptijd);
         $servicenorm = new CarbonInterval($zaaktype->servicenorm);
 
-        $openzaak->zaken()->zaken()->patch($ozZaak->uuid, [
+        Zgw::connection($connectionName)->zaken()->zaken()->patch($ozZaak->uuid, [
             'einddatumGepland' => Carbon::parse($ozZaak->startdatum)->add($servicenorm)->format('Y-m-d'),
             'uiterlijkeEinddatumAfdoening' => Carbon::parse($ozZaak->startdatum)->add($doorlooptijd)->format('Y-m-d'),
         ]);
