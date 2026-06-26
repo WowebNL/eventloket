@@ -2,15 +2,19 @@
 
 namespace App\Console\Commands\Doorkomst;
 
+use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
+use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Facades\Zgw;
 
 class ImportDoorkomstZaaktypen extends Command
 {
-    protected $signature = 'app:import-doorkomst-zaaktypen {--dry-run : Simuleer de import zonder daadwerkelijk iets aan te maken}';
+    protected $signature = 'app:import-doorkomst-zaaktypen
+        {--dry-run : Simuleer de import zonder daadwerkelijk iets aan te maken}
+        {--connection= : De ZGW connectie om tegen te draaien (standaard onze eigen Open Zaak)}';
 
-    protected $description = 'Importeert Doorkomst zaaktypen (inclusief child resources) naar de gekoppelde Open Zaak catalogus';
+    protected $description = 'Importeert Doorkomst zaaktypen naar onze eigen Open Zaak catalogus; voor externe instanties alleen read-only validatie';
 
     private array $headers = [];
 
@@ -20,30 +24,19 @@ class ImportDoorkomstZaaktypen extends Command
 
     private bool $dryRun = false;
 
-    public function handle(): int
+    public function handle(ZgwConnectionResolver $resolver): int
     {
         $this->dryRun = (bool) $this->option('dry-run');
 
-        $connection = Zgw::connection();
+        $connectionName = (string) ($this->option('connection') ?: config('zgw.default', ZgwConnectionResolver::DEFAULT_CONNECTION));
+        $connection = Zgw::connection($connectionName);
         $this->headers = $connection->getHeaders();
         $this->baseUrl = $connection->getBaseUrl('catalogi');
-        $this->catalogusUrl = config('openzaak.catalogi_url');
-
-        if ($this->dryRun) {
-            $this->warn('DRY-RUN modus: er worden geen wijzigingen doorgevoerd.');
-        }
-
-        $this->info('Open Zaak base URL: '.$this->baseUrl);
-        $this->info('Catalogus URL: '.$this->catalogusUrl);
+        $this->catalogusUrl = (string) config('openzaak.catalogi_url');
 
         // Load source JSON files
         $catalogusDir = base_path('docker/local-data/open-zaak-catalogus');
         $sourceZaaktypen = $this->loadJson($catalogusDir.'/ZaakType.json');
-        $sourceStatustypen = $this->loadJson($catalogusDir.'/StatusType.json');
-        $sourceRoltypen = $this->loadJson($catalogusDir.'/RolType.json');
-        $sourceResultaattypen = $this->loadJson($catalogusDir.'/ResultaatType.json');
-        $sourceEigenschappen = $this->loadJson($catalogusDir.'/Eigenschap.json');
-        $sourceZtiots = $this->loadJson($catalogusDir.'/ZaakTypeInformatieObjectType.json');
 
         // Filter to Doorkomst zaaktypen only
         $doorkomstZaaktypen = array_values(array_filter(
@@ -52,6 +45,25 @@ class ImportDoorkomstZaaktypen extends Command
         ));
 
         $this->info('Doorkomst zaaktypen gevonden in bronbestand: '.count($doorkomstZaaktypen));
+
+        // Importing is a write and only runs against our own OpenZaak. For an externally
+        // managed instance we validate read-only that the Doorkomst zaaktypen already exist.
+        if (! $resolver->isManaged($connectionName)) {
+            return $this->validateExternal($connectionName, $connection, $doorkomstZaaktypen);
+        }
+
+        if ($this->dryRun) {
+            $this->warn('DRY-RUN modus: er worden geen wijzigingen doorgevoerd.');
+        }
+
+        $this->info('Open Zaak base URL: '.$this->baseUrl);
+        $this->info('Catalogus URL: '.$this->catalogusUrl);
+
+        $sourceStatustypen = $this->loadJson($catalogusDir.'/StatusType.json');
+        $sourceRoltypen = $this->loadJson($catalogusDir.'/RolType.json');
+        $sourceResultaattypen = $this->loadJson($catalogusDir.'/ResultaatType.json');
+        $sourceEigenschappen = $this->loadJson($catalogusDir.'/Eigenschap.json');
+        $sourceZtiots = $this->loadJson($catalogusDir.'/ZaakTypeInformatieObjectType.json');
 
         // Group child resources by source zaaktype URL
         $statustypenByZaaktype = $this->groupBy($sourceStatustypen, 'zaaktype');
@@ -288,6 +300,45 @@ class ImportDoorkomstZaaktypen extends Command
         }
 
         return $failed === 0 ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    /**
+     * Read-only validation against an externally managed catalogus: report which
+     * Doorkomst zaaktypen already exist (by identificatie) and which are missing,
+     * without creating anything.
+     *
+     * @param  array<int, array<string, mixed>>  $doorkomstZaaktypen
+     */
+    private function validateExternal(string $connectionName, ZgwConnection $connection, array $doorkomstZaaktypen): int
+    {
+        $this->warn("Externe connectie '{$connectionName}': read-only validatie, er wordt niets aangemaakt.");
+
+        $existingIdentificaties = $connection->catalogi()->zaaktypen()
+            ->index()
+            ->collect()
+            ->pluck('identificatie')
+            ->filter()
+            ->flip();
+
+        $present = 0;
+        $missing = 0;
+
+        foreach ($doorkomstZaaktypen as $zt) {
+            $identificatie = $zt['identificatie'];
+
+            if ($existingIdentificaties->has($identificatie)) {
+                $this->line("  <info>Aanwezig</info>: {$identificatie}");
+                $present++;
+            } else {
+                $this->warn("  Ontbreekt: {$identificatie}. Maak dit zaaktype handmatig aan in de externe catalogus.");
+                $missing++;
+            }
+        }
+
+        $this->newLine();
+        $this->info("Validatie klaar. Aanwezig: {$present} | Ontbreekt: {$missing}.");
+
+        return $missing === 0 ? Command::SUCCESS : Command::FAILURE;
     }
 
     private function buildZaaktypePayload(array $zt): array

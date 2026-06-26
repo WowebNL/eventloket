@@ -70,6 +70,19 @@ class ZgwConnectionResolver
     }
 
     /**
+     * Whether a connection is one we manage ourselves and may write to.
+     *
+     * Only our own OpenZaak (the application's default connection) is writable
+     * by the setup commands. Per-municipality connections ("gemeente_{id}") are
+     * externally managed instances: the commands validate them read-only and
+     * never create, patch or publish there.
+     */
+    public function isManaged(string $connectionName): bool
+    {
+        return $connectionName === config('zgw.default', self::DEFAULT_CONNECTION);
+    }
+
+    /**
      * Resolve the connection name for an incoming ZGW resource URL (webhook path).
      *
      * The exact local Zaak lookup is the most reliable signal: a zaak URL maps to exactly
