@@ -61,7 +61,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
 
         return match ($user->role) {
             Role::Admin => [],
-            Role::MunicipalityAdmin => [],
+            Role::MunicipalityAdmin, Role::KoppelingBeheerder => [],
             Role::Coordinator => [
                 NewZaak::class,
                 NewOrganiserThread::class,
