@@ -3,10 +3,10 @@
 namespace App\Console\Commands\Zaaktypen;
 
 use App\Models\Zaaktype;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Throwable;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Woweb\Zgw\Facades\Zgw;
 
 class SyncZaaktypeEigenschappen extends Command
@@ -57,11 +57,11 @@ class SyncZaaktypeEigenschappen extends Command
             $catalogiEigenschappen = $connection->catalogi()->eigenschappen()
                 ->index(['zaaktype' => $zaaktype->zgw_zaaktype_url])
                 ->collect()
-                ->map(fn ($item) => new CatalogiEigenschap(...$item));
+                ->map(fn ($item) => EigenschapData::from($item));
 
             $missing = collect(self::REQUIRED_EIGENSCHAPPEN)
                 ->keys()
-                ->reject(fn (string $naam) => $catalogiEigenschappen->contains(fn (CatalogiEigenschap $eigenschap) => $eigenschap->naam === $naam))
+                ->reject(fn (string $naam) => $catalogiEigenschappen->contains(fn (EigenschapData $eigenschap) => $eigenschap->naam === $naam))
                 ->values();
 
             if ($missing->isEmpty()) {

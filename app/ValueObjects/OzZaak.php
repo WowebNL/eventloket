@@ -2,7 +2,6 @@
 
 namespace App\ValueObjects;
 
-use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\Rol;
 use App\ValueObjects\ZGW\ZaakEigenschap;
 use Carbon\Carbon;
@@ -25,7 +24,7 @@ class OzZaak implements Arrayable
 
     public readonly ?string $data_object_url;
 
-    /*  @var CatalogiEigenschap[]|[] $eigenschappen */
+    /*  @var ZaakEigenschap[]|[] $eigenschappen */
     public readonly array $eigenschappen;
 
     public readonly array $eigenschappen_key_value;

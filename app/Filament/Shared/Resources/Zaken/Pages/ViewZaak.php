@@ -15,7 +15,7 @@ use App\Notifications\AssignedToZaak;
 use App\Notifications\Result;
 use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\ZGW\BesluitType;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
@@ -281,7 +281,7 @@ class ViewZaak extends ViewRecord
                                             if (! $get('besluit_type')) {
                                                 return [];
                                             }
-                                            $besluittype = new BesluitType(...ZgwResource::byUrl($record->zgwConnectionName(), $get('besluit_type')));
+                                            $besluittype = BesluitTypeData::from(ZgwResource::byUrl($record->zgwConnectionName(), $get('besluit_type')));
 
                                             // dd($record->documenten);
                                             return $record->documenten->filter(function ($document) use ($besluittype) {

@@ -13,10 +13,10 @@ use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OzZaak;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -48,7 +48,7 @@ class AddZaakeigenschappenZGW implements ShouldQueue
         $catalogiEigenschappen = $connection->catalogi()->eigenschappen()
             ->index(['zaaktype' => $ozZaak->zaaktype])
             ->collect()
-            ->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
+            ->map(fn ($eigenschap) => EigenschapData::from($eigenschap));
 
         $eigenschappen = $map->buildEigenschappen($state);
 
@@ -87,7 +87,7 @@ class AddZaakeigenschappenZGW implements ShouldQueue
 
             $connection->zaken()->zaken()->zaakeigenschappen(basename($this->zaak->zgw_zaak_url))->store([
                 'zaak' => $ozZaak->url,
-                'eigenschap' => $catalogiEigenschap->url,
+                'eigenschap' => (string) $catalogiEigenschap->url,
                 'waarde' => ZgwConnectionConfig::formatEigenschapWaarde($connectionName, $waardeString),
             ]);
         }

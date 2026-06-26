@@ -16,8 +16,6 @@ use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
-use App\ValueObjects\ZGW\StatusType;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -39,6 +37,8 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 use App\Services\Zgw\ZgwResource;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
+use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
 class ZaakInfolist
@@ -249,7 +249,7 @@ class ZaakInfolist
                                                 // Load catalogi eigenschappen if needed
                                                 $catalogiEigenschappen = null;
                                                 if (! $eigenschappen['risico_classificatie'] || ! $eigenschappen['risico_toelichting']) {
-                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])->collect()->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
+                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])->collect()->map(fn ($eigenschap) => EigenschapData::from($eigenschap));
                                                 }
 
                                                 // Handle risico_classificatie
@@ -264,7 +264,7 @@ class ZaakInfolist
                                                     if ($catalogiEigenschap) {
                                                         $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
                                                             'zaak' => $record->openzaak->url,
-                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                            'eigenschap' => (string) $catalogiEigenschap->url,
                                                             'waarde' => $data['risico_classificatie'],
                                                         ]);
                                                     } else {
@@ -284,7 +284,7 @@ class ZaakInfolist
                                                     if ($catalogiEigenschap) {
                                                         $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
                                                             'zaak' => $record->openzaak->url,
-                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                            'eigenschap' => (string) $catalogiEigenschap->url,
                                                             'waarde' => $data['risico_toelichting'],
                                                         ]);
                                                     } else {
@@ -341,7 +341,7 @@ class ZaakInfolist
                                                 } else {
                                                     $catalogiEigenschap = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])
                                                         ->collect()
-                                                        ->map(fn ($item) => new CatalogiEigenschap(...$item))
+                                                        ->map(fn ($item) => EigenschapData::from($item))
                                                         ->firstWhere('naam', 'intern_zaaknummer');
 
                                                     if (! $catalogiEigenschap) {
@@ -355,7 +355,7 @@ class ZaakInfolist
 
                                                     $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
                                                         'zaak' => $record->openzaak->url,
-                                                        'eigenschap' => $catalogiEigenschap->url,
+                                                        'eigenschap' => (string) $catalogiEigenschap->url,
                                                         'waarde' => $data['intern_zaaknummer'],
                                                     ]);
                                                 }
@@ -415,7 +415,7 @@ class ZaakInfolist
                                                 if ($data['status'] != $record->openzaak->status['statustype']) {
                                                     $oldStatus = $record->reference_data->status_name;
                                                     $openzaak = Zgw::connection($record->zgwConnectionName());
-                                                    $statusType = new StatusType(...ZgwResource::byUrl($record->zgwConnectionName(), $data['status']));
+                                                    $statusType = StatusTypeData::from(ZgwResource::byUrl($record->zgwConnectionName(), $data['status']));
 
                                                     $openzaak->zaken()->statussen()->store([
                                                         'zaak' => $record->openzaak->url,

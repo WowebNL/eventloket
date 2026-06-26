@@ -5,10 +5,10 @@ namespace App\Jobs\Zaak;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\ValueObjects\FinishZaakObject;
-use App\ValueObjects\ZGW\StatusType;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use RuntimeException;
+use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
 class AddFinalStatusZGW implements ShouldQueue
@@ -36,7 +36,7 @@ class AddFinalStatusZGW implements ShouldQueue
             throw new RuntimeException(sprintf('Geen eind-statustype gevonden voor zaak %s.', $zaak->id));
         }
 
-        $finalStatusType = new StatusType(...$eind);
-        $connection->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statustype' => $finalStatusType->url]));
+        $finalStatusType = StatusTypeData::from($eind);
+        $connection->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statustype' => (string) $finalStatusType->url]));
     }
 }

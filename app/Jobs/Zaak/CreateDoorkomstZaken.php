@@ -17,7 +17,7 @@ use App\Services\Zgw\ZgwResource;
 use App\Support\Helpers\ArrayHelper;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\OzZaak;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Io\GeoJsonReader;
 use Brick\Geo\LineString;
@@ -230,7 +230,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         $newUuid = basename($newZaakUrl);
         $catalogi = $deelConnection->catalogi()->eigenschappen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])
             ->collect()
-            ->map(fn ($e) => new CatalogiEigenschap(...$e));
+            ->map(fn ($e) => EigenschapData::from($e));
 
         foreach ($ozZaak->eigenschappen_key_value as $naam => $waarde) {
             if (! $waarde) {
@@ -242,7 +242,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             }
             $deelConnection->zaken()->zaken()->zaakeigenschappen($newUuid)->store([
                 'zaak' => $newZaakUrl,
-                'eigenschap' => $cat->url,
+                'eigenschap' => (string) $cat->url,
                 'waarde' => $waarde,
             ]);
         }

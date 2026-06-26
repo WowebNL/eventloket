@@ -14,7 +14,6 @@ use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Besluit;
-use App\ValueObjects\ZGW\BesluitType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
@@ -32,6 +31,7 @@ use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
@@ -317,7 +317,7 @@ class Zaak extends Model implements Eventable
                     $besluitDocumentenCollection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($besluitInformatieObject['informatieobject']))));
                 }
                 $collection->push(new Besluit(...array_merge($besluit, [
-                    'besluittypeObject' => new BesluitType(...ZgwResource::ensureUuid($direct->getByUrl($besluit['besluittype']))),
+                    'besluittypeObject' => BesluitTypeData::from($direct->getByUrl($besluit['besluittype'])),
                     'besluitDocumenten' => $besluitDocumentenCollection,
                 ])));
             }
