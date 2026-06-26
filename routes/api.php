@@ -10,6 +10,6 @@ use Laravel\Passport\Http\Middleware\EnsureClientIsResourceOwner;
 // het report-questions endpoint zijn verwijderd samen met de
 // `NormalizeOpenformsInput`-middleware.
 // `open-notifications/listen` is een ZGW-webhook en onafhankelijk van OF.
-Route::group(['middleware' => [EnsureClientIsResourceOwner::class]], function () {
-    Route::post('/open-notifications/listen', [OpenNotificationsController::class, 'listen'])->name('api.open-notifications.listen');
-});
+Route::post('/open-notifications/listen', [OpenNotificationsController::class, 'listen'])
+    ->middleware(EnsureClientIsResourceOwner::class.':notifications:receive')
+    ->name('api.open-notifications.listen');
