@@ -11,7 +11,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class NewDocumentVersionAction
 {
@@ -60,11 +60,11 @@ class NewDocumentVersionAction
 
     public static function createNewDocumentVersion(string $documentUuid, array $data, Zaak $zaak)
     {
-        $oz = new Openzaak;
+        $connection = Zgw::connection($zaak->zgwConnectionName());
         $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
         $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
-        $lockString = $oz->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
-        $oz->documenten()->enkelvoudiginformatieobjecten()->patch($documentUuid,
+        $lockString = $connection->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
+        $connection->documenten()->enkelvoudiginformatieobjecten()->patch($documentUuid,
             [
                 'inhoud' => base64_encode(Storage::get($data['file'])),
                 'titel' => $data['titel'],
@@ -76,7 +76,7 @@ class NewDocumentVersionAction
                 'indicatieGebruiksrecht' => false,
             ]
         );
-        $oz->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);
+        $connection->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);
 
         Storage::delete($data['file']);
 

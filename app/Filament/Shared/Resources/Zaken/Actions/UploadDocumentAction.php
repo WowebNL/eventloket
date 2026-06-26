@@ -20,7 +20,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class UploadDocumentAction
 {
@@ -257,7 +257,7 @@ class UploadDocumentAction
      */
     public static function uploadDocument(array $data, Zaak $zaak): Informatieobject
     {
-        $oz = new Openzaak;
+        $connection = Zgw::connection($zaak->zgwConnectionName());
 
         $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding'] ?? match (auth()->user()->role) {
             Role::Organiser => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
@@ -268,7 +268,7 @@ class UploadDocumentAction
         $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
         $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
 
-        $informatieobject = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+        $informatieobject = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
             'vertrouwelijkheidaanduiding' => $vertrouwelijkheidaanduiding,
@@ -283,7 +283,7 @@ class UploadDocumentAction
             'indicatieGebruiksrecht' => false,
         ]));
 
-        $oz->zaken()->zaakinformatieobjecten()->store([
+        $connection->zaken()->zaakinformatieobjecten()->store([
             'zaak' => $zaak->openzaak->url,
             'informatieobject' => $informatieobject->url,
         ]);

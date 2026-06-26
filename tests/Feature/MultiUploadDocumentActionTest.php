@@ -55,7 +55,7 @@ test('upload action dispatches UploadDocumentsJob with file data', function () {
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
             [
                 'uuid' => '1',
                 'url' => $documentTypeUrl,
@@ -63,7 +63,7 @@ test('upload action dispatches UploadDocumentsJob with file data', function () {
                 'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
                 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
             ],
-        ], 200),
+        ]), 200),
         ZgwHttpFake::$baseUrl.'*' => Http::response([], 200),
     ]);
 
