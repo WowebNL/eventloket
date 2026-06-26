@@ -17,7 +17,7 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\OzZaak;
-use App\ValueObjects\ZGW\InformatieobjectType;
+use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
@@ -113,13 +113,13 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
     ));
     // Document types are cached per (connection, zaaktype version url). The job reads
     // them via the zaak's version snapshot, which falls back to the OzZaak zaaktype.
-    Cache::put('zaaktype_document_types_'.md5('main|https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1'), collect([
-        new InformatieobjectType(
-            uuid: 'iot-1',
-            url: 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',
-            omschrijving: 'Bijlage',
-            vertrouwelijkheidaanduiding: 'zaakvertrouwelijk',
-        ),
+    Cache::put('zaaktype_document_types_v2_'.md5('main|https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1'), collect([
+        InformatieObjectTypeData::from([
+            'uuid' => 'iot-1',
+            'url' => 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',
+            'omschrijving' => 'Bijlage',
+            'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+        ]),
     ]));
 
     // Pre-seed de documenten-cache zodat we straks kunnen bewijzen dat

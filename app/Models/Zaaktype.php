@@ -5,7 +5,7 @@ namespace App\Models;
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionResolver;
-use App\ValueObjects\ZGW\InformatieobjectType;
+use App\Services\Zgw\ZgwResource;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
 class Zaaktype extends Model
@@ -58,7 +59,7 @@ class Zaaktype extends Model
         return app(ZgwConnectionResolver::class)->for($this);
     }
 
-    /** @return Attribute<Collection<InformatieobjectType>|null, void> */
+    /** @return Attribute<Collection<InformatieObjectTypeData>|null, void> */
     protected function documentTypes(): Attribute
     {
         // TODO: user need to see type in zaakdocumentstable and besluiteninfolist, only need type name there
@@ -71,14 +72,17 @@ class Zaaktype extends Model
      * Document types for a specific zaaktype version, filtered to what the current
      * user may see. Defaults to this row's (latest) version when no version is given.
      *
-     * @return Collection<int, InformatieobjectType>
+     * @return Collection<int, InformatieObjectTypeData>
      */
     public function documentTypesForUser(?string $versionUrl = null): Collection
     {
         $types = $this->getDocumentTypes($versionUrl);
 
         if (auth()->user()) {
-            $types = $types->filter(fn (InformatieobjectType $type) => in_array($type->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
+            $allowed = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
+            // The DTO exposes vertrouwelijkheidaanduiding as a backed enum; compare on
+            // its value against the allowed string values.
+            $types = $types->filter(fn (InformatieObjectTypeData $type) => in_array($type->vertrouwelijkheidaanduiding?->value, $allowed, true));
         }
 
         return $types->sortBy('omschrijving');
@@ -112,21 +116,32 @@ class Zaaktype extends Model
     }
 
     /**
-     * @return Collection<int, InformatieobjectType>
+     * @return Collection<int, InformatieObjectTypeData>
      */
     private function getDocumentTypes(?string $versionUrl = null): Collection
     {
         $connectionName = $this->zgwConnectionName();
         $url = $versionUrl ?: $this->zgw_zaaktype_url;
 
-        return Cache::rememberForever('zaaktype_document_types_'.md5($connectionName.'|'.$url), function () use ($connectionName, $url) {
-            $items = Zgw::connection($connectionName)
+        // Cache key bumped to v2: the stored DTO type changed from the old
+        // InformatieobjectType value object to the package InformatieObjectTypeData.
+        return Cache::rememberForever('zaaktype_document_types_v2_'.md5($connectionName.'|'.$url), function () use ($connectionName, $url) {
+            // Resolve document types via the standard zaaktype-informatieobjecttypen
+            // relation rather than the informatieobjecttypen?zaaktype= filter, which
+            // not every ZGW instance supports. Each relation row links to one
+            // informatieobjecttype that we then fetch by url.
+            $relations = Zgw::connection($connectionName)
                 ->catalogi()
-                ->informatieobjecttypen()
+                ->zaaktypeInformatieobjecttypen()
                 ->index(['zaaktype' => $url]);
+
             $collection = collect();
-            foreach ($items as $item) {
-                $collection->push(new InformatieobjectType(...$item));
+            foreach ($relations as $relation) {
+                $informatieobjecttypeUrl = $relation['informatieobjecttype'] ?? null;
+                if (! is_string($informatieobjecttypeUrl) || $informatieobjecttypeUrl === '') {
+                    continue;
+                }
+                $collection->push(InformatieObjectTypeData::from(ZgwResource::byUrl($connectionName, $informatieobjecttypeUrl)));
             }
 
             return $collection;

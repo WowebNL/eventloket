@@ -111,7 +111,7 @@ class Zaak extends Model implements Eventable
         return $this->zaaktype?->zgw_zaaktype_url;
     }
 
-    /** @return Attribute<\Illuminate\Support\Collection<int, \App\ValueObjects\ZGW\InformatieobjectType>, void> */
+    /** @return Attribute<\Illuminate\Support\Collection<int, \Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData>, void> */
     protected function documentTypes(): Attribute
     {
         return Attribute::make(

@@ -100,7 +100,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
         $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
         $chosen = ZaaktypeBlueprint::bijlageInformatieobjecttype($mapping, $this->zaak->document_types, matchBijlageInOmschrijving: false);
 
-        if (! $chosen || ! property_exists($chosen, 'url') || $chosen->url === '') {
+        if (! $chosen || ! $chosen->url) {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
                 .($this->zaak->zaaktype->id ?? '?')

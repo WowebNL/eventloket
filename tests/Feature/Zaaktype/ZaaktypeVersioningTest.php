@@ -92,14 +92,19 @@ test('document_types reads against the zaak version snapshot, not the latest zaa
     ]);
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
-            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1', 'omschrijving' => 'Bijlage', 'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk'],
+        // Document types are resolved via the standard zaaktype-informatieobjecttypen
+        // relation, then each linked informatieobjecttype is fetched by url.
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen/1', 'zaaktype' => $snapshotUrl, 'informatieobjecttype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1'],
         ]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1', 'omschrijving' => 'Bijlage', 'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+        ], 200),
     ]);
 
     expect($zaak->document_types)->toHaveCount(1);
 
-    Http::assertSent(fn ($request) => str_contains($request->url(), '/catalogi/api/v1/informatieobjecttypen')
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/catalogi/api/v1/zaaktype-informatieobjecttypen')
         && str_contains($request->url(), 'zaaktype='.urlencode($snapshotUrl)));
 });
 
