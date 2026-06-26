@@ -7,11 +7,10 @@ namespace App\Jobs\Zaak;
 use App\Models\Zaak;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OzZaak;
-use App\ValueObjects\OzZaaktype;
 use Carbon\Carbon;
-use Carbon\CarbonInterval;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Woweb\Zgw\Data\Generated\Catalogi\ZaakTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -38,13 +37,21 @@ class AddEinddatumZGW implements ShouldQueue
             return;
         }
 
-        $zaaktype = new OzZaaktype(...ZgwResource::byUrl($connectionName, $ozZaak->zaaktype));
-        $doorlooptijd = new CarbonInterval($zaaktype->doorlooptijd);
-        $servicenorm = new CarbonInterval($zaaktype->servicenorm);
+        $zaaktype = ZaakTypeData::from(ZgwResource::byUrl($connectionName, $ozZaak->zaaktype));
+        // doorlooptijd/servicenorm are CarbonInterval (or null when the catalogus
+        // omits them); patch only the dates we can derive.
+        $patch = [];
+        if ($zaaktype->servicenorm) {
+            $patch['einddatumGepland'] = Carbon::parse($ozZaak->startdatum)->add($zaaktype->servicenorm)->format('Y-m-d');
+        }
+        if ($zaaktype->doorlooptijd) {
+            $patch['uiterlijkeEinddatumAfdoening'] = Carbon::parse($ozZaak->startdatum)->add($zaaktype->doorlooptijd)->format('Y-m-d');
+        }
 
-        Zgw::connection($connectionName)->zaken()->zaken()->patch($ozZaak->uuid, [
-            'einddatumGepland' => Carbon::parse($ozZaak->startdatum)->add($servicenorm)->format('Y-m-d'),
-            'uiterlijkeEinddatumAfdoening' => Carbon::parse($ozZaak->startdatum)->add($doorlooptijd)->format('Y-m-d'),
-        ]);
+        if ($patch === []) {
+            return;
+        }
+
+        Zgw::connection($connectionName)->zaken()->zaken()->patch($ozZaak->uuid, $patch);
     }
 }

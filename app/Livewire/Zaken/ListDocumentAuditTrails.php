@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Zaken;
 
-use App\ValueObjects\ZGW\DocumentAuditTrail;
+use App\Services\Zgw\AuditTrailActionFormatter;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
@@ -30,7 +30,10 @@ class ListDocumentAuditTrails extends Component implements HasActions, HasSchema
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (): Collection => collect($this->audittrail)->map(fn (array $item) => (new DocumentAuditTrail(...$item))->toArray()))
+            ->records(fn (): Collection => collect($this->audittrail)->map(fn (array $item) => [
+                ...$item,
+                'friendlyAction' => AuditTrailActionFormatter::friendly($item['actieWeergave'] ?? ''),
+            ]))
             ->columns([
                 TextColumn::make('aanmaakdatum')->label(__('Datum'))->dateTime(config('app.datetime_format')),
                 TextColumn::make('friendlyAction')->label(__('Actie')),
