@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[ObservedBy(MunicipalityObserver::class)]
 class Municipality extends Model implements HasGeometry
@@ -103,6 +104,17 @@ class Municipality extends Model implements HasGeometry
     public function zgwConnectionName(): string
     {
         return app(ZgwConnectionResolver::class)->for($this);
+    }
+
+    /**
+     * The municipality's own ZGW connection, when configured. Its absence means
+     * the municipality falls back to the global "main" connection.
+     *
+     * @return HasOne<MunicipalityZgwConnection, $this>
+     */
+    public function zgwConnection(): HasOne
+    {
+        return $this->hasOne(MunicipalityZgwConnection::class);
     }
 
     public function variables()

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Jobs\Submit;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\EventForm\Schema\EventFormSchema;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Forms\Components\FileUpload;
@@ -136,7 +136,8 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         }
 
         $informatieobjecttype = $this->resolveInformatieobjecttype();
-        $connection = Zgw::connection($this->zaak->zgwConnectionName());
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
 
         foreach ($aanwezig as $pad => $bestandsnaam) {
             $content = (string) $disk->get($pad);
@@ -144,7 +145,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
             $info = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
                 'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
                 'creatiedatum' => now()->format('Y-m-d'),
-                'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+                'vertrouwelijkheidaanduiding' => ZgwConnectionConfig::systemUploadDefault($connectionName),
                 'titel' => $bestandsnaam,
                 'auteur' => $this->zaak->organiserUser->name ?? 'Organisator',
                 'taal' => 'dut',

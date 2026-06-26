@@ -6,6 +6,7 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Jobs\Zaak\UploadDocumentsJob;
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
@@ -35,11 +36,8 @@ class UploadDocumentAction
             ->modalAutofocus(false)
             ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
             ->action(function (array $data, Action $action) use ($zaak): void {
-                $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding'] ?? match (auth()->user()->role) {
-                    Role::Organiser => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
-                    Role::Advisor => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-                    default => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-                };
+                $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding']
+                    ?? ZgwConnectionConfig::uploadDefaultForRole($zaak->zgwConnectionName(), auth()->user()->role);
 
                 $fileNames = (array) ($data['file_names'] ?? []);
                 $metadata = array_values((array) ($data['document_metadata'] ?? []));
@@ -153,8 +151,8 @@ class UploadDocumentAction
         if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Admin])) {
             $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
-                ->options(function () {
-                    $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
+                ->options(function () use ($zaak) {
+                    $vertrouwelijkheden = ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), auth()->user()->role);
                     $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
                     $options = [];
                     foreach ($rolesByVertrouwelijkheid as $key => $roles) {
@@ -206,8 +204,8 @@ class UploadDocumentAction
         if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin])) {
             $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
-                ->options(function () {
-                    $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
+                ->options(function () use ($zaak) {
+                    $vertrouwelijkheden = ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), auth()->user()->role);
                     $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
                     $options = [];
                     foreach ($rolesByVertrouwelijkheid as $key => $roles) {
@@ -257,13 +255,11 @@ class UploadDocumentAction
      */
     public static function uploadDocument(array $data, Zaak $zaak): Informatieobject
     {
-        $connection = Zgw::connection($zaak->zgwConnectionName());
+        $connectionName = $zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
 
-        $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding'] ?? match (auth()->user()->role) {
-            Role::Organiser => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
-            Role::Advisor => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-            default => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-        };
+        $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding']
+            ?? ZgwConnectionConfig::uploadDefaultForRole($connectionName, auth()->user()->role);
 
         $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
         $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);

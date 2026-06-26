@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Jobs\Submit;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -57,11 +57,12 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
         $content = (string) Storage::disk('local')->get($path);
         $informatieobjecttype = $this->resolveInformatieobjecttype();
 
-        $connection = Zgw::connection($this->zaak->zgwConnectionName());
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
         $info = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
-            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'vertrouwelijkheidaanduiding' => ZgwConnectionConfig::systemUploadDefault($connectionName),
             'titel' => 'Aanvraagformulier '.$this->zaak->reference_data->naam_evenement,
             'auteur' => 'Eventloket',
             'taal' => 'dut',

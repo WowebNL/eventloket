@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -79,7 +79,7 @@ class Zaaktype extends Model
         $types = $this->getDocumentTypes($versionUrl);
 
         if (auth()->user()) {
-            $allowed = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
+            $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role);
             // The DTO exposes vertrouwelijkheidaanduiding as a backed enum; compare on
             // its value against the allowed string values.
             $types = $types->filter(fn (InformatieObjectTypeData $type) => in_array($type->vertrouwelijkheidaanduiding?->value, $allowed, true));

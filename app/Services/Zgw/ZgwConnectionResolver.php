@@ -7,6 +7,8 @@ namespace App\Services\Zgw;
 use App\Models\Municipality;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Resolves which ZGW connection (a name usable with Zgw::connection($name)) a given
@@ -78,10 +80,34 @@ class ZgwConnectionResolver
     }
 
     /**
-     * Resolve (and, in a later step, register) the connection for a municipality.
+     * Resolve and register the connection for a municipality.
+     *
+     * When the municipality has its own connection, its config is registered
+     * once into the runtime config under "gemeente_{id}" (the ZgwManager reads
+     * config lazily per connection() call, so this takes effect immediately).
+     * An invalid config (e.g. a weak secret) is logged and falls back to "main".
      */
     private function resolve(Municipality $municipality): string
     {
-        return self::DEFAULT_CONNECTION;
+        $connection = $municipality->zgwConnection;
+
+        if ($connection === null) {
+            return self::DEFAULT_CONNECTION;
+        }
+
+        $name = "gemeente_{$municipality->id}";
+
+        try {
+            config(["zgw.connections.{$name}" => $connection->buildConfig()]);
+        } catch (Throwable $e) {
+            Log::warning('ZGW connection for municipality is invalid, falling back to main.', [
+                'municipality_id' => $municipality->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return self::DEFAULT_CONNECTION;
+        }
+
+        return $name;
     }
 }

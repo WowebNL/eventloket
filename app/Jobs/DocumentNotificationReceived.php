@@ -2,10 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Models\Zaak;
 use App\Notifications\NewZaakDocument;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OpenNotification;
@@ -75,7 +75,7 @@ class DocumentNotificationReceived implements ShouldQueue
                     /** @var Role $role */
                     $role = $user->role;
                     if (
-                        in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole($role)) // user has acces to document
+                        in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), $role)) // user has acces to document
                         && $user->name != $informatieobject->auteur // not own update
                     ) {
                         // Notify user about new document

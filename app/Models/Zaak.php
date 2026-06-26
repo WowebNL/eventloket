@@ -3,13 +3,13 @@
 namespace App\Models;
 
 use App\Enums\AdviceStatus;
-use App\Enums\DocumentVertrouwelijkheden;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
 use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -32,6 +32,7 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
 use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
+use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
@@ -111,7 +112,7 @@ class Zaak extends Model implements Eventable
         return $this->zaaktype?->zgw_zaaktype_url;
     }
 
-    /** @return Attribute<\Illuminate\Support\Collection<int, \Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData>, void> */
+    /** @return Attribute<Collection<int, InformatieObjectTypeData>, void> */
     protected function documentTypes(): Attribute
     {
         return Attribute::make(
@@ -267,7 +268,7 @@ class Zaak extends Model implements Eventable
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
                     return $this->getDocuments();
                 } else {
-                    return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
+                    return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role)));
                 }
             },
         );
@@ -294,7 +295,7 @@ class Zaak extends Model implements Eventable
             get: function ($value, $attributes) {
                 return $this->getBesluiten()->each(function (Besluit $besluit) {
                     $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                        'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))),
+                        'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role))),
                     ]));
                 });
             },

@@ -6,8 +6,9 @@ namespace App\EventForm\Submit\Steps;
 
 use App\EventForm\State\FormState;
 use App\Models\Zaaktype;
-use App\Services\Zgw\ZgwResource;
 use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwResource;
 use Carbon\Carbon;
 use Throwable;
 use Woweb\Zgw\Facades\Zgw;
@@ -26,10 +27,12 @@ final class CreateZaakInZGW
     {
         $connectionName = $zaaktype->zgwConnectionName();
 
+        $bronorganisatie = ZgwConnectionConfig::bronorganisatie($connectionName);
+
         $payload = [
             'zaaktype' => $this->resolveVersionUrl($connectionName, $zaaktype),
-            'bronorganisatie' => $this->bronorganisatie($state, $zaaktype),
-            'verantwoordelijkeOrganisatie' => $this->bronorganisatie($state, $zaaktype),
+            'bronorganisatie' => $bronorganisatie,
+            'verantwoordelijkeOrganisatie' => $bronorganisatie,
             'startdatum' => Carbon::now('Europe/Amsterdam')->toDateString(),
             'registratiedatum' => Carbon::now('Europe/Amsterdam')->toDateString(),
             'omschrijving' => $this->omschrijving($state),
@@ -80,15 +83,5 @@ final class CreateZaakInZGW
         $omschrijving = $state->get('geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning');
 
         return is_string($omschrijving) ? mb_substr($omschrijving, 0, 1000) : '';
-    }
-
-    private function bronorganisatie(FormState $state, Zaaktype $zaaktype): string
-    {
-        // In de OF-flow was in alle 45 registratie-backends dezelfde RSIN
-        // hardcoded (820151130 = Veiligheidsregio Zuid-Limburg). We nemen
-        // diezelfde conventie over: één centrale config-waarde. Doorkomst-
-        // subzaken voor individuele gemeenten erven via CreateDoorkomstZaken
-        // dezelfde waarde (alleen 't zaaktype verschilt).
-        return (string) config('services.openzaak.bronorganisatie_rsin', '820151130');
     }
 }

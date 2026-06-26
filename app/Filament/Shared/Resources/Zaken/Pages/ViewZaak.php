@@ -2,7 +2,6 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Pages;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Widgets\ActivityLogWidget;
 use App\Filament\Shared\Resources\Zaken\ZaakResource;
@@ -13,9 +12,10 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Notifications\AssignedToZaak;
 use App\Notifications\Result;
+use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
@@ -39,7 +39,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use App\Services\Zgw\ZgwResource;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
 class ViewZaak extends ViewRecord
@@ -335,7 +335,7 @@ class ViewZaak extends ViewRecord
                                     ->required(),
                                 Select::make('message_documenten')
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.message_documenten.label'))
-                                    ->options(fn (Zaak $record) => $record->documenten->whereIn('vertrouwelijkheidaanduiding', DocumentVertrouwelijkheden::fromUserRole(Role::Organiser))->pluck('titel', 'url')->toArray())
+                                    ->options(fn (Zaak $record) => $record->documenten->whereIn('vertrouwelijkheidaanduiding', ZgwConnectionConfig::documentVisibilityForRole($record->zgwConnectionName(), Role::Organiser))->pluck('titel', 'url')->toArray())
                                     ->multiple()
                                     ->required(fn (Get $get) => $get('result_has_besluit'))
                                     ->helperText(fn (Get $get) => $get('result_has_besluit') ? __('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.message_documenten.helper_text') : null)
