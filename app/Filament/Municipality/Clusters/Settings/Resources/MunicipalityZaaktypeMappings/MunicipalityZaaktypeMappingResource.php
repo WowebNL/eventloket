@@ -96,6 +96,7 @@ class MunicipalityZaaktypeMappingResource extends Resource
                         self::catalogusSelect('eind_statustype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::statustypen($conn, $id)),
                         self::catalogusSelect('initiator_roltype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::roltypen($conn, $id)),
                         self::catalogusSelect('ingetrokken_resultaattype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::resultaattypen($conn, $id)),
+                        self::catalogusSelect('aanvraag_informatieobjecttype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::informatieobjecttypen($conn, $id)),
                         self::catalogusSelect('bijlage_informatieobjecttype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::informatieobjecttypen($conn, $id)),
                     ]),
             ]);

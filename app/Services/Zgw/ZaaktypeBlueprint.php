@@ -142,4 +142,28 @@ final class ZaaktypeBlueprint
 
         return $types->first();
     }
+
+    /**
+     * The informatieobjecttype for the aanvraagformulier PDF.
+     *
+     * Heuristic when no blueprint match: the first type (the historical PDF
+     * fallback, without the "bijlage" omschrijving preference).
+     *
+     * @template TType of object
+     *
+     * @param  Collection<int, TType>  $types
+     * @return TType|null
+     */
+    public static function aanvraagInformatieobjecttype(?MunicipalityZaaktypeMapping $mapping, Collection $types): ?object
+    {
+        if ($mapping?->aanvraag_informatieobjecttype) {
+            $match = $types->first(fn ($type) => property_exists($type, 'omschrijving')
+                && $type->omschrijving === $mapping->aanvraag_informatieobjecttype);
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return $types->first();
+    }
 }

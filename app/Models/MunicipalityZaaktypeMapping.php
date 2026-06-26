@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $initiator_roltype
  * @property string|null $ingetrokken_resultaattype
  * @property string|null $bijlage_informatieobjecttype
+ * @property string|null $aanvraag_informatieobjecttype
  */
 class MunicipalityZaaktypeMapping extends Model
 {
@@ -37,6 +38,7 @@ class MunicipalityZaaktypeMapping extends Model
         'initiator_roltype',
         'ingetrokken_resultaattype',
         'bijlage_informatieobjecttype',
+        'aanvraag_informatieobjecttype',
     ];
 
     protected function casts(): array

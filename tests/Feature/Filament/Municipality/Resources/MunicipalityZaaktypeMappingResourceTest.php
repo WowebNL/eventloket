@@ -38,10 +38,15 @@ function fakeCatalogus(): void
         ])),
         "{$base}/catalogi/api/v1/zaaktype-informatieobjecttypen*" => Http::response(ZgwHttpFake::envelope([
             ['informatieobjecttype' => "{$base}/catalogi/api/v1/informatieobjecttypen/1"],
+            ['informatieobjecttype' => "{$base}/catalogi/api/v1/informatieobjecttypen/2"],
         ])),
         "{$base}/catalogi/api/v1/informatieobjecttypen/1" => Http::response([
             'url' => "{$base}/catalogi/api/v1/informatieobjecttypen/1",
             'omschrijving' => 'Bijlage',
+        ]),
+        "{$base}/catalogi/api/v1/informatieobjecttypen/2" => Http::response([
+            'url' => "{$base}/catalogi/api/v1/informatieobjecttypen/2",
+            'omschrijving' => 'Aanvraag',
         ]),
     ]);
 }
@@ -79,6 +84,7 @@ it('saves a mapping with eigenschap and flow-blocker selections from the live ca
             'eind_statustype' => 'Afgehandeld',
             'initiator_roltype' => 'Aanvrager',
             'ingetrokken_resultaattype' => 'Ingetrokken',
+            'aanvraag_informatieobjecttype' => 'Aanvraag',
             'bijlage_informatieobjecttype' => 'Bijlage',
         ])
         ->call('create')
@@ -94,6 +100,7 @@ it('saves a mapping with eigenschap and flow-blocker selections from the live ca
         ->and($mapping->eind_statustype)->toBe('Afgehandeld')
         ->and($mapping->initiator_roltype)->toBe('Aanvrager')
         ->and($mapping->ingetrokken_resultaattype)->toBe('Ingetrokken')
+        ->and($mapping->aanvraag_informatieobjecttype)->toBe('Aanvraag')
         ->and($mapping->bijlage_informatieobjecttype)->toBe('Bijlage');
 });
 

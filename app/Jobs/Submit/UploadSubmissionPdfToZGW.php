@@ -95,11 +95,10 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
 
     private function resolveInformatieobjecttype(): string
     {
-        // The aanvraagformulier PDF keeps the historical "first type" fallback
-        // (no "bijlage" omschrijving preference), but honours an explicit
-        // blueprint bijlage-type when one is configured.
+        // The aanvraagformulier PDF uses its own blueprint slot, falling back
+        // to the historical "first type" when none is configured.
         $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
-        $chosen = ZaaktypeBlueprint::bijlageInformatieobjecttype($mapping, $this->zaak->document_types, matchBijlageInOmschrijving: false);
+        $chosen = ZaaktypeBlueprint::aanvraagInformatieobjecttype($mapping, $this->zaak->document_types);
 
         if (! $chosen || ! $chosen->url) {
             throw new RuntimeException(

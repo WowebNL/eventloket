@@ -121,3 +121,19 @@ describe('bijlageInformatieobjecttype', function () {
             ->toBe('iot/1');
     });
 });
+
+describe('aanvraagInformatieobjecttype', function () {
+    $types = collect([
+        (object) ['url' => 'iot/1', 'omschrijving' => 'Aanvraag'],
+        (object) ['url' => 'iot/2', 'omschrijving' => 'Bijlage'],
+    ]);
+
+    test('falls back to the first type without a mapping', function () use ($types) {
+        expect(ZaaktypeBlueprint::aanvraagInformatieobjecttype(null, $types)->url)->toBe('iot/1');
+    });
+
+    test('uses the mapped omschrijving when set', function () use ($types) {
+        expect(ZaaktypeBlueprint::aanvraagInformatieobjecttype(mapping(['aanvraag_informatieobjecttype' => 'Bijlage']), $types)->url)
+            ->toBe('iot/2');
+    });
+});

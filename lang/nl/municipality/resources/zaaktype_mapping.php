@@ -27,6 +27,7 @@ return [
         'eind_statustype' => ['label' => 'Eind-statustype'],
         'initiator_roltype' => ['label' => 'Initiator-roltype'],
         'ingetrokken_resultaattype' => ['label' => 'Ingetrokken-resultaattype'],
+        'aanvraag_informatieobjecttype' => ['label' => 'Aanvraag-documenttype'],
         'bijlage_informatieobjecttype' => ['label' => 'Bijlage-documenttype'],
     ],
 
