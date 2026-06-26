@@ -12,7 +12,6 @@ use App\Observers\ZaakObserver;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\OzStatustype;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Besluit;
 use App\ValueObjects\ZGW\BesluitType;
@@ -33,6 +32,7 @@ use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
+use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -42,7 +42,7 @@ use Woweb\Zgw\Facades\Zgw;
  * @property-read ?Organisation                $organisation
  * @property-read ?Municipality                $municipality
  * @property-read Collection<Informatieobject> $documenten
- * @property-read ?OzStatustype                $statustype
+ * @property-read ?StatusTypeData              $statustype
  */
 #[ObservedBy(ZaakObserver::class)]
 class Zaak extends Model implements Eventable
@@ -345,24 +345,25 @@ class Zaak extends Model implements Eventable
         });
     }
 
-    /** @return Attribute<OzStatustype, void> */
+    /** @return Attribute<StatusTypeData|null, void> */
     protected function statustype(): Attribute
     {
         return Attribute::make(
-            get: function (): ?OzStatustype {
-                $statustypen = Cache::remember("statustypen.{$this->zgwConnectionName()}", 60 * 60 * 24, function () {
+            get: function (): ?StatusTypeData {
+                // Cache key bumped to .v2 because the stored DTO type changed from
+                // the old OzStatustype value object to the package StatusTypeData.
+                $statustypen = Cache::remember("statustypen.v2.{$this->zgwConnectionName()}", 60 * 60 * 24, function () {
                     return Zgw::connection($this->zgwConnectionName())
                         ->catalogi()
                         ->statustypen()
                         ->index()
                         ->collect()
-                        ->map(function ($statustype) {
-                            return new OzStatustype(...$statustype);
-                        });
+                        ->map(fn ($statustype) => StatusTypeData::from($statustype));
                 });
 
-                // TODO: Eventueel nog cachen
-                return $statustypen->firstWhere('url', $this->reference_data->statustype_url);
+                return $statustypen->first(
+                    fn (StatusTypeData $statustype) => (string) $statustype->url === $this->reference_data->statustype_url
+                );
             },
         );
     }

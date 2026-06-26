@@ -22,6 +22,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaaktype;
+use App\Services\Zgw\StatusPhase;
 use App\ValueObjects\OzZaak;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
@@ -91,9 +92,9 @@ test('sets the initial statustype_url (volgnummer 1) on the local zaak', functio
         ->toBe(ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1')
         ->and($zaak->reference_data->status_name)->toBe('Ingediend');
 
-    // En de statustype-accessor resolvet daardoor een niet-null OzStatustype.
+    // En de statustype-accessor resolvet daardoor een niet-null StatusTypeData.
     expect($zaak->statustype)->not->toBeNull()
-        ->and($zaak->statustype->isReceived())->toBeTrue();
+        ->and(StatusPhase::isReceived($zaak->statustype))->toBeTrue();
 });
 
 test('falls back to empty statustype_url when the statustype lookup fails', function () {

@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\AvatarProviders\LocalSvgAvatarProvider;
+use App\Services\Zgw\StatusPhase;
 use App\Filament\Advisor\Pages\Dashboard;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
 use App\Filament\Shared\Pages\EditProfile;
@@ -111,7 +112,7 @@ class AdvisorPanelProvider extends PanelProvider
                             fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active() // @phpstan-ignore-line
                         )->get();
 
-                        return $zakenAssignedToUser->filter(fn ($zaak) => $zaak->statustype->isReceived() || $zaak->statustype->isInProgress())->count();
+                        return $zakenAssignedToUser->filter(fn ($zaak) => StatusPhase::isReceived($zaak->statustype) || StatusPhase::isInProgress($zaak->statustype))->count();
                     })
                     ->icon(Heroicon::Inbox)
                     ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'me']]]))
