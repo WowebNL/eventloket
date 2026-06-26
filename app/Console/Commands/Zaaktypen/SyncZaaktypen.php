@@ -6,7 +6,7 @@ use App\Models\Municipality;
 use App\Models\Zaaktype;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class SyncZaaktypen extends Command
 {
@@ -27,12 +27,12 @@ class SyncZaaktypen extends Command
     /**
      * Execute the console command.
      */
-    public function handle(Openzaak $openzaak)
+    public function handle()
     {
         $this->info('Syncing zaaktypen...');
 
-        // Fetch zaaktypen from Open Zaak
-        $zaaktypen = $openzaak->catalogi()->zaaktypen()->getAll();
+        // Fetch zaaktypen from the central ZGW (OpenZaak) catalogus.
+        $zaaktypen = Zgw::connection()->catalogi()->zaaktypen()->index();
         $updatedIds = [];
 
         foreach ($zaaktypen as $data) {

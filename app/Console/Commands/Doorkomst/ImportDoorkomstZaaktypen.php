@@ -4,7 +4,7 @@ namespace App\Console\Commands\Doorkomst;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use Woweb\Openzaak\Connection\OpenzaakConnection;
+use Woweb\Zgw\Facades\Zgw;
 
 class ImportDoorkomstZaaktypen extends Command
 {
@@ -24,9 +24,9 @@ class ImportDoorkomstZaaktypen extends Command
     {
         $this->dryRun = (bool) $this->option('dry-run');
 
-        $connection = new OpenzaakConnection;
+        $connection = Zgw::connection();
         $this->headers = $connection->getHeaders();
-        $this->baseUrl = rtrim(config('openzaak.url'), '/').'/catalogi/api/v1/';
+        $this->baseUrl = $connection->getBaseUrl('catalogi');
         $this->catalogusUrl = config('openzaak.catalogi_url');
 
         if ($this->dryRun) {

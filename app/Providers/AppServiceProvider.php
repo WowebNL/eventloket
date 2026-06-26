@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Auth\CaseInsensitiveUserProvider;
-use App\Console\Commands\Zaaktypen\SyncZaaktypen;
 use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
 use App\Listeners\NotifySlackOfFailedJob;
@@ -30,7 +29,6 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
 use Livewire\Livewire;
-use Woweb\Openzaak\Openzaak;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -120,15 +118,5 @@ class AppServiceProvider extends ServiceProvider
         Carbon::mixin(new CarbonBusinessDaysMixin);
 
         Event::listen(JobFailed::class, NotifySlackOfFailedJob::class);
-
-        $this->bindCustomMethods();
-    }
-
-    private function bindCustomMethods(): void
-    {
-        // SyncZaaktypen still talks to the legacy Openzaak client (migrated in a
-        // later wave); ProcessOpenNotification and its type processor now resolve
-        // their dependencies through standard container method injection.
-        $this->app->bindMethod([SyncZaaktypen::class, 'handle'], fn ($command) => $command->handle(app(Openzaak::class)));
     }
 }

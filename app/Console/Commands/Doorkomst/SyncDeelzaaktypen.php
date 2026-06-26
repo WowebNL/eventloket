@@ -5,7 +5,7 @@ namespace App\Console\Commands\Doorkomst;
 use App\Models\Zaaktype;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use Woweb\Openzaak\Connection\OpenzaakConnection;
+use Woweb\Zgw\Facades\Zgw;
 
 class SyncDeelzaaktypen extends Command
 {
@@ -44,9 +44,9 @@ class SyncDeelzaaktypen extends Command
         $this->line("Doorkomst zaaktypen gevonden: {$doorkomstZaaktypen->count()}");
         $this->line("Evenementenvergunning zaaktypen gevonden: {$evenementenZaaktypen->count()}");
 
-        $connection = new OpenzaakConnection;
+        $connection = Zgw::connection();
         $headers = $connection->getHeaders();
-        $baseUrl = rtrim((string) config('openzaak.url'), '/').'/catalogi/api/v1/';
+        $baseUrl = $connection->getBaseUrl('catalogi');
 
         $updated = 0;
         $alreadyCorrect = 0;

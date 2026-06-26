@@ -7,8 +7,7 @@ use App\ValueObjects\ZGW\CatalogiEigenschap;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Throwable;
-use Woweb\Openzaak\Connection\OpenzaakConnection;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class SyncZaaktypeEigenschappen extends Command
 {
@@ -32,7 +31,7 @@ class SyncZaaktypeEigenschappen extends Command
         ],
     ];
 
-    public function handle(Openzaak $openzaak): int
+    public function handle(): int
     {
         $this->info('Eigenschappen aanvullen voor gesynchroniseerde zaaktypen...');
 
@@ -46,17 +45,18 @@ class SyncZaaktypeEigenschappen extends Command
             return Command::FAILURE;
         }
 
-        $connection = new OpenzaakConnection;
+        $connection = Zgw::connection();
         $headers = $connection->getHeaders();
-        $baseUrl = rtrim((string) config('openzaak.url'), '/').'/catalogi/api/v1/';
+        $baseUrl = $connection->getBaseUrl('catalogi');
 
         $updated = 0;
         $alreadyCorrect = 0;
         $failed = 0;
 
         foreach ($zaaktypen as $zaaktype) {
-            $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()
-                ->getAll(['zaaktype' => $zaaktype->zgw_zaaktype_url])
+            $catalogiEigenschappen = $connection->catalogi()->eigenschappen()
+                ->index(['zaaktype' => $zaaktype->zgw_zaaktype_url])
+                ->collect()
                 ->map(fn ($item) => new CatalogiEigenschap(...$item));
 
             $missing = collect(self::REQUIRED_EIGENSCHAPPEN)
@@ -107,7 +107,7 @@ class SyncZaaktypeEigenschappen extends Command
                 $definition = self::REQUIRED_EIGENSCHAPPEN[$naam];
 
                 try {
-                    $openzaak->catalogi()->eigenschappen()->store([
+                    $connection->catalogi()->eigenschappen()->store([
                         'zaaktype' => $zaaktype->zgw_zaaktype_url,
                         'naam' => $naam,
                         'definitie' => $definition['definitie'],
