@@ -27,6 +27,14 @@ it('logs a ZGW request, deriving the municipality and stripping the query string
         ->and($log->failed)->toBeFalse();
 });
 
+it('logs a single row per request, not once per registered listener', function () {
+    // The listener is auto-registered by Laravel's event discovery. A manual
+    // Event::listen on top of that would fire it twice and double every row.
+    event(new ZgwRequestSent('main', 'client-id', 'GET', 'https://zgw.example.com/zaken/api/v1/zaken', 200));
+
+    expect(ZgwRequestLog::count())->toBe(1);
+});
+
 it('records the authenticated user who triggered the call', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
