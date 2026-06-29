@@ -21,8 +21,8 @@ return [
     ],
 
     'fields' => [
-        'role' => ['label' => 'Rol'],
-        'zaaktype_identificatie' => ['label' => 'Zaaktype'],
+        'role' => ['label' => 'Zaaktype Eventloket'],
+        'zaaktype_identificatie' => ['label' => 'Zaaktype ZGW'],
         'initial_statustype' => ['label' => 'Begin-statustype'],
         'eind_statustype' => ['label' => 'Eind-statustype'],
         'initiator_roltype' => ['label' => 'Initiator-roltype'],
@@ -32,8 +32,8 @@ return [
     ],
 
     'columns' => [
-        'role' => ['label' => 'Rol'],
-        'zaaktype_identificatie' => ['label' => 'Zaaktype'],
+        'role' => ['label' => 'Zaaktype Eventloket'],
+        'zaaktype_identificatie' => ['label' => 'Zaaktype ZGW'],
         'updated_at' => ['label' => 'Laatst gewijzigd'],
     ],
 
