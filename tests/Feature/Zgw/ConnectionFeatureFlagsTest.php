@@ -29,11 +29,20 @@ test('without a connection row all behaviour defaults to the full feature set', 
     $zaak = zaakForConnection(withConnection: false);
 
     expect($zaak->behandelaarCanChangeStatus())->toBeTrue();
+    expect($zaak->behandelaarCanEditRisicoClassificatie())->toBeTrue();
     expect($zaak->showsTab('besluiten'))->toBeTrue();
     expect($zaak->showsTab('bestanden'))->toBeTrue();
     expect($zaak->showsTab('adviesvragen'))->toBeTrue();
     expect($zaak->showsTab('organisatievragen'))->toBeTrue();
     expect($zaak->suppressesNotifications())->toBeFalse();
+});
+
+test('a municipality with its own connection cannot edit the risico classificatie', function () {
+    // The edit writes the eigenschappen by hardcoded naam and bypasses the
+    // per-municipality blueprint, so it is hidden once a connection exists.
+    $zaak = zaakForConnection();
+
+    expect($zaak->behandelaarCanEditRisicoClassificatie())->toBeFalse();
 });
 
 test('lock_status_for_behandelaar blocks status changes', function () {

@@ -201,8 +201,10 @@ class ZaakInfolist
                                         return null;
                                     })
                                     ->afterLabel(Schema::end([
-                                        Icon::make('heroicon-o-pencil-square'),
+                                        Icon::make('heroicon-o-pencil-square')
+                                            ->visible(fn (Zaak $record): bool => $record->behandelaarCanEditRisicoClassificatie()),
                                         Action::make('editRisicoClassificatie')
+                                            ->visible(fn (Zaak $record): bool => $record->behandelaarCanEditRisicoClassificatie())
                                             ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.label'))
                                             ->fillForm(function (Zaak $record): array {
                                                 /** @var ZaakReferenceData $referenceData */

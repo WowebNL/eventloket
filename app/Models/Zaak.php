@@ -114,6 +114,18 @@ class Zaak extends Model implements Eventable
     }
 
     /**
+     * Whether a behandelaar may change the risico classificatie (and toelichting)
+     * from inside Eventloket. The edit writes these eigenschappen by hardcoded
+     * naam and bypasses the per-municipality blueprint, so it is only offered on
+     * the global "main" connection; a municipality with its own ZGW connection
+     * drives these eigenschappen in its own system.
+     */
+    public function behandelaarCanEditRisicoClassificatie(): bool
+    {
+        return $this->zgwConnectionModel() === null;
+    }
+
+    /**
      * Whether a given zaak detail tab should be shown for this connection.
      *
      * @param  'besluiten'|'bestanden'|'adviesvragen'|'organisatievragen'  $tab
