@@ -33,7 +33,6 @@ class ZgwRequestLogResource extends Resource
         return in_array(auth()->user()->role, [
             Role::KoppelingBeheerder,
             Role::MunicipalityAdmin,
-            Role::ReviewerMunicipalityAdmin,
         ]);
     }
 
