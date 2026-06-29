@@ -185,25 +185,37 @@ final class ZaaktypeCatalogusOptions
         });
     }
 
+    /**
+     * Resolve (and cache) the current definitief version url for an identificatie.
+     *
+     * The same version url is needed by every dependent option list
+     * (eigenschappen, statustypen, roltypen, …). Caching it here means a form
+     * that renders several of those selects resolves the version once instead
+     * of once per resource type.
+     */
     private static function versionUrl(string $connectionName, string $identificatie): ?string
     {
-        // An identificatie can have several definitief versions; only the one
-        // valid today carries the eigenschappen and relations we want, so filter
-        // on datumGeldigheid. Fall back to any definitief version when none is
-        // marked valid today.
-        $version = Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
-            'identificatie' => $identificatie,
-            'status' => 'definitief',
-            'datumGeldigheid' => now('Europe/Amsterdam')->toDateString(),
-        ])->first()
-            ?? Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
+        $resolved = self::remember($connectionName, 'version_url', $identificatie, function () use ($connectionName, $identificatie): array {
+            // An identificatie can have several definitief versions; only the one
+            // valid today carries the eigenschappen and relations we want, so filter
+            // on datumGeldigheid. Fall back to any definitief version when none is
+            // marked valid today.
+            $version = Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
                 'identificatie' => $identificatie,
                 'status' => 'definitief',
-            ])->first();
+                'datumGeldigheid' => now('Europe/Amsterdam')->toDateString(),
+            ])->first()
+                ?? Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
+                    'identificatie' => $identificatie,
+                    'status' => 'definitief',
+                ])->first();
 
-        $url = $version['url'] ?? null;
+            $url = $version['url'] ?? null;
 
-        return is_string($url) && $url !== '' ? $url : null;
+            return is_string($url) && $url !== '' ? ['url' => $url] : [];
+        });
+
+        return $resolved['url'] ?? null;
     }
 
     /**

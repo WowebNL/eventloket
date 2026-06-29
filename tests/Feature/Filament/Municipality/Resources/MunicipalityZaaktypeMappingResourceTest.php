@@ -4,6 +4,7 @@ use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZaaktypeMappings\MunicipalityZaaktypeMappingResource;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZaaktypeMappings\Pages\CreateMunicipalityZaaktypeMapping;
+use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZaaktypeMappings\Pages\EditMunicipalityZaaktypeMapping;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\User;
@@ -102,6 +103,35 @@ it('saves a mapping with eigenschap and flow-blocker selections from the live ca
         ->and($mapping->ingetrokken_resultaattype)->toBe('Ingetrokken')
         ->and($mapping->aanvraag_informatieobjecttype)->toBe('Aanvraag')
         ->and($mapping->bijlage_informatieobjecttype)->toBe('Bijlage');
+});
+
+it('does not eagerly read the dependent catalogi when opening the edit form', function () {
+    fakeCatalogus();
+
+    $mapping = MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'EVT-1',
+        'initial_statustype' => 'Ontvangen',
+        'initiator_roltype' => 'Aanvrager',
+    ]);
+
+    livewire(EditMunicipalityZaaktypeMapping::class, ['record' => $mapping->getKey()])
+        ->assertSuccessful()
+        ->assertFormSet([
+            'zaaktype_identificatie' => 'EVT-1',
+            'initial_statustype' => 'Ontvangen',
+            'initiator_roltype' => 'Aanvrager',
+        ]);
+
+    // The dependent dropdowns fetch their catalogi lazily (only when opened),
+    // so merely rendering the edit form must not read them. The zaaktype label
+    // is the only catalogi read on load.
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/statustypen'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/roltypen'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/resultaattypen'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/eigenschappen'));
+    Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/zaaktype-informatieobjecttypen'));
 });
 
 it('rejects a second mapping for the same role', function () {

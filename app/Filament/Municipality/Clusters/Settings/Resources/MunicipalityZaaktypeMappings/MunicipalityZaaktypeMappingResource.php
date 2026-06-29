@@ -75,8 +75,18 @@ class MunicipalityZaaktypeMappingResource extends Resource
                             ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule): Unique => $rule->where('municipality_id', Filament::getTenant()?->getKey())),
                         Select::make('zaaktype_identificatie')
                             ->label(__('municipality/resources/zaaktype_mapping.fields.zaaktype_identificatie.label'))
-                            ->options(fn (): array => ZaaktypeCatalogusOptions::zaaktypen(self::connectionName()))
                             ->searchable()
+                            // Load the (cached) zaaktypen list only when the user
+                            // opens the dropdown; on first render we just resolve
+                            // the label of the already-selected identificatie.
+                            ->getSearchResultsUsing(fn (?string $search): array => self::filterOptions(
+                                ZaaktypeCatalogusOptions::zaaktypen(self::connectionName()),
+                                $search,
+                            ))
+                            ->getOptionLabelUsing(fn (?string $value): ?string => self::labelFromOptions(
+                                ZaaktypeCatalogusOptions::zaaktypen(self::connectionName()),
+                                $value,
+                            ))
                             ->live()
                             ->afterStateUpdated(fn (Set $set) => self::resetDependentFields($set)),
                     ]),
@@ -154,28 +164,33 @@ class MunicipalityZaaktypeMappingResource extends Resource
     private static function eigenschapFields(): array
     {
         return collect(ZaakeigenschappenMap::logicalKeys())
-            ->map(fn (string $key): Select => Select::make("eigenschap_map.{$key}")
-                ->label(Str::headline($key))
-                ->options(fn (Get $get): array => self::optionsForSelectedZaaktype(
-                    $get,
-                    fn (string $conn, string $id) => ZaaktypeCatalogusOptions::eigenschappen($conn, $id),
-                ))
-                ->searchable()
-                ->placeholder(__('municipality/resources/zaaktype_mapping.placeholder')))
+            ->map(fn (string $key): Select => self::catalogusSelect(
+                "eigenschap_map.{$key}",
+                fn (string $conn, string $id) => ZaaktypeCatalogusOptions::eigenschappen($conn, $id),
+                label: Str::headline($key),
+            ))
             ->all();
     }
 
     /**
-     * A flow-blocker select whose options come from the chosen zaaktype.
+     * A select whose options come from the chosen zaaktype's catalogi. The
+     * (cached) catalogi list is fetched lazily — only when the user opens the
+     * dropdown — so rendering the edit form does not block on a burst of ZGW
+     * reads. The stored value is itself a readable label (omschrijving / naam),
+     * so the already-selected option shows without a remote read on load.
      *
      * @param  callable(string, string): array<string, string>  $options
      */
-    private static function catalogusSelect(string $field, callable $options): Select
+    private static function catalogusSelect(string $field, callable $options, ?string $label = null): Select
     {
         return Select::make($field)
-            ->label(__("municipality/resources/zaaktype_mapping.fields.{$field}.label"))
-            ->options(fn (Get $get): array => self::optionsForSelectedZaaktype($get, $options))
+            ->label($label ?? __("municipality/resources/zaaktype_mapping.fields.{$field}.label"))
             ->searchable()
+            ->getSearchResultsUsing(fn (Get $get, ?string $search): array => self::filterOptions(
+                self::optionsForSelectedZaaktype($get, $options),
+                $search,
+            ))
+            ->getOptionLabelUsing(fn (?string $value): ?string => ($value === null || $value === '') ? null : $value)
             ->placeholder(__('municipality/resources/zaaktype_mapping.placeholder'));
     }
 
@@ -193,6 +208,47 @@ class MunicipalityZaaktypeMappingResource extends Resource
         return is_string($identificatie) && $identificatie !== ''
             ? $builder(self::connectionName(), $identificatie)
             : [];
+    }
+
+    /**
+     * Filter an options map by the user's search term (case-insensitive, on both
+     * the stored value and its label). An empty search returns the full list.
+     *
+     * @param  array<string, string>  $options
+     * @return array<string, string>
+     */
+    private static function filterOptions(array $options, ?string $search): array
+    {
+        $search = is_string($search) ? trim($search) : '';
+
+        if ($search === '') {
+            return $options;
+        }
+
+        $needle = Str::lower($search);
+
+        return array_filter(
+            $options,
+            fn (string $label, string $value): bool => str_contains(Str::lower($label), $needle)
+                || str_contains(Str::lower($value), $needle),
+            ARRAY_FILTER_USE_BOTH,
+        );
+    }
+
+    /**
+     * Resolve a single option's label from a (cached) options map, falling back
+     * to the raw value so a selected option still shows when the list is
+     * momentarily unavailable.
+     *
+     * @param  array<string, string>  $options
+     */
+    private static function labelFromOptions(array $options, ?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return $options[$value] ?? $value;
     }
 
     private static function resetDependentFields(Set $set): void
