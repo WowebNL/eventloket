@@ -55,3 +55,38 @@ test('an unreadable informatieobjecttype is skipped, not fatal', function () {
     expect(ZaaktypeCatalogusOptions::informatieobjecttypen('main', 'ZT-1'))
         ->toBe(['Vergunning' => 'Vergunning']);
 });
+
+test('document types use the inline omschrijving when the relation is not a url (RX Mission)', function () {
+    $base = ZgwHttpFake::$baseUrl.'/catalogi/api/v1';
+
+    Http::fake([
+        $base.'/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([['url' => $base.'/zaaktypen/1']]), 200),
+        $base.'/zaaktype-informatieobjecttypen?*' => Http::response(ZgwHttpFake::envelope([
+            ['informatieobjecttype' => 'Aanvraag'],
+            ['informatieobjecttype' => 'Bijlage'],
+        ]), 200),
+    ]);
+
+    expect(ZaaktypeCatalogusOptions::informatieobjecttypen('main', 'ZT-1'))
+        ->toBe(['Aanvraag' => 'Aanvraag', 'Bijlage' => 'Bijlage']);
+});
+
+test('eigenschappen resolve the version valid today and list the naam', function () {
+    $base = ZgwHttpFake::$baseUrl.'/catalogi/api/v1';
+
+    Http::fake([
+        $base.'/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([['url' => $base.'/zaaktypen/9']]), 200),
+        $base.'/eigenschappen?*' => Http::response(ZgwHttpFake::envelope([
+            ['naam' => 'risico_classificatie'],
+            ['naam' => 'aantal_bezoekers'],
+        ]), 200),
+    ]);
+
+    expect(ZaaktypeCatalogusOptions::eigenschappen('main', 'ZT-1'))
+        ->toBe(['risico_classificatie' => 'risico_classificatie', 'aantal_bezoekers' => 'aantal_bezoekers']);
+
+    // The version is resolved with a datumGeldigheid filter so only the
+    // currently-valid definitief version is used.
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/zaaktypen')
+        && str_contains($request->url(), 'datumGeldigheid='));
+});

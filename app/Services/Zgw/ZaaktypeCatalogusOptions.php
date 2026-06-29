@@ -129,27 +129,32 @@ final class ZaaktypeCatalogusOptions
             $relations = Zgw::connection($connectionName)->catalogi()->zaaktypeInformatieobjecttypen()->index(['zaaktype' => $url]);
 
             foreach ($relations as $relation) {
-                $typeUrl = $relation['informatieobjecttype'] ?? null;
+                $value = $relation['informatieobjecttype'] ?? null;
 
-                if (! is_string($typeUrl) || $typeUrl === '') {
+                if (! is_string($value) || $value === '') {
                     continue;
                 }
 
-                // A single unreadable type (e.g. a 404 or a host outside the
-                // allowlist) must not wipe the whole list; skip it and continue.
-                try {
-                    $type = ZgwResource::byUrl($connectionName, $typeUrl);
-                } catch (Throwable $e) {
-                    Log::warning('ZaaktypeCatalogusOptions: kon informatieobjecttype niet ophalen', [
-                        'connection' => $connectionName,
-                        'informatieobjecttype' => $typeUrl,
-                        'exception' => $e->getMessage(),
-                    ]);
+                // OpenZaak returns a URL to the informatieobjecttype; RX Mission
+                // returns the omschrijving inline. Fetch the omschrijving for a
+                // URL, otherwise use the value as the omschrijving directly.
+                if (str_starts_with($value, 'http')) {
+                    // A single unreadable type (e.g. a 404 or a host outside the
+                    // allowlist) must not wipe the whole list; skip it.
+                    try {
+                        $omschrijving = ZgwResource::byUrl($connectionName, $value)['omschrijving'] ?? null;
+                    } catch (Throwable $e) {
+                        Log::warning('ZaaktypeCatalogusOptions: kon informatieobjecttype niet ophalen', [
+                            'connection' => $connectionName,
+                            'informatieobjecttype' => $value,
+                            'exception' => $e->getMessage(),
+                        ]);
 
-                    continue;
+                        continue;
+                    }
+                } else {
+                    $omschrijving = $value;
                 }
-
-                $omschrijving = $type['omschrijving'] ?? null;
 
                 if (is_string($omschrijving) && $omschrijving !== '') {
                     $options[$omschrijving] = $omschrijving;
@@ -182,10 +187,19 @@ final class ZaaktypeCatalogusOptions
 
     private static function versionUrl(string $connectionName, string $identificatie): ?string
     {
+        // An identificatie can have several definitief versions; only the one
+        // valid today carries the eigenschappen and relations we want, so filter
+        // on datumGeldigheid. Fall back to any definitief version when none is
+        // marked valid today.
         $version = Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
             'identificatie' => $identificatie,
             'status' => 'definitief',
-        ])->first();
+            'datumGeldigheid' => now('Europe/Amsterdam')->toDateString(),
+        ])->first()
+            ?? Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
+                'identificatie' => $identificatie,
+                'status' => 'definitief',
+            ])->first();
 
         $url = $version['url'] ?? null;
 
