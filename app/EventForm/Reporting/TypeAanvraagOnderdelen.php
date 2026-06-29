@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Reporting;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\DetermineAanvraagType;
 
 /**
  * Centrale berekening van de "onderdelen van uw aanvraag"-lijst.
@@ -25,24 +26,28 @@ final class TypeAanvraagOnderdelen
      */
     public static function buildList(FormState $state): array
     {
-        $items = [];
-
-        $waarvoor = $state->get('waarvoorWiltUEventloketGebruiken');
-        $afsluit = $state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer');
-
-        if ($waarvoor === 'vooraankondiging') {
-            $items[] = 'Vooraankondiging';
-        } elseif ($afsluit === 'Nee') {
-            $items[] = 'Melding';
-        } elseif ($waarvoor === 'evenement') {
-            $items[] = 'Evenementenvergunning';
+        // Without a choice for `waarvoorWiltUEventloketGebruiken` there is
+        // nothing to say about the type of application yet, so we show no
+        // (empty) section.
+        if (((string) ($state->get('waarvoorWiltUEventloketGebruiken') ?? '')) === '') {
+            return [];
         }
 
-        // `alcoholvergunning` is een afgeleide variabele die `'Ja'` of
-        // `null` returnt (zie FormDerivedState::alcoholvergunning) —
-        // niet een bool. Zonder die specifieke check zou de ontheffing
-        // nooit in de "Onderdelen aanvraag"-lijst belanden.
-        return $items;
+        // Derive the main item from the same canonical determination that picks
+        // the zaaktype (`ResolveZaaktype`) and drives the summary and PDF
+        // (`SubmissionReport::isMelding`). This method used to hold its own
+        // legacy-only copy of that logic (the road-closure question alone),
+        // which made municipalities on the new ReportQuestion system (such as
+        // Heerlen) see "Evenementenvergunning" for a melding.
+        $type = app(DetermineAanvraagType::class)->forState($state);
+
+        // The label matches the zaaktype name prefix per type, the convention
+        // the shared catalogus uses.
+        return [match ($type) {
+            DetermineAanvraagType::MELDING => 'Melding',
+            DetermineAanvraagType::VOORAANKONDIGING => 'Vooraankondiging',
+            default => 'Evenementenvergunning',
+        }];
     }
 
     /**
