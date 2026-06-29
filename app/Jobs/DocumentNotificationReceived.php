@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Enums\Role;
 use App\Models\Zaak;
 use App\Notifications\NewZaakDocument;
+use App\Services\Zgw\SubmissionDocumentDetector;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
@@ -13,7 +14,9 @@ use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
 use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Facades\Zgw;
 
@@ -64,7 +67,15 @@ class DocumentNotificationReceived implements ShouldQueue
                 // Versie 1 van inzendingsdocumenten (aanvraagformulier-PDF en form-bijlagen)
                 // triggert geen notificatie — de organisator krijgt al de bevestigingsmail.
                 // Versie 2+ (isNew=false) triggert wel een notificatie.
-                if ($isNew && $this->isSubmissionDocument($informatieobject, $zaak)) {
+                if ($isNew && SubmissionDocumentDetector::isSubmissionDocument($informatieobject, $zaak)) {
+                    $zaak->clearZgwCache();
+
+                    return;
+                }
+
+                // Only notify for finalised documents (no concepts), and for a
+                // besluitdocument only once the besluit's verzenddatum is reached.
+                if (! $informatieobject->isDefinitief() || ! $this->besluitVerzenddatumReached($connection, $informatieobject)) {
                     $zaak->clearZgwCache();
 
                     return;
@@ -91,31 +102,37 @@ class DocumentNotificationReceived implements ShouldQueue
     }
 
     /**
-     * Bepaalt of een document een inzendingsdocument is (versie 1):
-     * het aanvraagformulier (herkenbaar aan de bestandsnaam) of een
-     * bijlage die de organisator via het formulier heeft ge-upload
-     * (herkenbaar via form_state_snapshot van de zaak).
+     * Whether a document may be notified about with respect to a besluit's
+     * verzenddatum. Returns true for ordinary documents (not linked to a
+     * besluit). For a besluitdocument it returns true only once the besluit's
+     * verzenddatum has been reached. Any lookup failure defaults to true so a
+     * besluiten-API hiccup never silently swallows a normal notification.
      */
-    private function isSubmissionDocument(Informatieobject $informatieobject, Zaak $zaak): bool
+    private function besluitVerzenddatumReached(ZgwConnection $connection, Informatieobject $informatieobject): bool
     {
-        if ($informatieobject->bestandsnaam === 'aanvraagformulier.pdf') {
-            return true;
-        }
+        try {
+            $link = collect($connection->besluiten()->besluitinformatieobjecten()->index([
+                'informatieobject' => $this->notification->hoofdObject,
+            ]))->first();
 
-        $values = $zaak->form_state_snapshot['values'] ?? [];
-        foreach ($values as $value) {
-            if (is_string($value) && $value !== '' && basename($value) === $informatieobject->bestandsnaam) {
+            if (! is_array($link) || empty($link['besluit'])) {
                 return true;
             }
-            if (is_array($value)) {
-                foreach ($value as $entry) {
-                    if (is_string($entry) && $entry !== '' && basename($entry) === $informatieobject->bestandsnaam) {
-                        return true;
-                    }
-                }
-            }
-        }
 
-        return false;
+            $besluit = (new DirectEndpoint($connection))->getByUrl($link['besluit']);
+            $verzenddatum = $besluit['verzenddatum'] ?? null;
+
+            if (empty($verzenddatum)) {
+                return false;
+            }
+
+            return Carbon::parse($verzenddatum, 'Europe/Amsterdam')
+                ->startOfDay()
+                ->lessThanOrEqualTo(Carbon::now('Europe/Amsterdam')->startOfDay());
+        } catch (\Throwable $e) {
+            Log::warning('Could not determine besluit verzenddatum for document notification: '.$e->getMessage());
+
+            return true;
+        }
     }
 }

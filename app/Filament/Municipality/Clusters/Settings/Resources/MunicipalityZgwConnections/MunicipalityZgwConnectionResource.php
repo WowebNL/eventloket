@@ -13,6 +13,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -117,6 +118,30 @@ class MunicipalityZgwConnectionResource extends Resource
                             ->label(__('municipality/resources/zgw_connection.fields.eigenschap_date_format.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.eigenschap_date_format.helper'))
                             ->maxLength(32),
+                    ]),
+
+                Section::make(__('municipality/resources/zgw_connection.sections.features.heading'))
+                    ->description(__('municipality/resources/zgw_connection.sections.features.description'))
+                    ->columns(1)
+                    ->schema([
+                        Toggle::make('lock_status_for_behandelaar')
+                            ->label(__('municipality/resources/zgw_connection.fields.lock_status_for_behandelaar.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.lock_status_for_behandelaar.helper')),
+                        Toggle::make('show_besluiten_tab')
+                            ->label(__('municipality/resources/zgw_connection.fields.show_besluiten_tab.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_besluiten_tab.helper')),
+                        Toggle::make('show_bestanden_tab')
+                            ->label(__('municipality/resources/zgw_connection.fields.show_bestanden_tab.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_bestanden_tab.helper')),
+                        Toggle::make('show_adviesvragen_tab')
+                            ->label(__('municipality/resources/zgw_connection.fields.show_adviesvragen_tab.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_adviesvragen_tab.helper')),
+                        Toggle::make('show_organisatievragen_tab')
+                            ->label(__('municipality/resources/zgw_connection.fields.show_organisatievragen_tab.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_organisatievragen_tab.helper')),
+                        Toggle::make('suppress_notifications')
+                            ->label(__('municipality/resources/zgw_connection.fields.suppress_notifications.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.suppress_notifications.helper')),
                     ]),
             ]);
     }

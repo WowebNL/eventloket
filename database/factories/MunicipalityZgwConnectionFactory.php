@@ -40,6 +40,12 @@ class MunicipalityZgwConnectionFactory extends Factory
             'bronorganisatie_rsin' => null,
             'vertrouwelijkheid_map' => null,
             'eigenschap_date_format' => null,
+            'lock_status_for_behandelaar' => false,
+            'show_besluiten_tab' => true,
+            'show_bestanden_tab' => true,
+            'show_adviesvragen_tab' => true,
+            'show_organisatievragen_tab' => true,
+            'suppress_notifications' => false,
         ];
     }
 }

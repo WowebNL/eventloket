@@ -7,6 +7,8 @@ use App\Filament\Shared\Resources\Zaken\Actions\DownloadDocumentsAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Zaak;
+use App\Services\Zgw\SubmissionDocumentDetector;
+use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -35,20 +37,48 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     #[Locked]
     public Zaak $zaak;
 
+    /**
+     * Read-only mode for the organiser when the bestanden tab is disabled for
+     * the connection: only the files delivered with the application are shown
+     * and no new files can be added.
+     */
+    #[Locked]
+    public bool $submissionOnly = false;
+
     public bool $hasDocuments = false;
 
-    public function mount(Zaak $zaak): void
+    public function mount(Zaak $zaak, bool $submissionOnly = false): void
     {
         $this->zaak = $zaak;
+        $this->submissionOnly = $submissionOnly;
     }
 
     #[On('refreshTable')]
     public function refresh(): void {}
 
+    /**
+     * The documents shown in the table. In read-only submission mode only the
+     * files the organiser delivered with the application are listed.
+     *
+     * @return Collection<int, Informatieobject>
+     */
+    private function records(): Collection
+    {
+        $documenten = $this->zaak->documenten;
+
+        if ($this->submissionOnly) {
+            return $documenten->filter(
+                fn (Informatieobject $document) => SubmissionDocumentDetector::isSubmissionDocument($document, $this->zaak)
+            )->values();
+        }
+
+        return $documenten;
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (): Collection => $this->zaak->documenten->mapWithKeys(fn ($item) => [$item->uuid => $item->toArray()]))
+            ->records(fn (): Collection => $this->records()->mapWithKeys(fn ($item) => [$item->uuid => $item->toArray()]))
             ->defaultSort('created_at', direction: 'desc')
             ->columns([
                 TextColumn::make('titel'),
@@ -78,7 +108,8 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ]))
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-eye'),
-                NewDocumentVersionAction::make($this->zaak),
+                NewDocumentVersionAction::make($this->zaak)
+                    ->visible(fn (): bool => ! $this->submissionOnly),
                 ActionGroup::make([
                     Action::make('downloaden')
                     // ->label(__('municipality/resources/zaak.actions.download.label'))
@@ -132,7 +163,8 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->visible(fn (): bool => auth()->user()->role != Role::Organiser),
             ])
             ->headerActions([
-                UploadDocumentAction::make($this->zaak),
+                UploadDocumentAction::make($this->zaak)
+                    ->visible(fn (): bool => ! $this->submissionOnly),
             ])
             ->toolbarActions([
                 DownloadDocumentsAction::make($this->zaak),

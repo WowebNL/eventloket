@@ -7,6 +7,7 @@ use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
+use App\Models\MunicipalityZgwConnection;
 use App\Observers\ZaakObserver;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionConfig;
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
@@ -88,6 +90,60 @@ class Zaak extends Model implements Eventable
     public function zgwConnectionName(): string
     {
         return app(ZgwConnectionResolver::class)->for($this);
+    }
+
+    /**
+     * The per-municipality ZGW connection row, or null when this zaak runs on
+     * the global "main" connection (which has no row, hence default behaviour).
+     */
+    public function zgwConnectionModel(): ?MunicipalityZgwConnection
+    {
+        return $this->municipality?->zgwConnection;
+    }
+
+    /**
+     * Whether a behandelaar may change the status (and finish) this zaak inside
+     * Eventloket. Locked connections let the municipality drive status in its
+     * own system; organiser withdrawal stays possible regardless.
+     */
+    public function behandelaarCanChangeStatus(): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        return $connection === null || ! $connection->lock_status_for_behandelaar;
+    }
+
+    /**
+     * Whether a given zaak detail tab should be shown for this connection.
+     *
+     * @param  'besluiten'|'bestanden'|'adviesvragen'|'organisatievragen'  $tab
+     */
+    public function showsTab(string $tab): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        if ($connection === null) {
+            return true;
+        }
+
+        return match ($tab) {
+            'besluiten' => $connection->show_besluiten_tab,
+            'bestanden' => $connection->show_bestanden_tab,
+            'adviesvragen' => $connection->show_adviesvragen_tab,
+            'organisatievragen' => $connection->show_organisatievragen_tab,
+            default => true,
+        };
+    }
+
+    /**
+     * Whether all zaak notifications are suppressed for this connection (only
+     * the submission confirmation mail still goes out).
+     */
+    public function suppressesNotifications(): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        return $connection !== null && $connection->suppress_notifications;
     }
 
     /**
@@ -264,11 +320,16 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
+                // Only show finalised documents; concepts from an external ZGW
+                // backend are hidden (documents without an explicit status, such
+                // as our own uploads, count as final). See Informatieobject::isDefinitief().
+                $documenten = $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => $informatieobject->isDefinitief());
+
                 if (app()->runningInConsole()) {
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
-                    return $this->getDocuments();
+                    return $documenten->values();
                 } else {
-                    return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role)));
+                    return $documenten->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role)))->values();
                 }
             },
         );
@@ -293,13 +354,43 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                return $this->getBesluiten()->each(function (Besluit $besluit) {
-                    $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                        'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role))),
-                    ]));
-                });
+                // Only show a besluit once it has a finalised besluitdocument and
+                // its verzenddatum has been reached. See besluitIsPubliceerbaar().
+                return $this->getBesluiten()
+                    ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
+                    ->each(function (Besluit $besluit) {
+                        $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                            'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role))),
+                        ]));
+                    })
+                    ->values();
             },
         );
+    }
+
+    /**
+     * Whether a besluit may be shown to and notified about: it must have a
+     * finalised besluitdocument and a verzenddatum that has been reached (on or
+     * before today, Europe/Amsterdam). Besluiten created in Eventloket get a
+     * verzenddatum of today, so their behaviour is unchanged.
+     */
+    private function besluitIsPubliceerbaar(Besluit $besluit): bool
+    {
+        $heeftDefinitiefDocument = $besluit->besluitDocumenten?->contains(
+            fn (Informatieobject $document) => $document->isDefinitief()
+        ) ?? false;
+
+        if (! $heeftDefinitiefDocument || empty($besluit->verzenddatum)) {
+            return false;
+        }
+
+        try {
+            return Carbon::parse($besluit->verzenddatum, 'Europe/Amsterdam')
+                ->startOfDay()
+                ->lessThanOrEqualTo(Carbon::now('Europe/Amsterdam')->startOfDay());
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function getBesluiten(): Collection

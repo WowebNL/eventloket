@@ -481,7 +481,7 @@ class ZaakInfolist
                                 // })
                             ])
                             ->columnSpan(4)
-                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Admin])),
+                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! $record->behandelaarCanChangeStatus() || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Admin])),
                         self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
@@ -493,17 +493,18 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(BesluitenInfolist::class, ['zaak' => $schema->model])->key('besluiten-table-'.($schema->model->id ?? 'new')),
                                     ])
-                                    ->visible(fn (Zaak $record) => $record->besluiten->count() > 0),
+                                    ->visible(fn (Zaak $record) => $record->showsTab('besluiten') && $record->besluiten->count() > 0),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->icon('heroicon-o-document')
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
-                                    ]),
+                                    ])
+                                    ->visible(fn (Zaak $record) => $record->showsTab('bestanden')),
                                 Tab::make('Organisatievragen')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
-                                    ->visible(fn (Zaak $record) => Filament::getCurrentPanel()->getId() === 'municipality' || Filament::getCurrentPanel()->getId() === 'admin')
+                                    ->visible(fn (Zaak $record) => $record->showsTab('organisatievragen') && (Filament::getCurrentPanel()->getId() === 'municipality' || Filament::getCurrentPanel()->getId() === 'admin'))
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()
@@ -518,6 +519,7 @@ class ZaakInfolist
                                 Tab::make('advice_requests')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
                                     ->icon('heroicon-o-question-mark-circle')
+                                    ->visible(fn (Zaak $record) => $record->showsTab('adviesvragen'))
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()

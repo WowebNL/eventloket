@@ -37,6 +37,12 @@ use RuntimeException;
  * @property string|null $bronorganisatie_rsin
  * @property array<string, mixed>|null $vertrouwelijkheid_map
  * @property string|null $eigenschap_date_format
+ * @property bool $lock_status_for_behandelaar
+ * @property bool $show_besluiten_tab
+ * @property bool $show_bestanden_tab
+ * @property bool $show_adviesvragen_tab
+ * @property bool $show_organisatievragen_tab
+ * @property bool $suppress_notifications
  */
 #[ObservedBy(MunicipalityZgwConnectionObserver::class)]
 class MunicipalityZgwConnection extends Model
@@ -62,6 +68,12 @@ class MunicipalityZgwConnection extends Model
         'bronorganisatie_rsin',
         'vertrouwelijkheid_map',
         'eigenschap_date_format',
+        'lock_status_for_behandelaar',
+        'show_besluiten_tab',
+        'show_bestanden_tab',
+        'show_adviesvragen_tab',
+        'show_organisatievragen_tab',
+        'suppress_notifications',
     ];
 
     protected $hidden = [
@@ -74,6 +86,12 @@ class MunicipalityZgwConnection extends Model
             'client_secret' => 'encrypted',
             'allowed_hosts' => 'array',
             'vertrouwelijkheid_map' => 'array',
+            'lock_status_for_behandelaar' => 'boolean',
+            'show_besluiten_tab' => 'boolean',
+            'show_bestanden_tab' => 'boolean',
+            'show_adviesvragen_tab' => 'boolean',
+            'show_organisatievragen_tab' => 'boolean',
+            'suppress_notifications' => 'boolean',
         ];
     }
 

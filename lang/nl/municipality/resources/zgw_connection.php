@@ -18,6 +18,10 @@ return [
             'heading' => 'Technische parameters',
             'description' => 'Instance-specifieke instellingen. Laat leeg om het gedrag van de hoofdkoppeling te erven.',
         ],
+        'features' => [
+            'heading' => 'Eventloket functies',
+            'description' => 'Bepaal hoe Eventloket zaken van deze koppeling toont en notificeert. De standaardwaarden houden het volledige gedrag aan.',
+        ],
     ],
 
     'fields' => [
@@ -51,6 +55,30 @@ return [
         'eigenschap_date_format' => [
             'label' => 'Datumformaat zaakeigenschappen',
             'helper' => 'Optioneel PHP-datumformaat voor zaakeigenschap-waarden (bijv. YmdHis). Leeg laten houdt het formulier-formaat aan.',
+        ],
+        'lock_status_for_behandelaar' => [
+            'label' => 'Status niet wijzigbaar door behandelaar',
+            'helper' => 'De behandelaar kan de status niet wijzigen en de zaak niet afronden in Eventloket. Intrekken door de organisator blijft mogelijk.',
+        ],
+        'show_besluiten_tab' => [
+            'label' => 'Tabblad besluiten tonen',
+            'helper' => 'Toon het tabblad besluiten bij een zaak.',
+        ],
+        'show_bestanden_tab' => [
+            'label' => 'Tabblad bestanden tonen',
+            'helper' => 'Toon het tabblad bestanden. Bij uitschakelen ziet de organisator nog wel de eigen aanvraag-bestanden, maar kunnen er geen nieuwe bestanden bijkomen.',
+        ],
+        'show_adviesvragen_tab' => [
+            'label' => 'Tabblad adviesvragen tonen',
+            'helper' => 'Toon het tabblad adviesvragen bij een zaak.',
+        ],
+        'show_organisatievragen_tab' => [
+            'label' => 'Tabblad organisatievragen tonen',
+            'helper' => 'Toon het tabblad organisatievragen bij een zaak.',
+        ],
+        'suppress_notifications' => [
+            'label' => 'Geen notificaties versturen',
+            'helper' => 'Onderdruk alle notificaties voor een zaak. Alleen de ontvangstbevestiging bij indienen wordt nog verstuurd.',
         ],
     ],
 

@@ -93,6 +93,24 @@ class ZgwHttpFake
         return $url;
     }
 
+    /**
+     * Fake the besluitinformatieobjecten list endpoint (links between a besluit
+     * and its documents). Defaults to empty, so a document is treated as not
+     * belonging to a besluit.
+     *
+     * @param  array<int, array<string, mixed>>  $results
+     */
+    public static function fakeBesluitinformatieobjecten(array $results = [])
+    {
+        $url = self::$baseUrl.'/besluiten/api/v1/besluitinformatieobjecten';
+
+        Http::fake([
+            $url.'*' => Http::response(self::envelope($results), 200),
+        ]);
+
+        return $url;
+    }
+
     public static function fakeZaakinformatieobjecten()
     {
         $url = self::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten';
