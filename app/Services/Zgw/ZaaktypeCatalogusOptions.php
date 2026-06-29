@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Zgw;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 use Woweb\Zgw\Facades\Zgw;
 
@@ -134,7 +135,20 @@ final class ZaaktypeCatalogusOptions
                     continue;
                 }
 
-                $type = ZgwResource::byUrl($connectionName, $typeUrl);
+                // A single unreadable type (e.g. a 404 or a host outside the
+                // allowlist) must not wipe the whole list; skip it and continue.
+                try {
+                    $type = ZgwResource::byUrl($connectionName, $typeUrl);
+                } catch (Throwable $e) {
+                    Log::warning('ZaaktypeCatalogusOptions: kon informatieobjecttype niet ophalen', [
+                        'connection' => $connectionName,
+                        'informatieobjecttype' => $typeUrl,
+                        'exception' => $e->getMessage(),
+                    ]);
+
+                    continue;
+                }
+
                 $omschrijving = $type['omschrijving'] ?? null;
 
                 if (is_string($omschrijving) && $omschrijving !== '') {
@@ -218,7 +232,17 @@ final class ZaaktypeCatalogusOptions
 
         try {
             return Cache::remember($key, self::TTL_SECONDS, $builder);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            // Degrade to an empty list rather than breaking the form, but log the
+            // cause so a failing catalogi read on an external ZGW backend is
+            // diagnosable instead of looking like an empty catalogus.
+            Log::warning('ZaaktypeCatalogusOptions: kon catalogi-opties niet ophalen', [
+                'connection' => $connectionName,
+                'resource' => $resource,
+                'discriminator' => $discriminator,
+                'exception' => $e->getMessage(),
+            ]);
+
             return [];
         }
     }
