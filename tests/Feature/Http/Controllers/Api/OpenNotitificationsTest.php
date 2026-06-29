@@ -1,8 +1,6 @@
 <?php
 
-use App\Jobs\DocumentNotificationReceived;
-use App\Jobs\Zaak\ClearZaakCache;
-use App\Jobs\ZaakStatusNotificationReceived;
+use App\Jobs\ProcessOpenNotification;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
@@ -14,10 +12,13 @@ beforeEach(function () {
 
     $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
 
+    // The listen webhook requires the notifications:receive scope, so the token
+    // is requested with that scope (see EnsureClientIsResourceOwner on the route).
     $response = $this->postJson(route('passport.token'), [
         'grant_type' => 'client_credentials',
         'client_id' => $client->id,
         'client_secret' => '12345678',
+        'scope' => 'notifications:receive',
     ]);
 
     $body = $response->json();
@@ -60,7 +61,7 @@ test('Open notifications endpoint is reachable with valid access key', function 
 
 test('Open notifications endpoint handles update zaak eigenschap notification', function () {
     Queue::fake([
-        ClearZaakCache::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -75,13 +76,13 @@ test('Open notifications endpoint handles update zaak eigenschap notification', 
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(ClearZaakCache::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
 test('Open notifications endpoint handles zaak status changed notification', function () {
     Queue::fake([
-        ZaakStatusNotificationReceived::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -96,13 +97,13 @@ test('Open notifications endpoint handles zaak status changed notification', fun
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(ZaakStatusNotificationReceived::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
 test('Open notifications endpoint handles document creation notification', function () {
     Queue::fake([
-        DocumentNotificationReceived::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -117,13 +118,13 @@ test('Open notifications endpoint handles document creation notification', funct
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(DocumentNotificationReceived::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
 test('Open notifications endpoint handles document update notification', function () {
     Queue::fake([
-        DocumentNotificationReceived::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -138,7 +139,7 @@ test('Open notifications endpoint handles document update notification', functio
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(DocumentNotificationReceived::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
