@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\DocumentRequest;
 use App\Models\Zaak;
-use App\Support\Uploads\DocumentUploadType;
 use App\Services\Zgw\ZgwResource;
+use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\HeaderUtils;
@@ -17,9 +17,10 @@ class DocumentController extends Controller
         $document = $zaak->documenten->where('uuid', $documentuuid)->firstOrFail();
 
         $validated = $request->validated();
-        if (isset($validated['version']) && $validated['version'] != $document->versie) {
+        $requestedVersion = isset($validated['version']) ? (int) $validated['version'] : null;
+        if ($requestedVersion !== null && $requestedVersion !== (int) $document->versie) {
             // get the specified version
-            $document = new Informatieobject(...ZgwResource::byUrl($zaak->zgwConnectionName(), $document->url.'?versie='.$validated['version']));
+            $document = new Informatieobject(...ZgwResource::showDocumentVersion($zaak->zgwConnectionName(), $documentuuid, $requestedVersion));
         }
 
         $event = $type === 'download' ? 'download' : 'view';
@@ -51,7 +52,7 @@ class DocumentController extends Controller
             ? DocumentUploadType::ensureFileNameHasExtension($document->bestandsnaam, $document->formaat)
             : $document->bestandsnaam;
 
-        return response(ZgwResource::downloadByUrl($zaak->zgwConnectionName(), $document->inhoud))->withHeaders([
+        return response(ZgwResource::downloadDocument($zaak->zgwConnectionName(), $documentuuid, $requestedVersion))->withHeaders([
             'Content-Disposition' => HeaderUtils::makeDisposition(
                 $dispositionType,
                 $fileName,

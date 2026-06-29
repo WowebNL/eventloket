@@ -44,7 +44,7 @@ final readonly class Besluit implements Arrayable
             'zaak' => $this->zaak,
             'datum' => $this->datum,
             'toelichting' => $this->toelichting,
-            'besluittypeObject' => $this->besluittypeObject?->raw,
+            'besluittypeObject' => $this->besluittypeObject?->toArray(),
             'besluitDocumenten' => $this->besluitDocumenten?->map(fn (Informatieobject $doc) => $doc->toArray())->all(),
             'ingangsdatum' => $this->ingangsdatum,
             'verzenddatum' => $this->verzenddatum,

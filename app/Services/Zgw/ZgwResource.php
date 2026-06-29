@@ -32,9 +32,9 @@ class ZgwResource
     /**
      * Download the raw bytes at a full ZGW URL (e.g. a document `inhoud` link).
      *
-     * The client's typed download() helper only targets the default document download
-     * endpoint and cannot fetch a version-specific `inhoud` URL, so we use the connection's
-     * authenticated request directly. The host allowlist is still enforced.
+     * Used for current-version downloads where only the resource `inhoud` URL is at hand
+     * (bulk zips, e-mail attachments). The host allowlist is still enforced. Version-specific
+     * downloads go through {@see self::downloadDocument()}.
      */
     public static function downloadByUrl(string $connectionName, string $url): string
     {
@@ -42,6 +42,41 @@ class ZgwResource
         $connection->assertUrlAllowed($url);
 
         return $connection->request()->get($url)->body();
+    }
+
+    /**
+     * Fetch a specific version of an enkelvoudiginformatieobject as a decoded array,
+     * deriving the uuid like {@see self::byUrl()}.
+     *
+     * Uses the client's `show()` query parameters (laravel-zgw-client v1.1.0+) instead of
+     * concatenating `?versie=` onto the URL by hand.
+     *
+     * @return array<string, mixed>
+     */
+    public static function showDocumentVersion(string $connectionName, string $uuid, int $versie): array
+    {
+        return self::ensureUuid(
+            Zgw::connection($connectionName)
+                ->documenten()
+                ->enkelvoudiginformatieobjecten()
+                ->show($uuid, ['versie' => $versie])
+        );
+    }
+
+    /**
+     * Download the binary content of an enkelvoudiginformatieobject, optionally a specific
+     * version.
+     *
+     * Uses the client's `download()` `versie` query parameter (laravel-zgw-client v1.1.0+),
+     * which targets the connection's own documenten download endpoint, so no manual host
+     * allowlist check is needed.
+     */
+    public static function downloadDocument(string $connectionName, string $uuid, ?int $versie = null): string
+    {
+        return Zgw::connection($connectionName)
+            ->documenten()
+            ->enkelvoudiginformatieobjecten()
+            ->download($uuid, $versie !== null ? ['versie' => $versie] : []);
     }
 
     /**

@@ -38,7 +38,7 @@ class Document extends Component implements HasActions, HasSchemas
         $this->latestVersion = (int) $this->document->versie;
 
         if ((int) $this->document->versie !== $this->versie) {
-            $this->document = new Informatieobject(...ZgwResource::byUrl($this->zaak->zgwConnectionName(), $this->documentUrl.'?versie='.$this->versie));
+            $this->document = new Informatieobject(...ZgwResource::showDocumentVersion($this->zaak->zgwConnectionName(), $this->document->uuid, $this->versie));
         }
     }
 

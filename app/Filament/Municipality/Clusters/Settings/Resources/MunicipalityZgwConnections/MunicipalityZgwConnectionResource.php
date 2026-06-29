@@ -9,16 +9,20 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnect
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\ListMunicipalityZgwConnections;
 use App\Models\MunicipalityZgwConnection;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Throwable;
 use Woweb\Zgw\Enums\ZgwVersion;
+use Woweb\Zgw\Facades\Zgw;
 
 class MunicipalityZgwConnectionResource extends Resource
 {
@@ -134,7 +138,47 @@ class MunicipalityZgwConnectionResource extends Resource
                 TextColumn::make('updated_at')
                     ->label(__('municipality/resources/zgw_connection.columns.updated_at.label'))
                     ->dateTime(),
+            ])
+            ->recordActions([
+                self::testConnectionAction(),
             ]);
+    }
+
+    /**
+     * A row action that runs an end-to-end health check against the connection.
+     *
+     * It registers this row's config under its runtime name and makes one real
+     * read via the package's assertUsable() (a catalogi catalogussen list). The
+     * config build also re-applies the secret-length floor, so a weak secret or
+     * an unreachable instance both surface as a danger notification.
+     */
+    public static function testConnectionAction(): Action
+    {
+        return Action::make('test')
+            ->label(__('municipality/resources/zgw_connection.actions.test.label'))
+            ->icon(Heroicon::OutlinedSignal)
+            ->action(function (MunicipalityZgwConnection $record): void {
+                $name = "gemeente_{$record->municipality_id}";
+
+                try {
+                    config(["zgw.connections.{$name}" => $record->buildConfig()]);
+                    Zgw::connection($name)->assertUsable();
+                } catch (Throwable $e) {
+                    Notification::make()
+                        ->title(__('municipality/resources/zgw_connection.actions.test.failure'))
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->title(__('municipality/resources/zgw_connection.actions.test.success'))
+                    ->body(__('municipality/resources/zgw_connection.actions.test.success_body'))
+                    ->success()
+                    ->send();
+            });
     }
 
     public static function getPages(): array

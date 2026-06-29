@@ -4,11 +4,15 @@ use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\MunicipalityZgwConnectionResource;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\CreateMunicipalityZgwConnection;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\EditMunicipalityZgwConnection;
+use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\ListMunicipalityZgwConnections;
 use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Http;
+use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
 
@@ -78,6 +82,42 @@ it('does not surface the stored secret in the edit form', function () {
     livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
         ->assertFormFieldExists('client_secret')
         ->assertFormSet(['client_secret' => null]);
+});
+
+it('reports a successful connection test', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    Http::fake([
+        'https://gemeente.example.com/catalogi/api/v1/catalogussen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => 'https://gemeente.example.com/catalogi/api/v1/catalogussen/1'],
+        ]), 200),
+    ]);
+
+    livewire(ListMunicipalityZgwConnections::class)
+        ->callAction(TestAction::make('test')->table($connection))
+        ->assertNotified(__('municipality/resources/zgw_connection.actions.test.success'));
+});
+
+it('reports a failed connection test when the API rejects the request', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    Http::fake([
+        'https://gemeente.example.com/catalogi/api/v1/catalogussen*' => Http::response(['detail' => 'unauthorized'], 401),
+    ]);
+
+    livewire(ListMunicipalityZgwConnections::class)
+        ->callAction(TestAction::make('test')->table($connection))
+        ->assertNotified(__('municipality/resources/zgw_connection.actions.test.failure'));
+});
+
+it('reports a failed connection test when the secret is too short', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create([
+        'client_secret' => 'too-short',
+    ]);
+
+    livewire(ListMunicipalityZgwConnections::class)
+        ->callAction(TestAction::make('test')->table($connection))
+        ->assertNotified(__('municipality/resources/zgw_connection.actions.test.failure'));
 });
 
 it('is not accessible to a reviewer', function () {

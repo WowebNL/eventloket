@@ -61,4 +61,13 @@ return [
         'updated_at' => ['label' => 'Laatst gewijzigd'],
     ],
 
+    'actions' => [
+        'test' => [
+            'label' => 'Verbinding testen',
+            'success' => 'Verbinding geslaagd',
+            'success_body' => 'Eventloket kon deze ZGW-instantie bereiken.',
+            'failure' => 'Verbinding mislukt',
+        ],
+    ],
+
 ];

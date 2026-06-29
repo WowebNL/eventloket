@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Services\Zgw;
 
+use App\Livewire\Zaken\ListDocumentAuditTrails;
+
 /**
  * Maps a raw ZGW audit-trail `actieWeergave` to a friendly, localized label.
  *
  * Re-homed from the old DocumentAuditTrail value object so the localization
- * lives next to the other ZGW services. The audit-trail endpoint has no typed
- * DTO in the package (it returns plain arrays), so callers keep the raw rows
- * and enrich them with this label.
+ * lives next to the other ZGW services. The kernel audit-trail endpoint returns
+ * plain arrays. A typed AuditTrailData exists in the package (via Typed::wrap()),
+ * but the rows are deliberately kept as arrays so they survive Livewire's public
+ * property serialization in {@see ListDocumentAuditTrails};
+ * callers enrich those raw rows with this label.
  */
 final class AuditTrailActionFormatter
 {

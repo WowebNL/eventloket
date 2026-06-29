@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "66c219a21291c9c257e4f1d88f124d38",
+    "content-hash": "43abb5e28e72d8d20125a529cabdcfd9",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -10897,16 +10897,16 @@
         },
         {
             "name": "woweb/laravel-zgw-client",
-            "version": "v1.0.0",
+            "version": "v1.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WowebNL/laravel-zgw-client.git",
-                "reference": "7c8550d3bfe52756865f912143e8514544d6c77b"
+                "reference": "e574c7cc20966263ec04bd156f0e9ecdcb8ab665"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/7c8550d3bfe52756865f912143e8514544d6c77b",
-                "reference": "7c8550d3bfe52756865f912143e8514544d6c77b",
+                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/e574c7cc20966263ec04bd156f0e9ecdcb8ab665",
+                "reference": "e574c7cc20966263ec04bd156f0e9ecdcb8ab665",
                 "shasum": ""
             },
             "require": {
@@ -10968,7 +10968,7 @@
                 ],
                 "dto:generate": [
                     "@php scripts/generate-dtos.php",
-                    "@php vendor/bin/pint src/Data/Generated src/Data/Writes --quiet"
+                    "@php vendor/bin/pint src/Data/Generated src/Data/Writes src/Data/Typed.php --quiet"
                 ],
                 "deptrac": [
                     "@php vendor/bin/deptrac analyse --no-progress"
@@ -10997,10 +10997,10 @@
                 "zgw"
             ],
             "support": {
-                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.0.0",
+                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.2.0",
                 "issues": "https://github.com/WowebNL/laravel-zgw-client/issues"
             },
-            "time": "2026-06-25T12:42:24+00:00"
+            "time": "2026-06-26T18:19:21+00:00"
         },
         {
             "name": "woweb/openzaak",
