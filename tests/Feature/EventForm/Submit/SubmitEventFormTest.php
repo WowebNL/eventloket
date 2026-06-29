@@ -32,6 +32,7 @@ use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
+use App\Jobs\Zaak\AddGlobaleLocatieZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\SetInitialStatusZGW;
@@ -183,7 +184,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     expect(Draft::whereKey($activeDraft->id)->exists())->toBeFalse()
         ->and(Draft::whereKey($otherDraft->id)->exists())->toBeTrue();
 
-    // 5. De 8 jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    // 5. De jobs zitten samen in één Bus::chain() in de juiste volgorde.
     //    GenerateSubmissionPdf staat als eerste zodat de bevestigingsmail zo
     //    snel mogelijk verstuurd wordt. HashIdentifyingAttributes loopt als
     //    allerlaatste zodat alle eerdere jobs de plain BSN/KvK kunnen lezen.
@@ -194,6 +195,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
         AddEinddatumZGW::class,
         UpdateInitiatorZGW::class,
         AddGeometryZGW::class,
+        AddGlobaleLocatieZGW::class,
         CreateDoorkomstZaken::class,
         HashIdentifyingAttributes::class,
     ]);

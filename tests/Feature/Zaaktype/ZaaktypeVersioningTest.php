@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\Steps\CreateZaakInZGW;
+use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -55,6 +58,56 @@ test('CreateZaakInZGW sends the version valid on the creation date as zaaktype',
         && str_contains($request->url(), 'identificatie=EVG-HEERLEN')
         && str_contains($request->url(), 'datumGeldigheid=')
         && str_contains($request->url(), 'status=definitief'));
+});
+
+test('CreateZaakInZGW resolves the zaaktype from the blueprint mapping identificatie, not the local row', function () {
+    // A municipality whose local zaaktype was synced from the central OpenZaak
+    // (its own identificatie/url point at that instance), while the blueprint
+    // mapping names the identificatie in the municipality's own catalogus.
+    $municipality = Municipality::factory()->create();
+    MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Vergunning->value,
+        'zaaktype_identificatie' => 'GEMEENTE-ID',
+    ]);
+
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'identificatie' => 'CENTRAL-ID',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/central',
+    ]);
+
+    $versionUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/gemeente-valid';
+    $zaakUrl = ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/new-1';
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => $versionUrl, 'identificatie' => 'GEMEENTE-ID'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken' => Http::response([
+            'url' => $zaakUrl,
+            'uuid' => 'new-1',
+            'identificatie' => 'ZAAK-1',
+            'zaaktype' => $versionUrl,
+            'omschrijving' => 'Test',
+            'startdatum' => now()->toDateString(),
+            'registratiedatum' => now()->toDateString(),
+            'bronorganisatie' => '820151130',
+            'zaakgeometrie' => null,
+        ], 201),
+    ]);
+
+    $oz = app(CreateZaakInZGW::class)->execute(
+        new FormState(values: ['watIsDeNaamVanHetEvenementVergunning' => 'Test']),
+        $zaaktype,
+    );
+
+    expect($oz->zaaktype)->toBe($versionUrl);
+
+    // The version lookup used the mapping identificatie, not the local row's.
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/catalogi/api/v1/zaaktypen')
+        && str_contains($request->url(), 'identificatie=GEMEENTE-ID'));
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), 'identificatie=CENTRAL-ID'));
 });
 
 test('zgwZaaktypeVersionUrl prefers the snapshot and falls back to the zaaktype url', function () {
