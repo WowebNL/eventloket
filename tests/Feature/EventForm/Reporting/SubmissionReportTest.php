@@ -190,6 +190,26 @@ test('Type-aanvraag-stap: meldingspad → Melding zonder aanvullende ontheffinge
     expect($sections[0]['entries'][0]['value'])->toBe('Melding');
 });
 
+test('Type-aanvraag-stap: nieuw ReportQuestion-pad (alle Ja) → Melding, niet Evenementenvergunning', function () {
+    // Gemeenten op het nieuwe ReportQuestion-systeem (zoals Heerlen) hebben
+    // geen wegafsluiting-antwoord; het type volgt uit de reportQuestion-
+    // antwoorden. Alle 'Ja' betekent een melding. De legacy-only kopie van
+    // deze logica toonde hier ten onrechte "Evenementenvergunning".
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => ['vraag 1', 'vraag 2'],
+        ],
+        'reportQuestion_1' => 'Ja',
+        'reportQuestion_2' => 'Ja',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
+
+    expect($sections[0]['entries'][0]['value'])->toBe('Melding');
+});
+
 test('Risicoscan: het seizoen-veld wordt bij een melding weggelaten uit samenvatting/PDF', function () {
     // Het seizoen-veld wordt automatisch afgeleid uit de startdatum, ook
     // wanneer de risicoscan-stap (bij een melding) nooit getoond wordt.
