@@ -36,6 +36,7 @@ use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -178,10 +179,16 @@ class ViewZaak extends ViewRecord
                                     ->send();
                             }
                         } catch (\Exception $e) {
+                            // The underlying error goes to the log only; the user
+                            // sees a generic message.
+                            Log::warning('ViewZaak: deleting the zaak in OpenZaak failed', [
+                                'zaak_id' => $record->id,
+                                'exception' => $e->getMessage(),
+                            ]);
+
                             Notification::make()
                                 ->warning()
                                 ->title(__('resources/zaak.actions.delete_zaak.error_open_zaak'))
-                                ->body($e->getMessage())
                                 ->send();
                         }
                     }

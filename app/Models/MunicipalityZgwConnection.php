@@ -43,6 +43,7 @@ use RuntimeException;
  * @property bool $show_adviesvragen_tab
  * @property bool $show_organisatievragen_tab
  * @property bool $suppress_notifications
+ * @property \Illuminate\Support\Carbon|null $last_verified_at
  */
 #[ObservedBy(MunicipalityZgwConnectionObserver::class)]
 class MunicipalityZgwConnection extends Model
@@ -74,6 +75,7 @@ class MunicipalityZgwConnection extends Model
         'show_adviesvragen_tab',
         'show_organisatievragen_tab',
         'suppress_notifications',
+        'last_verified_at',
     ];
 
     protected $hidden = [
@@ -92,6 +94,7 @@ class MunicipalityZgwConnection extends Model
             'show_adviesvragen_tab' => 'boolean',
             'show_organisatievragen_tab' => 'boolean',
             'suppress_notifications' => 'boolean',
+            'last_verified_at' => 'datetime',
         ];
     }
 

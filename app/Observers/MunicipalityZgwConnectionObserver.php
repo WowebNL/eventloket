@@ -39,6 +39,7 @@ class MunicipalityZgwConnectionObserver
     private function invalidate(): void
     {
         Cache::forget(ZgwConnectionResolver::HOST_INDEX_CACHE_KEY);
+        Cache::forget(ZgwConnectionResolver::ALLOWED_HOSTS_CACHE_KEY);
         $this->restartWorkers();
     }
 

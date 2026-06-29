@@ -1,6 +1,8 @@
 <?php
 
 use App\Jobs\ProcessOpenNotification;
+use App\Models\MunicipalityZgwConnection;
+use App\Services\Notificaties\NotificationRoundTripProbe;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
@@ -173,4 +175,68 @@ test('resourceUrl met vreemde host wordt geweigerd (SSRF-bescherming)', function
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['resourceUrl']);
+});
+
+test('een notificatie van een eigen gemeente-host wordt geaccepteerd', function () {
+    Queue::fake([ProcessOpenNotification::class]);
+
+    // The connection's own host is not the global OpenZaak host, but it is a
+    // trusted ZGW host, so its notifications must be accepted.
+    MunicipalityZgwConnection::factory()->create();
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://gemeente.example.com/zaken/api/v1/zaken/123',
+        'resourceUrl' => 'https://gemeente.example.com/zaken/api/v1/zaken/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    Queue::assertPushed(ProcessOpenNotification::class);
+});
+
+test('een notificatie met een bekend probe-id registreert de ontvangst en wordt niet verwerkt', function () {
+    Queue::fake([ProcessOpenNotification::class]);
+
+    NotificationRoundTripProbe::markPending('probe-123', 'main');
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'test',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'https://example.com/zaak/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+        'kenmerken' => ['probe_id' => 'probe-123'],
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    expect(NotificationRoundTripProbe::hasReceived('probe-123'))->toBeTrue();
+    Queue::assertNotPushed(ProcessOpenNotification::class);
+});
+
+test('een notificatie met een onbekend probe-id wordt gewoon verwerkt', function () {
+    Queue::fake([ProcessOpenNotification::class]);
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'https://example.com/zaak/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+        'kenmerken' => ['probe_id' => 'unknown-id'],
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    expect(NotificationRoundTripProbe::hasReceived('unknown-id'))->toBeFalse();
+    Queue::assertPushed(ProcessOpenNotification::class);
 });

@@ -14,16 +14,13 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Throwable;
 use Woweb\Zgw\Enums\ZgwVersion;
-use Woweb\Zgw\Facades\Zgw;
 
 class MunicipalityZgwConnectionResource extends Resource
 {
@@ -159,50 +156,40 @@ class MunicipalityZgwConnectionResource extends Resource
                 TextColumn::make('version')
                     ->label(__('municipality/resources/zgw_connection.columns.version.label'))
                     ->placeholder('—'),
+                TextColumn::make('last_verified_at')
+                    ->label(__('municipality/resources/zgw_connection.columns.last_verified_at.label'))
+                    ->dateTime(config('app.date_format'))
+                    ->badge()
+                    ->color(fn ($state): string => $state ? 'success' : 'danger')
+                    ->formatStateUsing(fn ($state): string => $state
+                        ? $state->translatedFormat(config('app.date_format', 'd-m-Y H:i'))
+                        : '✕'),
                 TextColumn::make('updated_at')
                     ->label(__('municipality/resources/zgw_connection.columns.updated_at.label'))
                     ->dateTime(),
             ])
             ->recordActions([
-                self::testConnectionAction(),
+                self::verifyConnectionAction(),
             ]);
     }
 
     /**
-     * A row action that runs an end-to-end health check against the connection.
-     *
-     * It registers this row's config under its runtime name and makes one real
-     * read via the package's assertUsable() (a catalogi catalogussen list). The
-     * config build also re-applies the secret-length floor, so a weak secret or
-     * an unreachable instance both surface as a danger notification.
+     * The single "Verbinding testen" row action. It opens a modal that runs the
+     * full verification flow (connection, abonnement, notification round trip)
+     * via the {@see \App\Livewire\ConnectionVerifier} component.
      */
-    public static function testConnectionAction(): Action
+    public static function verifyConnectionAction(): Action
     {
-        return Action::make('test')
-            ->label(__('municipality/resources/zgw_connection.actions.test.label'))
+        return Action::make('verify')
+            ->label(__('municipality/resources/zgw_connection.actions.verify.label'))
             ->icon(Heroicon::OutlinedSignal)
-            ->action(function (MunicipalityZgwConnection $record): void {
-                $name = "gemeente_{$record->municipality_id}";
-
-                try {
-                    config(["zgw.connections.{$name}" => $record->buildConfig()]);
-                    Zgw::connection($name)->assertUsable();
-                } catch (Throwable $e) {
-                    Notification::make()
-                        ->title(__('municipality/resources/zgw_connection.actions.test.failure'))
-                        ->body($e->getMessage())
-                        ->danger()
-                        ->send();
-
-                    return;
-                }
-
-                Notification::make()
-                    ->title(__('municipality/resources/zgw_connection.actions.test.success'))
-                    ->body(__('municipality/resources/zgw_connection.actions.test.success_body'))
-                    ->success()
-                    ->send();
-            });
+            ->modalHeading(__('municipality/resources/zgw_connection.actions.verify.modal_heading'))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('municipality/resources/zgw_connection.actions.verify.close'))
+            ->modalContent(fn (MunicipalityZgwConnection $record) => view(
+                'filament.zgw.verify-modal',
+                ['connection' => $record],
+            ));
     }
 
     public static function getPages(): array

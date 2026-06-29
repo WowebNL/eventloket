@@ -35,6 +35,12 @@ class ZgwConnectionResolver
     public const HOST_INDEX_CACHE_KEY = 'zgw_connection_host_index';
 
     /**
+     * Cache key for the set of trusted ZGW hosts used to validate notification
+     * webhook URLs. Forgotten by the observer whenever a connection changes.
+     */
+    public const ALLOWED_HOSTS_CACHE_KEY = 'zgw_allowed_notification_hosts';
+
+    /**
      * Memo of municipality id => resolved connection name.
      *
      * @var array<int, string>
@@ -107,6 +113,42 @@ class ZgwConnectionResolver
         }
 
         return self::DEFAULT_CONNECTION;
+    }
+
+    /**
+     * Every host that belongs to a trusted ZGW connection: the main connection's
+     * URLs and allowed_hosts, the legacy OpenZaak host, and each per-municipality
+     * connection's explicit URLs and allowed_hosts. The notification webhook
+     * accepts a notification whose URLs point at any of these hosts, so a
+     * municipality with its own ZGW host is no longer rejected, while unknown or
+     * internal hosts still are.
+     *
+     * Cached forever and invalidated by the connection observer.
+     *
+     * @return list<string>
+     */
+    public function allowedNotificationHosts(): array
+    {
+        return Cache::rememberForever(self::ALLOWED_HOSTS_CACHE_KEY, function (): array {
+            $hosts = [];
+
+            foreach ($this->configHosts((array) config('zgw.connections.main', [])) as $host) {
+                $hosts[$host] = true;
+            }
+
+            $legacy = $this->host((string) config('openzaak.url', ''));
+            if ($legacy !== null) {
+                $hosts[$legacy] = true;
+            }
+
+            foreach (MunicipalityZgwConnection::query()->get() as $connection) {
+                foreach ($this->connectionHosts($connection) as $host) {
+                    $hosts[$host] = true;
+                }
+            }
+
+            return array_keys($hosts);
+        });
     }
 
     /**

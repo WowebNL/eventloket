@@ -86,15 +86,46 @@ return [
         'name' => ['label' => 'Naam'],
         'zaken_url' => ['label' => 'Zaken API'],
         'version' => ['label' => 'Versie'],
+        'last_verified_at' => ['label' => 'Laatste controle'],
         'updated_at' => ['label' => 'Laatst gewijzigd'],
     ],
 
     'actions' => [
-        'test' => [
+        'verify' => [
             'label' => 'Verbinding testen',
-            'success' => 'Verbinding geslaagd',
-            'success_body' => 'Eventloket kon deze ZGW-instantie bereiken.',
-            'failure' => 'Verbinding mislukt',
+            'modal_heading' => 'Verbinding controleren',
+            'close' => 'Sluiten',
+            'steps' => [
+                'connection' => 'Verbinding met de ZGW-instantie',
+                'abonnement' => 'Notificatie-abonnement',
+                'notification' => 'Notificatie-rondrit',
+            ],
+            'connection' => [
+                'success' => 'Eventloket kan deze ZGW-instantie bereiken.',
+                'error' => 'Kon de verbinding niet controleren. Probeer het later opnieuw of neem contact op met de beheerder.',
+            ],
+            'abonnement' => [
+                'healthy' => 'Het abonnement is geregistreerd en werkt.',
+                'expiring_soon' => 'Het abonnement werkt. Het token verloopt binnenkort en wordt automatisch vernieuwd.',
+                'needs_register' => 'Er is nog geen geldig abonnement geregistreerd.',
+                'no_notificaties_url' => 'Deze koppeling heeft geen Notificaties API-URL, dus er kan geen abonnement geregistreerd worden.',
+                'register' => 'Abonnement registreren',
+                'error' => 'Er ging iets mis bij het controleren of registreren van het abonnement. Probeer het later opnieuw.',
+            ],
+            'notification' => [
+                'skipped_local' => 'Overgeslagen: lokaal is de callback niet bereikbaar voor de Notificaties API.',
+                'send' => 'Testnotificatie versturen',
+                'send_confirm' => 'Er wordt een testnotificatie via de Notificaties API verstuurd. Doorgaan?',
+                'waiting' => 'Wachten op de notificatie op onze callback (maximaal 15 seconden).',
+                'success' => 'De testnotificatie is op onze callback aangekomen.',
+                'timeout' => 'Geen notificatie ontvangen binnen 15 seconden. Controleer of de callback-URL publiek bereikbaar is.',
+                'retry' => 'Opnieuw proberen',
+                'error' => 'Kon de testnotificatie niet versturen. Probeer het later opnieuw.',
+            ],
+            'result' => [
+                'success' => 'De verbinding is volledig gecontroleerd en werkt.',
+                'fail' => 'De controle is niet volledig geslaagd. Zie de stappen hierboven.',
+            ],
         ],
     ],
 

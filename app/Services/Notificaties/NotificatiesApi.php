@@ -48,6 +48,35 @@ final class NotificatiesApi
     }
 
     /**
+     * Fetch a single abonnement by its resource URL.
+     *
+     * @return array<string, mixed>
+     */
+    public function show(string $abonnementUrl): array
+    {
+        $response = Http::withHeaders($this->headers())->get($abonnementUrl);
+        $response->throw();
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Publish a notification onto the connection's Notificaties API, which fans
+     * it out to every abonnement subscribed to the channel. Used by the
+     * round-trip probe to confirm our callback is reachable.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    public function publish(array $payload): array
+    {
+        $response = Http::withHeaders($this->headers())->post($this->baseUrl().'notificaties', $payload);
+        $response->throw();
+
+        return $response->json() ?? [];
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
@@ -69,6 +98,11 @@ final class NotificatiesApi
         $response->throw();
 
         return $response->json() ?? [];
+    }
+
+    public function deleteAbonnement(string $abonnementUrl): void
+    {
+        Http::withHeaders($this->headers())->delete($abonnementUrl)->throw();
     }
 
     /**
