@@ -18,7 +18,10 @@ use RuntimeException;
  * Primair pad: de per-gemeente blueprint (`MunicipalityZaaktypeMapping`)
  * koppelt de rol aan een logische `Zaaktype.identificatie`.
  *
- * Fallback (geen mapping): de naamconventie zoals `SyncZaaktypen` die ook
+ * Daarna: de expliciete `role`-kolom op het `Zaaktype` (door de admin gezet of
+ * door `SyncZaaktypen` uit de naam-prefix afgeleid).
+ *
+ * Laatste terugval (legacy): de naamconventie zoals `SyncZaaktypen` die ook
  * gebruikt om zaaktypes aan een gemeente te koppelen, bv:
  *
  *   "Evenementenvergunning gemeente Heerlen"
@@ -35,6 +38,7 @@ final class ResolveZaaktype
         $role = $this->determineAanvraagType->forState($state);
 
         $zaaktype = $this->resolveByMapping($municipality, $role)
+            ?? $this->resolveByRole($municipality, $role)
             ?? $this->resolveByNamePrefix($municipality, $role);
 
         if (! $zaaktype) {
@@ -59,6 +63,15 @@ final class ResolveZaaktype
             ->where('municipality_id', $municipality->id)
             ->where('is_active', true)
             ->where('identificatie', $mapping->zaaktype_identificatie)
+            ->first();
+    }
+
+    private function resolveByRole(Municipality $municipality, ZaaktypeRole $role): ?Zaaktype
+    {
+        return Zaaktype::query()
+            ->where('municipality_id', $municipality->id)
+            ->where('is_active', true)
+            ->where('role', $role->value)
             ->first();
     }
 

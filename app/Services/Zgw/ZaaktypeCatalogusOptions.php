@@ -117,6 +117,32 @@ final class ZaaktypeCatalogusOptions
     }
 
     /**
+     * The resultaattypen of the identificatie's current definitief version, keyed
+     * by their url. Used by the per-municipality "hide results" picker, whose
+     * stored values are resultaattype urls (the stable value the calendar filter
+     * compares against, mirroring the admin-level hidden_resultaat_types).
+     *
+     * @return array<string, string> url => omschrijving
+     */
+    public static function resultaattypenByUrl(string $connectionName, string $identificatie): array
+    {
+        return self::forZaaktype($connectionName, $identificatie, 'resultaattypen_by_url', function (string $url) use ($connectionName): array {
+            $options = [];
+
+            foreach (Zgw::connection($connectionName)->catalogi()->resultaattypen()->index(['zaaktype' => $url]) as $resultaattype) {
+                $value = $resultaattype['url'] ?? null;
+                $omschrijving = $resultaattype['omschrijving'] ?? null;
+
+                if (is_string($value) && $value !== '' && is_string($omschrijving) && $omschrijving !== '') {
+                    $options[$value] = $omschrijving;
+                }
+            }
+
+            return $options;
+        });
+    }
+
+    /**
      * The informatieobjecttypen linked to the zaaktype via the standard relation.
      *
      * @return array<string, string> omschrijving => omschrijving

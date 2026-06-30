@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Admin\Pages\Calendar as AdminCalendarPage;
 use App\Filament\Admin\Widgets\AdminCalendarWidget;
 use App\Filament\Advisor\Pages\Calendar as AdvisorCalendarPage;
@@ -358,7 +359,12 @@ test('admin calendar widget applies zaaktype filter in table view', function () 
         'role' => Role::Admin,
     ]);
 
-    $otherZaaktype = Zaaktype::factory()->create(['municipality_id' => $this->municipality->id]);
+    $this->zaaktype->update(['role' => ZaaktypeRole::Vergunning]);
+
+    $otherZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Melding,
+    ]);
     $otherZaak = Zaak::factory()->create([
         'zaaktype_id' => $otherZaaktype->id,
         'organisation_id' => $this->organisation->id,
@@ -371,7 +377,7 @@ test('admin calendar widget applies zaaktype filter in table view', function () 
         ->callAction('toggleView')
         ->assertSet('viewMode', 'table')
         ->callAction('filter', data: [
-            'zaaktypes' => [$this->zaaktype->id],
+            'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
         ])
         ->assertCanSeeTableRecords([$this->zaak])
         ->assertCanNotSeeTableRecords([$otherZaak]);

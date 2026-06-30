@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Observers\MunicipalityZgwConnectionObserver;
 use Database\Factories\MunicipalityZgwConnectionFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -107,6 +108,36 @@ class MunicipalityZgwConnection extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    /**
+     * A human-friendly label for this connection: its configured name, or the
+     * zaken URL when no name is set.
+     *
+     * @return Attribute<string, never>
+     */
+    protected function displayName(): Attribute
+    {
+        return Attribute::get(fn (): string => $this->name ?: ($this->zaken_url ?? ''));
+    }
+
+    /**
+     * The display name of the per-municipality connection a "gemeente_{id}"
+     * connection name refers to, or null for the shared "main" connection and any
+     * name that does not resolve to a configured per-municipality connection.
+     */
+    public static function displayNameForConnection(string $connection): ?string
+    {
+        if (preg_match('/^gemeente_(\d+)$/', $connection, $matches) !== 1) {
+            return null;
+        }
+
+        $label = self::query()
+            ->where('municipality_id', (int) $matches[1])
+            ->first(['name', 'zaken_url', 'municipality_id'])
+            ?->displayName;
+
+        return is_string($label) && $label !== '' ? $label : null;
     }
 
     /**

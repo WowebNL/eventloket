@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ZaaktypeRole;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\Cache;
 use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
+/**
+ * @property ZaaktypeRole|null $role
+ */
 class Zaaktype extends Model
 {
     use HasFactory, HasUuids;
@@ -25,8 +29,10 @@ class Zaaktype extends Model
 
     protected $fillable = [
         'name',
+        'role',
         'identificatie',
         'zgw_zaaktype_url',
+        'connection',
         'is_active',
         'hidden_resultaat_types',
         'triggers_route_check',
@@ -35,6 +41,7 @@ class Zaaktype extends Model
     protected function casts(): array
     {
         return [
+            'role' => ZaaktypeRole::class,
             'hidden_resultaat_types' => 'array',
             'triggers_route_check' => 'boolean',
         ];
@@ -53,10 +60,80 @@ class Zaaktype extends Model
 
     /**
      * The ZGW connection name to use for calls about this zaaktype.
+     *
+     * Resolved by municipality, which also registers the per-municipality
+     * connection's runtime config. Because per-instance sync attributes a
+     * zaaktype to the municipality whose instance hosts it (see the `connection`
+     * column, used for sync scoping and admin display), this resolves to the same
+     * instance that owns the zaaktype URL, so catalogus reads and zaak creation
+     * stay on that instance, including the main fallback for shared zaaktypen.
      */
     public function zgwConnectionName(): string
     {
         return app(ZgwConnectionResolver::class)->for($this);
+    }
+
+    /**
+     * Whether this zaaktype triggers the route check. A municipality that runs
+     * its own ZGW instance manages this on its blueprint; everywhere else the
+     * admin-managed row value is used. A null override falls back to the row.
+     */
+    public function effectiveTriggersRouteCheck(): bool
+    {
+        $override = MunicipalityZaaktypeMapping::forZaaktype($this)?->triggers_route_check;
+
+        return $override ?? (bool) $this->triggers_route_check;
+    }
+
+    /**
+     * The effective hidden-resultaattype urls per zaaktype id, used by the
+     * calendar bulk filter. The admin-managed row value is the base; a
+     * per-municipality blueprint value (own-instance gemeenten) overrides it.
+     * An explicit empty blueprint value clears the row value for that zaaktype.
+     *
+     * @return array<string, array<int, string>>
+     */
+    public static function effectiveHiddenResultaatTypesMap(): array
+    {
+        $map = [];
+
+        $rows = static::query()
+            ->whereNotNull('hidden_resultaat_types')
+            ->whereJsonLength('hidden_resultaat_types', '>', 0)
+            ->get(['id', 'hidden_resultaat_types']);
+
+        foreach ($rows as $zaaktype) {
+            $map[$zaaktype->id] = $zaaktype->hidden_resultaat_types;
+        }
+
+        $mappings = MunicipalityZaaktypeMapping::query()
+            ->whereNotNull('hidden_resultaat_types')
+            ->get();
+
+        foreach ($mappings as $mapping) {
+            if (! $mapping->zaaktype_identificatie) {
+                continue;
+            }
+
+            $zaaktype = static::query()
+                ->where('municipality_id', $mapping->municipality_id)
+                ->where('identificatie', $mapping->zaaktype_identificatie)
+                ->first(['id']);
+
+            if ($zaaktype === null) {
+                continue;
+            }
+
+            $hidden = $mapping->hidden_resultaat_types;
+
+            if (is_array($hidden) && $hidden !== []) {
+                $map[$zaaktype->id] = $hidden;
+            } else {
+                unset($map[$zaaktype->id]);
+            }
+        }
+
+        return $map;
     }
 
     /** @return Attribute<Collection<InformatieObjectTypeData>|null, void> */

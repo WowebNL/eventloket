@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class MunicipalityAdminUsersRelationManager extends RelationManager
 {
-    protected static string $relationship = 'municipalityAdminUsers';
+    protected static string $relationship = 'municipalityBeheerderUsers';
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\ZaaktypeRole;
+use App\Observers\MunicipalityZaaktypeMappingObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $municipality_id
  * @property ZaaktypeRole $role
  * @property string|null $zaaktype_identificatie
+ * @property bool|null $triggers_route_check
+ * @property array<int, string>|null $hidden_resultaat_types
  * @property array<string, string>|null $eigenschap_map
  * @property string|null $initial_statustype
  * @property string|null $eind_statustype
@@ -26,12 +30,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $bijlage_informatieobjecttype
  * @property string|null $aanvraag_informatieobjecttype
  */
+#[ObservedBy(MunicipalityZaaktypeMappingObserver::class)]
 class MunicipalityZaaktypeMapping extends Model
 {
     protected $fillable = [
         'municipality_id',
         'role',
         'zaaktype_identificatie',
+        'triggers_route_check',
+        'hidden_resultaat_types',
         'eigenschap_map',
         'initial_statustype',
         'eind_statustype',
@@ -45,6 +52,8 @@ class MunicipalityZaaktypeMapping extends Model
     {
         return [
             'role' => ZaaktypeRole::class,
+            'triggers_route_check' => 'boolean',
+            'hidden_resultaat_types' => 'array',
             'eigenschap_map' => 'array',
         ];
     }

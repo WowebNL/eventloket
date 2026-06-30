@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Casts\AsGeoJson;
 use App\Enums\MunicipalityVariableType;
+use App\Enums\Role;
 use App\Models\Contracts\HasGeometry;
 use App\Models\Users\CoordinatorUser;
 use App\Models\Users\MunicipalityAdminUser;
@@ -71,6 +72,18 @@ class Municipality extends Model implements HasGeometry
     public function municipalityAdminUsers()
     {
         return $this->belongsToMany(MunicipalityAdminUser::class, 'municipality_user');
+    }
+
+    /**
+     * Gemeentelijk beheerders and koppelingbeheerders together, used by the admin
+     * panel's "Gemeentelijke beheerders" tab so both roles are managed in one place.
+     *
+     * @return BelongsToMany<MunicipalityUser, $this>
+     */
+    public function municipalityBeheerderUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(MunicipalityUser::class, 'municipality_user')
+            ->whereIn('role', [Role::MunicipalityAdmin->value, Role::KoppelingBeheerder->value]);
     }
 
     public function reviewerMunicipalityAdminUsers()

@@ -9,12 +9,12 @@ use App\Models\ZgwRequestLog;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Resources\Resource;
-use Illuminate\Database\Eloquent\Builder;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ZgwRequestLogResource extends Resource
 {
@@ -75,18 +75,23 @@ class ZgwRequestLogResource extends Resource
                 TextColumn::make('resource')
                     ->label(__('municipality/resources/zgw_request_log.columns.resource.label'))
                     ->limit(60)
-                    ->wrap(),
+                    ->wrap()
+                    ->searchable(),
                 TextColumn::make('status_code')
                     ->label(__('municipality/resources/zgw_request_log.columns.status_code.label'))
                     ->badge()
                     ->color(fn (ZgwRequestLog $record): string => $record->failed ? 'danger' : 'success'),
                 TextColumn::make('user.name')
                     ->label(__('municipality/resources/zgw_request_log.columns.user.label'))
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereHas(
+                        'user',
+                        fn (Builder $q): Builder => $q->where('name', 'like', "%{$search}%"),
+                    )),
                 TextColumn::make('connection')
                     ->label(__('municipality/resources/zgw_request_log.columns.connection.label'))
-                    // Prefer the connection's friendly label when one is set.
-                    ->state(fn (ZgwRequestLog $record): string => $record->municipality?->zgwConnection?->name ?: $record->connection)
+                    // Prefer the connection's friendly label (name, or its zaken URL).
+                    ->state(fn (ZgwRequestLog $record): string => $record->municipality?->zgwConnection?->displayName ?: $record->connection)
                     ->toggleable(),
             ])
             ->filters([

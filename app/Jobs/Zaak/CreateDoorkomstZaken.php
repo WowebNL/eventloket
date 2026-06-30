@@ -12,12 +12,11 @@ use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Normalizers\OpenFormsNormalizer;
+use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Helpers\ArrayHelper;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\Services\Zgw\ZaakReadModel;
-use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Io\GeoJsonReader;
 use Brick\Geo\LineString;
@@ -27,6 +26,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Woweb\Zgw\Connection\ZgwConnection;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -49,7 +49,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         if (! $this->zaak->zgw_zaak_url || ! $this->zaak->zaaktype) {
             return;
         }
-        if (! $this->zaak->zaaktype->triggers_route_check) {
+        if (! $this->zaak->zaaktype->effectiveTriggersRouteCheck()) {
             return;
         }
 
@@ -137,10 +137,12 @@ class CreateDoorkomstZaken implements ShouldQueue
             return;
         }
 
-        // The deelzaak lives at the target municipality, which may have its own
-        // ZGW connection. Writes for the deelzaak go there; reads from the
-        // hoofdzaak keep using the hoofdzaak connection.
-        $deelConnectionName = $municipality->zgwConnectionName();
+        // The deelzaak is created in the connection that hosts its doorkomst
+        // zaaktype: the municipality's own instance when it has its own doorkomst
+        // zaaktype, or main when it falls back to a main one. This keeps the
+        // deelzaak and its zaaktype in the same instance. Reads from the hoofdzaak
+        // keep using the hoofdzaak connection.
+        $deelConnectionName = $doorkomstZaaktype->zgwConnectionName();
         $deelConnection = Zgw::connection($deelConnectionName);
 
         $response = $deelConnection->zaken()->zaken()->store([

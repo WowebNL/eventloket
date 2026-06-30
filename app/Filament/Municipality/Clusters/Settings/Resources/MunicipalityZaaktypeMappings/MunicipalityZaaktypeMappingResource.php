@@ -14,6 +14,8 @@ use App\Models\MunicipalityZaaktypeMapping;
 use App\Services\Zgw\ZaaktypeCatalogusOptions;
 use BackedEnum;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Fieldset;
@@ -89,6 +91,24 @@ class MunicipalityZaaktypeMappingResource extends Resource
                             ))
                             ->live()
                             ->afterStateUpdated(fn (Set $set) => self::resetDependentFields($set)),
+                    ]),
+
+                Section::make(__('municipality/resources/zaaktype_mapping.sections.behaviour.heading'))
+                    ->description(__('municipality/resources/zaaktype_mapping.sections.behaviour.description'))
+                    ->columns(1)
+                    ->visible(fn (Get $get): bool => self::hasOwnConnection() && filled($get('zaaktype_identificatie')))
+                    ->schema([
+                        Checkbox::make('triggers_route_check')
+                            ->label(__('municipality/resources/zaaktype_mapping.fields.triggers_route_check.label'))
+                            ->helperText(__('municipality/resources/zaaktype_mapping.fields.triggers_route_check.helper_text')),
+                        CheckboxList::make('hidden_resultaat_types')
+                            ->label(__('municipality/resources/zaaktype_mapping.fields.hidden_resultaat_types.label'))
+                            ->helperText(__('municipality/resources/zaaktype_mapping.fields.hidden_resultaat_types.helper_text'))
+                            ->options(fn (Get $get): array => self::optionsForSelectedZaaktype(
+                                $get,
+                                fn (string $conn, string $id) => ZaaktypeCatalogusOptions::resultaattypenByUrl($conn, $id),
+                            ))
+                            ->columnSpanFull(),
                     ]),
 
                 Fieldset::make(__('municipality/resources/zaaktype_mapping.sections.eigenschappen.heading'))
@@ -265,5 +285,17 @@ class MunicipalityZaaktypeMappingResource extends Resource
         $tenant = Filament::getTenant();
 
         return $tenant instanceof Municipality ? $tenant->zgwConnectionName() : 'main';
+    }
+
+    /**
+     * Whether the current municipality runs its own ZGW instance. The route-check
+     * and hidden-results overrides only make sense there; municipalities on the
+     * shared main connection keep these settings admin-managed on the zaaktype row.
+     */
+    private static function hasOwnConnection(): bool
+    {
+        $tenant = Filament::getTenant();
+
+        return $tenant instanceof Municipality && $tenant->zgwConnection !== null;
     }
 }

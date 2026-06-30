@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Listeners\LogZgwRequest;
+use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * One metadata row per ZGW HTTP exchange (no request/response bodies), written
- * by {@see \App\Listeners\LogZgwRequest} from the package's ZgwRequestSent event.
+ * by {@see LogZgwRequest} from the package's ZgwRequestSent event.
  *
  * @property string $connection
  * @property int|null $municipality_id
@@ -68,5 +70,20 @@ class ZgwRequestLog extends Model
         return preg_match('/^gemeente_(\d+)$/', $connection, $matches) === 1
             ? (int) $matches[1]
             : null;
+    }
+
+    /**
+     * A human-friendly label for a connection name: the shared "main" connection
+     * gets a translated label, a per-municipality connection ("gemeente_{id}")
+     * resolves to that connection's display name (its name, or its zaken URL),
+     * and anything unknown falls back to the raw connection name.
+     */
+    public static function connectionLabel(string $connection): string
+    {
+        if ($connection === ZgwConnectionResolver::DEFAULT_CONNECTION) {
+            return __('admin/resources/zgw_request_log.connections.main');
+        }
+
+        return MunicipalityZgwConnection::displayNameForConnection($connection) ?? $connection;
     }
 }
