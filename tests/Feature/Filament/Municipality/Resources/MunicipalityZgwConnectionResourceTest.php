@@ -82,6 +82,98 @@ it('does not surface the stored secret in the edit form', function () {
         ->assertFormSet(['client_secret' => null]);
 });
 
+it('stores the vertrouwelijkheid map from the form', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm([
+            'vertrouwelijkheid_map.visibility.organiser' => ['zaakvertrouwelijk', 'vertrouwelijk'],
+            'vertrouwelijkheid_map.upload_default.organiser' => 'vertrouwelijk',
+            'vertrouwelijkheid_map.upload_default.system' => 'confidentieel',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $connection->refresh();
+
+    expect($connection->vertrouwelijkheid_map)->toBe([
+        'visibility' => ['organiser' => ['zaakvertrouwelijk', 'vertrouwelijk']],
+        'upload_default' => ['organiser' => 'vertrouwelijk', 'system' => 'confidentieel'],
+    ]);
+});
+
+it('fans the gemeente group choice out to every municipal handler role', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm([
+            'vertrouwelijkheid_map.visibility.reviewer' => ['zaakvertrouwelijk', 'vertrouwelijk', 'confidentieel'],
+            'vertrouwelijkheid_map.upload_default.reviewer' => 'confidentieel',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $connection->refresh();
+
+    $allLevels = ['zaakvertrouwelijk', 'vertrouwelijk', 'confidentieel'];
+
+    expect($connection->vertrouwelijkheid_map['visibility'])->toBe([
+        'reviewer' => $allLevels,
+        'coordinator' => $allLevels,
+        'municipality_admin' => $allLevels,
+        'reviewer_municipality_admin' => $allLevels,
+    ])->and($connection->vertrouwelijkheid_map['upload_default'])->toBe([
+        'reviewer' => 'confidentieel',
+        'coordinator' => 'confidentieel',
+        'municipality_admin' => 'confidentieel',
+        'reviewer_municipality_admin' => 'confidentieel',
+    ]);
+});
+
+it('prunes empty roles so they fall back to the defaults', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm([
+            'vertrouwelijkheid_map.visibility.organiser' => ['zaakvertrouwelijk'],
+            'vertrouwelijkheid_map.visibility.advisor' => [],
+            'vertrouwelijkheid_map.upload_default.reviewer' => null,
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $connection->refresh();
+
+    expect($connection->vertrouwelijkheid_map)->toBe([
+        'visibility' => ['organiser' => ['zaakvertrouwelijk']],
+    ]);
+});
+
+it('hides the per-role vertrouwelijkheid fields when no upload tab is enabled', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create([
+        'show_bestanden_tab' => false,
+        'show_adviesvragen_tab' => false,
+        'show_organisatievragen_tab' => false,
+    ]);
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->assertFormFieldIsHidden('vertrouwelijkheid_map.visibility.organiser')
+        ->assertFormFieldIsHidden('vertrouwelijkheid_map.visibility.reviewer')
+        ->assertFormFieldExists('vertrouwelijkheid_map.upload_default.system');
+});
+
+it('shows the per-role vertrouwelijkheid fields when at least one upload tab is enabled', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create([
+        'show_bestanden_tab' => false,
+        'show_adviesvragen_tab' => true,
+        'show_organisatievragen_tab' => false,
+    ]);
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->assertFormFieldIsVisible('vertrouwelijkheid_map.visibility.organiser')
+        ->assertFormFieldIsVisible('vertrouwelijkheid_map.visibility.reviewer');
+});
+
 it('exposes the verify connection row action', function () {
     $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
 

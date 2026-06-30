@@ -2,11 +2,13 @@
 
 namespace App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections;
 
+use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Settings;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\CreateMunicipalityZgwConnection;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\EditMunicipalityZgwConnection;
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\ListMunicipalityZgwConnections;
+use App\Livewire\ConnectionVerifier;
 use App\Models\MunicipalityZgwConnection;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -15,7 +17,9 @@ use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -64,13 +68,12 @@ class MunicipalityZgwConnectionResource extends Resource
 
                 Section::make(__('municipality/resources/zgw_connection.sections.endpoints.heading'))
                     ->description(__('municipality/resources/zgw_connection.sections.endpoints.description'))
-                    ->columns(2)
+                    ->columns(1)
                     ->schema([
                         TextInput::make('zaken_url')->label(__('municipality/resources/zgw_connection.fields.zaken_url.label'))->url()->maxLength(255),
                         TextInput::make('catalogi_url')->label(__('municipality/resources/zgw_connection.fields.catalogi_url.label'))->url()->maxLength(255),
                         TextInput::make('documenten_url')->label(__('municipality/resources/zgw_connection.fields.documenten_url.label'))->url()->maxLength(255),
                         TextInput::make('besluiten_url')->label(__('municipality/resources/zgw_connection.fields.besluiten_url.label'))->url()->maxLength(255),
-                        TextInput::make('autorisaties_url')->label(__('municipality/resources/zgw_connection.fields.autorisaties_url.label'))->url()->maxLength(255),
                         TextInput::make('notificaties_url')->label(__('municipality/resources/zgw_connection.fields.notificaties_url.label'))->url()->maxLength(255),
                     ]),
 
@@ -125,21 +128,202 @@ class MunicipalityZgwConnectionResource extends Resource
                             ->helperText(__('municipality/resources/zgw_connection.fields.lock_status_for_behandelaar.helper')),
                         Toggle::make('show_besluiten_tab')
                             ->label(__('municipality/resources/zgw_connection.fields.show_besluiten_tab.label'))
-                            ->helperText(__('municipality/resources/zgw_connection.fields.show_besluiten_tab.helper')),
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_besluiten_tab.helper'))
+                            ->default(true),
                         Toggle::make('show_bestanden_tab')
                             ->label(__('municipality/resources/zgw_connection.fields.show_bestanden_tab.label'))
-                            ->helperText(__('municipality/resources/zgw_connection.fields.show_bestanden_tab.helper')),
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_bestanden_tab.helper'))
+                            ->default(true)
+                            ->live(),
                         Toggle::make('show_adviesvragen_tab')
                             ->label(__('municipality/resources/zgw_connection.fields.show_adviesvragen_tab.label'))
-                            ->helperText(__('municipality/resources/zgw_connection.fields.show_adviesvragen_tab.helper')),
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_adviesvragen_tab.helper'))
+                            ->default(true)
+                            ->live(),
                         Toggle::make('show_organisatievragen_tab')
                             ->label(__('municipality/resources/zgw_connection.fields.show_organisatievragen_tab.label'))
-                            ->helperText(__('municipality/resources/zgw_connection.fields.show_organisatievragen_tab.helper')),
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_organisatievragen_tab.helper'))
+                            ->default(true)
+                            ->live(),
                         Toggle::make('suppress_notifications')
                             ->label(__('municipality/resources/zgw_connection.fields.suppress_notifications.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.suppress_notifications.helper')),
                     ]),
+
+                Section::make(__('municipality/resources/zgw_connection.sections.vertrouwelijkheid.heading'))
+                    ->description(__('municipality/resources/zgw_connection.sections.vertrouwelijkheid.description'))
+                    ->columns(1)
+                    ->schema([
+                        ...self::vertrouwelijkheidRoleFields(),
+                        Select::make('vertrouwelijkheid_map.upload_default.system')
+                            ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_system_default.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_system_default.helper'))
+                            ->options(self::vertrouwelijkheidLevelOptions())
+                            ->native(false),
+                    ]),
             ]);
+    }
+
+    /**
+     * One fieldset per document-facing role group, each with the visibility
+     * multi select and the upload default. Groups left blank fall back to the
+     * hardcoded {@see DocumentVertrouwelijkheden::fromUserRole()} defaults. The
+     * municipal handler roles share a single "Gemeente" group; the form binds to
+     * the group's canonical role and the choice is fanned out to the other roles
+     * on save by {@see pruneVertrouwelijkheidMap()}.
+     *
+     * @return array<int, Fieldset>
+     */
+    protected static function vertrouwelijkheidRoleFields(): array
+    {
+        $levels = self::vertrouwelijkheidLevelOptions();
+
+        return array_map(
+            static function (array $group) use ($levels): Fieldset {
+                $canonical = $group['roles'][0]->value;
+
+                return Fieldset::make($group['label'])
+                    ->columns(2)
+                    ->visible(fn (Get $get): bool => self::documentUploadTabsEnabled($get))
+                    ->schema([
+                        Select::make("vertrouwelijkheid_map.visibility.{$canonical}")
+                            ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.helper'))
+                            ->multiple()
+                            ->options($levels)
+                            ->native(false),
+                        Select::make("vertrouwelijkheid_map.upload_default.{$canonical}")
+                            ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_upload_default.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_upload_default.helper'))
+                            ->options($levels)
+                            ->native(false),
+                    ]);
+            },
+            self::vertrouwelijkheidGroups(),
+        );
+    }
+
+    /**
+     * The role groups whose document visibility and upload default can be tuned
+     * per connection. The first role in each group is the canonical one the form
+     * binds to; the others inherit its value on save. Roles outside these groups
+     * (platform admin, koppeling beheerder) always fall back to the defaults.
+     *
+     * @return array<int, array{label: string, roles: array<int, Role>}>
+     */
+    protected static function vertrouwelijkheidGroups(): array
+    {
+        return [
+            [
+                'label' => Role::Organiser->getLabel(),
+                'roles' => [Role::Organiser],
+            ],
+            [
+                'label' => Role::Advisor->getLabel(),
+                'roles' => [Role::Advisor],
+            ],
+            [
+                'label' => __('municipality/resources/zgw_connection.vertrouwelijkheid_groups.gemeente'),
+                'roles' => [
+                    Role::Reviewer,
+                    Role::Coordinator,
+                    Role::MunicipalityAdmin,
+                    Role::ReviewerMunicipalityAdmin,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Whether any document upload tab is enabled for this connection. With all
+     * three off no role can upload a document through Eventloket, so the per-role
+     * visibility and upload defaults are moot and hidden. The system upload
+     * default stays relevant: the application PDF and form attachments are still
+     * pushed to ZGW regardless of these tabs.
+     */
+    protected static function documentUploadTabsEnabled(Get $get): bool
+    {
+        return (bool) $get('show_bestanden_tab')
+            || (bool) $get('show_adviesvragen_tab')
+            || (bool) $get('show_organisatievragen_tab');
+    }
+
+    /**
+     * The eight standard ZGW vertrouwelijkheidaanduiding values, by official term.
+     *
+     * @return array<string, string>
+     */
+    protected static function vertrouwelijkheidLevelOptions(): array
+    {
+        $options = [];
+
+        foreach (DocumentVertrouwelijkheden::cases() as $level) {
+            $options[$level->value] = __("municipality/resources/zgw_connection.vertrouwelijkheid_levels.{$level->value}");
+        }
+
+        return $options;
+    }
+
+    /**
+     * Fan each role group's canonical choice out onto the roles it represents,
+     * then drop empty visibility/upload-default entries so an unconfigured role
+     * keeps falling back to the hardcoded defaults instead of being stored as an
+     * empty (and therefore "sees nothing") map.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function pruneVertrouwelijkheidMap(array $data): array
+    {
+        if (! isset($data['vertrouwelijkheid_map']) || ! is_array($data['vertrouwelijkheid_map'])) {
+            return $data;
+        }
+
+        $map = $data['vertrouwelijkheid_map'];
+
+        foreach (self::vertrouwelijkheidGroups() as $group) {
+            $roles = $group['roles'];
+            $canonical = $roles[0]->value;
+            $members = array_slice($roles, 1);
+
+            foreach (['visibility', 'upload_default'] as $section) {
+                $value = $map[$section][$canonical] ?? null;
+
+                foreach ($members as $role) {
+                    if ($value === null || $value === '' || $value === []) {
+                        unset($map[$section][$role->value]);
+                    } else {
+                        $map[$section][$role->value] = $value;
+                    }
+                }
+            }
+        }
+
+        if (isset($map['visibility']) && is_array($map['visibility'])) {
+            $map['visibility'] = array_filter(
+                $map['visibility'],
+                static fn ($values): bool => is_array($values) && $values !== [],
+            );
+
+            if ($map['visibility'] === []) {
+                unset($map['visibility']);
+            }
+        }
+
+        if (isset($map['upload_default']) && is_array($map['upload_default'])) {
+            $map['upload_default'] = array_filter(
+                $map['upload_default'],
+                static fn ($value): bool => is_string($value) && $value !== '',
+            );
+
+            if ($map['upload_default'] === []) {
+                unset($map['upload_default']);
+            }
+        }
+
+        $data['vertrouwelijkheid_map'] = $map === [] ? null : $map;
+
+        return $data;
     }
 
     public static function table(Table $table): Table
@@ -176,7 +360,7 @@ class MunicipalityZgwConnectionResource extends Resource
     /**
      * The single "Verbinding testen" row action. It opens a modal that runs the
      * full verification flow (connection, abonnement, notification round trip)
-     * via the {@see \App\Livewire\ConnectionVerifier} component.
+     * via the {@see ConnectionVerifier} component.
      */
     public static function verifyConnectionAction(): Action
     {

@@ -30,4 +30,16 @@ class EditMunicipalityZgwConnection extends EditRecord
 
         return $data;
     }
+
+    /**
+     * Keep the vertrouwelijkheid map sparse so unconfigured roles fall back to
+     * the hardcoded defaults rather than being stored as an empty map.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return MunicipalityZgwConnectionResource::pruneVertrouwelijkheidMap($data);
+    }
 }

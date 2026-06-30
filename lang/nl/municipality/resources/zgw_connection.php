@@ -18,6 +18,10 @@ return [
             'heading' => 'Technische parameters',
             'description' => 'Instance-specifieke instellingen. Laat leeg om het gedrag van de hoofdkoppeling te erven.',
         ],
+        'vertrouwelijkheid' => [
+            'heading' => 'Vertrouwelijkheid',
+            'description' => 'Bepaal per rol welke vertrouwelijkheidsniveaus zichtbaar zijn en welk niveau standaard bij uploaden wordt gebruikt. Laat een rol leeg om de standaardwaarden van Eventloket aan te houden. De rol-gebaseerde filtering blijft altijd actief.',
+        ],
         'features' => [
             'heading' => 'Eventloket functies',
             'description' => 'Bepaal hoe Eventloket zaken van deze koppeling toont en notificeert. De standaardwaarden houden het volledige gedrag aan.',
@@ -33,7 +37,6 @@ return [
         'catalogi_url' => ['label' => 'Catalogi API base-URL'],
         'documenten_url' => ['label' => 'Documenten API base-URL'],
         'besluiten_url' => ['label' => 'Besluiten API base-URL'],
-        'autorisaties_url' => ['label' => 'Autorisaties API base-URL'],
         'notificaties_url' => ['label' => 'Notificaties API base-URL'],
         'version' => ['label' => 'ZGW-versie'],
         'client_id' => ['label' => 'Client ID'],
@@ -55,6 +58,18 @@ return [
         'eigenschap_date_format' => [
             'label' => 'Datumformaat zaakeigenschappen',
             'helper' => 'Optioneel PHP-datumformaat voor zaakeigenschap-waarden (bijv. YmdHis). Leeg laten houdt het formulier-formaat aan.',
+        ],
+        'vertrouwelijkheid_visibility' => [
+            'label' => 'Zichtbare niveaus',
+            'helper' => 'De vertrouwelijkheidsniveaus die deze rol mag zien. Leeg laten valt terug op de standaard.',
+        ],
+        'vertrouwelijkheid_upload_default' => [
+            'label' => 'Standaard bij uploaden',
+            'helper' => 'Het niveau dat vooraf is ingevuld wanneer deze rol een document uploadt. Leeg laten valt terug op de standaard.',
+        ],
+        'vertrouwelijkheid_system_default' => [
+            'label' => 'Standaard voor systeemdocumenten',
+            'helper' => 'Het niveau voor automatisch gegenereerde documenten (de aanvraag-PDF en de formulier-bijlagen). Leeg laten valt terug op zaakvertrouwelijk.',
         ],
         'lock_status_for_behandelaar' => [
             'label' => 'Status niet wijzigbaar door behandelaar',
@@ -80,6 +95,21 @@ return [
             'label' => 'Geen notificaties versturen',
             'helper' => 'Onderdruk alle notificaties voor een zaak. Alleen de ontvangstbevestiging bij indienen wordt nog verstuurd.',
         ],
+    ],
+
+    'vertrouwelijkheid_groups' => [
+        'gemeente' => 'Gemeente (behandelaars en beheerders)',
+    ],
+
+    'vertrouwelijkheid_levels' => [
+        'openbaar' => 'Openbaar',
+        'beperkt_openbaar' => 'Beperkt openbaar',
+        'intern' => 'Intern',
+        'zaakvertrouwelijk' => 'Zaakvertrouwelijk',
+        'vertrouwelijk' => 'Vertrouwelijk',
+        'confidentieel' => 'Confidentieel',
+        'geheim' => 'Geheim',
+        'zeer_geheim' => 'Zeer geheim',
     ],
 
     'columns' => [
