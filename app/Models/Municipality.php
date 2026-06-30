@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\AsGeoJson;
 use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Models\Contracts\HasGeometry;
 use App\Models\Users\CoordinatorUser;
 use App\Models\Users\MunicipalityAdminUser;
@@ -165,6 +166,51 @@ class Municipality extends Model implements HasGeometry
     public function doorkomstZaaktype(): BelongsTo
     {
         return $this->belongsTo(Zaaktype::class, 'doorkomst_zaaktype_id');
+    }
+
+    /**
+     * The active doorkomst zaaktype to use when creating route-passage deelzaken
+     * for this municipality, or null when none is configured.
+     *
+     * Resolution order, mirroring {@see \App\EventForm\Submit\ResolveZaaktype}:
+     *   1. the per-municipality blueprint mapping for the Doorkomst role;
+     *   2. the explicit role column on a zaaktype of this municipality;
+     *   3. the legacy doorkomst_zaaktype_id FK.
+     *
+     * Own-instance municipalities are skipped by SyncZaaktypen's name-link (which
+     * sets doorkomst_zaaktype_id), so the blueprint/role steps are what give them
+     * a doorkomst zaaktype.
+     */
+    public function resolveDoorkomstZaaktype(): ?Zaaktype
+    {
+        $mapping = MunicipalityZaaktypeMapping::forMunicipalityRole($this, ZaaktypeRole::Doorkomst);
+
+        if ($mapping && $mapping->zaaktype_identificatie) {
+            $byMapping = Zaaktype::query()
+                ->where('municipality_id', $this->id)
+                ->where('is_active', true)
+                ->where('identificatie', $mapping->zaaktype_identificatie)
+                ->first();
+
+            if ($byMapping) {
+                return $byMapping;
+            }
+        }
+
+        $byRole = Zaaktype::query()
+            ->where('municipality_id', $this->id)
+            ->where('is_active', true)
+            ->where('role', ZaaktypeRole::Doorkomst->value)
+            ->first();
+
+        if ($byRole) {
+            return $byRole;
+        }
+
+        /** @var Zaaktype|null $legacy */
+        $legacy = $this->doorkomstZaaktype;
+
+        return $legacy && $legacy->is_active ? $legacy : null;
     }
 
     /** @return HasMany<MunicipalityZaaktypeMapping, $this> */

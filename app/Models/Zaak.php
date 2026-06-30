@@ -59,6 +59,7 @@ class Zaak extends Model implements Eventable
         'zgw_zaak_url',
         'zaaktype_id',
         'zgw_zaaktype_url',
+        'hoofdzaak_id',
         'data_object_url',
         'organisation_id',
         'organiser_user_id',
@@ -82,6 +83,28 @@ class Zaak extends Model implements Eventable
     public function zaaktype(): BelongsTo
     {
         return $this->belongsTo(Zaaktype::class);
+    }
+
+    /**
+     * The hoofdzaak this zaak belongs to, when it is a doorkomst deelzaak.
+     *
+     * @return BelongsTo<Zaak, $this>
+     */
+    public function hoofdzaak(): BelongsTo
+    {
+        return $this->belongsTo(Zaak::class, 'hoofdzaak_id');
+    }
+
+    /**
+     * The doorkomst deelzaken created from this (hoofd)zaak. The relationship is
+     * tracked locally because ZGW only relates hoofdzaak/deelzaak within a single
+     * instance, while doorkomst zaken may live in other municipalities' instances.
+     *
+     * @return HasMany<Zaak, $this>
+     */
+    public function deelzaken(): HasMany
+    {
+        return $this->hasMany(Zaak::class, 'hoofdzaak_id');
     }
 
     /**

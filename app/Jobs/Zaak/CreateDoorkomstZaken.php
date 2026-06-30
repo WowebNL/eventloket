@@ -86,7 +86,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
         $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
             $hoofdConnectionName,
-            $this->zaak->zgw_zaak_url.'?expand=zaakobjecten,eigenschappen,rollen,zaakinformatieobjecten,deelzaken'
+            $this->zaak->zgw_zaak_url.'?expand=zaakobjecten,eigenschappen,rollen,zaakinformatieobjecten'
         ));
 
         foreach ($passing as $muniRef) {
@@ -117,22 +117,27 @@ class CreateDoorkomstZaken implements ShouldQueue
     private function createDeelzaakFor(string $hoofdConnectionName, ZaakReadModel $hoofdZaak, Municipality $muniRef, FormState $state): void
     {
         /** @var Municipality|null $municipality */
-        $municipality = Municipality::where('brk_identification', $muniRef->brk_identification)
-            ->with('doorkomstZaaktype')
-            ->first();
+        $municipality = Municipality::where('brk_identification', $muniRef->brk_identification)->first();
 
-        if (! $municipality || ! $municipality->doorkomst_zaaktype_id) {
+        if (! $municipality) {
             return;
         }
 
-        /** @var Zaaktype|null $doorkomstZaaktype */
-        $doorkomstZaaktype = $municipality->doorkomstZaaktype;
-        if (! $doorkomstZaaktype || ! $doorkomstZaaktype->is_active) {
+        // Resolve via the role=Doorkomst blueprint (own-instance municipalities)
+        // with a fallback to the legacy doorkomst_zaaktype_id. A municipality
+        // without any doorkomst zaaktype configured gets no deelzaak.
+        $doorkomstZaaktype = $municipality->resolveDoorkomstZaaktype();
+        if (! $doorkomstZaaktype) {
             return;
         }
 
-        $alreadyExists = collect($hoofdZaak->deelzaken)
-            ->contains(fn ($deel) => ($deel['zaaktype'] ?? null) === $doorkomstZaaktype->zgw_zaaktype_url);
+        // Idempotency: never create a second doorkomst zaak for the same
+        // (hoofdzaak × zaaktype). Tracked locally because the ZGW hoofdzaak/deelzaak
+        // relationship does not exist for cross-instance doorkomst zaken.
+        $alreadyExists = Zaak::query()
+            ->where('hoofdzaak_id', $this->zaak->id)
+            ->where('zaaktype_id', $doorkomstZaaktype->id)
+            ->exists();
         if ($alreadyExists) {
             return;
         }
@@ -145,15 +150,24 @@ class CreateDoorkomstZaken implements ShouldQueue
         $deelConnectionName = $doorkomstZaaktype->zgwConnectionName();
         $deelConnection = Zgw::connection($deelConnectionName);
 
-        $response = $deelConnection->zaken()->zaken()->store([
+        $payload = [
             'zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url,
             'bronorganisatie' => $hoofdZaak->bronorganisatie,
             'verantwoordelijkeOrganisatie' => $hoofdZaak->bronorganisatie,
             'startdatum' => $hoofdZaak->startdatum,
             'omschrijving' => $hoofdZaak->omschrijving,
             'zaakgeometrie' => $hoofdZaak->zaakgeometrie,
-            'hoofdzaak' => $hoofdZaak->url,
-        ]);
+        ];
+
+        // ZGW only relates hoofdzaak/deelzaak within one instance: OpenZaak
+        // validates the hoofdzaak as one of its own zaken. Only link it when the
+        // doorkomst zaaktype lives in the same instance as the hoofdzaak; otherwise
+        // create a standalone zaak (the relationship is kept locally via hoofdzaak_id).
+        if ($deelConnectionName === $hoofdConnectionName) {
+            $payload['hoofdzaak'] = $hoofdZaak->url;
+        }
+
+        $response = $deelConnection->zaken()->zaken()->store($payload);
 
         $newZaakUrl = $response['url'] ?? null;
         if (! $newZaakUrl) {
@@ -182,6 +196,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             [
                 'public_id' => $newOzZaak->identificatie,
                 'zaaktype_id' => $doorkomstZaaktype->id,
+                'hoofdzaak_id' => $this->zaak->id, // local hoofdzaak link (works cross-instance)
                 'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
                 'data_object_url' => null, // Objects API is in nieuwe flow weg
                 'organisation_id' => $this->zaak->organisation_id,
