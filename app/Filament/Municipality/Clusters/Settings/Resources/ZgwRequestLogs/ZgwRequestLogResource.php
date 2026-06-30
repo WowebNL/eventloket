@@ -100,6 +100,7 @@ class ZgwRequestLogResource extends Resource
                         'PUT' => 'PUT',
                         'PATCH' => 'PATCH',
                         'DELETE' => 'DELETE',
+                        'NOTIFY' => 'NOTIFY',
                     ]),
             ]);
     }

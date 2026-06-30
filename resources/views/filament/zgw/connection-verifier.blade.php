@@ -2,11 +2,10 @@
     $stepLabels = [
         'connection' => __('municipality/resources/zgw_connection.actions.verify.steps.connection'),
         'abonnement' => __('municipality/resources/zgw_connection.actions.verify.steps.abonnement'),
-        'notification' => __('municipality/resources/zgw_connection.actions.verify.steps.notification'),
     ];
 @endphp
 
-<div wire:init="start" @if ($waiting) wire:poll.1s="poll" @endif class="space-y-4">
+<div wire:init="start" class="space-y-4">
     <ul class="space-y-4">
         @foreach ($steps as $key => $step)
             <li class="flex items-start gap-3">
@@ -46,18 +45,6 @@
                     @if ($key === 'abonnement' && $needsRegister)
                         <x-filament::button size="sm" icon="heroicon-o-arrow-path" wire:click="register" wire:loading.attr="disabled" wire:target="register" class="mt-2">
                             {{ __('municipality/resources/zgw_connection.actions.verify.abonnement.register') }}
-                        </x-filament::button>
-                    @endif
-
-                    @if ($key === 'notification' && $awaitingSend)
-                        <x-filament::button size="sm" icon="heroicon-o-paper-airplane" wire:click="sendTest" wire:confirm="{{ __('municipality/resources/zgw_connection.actions.verify.notification.send_confirm') }}" class="mt-2">
-                            {{ __('municipality/resources/zgw_connection.actions.verify.notification.send') }}
-                        </x-filament::button>
-                    @endif
-
-                    @if ($key === 'notification' && $canRetry)
-                        <x-filament::button size="sm" color="gray" icon="heroicon-o-arrow-path" wire:click="retry" class="mt-2">
-                            {{ __('municipality/resources/zgw_connection.actions.verify.notification.retry') }}
                         </x-filament::button>
                     @endif
                 </div>

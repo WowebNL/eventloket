@@ -128,7 +128,6 @@ return [
             'steps' => [
                 'connection' => 'Verbinding met de ZGW-instantie',
                 'abonnement' => 'Notificatie-abonnement',
-                'notification' => 'Notificatie-rondrit',
             ],
             'connection' => [
                 'success' => 'Eventloket kan deze ZGW-instantie bereiken.',
@@ -141,16 +140,6 @@ return [
                 'no_notificaties_url' => 'Deze koppeling heeft geen Notificaties API-URL, dus er kan geen abonnement geregistreerd worden.',
                 'register' => 'Abonnement registreren',
                 'error' => 'Er ging iets mis bij het controleren of registreren van het abonnement. Probeer het later opnieuw.',
-            ],
-            'notification' => [
-                'skipped_local' => 'Overgeslagen: lokaal is de callback niet bereikbaar voor de Notificaties API.',
-                'send' => 'Testnotificatie versturen',
-                'send_confirm' => 'Er wordt een testnotificatie via de Notificaties API verstuurd. Doorgaan?',
-                'waiting' => 'Wachten op de notificatie op onze callback (maximaal 15 seconden).',
-                'success' => 'De testnotificatie is op onze callback aangekomen.',
-                'timeout' => 'Geen notificatie ontvangen binnen 15 seconden. Controleer of de callback-URL publiek bereikbaar is.',
-                'retry' => 'Opnieuw proberen',
-                'error' => 'Kon de testnotificatie niet versturen. Probeer het later opnieuw.',
             ],
             'result' => [
                 'success' => 'De verbinding is volledig gecontroleerd en werkt.',

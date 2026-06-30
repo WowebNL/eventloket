@@ -9,7 +9,6 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
 use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\AbonnementRegistrar;
-use App\Services\Notificaties\NotificationRoundTripProbe;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -39,16 +38,6 @@ beforeEach(function () {
     $this->actingAs(managingUser($this->connection->municipality_id));
 });
 
-function fakeConnectionOk(): void
-{
-    Http::fake([
-        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
-            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
-            200,
-        ),
-    ]);
-}
-
 function healthyAbonnement(int $municipalityId, string $name): string
 {
     $aboUrl = GEM.'/notificaties/api/v1/abonnement/abc';
@@ -75,10 +64,7 @@ it('fails fast when the connection is unreachable', function () {
         ->assertSet('success', false);
 });
 
-it('completes and stamps the connection on local where the round trip is skipped', function () {
-    $this->app['env'] = 'local';
-
-    fakeConnectionOk();
+it('completes and stamps the connection when the abonnement is healthy', function () {
     $aboUrl = healthyAbonnement($this->connection->municipality_id, $this->name);
     Http::fake([
         $aboUrl => Http::response([
@@ -95,40 +81,6 @@ it('completes and stamps the connection on local where the round trip is skipped
         ->call('start')
         ->assertSet('steps.connection.status', 'success')
         ->assertSet('steps.abonnement.status', 'success')
-        ->assertSet('steps.notification.status', 'skipped')
-        ->assertSet('finished', true)
-        ->assertSet('success', true);
-
-    expect($this->connection->refresh()->last_verified_at)->not->toBeNull();
-});
-
-it('runs the round trip and stamps the connection outside local', function () {
-    // testing env is not local, so the notification step is offered.
-    $aboUrl = healthyAbonnement($this->connection->municipality_id, $this->name);
-
-    Http::fake([
-        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
-            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
-            200,
-        ),
-        $aboUrl => Http::response([
-            'url' => $aboUrl,
-            'kanalen' => collect(AbonnementRegistrar::KANALEN)->map(fn (string $n): array => ['naam' => $n])->all(),
-        ], 200),
-        GEM.'/notificaties/api/v1/notificaties' => function (Request $request) {
-            NotificationRoundTripProbe::recordReceipt(data_get($request->data(), 'kenmerken.probe_id'));
-
-            return Http::response([], 201);
-        },
-    ]);
-
-    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
-        ->call('start')
-        ->assertSet('steps.abonnement.status', 'success')
-        ->assertSet('awaitingSend', true)
-        ->call('sendTest')
-        ->call('poll')
-        ->assertSet('steps.notification.status', 'success')
         ->assertSet('finished', true)
         ->assertSet('success', true);
 
@@ -169,37 +121,6 @@ it('offers a register button and registers the abonnement', function () {
         ->assertSet('needsRegister', false);
 
     expect(ZgwAbonnement::where('connection', $this->name)->exists())->toBeTrue();
-});
-
-it('offers a retry when the round trip times out', function () {
-    $aboUrl = healthyAbonnement($this->connection->municipality_id, $this->name);
-
-    Http::fake([
-        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
-            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
-            200,
-        ),
-        $aboUrl => Http::response([
-            'url' => $aboUrl,
-            'kanalen' => collect(AbonnementRegistrar::KANALEN)->map(fn (string $n): array => ['naam' => $n])->all(),
-        ], 200),
-        // Publish succeeds but the notification never returns.
-        GEM.'/notificaties/api/v1/notificaties' => Http::response([], 201),
-    ]);
-
-    $component = livewire(ConnectionVerifier::class, ['connection' => $this->connection])
-        ->call('start')
-        ->call('sendTest')
-        ->assertSet('waiting', true);
-
-    $this->travel(16)->seconds();
-
-    $component->call('poll')
-        ->assertSet('steps.notification.status', 'fail')
-        ->assertSet('canRetry', true)
-        ->assertSet('finished', false);
-
-    expect($this->connection->refresh()->last_verified_at)->toBeNull();
 });
 
 it('forbids verifying a connection of another municipality', function () {

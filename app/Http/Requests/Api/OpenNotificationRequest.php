@@ -31,8 +31,8 @@ class OpenNotificationRequest extends FormRequest
             'hoofdObject' => ['required', 'url', $this->zgwHostRule()],
             'resourceUrl' => ['required', 'url', $this->zgwHostRule()],
             'aanmaakdatum' => 'required|date',
-            // Only the round-trip probe sends kenmerken (a probe_id); real
-            // notifications may omit it, so it stays optional.
+            // ZGW notifications may carry kenmerken; we do not act on them, so the
+            // field stays optional.
             'kenmerken' => 'sometimes|array',
         ];
     }

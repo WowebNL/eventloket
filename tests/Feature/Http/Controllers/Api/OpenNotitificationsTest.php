@@ -2,7 +2,6 @@
 
 use App\Jobs\ProcessOpenNotification;
 use App\Models\MunicipalityZgwConnection;
-use App\Services\Notificaties\NotificationRoundTripProbe;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
@@ -199,44 +198,33 @@ test('een notificatie van een eigen gemeente-host wordt geaccepteerd', function 
     Queue::assertPushed(ProcessOpenNotification::class);
 });
 
-test('een notificatie met een bekend probe-id registreert de ontvangst en wordt niet verwerkt', function () {
+test('een ontvangen notificatie landt in het ZGW-logboek van de gemeente', function () {
     Queue::fake([ProcessOpenNotification::class]);
 
-    NotificationRoundTripProbe::markPending('probe-123', 'main');
+    // A per-municipality connection whose host uniquely identifies the gemeente,
+    // so the notification is attributed to that municipality's logboek.
+    $connection = MunicipalityZgwConnection::factory()->create();
+    $name = "gemeente_{$connection->municipality_id}";
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
         'actie' => 'create',
         'kanaal' => 'zaken',
-        'resource' => 'test',
-        'hoofdObject' => 'https://example.com/zaak/123',
-        'resourceUrl' => 'https://example.com/zaak/123',
+        'resource' => 'status',
+        'hoofdObject' => 'https://gemeente.example.com/zaken/api/v1/zaken/123',
+        'resourceUrl' => 'https://gemeente.example.com/zaken/api/v1/statussen/456?foo=bar',
         'aanmaakdatum' => now()->toIso8601String(),
-        'kenmerken' => ['probe_id' => 'probe-123'],
     ], [
         'Authorization' => 'Bearer '.$this->access_token,
     ]);
 
     $response->assertStatus(200);
-    expect(NotificationRoundTripProbe::hasReceived('probe-123'))->toBeTrue();
-    Queue::assertNotPushed(ProcessOpenNotification::class);
-});
 
-test('een notificatie met een onbekend probe-id wordt gewoon verwerkt', function () {
-    Queue::fake([ProcessOpenNotification::class]);
-
-    $response = $this->postJson(route('api.open-notifications.listen'), [
-        'actie' => 'create',
-        'kanaal' => 'zaken',
-        'resource' => 'zaak',
-        'hoofdObject' => 'https://example.com/zaak/123',
-        'resourceUrl' => 'https://example.com/zaak/123',
-        'aanmaakdatum' => now()->toIso8601String(),
-        'kenmerken' => ['probe_id' => 'unknown-id'],
-    ], [
-        'Authorization' => 'Bearer '.$this->access_token,
+    // The query string is stripped (it can carry personal data), as for outbound logs.
+    $this->assertDatabaseHas('zgw_request_logs', [
+        'connection' => $name,
+        'municipality_id' => $connection->municipality_id,
+        'method' => 'NOTIFY',
+        'resource' => '/zaken/api/v1/statussen/456',
+        'failed' => false,
     ]);
-
-    $response->assertStatus(200);
-    expect(NotificationRoundTripProbe::hasReceived('unknown-id'))->toBeFalse();
-    Queue::assertPushed(ProcessOpenNotification::class);
 });
