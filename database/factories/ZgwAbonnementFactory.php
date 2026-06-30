@@ -24,6 +24,7 @@ class ZgwAbonnementFactory extends Factory
             'callback_url' => 'https://eventloket.example.com/api/open-notifications/listen',
             'abonnement_url' => $base.'/api/v1/abonnement/'.fake()->uuid(),
             'token_id' => fake()->uuid(),
+            'client_id' => fake()->uuid(),
             'expires_at' => now()->addYear(),
             'last_renewed_at' => null,
         ];

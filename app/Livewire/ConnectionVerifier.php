@@ -14,6 +14,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Throwable;
 use Woweb\Zgw\Facades\Zgw;
@@ -26,6 +27,7 @@ use Woweb\Zgw\Facades\Zgw;
  */
 class ConnectionVerifier extends Component
 {
+    #[Locked]
     public int $connectionId;
 
     /**
@@ -59,6 +61,8 @@ class ConnectionVerifier extends Component
 
     public function mount(MunicipalityZgwConnection $connection): void
     {
+        $this->authorize('verify', $connection);
+
         $this->connectionId = $connection->getKey();
     }
 

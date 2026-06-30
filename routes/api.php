@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\OpenNotificationsController;
+use App\Http\Middleware\LogOpenNotificationRejection;
 use Illuminate\Support\Facades\Route;
 use Laravel\Passport\Http\Middleware\EnsureClientIsResourceOwner;
 
@@ -11,5 +12,10 @@ use Laravel\Passport\Http\Middleware\EnsureClientIsResourceOwner;
 // `NormalizeOpenformsInput`-middleware.
 // `open-notifications/listen` is een ZGW-webhook en onafhankelijk van OF.
 Route::post('/open-notifications/listen', [OpenNotificationsController::class, 'listen'])
-    ->middleware(EnsureClientIsResourceOwner::class.':notifications:receive')
+    ->middleware([
+        // Runs first so it can observe (and log) auth, scope and host-rule
+        // rejections raised by the middleware and validation that follow.
+        LogOpenNotificationRejection::class,
+        EnsureClientIsResourceOwner::class.':notifications:receive',
+    ])
     ->name('api.open-notifications.listen');

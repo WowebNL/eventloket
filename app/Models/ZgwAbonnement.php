@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Database\Factories\ZgwAbonnementFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 /**
  * An Open Notificaties abonnement registered against a single ZGW connection.
@@ -22,12 +24,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $callback_url
  * @property string|null $abonnement_url
  * @property string|null $token_id
- * @property \Illuminate\Support\Carbon|null $expires_at
- * @property \Illuminate\Support\Carbon|null $last_renewed_at
+ * @property string|null $client_id
+ * @property Carbon|null $expires_at
+ * @property Carbon|null $last_renewed_at
  */
 class ZgwAbonnement extends Model
 {
-    /** @use HasFactory<\Database\Factories\ZgwAbonnementFactory> */
+    /** @use HasFactory<ZgwAbonnementFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -37,6 +40,7 @@ class ZgwAbonnement extends Model
         'callback_url',
         'abonnement_url',
         'token_id',
+        'client_id',
         'expires_at',
         'last_renewed_at',
     ];

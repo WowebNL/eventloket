@@ -103,6 +103,14 @@ final class CreateDocumentsZipJob implements ShouldQueue
 
             $fileName = $document->bestandsnaam ?: ($document->titel.'.bin');
 
+            // Strip any directory segments so a crafted bestandsnaam (e.g. "../x")
+            // cannot become a traversal path in the archive (zip slip on extract).
+            $fileName = basename(str_replace('\\', '/', $fileName));
+
+            if ($fileName === '' || $fileName === '.' || $fileName === '..') {
+                $fileName = $uuid.'.bin';
+            }
+
             // Deduplicate filenames within the zip.
             $base = pathinfo($fileName, PATHINFO_FILENAME);
             $ext = pathinfo($fileName, PATHINFO_EXTENSION);

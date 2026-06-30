@@ -8,6 +8,7 @@ use App\Models\Municipality;
 use App\Models\ZgwAbonnement;
 use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Support\Facades\URL;
+use Throwable;
 use Woweb\Zgw\Exceptions\InvalidConfigurationException;
 
 /**
@@ -114,22 +115,31 @@ class AbonnementRegistrar
             return AbonnementRegistrationOutcome::DryRun;
         }
 
-        $token = $this->issuer->issue();
-
+        $previous = ZgwAbonnement::where('connection', $connectionName)->first();
         $existing = $this->findRemote($api, $callbackUrl);
 
-        if (is_array($existing) && isset($existing['url'])) {
-            $abonnementUrl = (string) $existing['url'];
-            $api->patchAbonnement($abonnementUrl, ['auth' => 'Bearer '.$token->token]);
-            $outcome = AbonnementRegistrationOutcome::Updated;
-        } else {
-            $created = $api->createAbonnement([
-                'callbackUrl' => $callbackUrl,
-                'auth' => 'Bearer '.$token->token,
-                'kanalen' => array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => (object) []], self::KANALEN),
-            ]);
-            $abonnementUrl = isset($created['url']) ? (string) $created['url'] : null;
-            $outcome = AbonnementRegistrationOutcome::Created;
+        $token = $this->issuer->issue();
+
+        try {
+            if (is_array($existing) && isset($existing['url'])) {
+                $abonnementUrl = (string) $existing['url'];
+                $api->patchAbonnement($abonnementUrl, ['auth' => 'Bearer '.$token->token]);
+                $outcome = AbonnementRegistrationOutcome::Updated;
+            } else {
+                $created = $api->createAbonnement([
+                    'callbackUrl' => $callbackUrl,
+                    'auth' => 'Bearer '.$token->token,
+                    'kanalen' => array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => (object) []], self::KANALEN),
+                ]);
+                $abonnementUrl = isset($created['url']) ? (string) $created['url'] : null;
+                $outcome = AbonnementRegistrationOutcome::Created;
+            }
+        } catch (Throwable $e) {
+            // Registration failed, so retire the credential we just minted rather
+            // than leaving an orphaned client_credentials client behind.
+            $this->issuer->revoke($token->tokenId, $token->clientId);
+
+            throw $e;
         }
 
         ZgwAbonnement::updateOrCreate(
@@ -140,10 +150,14 @@ class AbonnementRegistrar
                 'callback_url' => $callbackUrl,
                 'abonnement_url' => $abonnementUrl,
                 'token_id' => $token->tokenId,
+                'client_id' => $token->clientId,
                 'expires_at' => $token->expiresAt,
                 'last_renewed_at' => now(),
             ],
         );
+
+        // The new credential is registered, so any previous one can be retired.
+        $this->issuer->revoke($previous?->token_id, $previous?->client_id);
 
         return $outcome;
     }

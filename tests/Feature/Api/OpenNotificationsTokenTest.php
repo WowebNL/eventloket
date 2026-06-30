@@ -2,6 +2,7 @@
 
 use App\Jobs\ProcessOpenNotification;
 use App\Models\Application;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
@@ -72,4 +73,46 @@ test('the wildcard scope can call the listen endpoint', function () {
 test('an unauthenticated request is blocked on the listen endpoint', function () {
     $this->postJson('/api/open-notifications/listen', validNotificationPayload())
         ->assertStatus(401);
+});
+
+test('logs an unauthenticated webhook rejection', function () {
+    Log::spy();
+
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload())
+        ->assertStatus(401);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context = []): bool => $message === 'Rejected Open Notificaties webhook call.'
+            && ($context['category'] ?? null) === 'authentication')
+        ->once();
+});
+
+test('logs an insufficient-scope webhook rejection', function () {
+    Log::spy();
+    Passport::actingAsClient($this->notificationsClient, ['api:access']);
+
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload())
+        ->assertStatus(403);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context = []): bool => $message === 'Rejected Open Notificaties webhook call.'
+            && ($context['category'] ?? null) === 'authorization')
+        ->once();
+});
+
+test('logs an ssrf host-rule webhook rejection', function () {
+    Log::spy();
+    Passport::actingAsClient($this->notificationsClient, ['notifications:receive']);
+
+    $payload = validNotificationPayload();
+    $payload['hoofdObject'] = 'https://evil.example.com/zaken/api/v1/zaken/uuid';
+    $payload['resourceUrl'] = 'https://evil.example.com/zaken/api/v1/zaken/uuid';
+
+    $this->postJson('/api/open-notifications/listen', $payload)
+        ->assertStatus(422);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context = []): bool => $message === 'Rejected Open Notificaties webhook call.'
+            && ($context['category'] ?? null) === 'validation')
+        ->once();
 });

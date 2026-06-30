@@ -75,3 +75,15 @@ it('prunes request logs older than the retention window', function () {
     expect(ZgwRequestLog::count())->toBe(1)
         ->and(ZgwRequestLog::first()->resource)->toBe('/recent');
 });
+
+it('prunes using the configured retention window when no --days is given', function () {
+    config()->set('zgw.request_log_retention_days', 30);
+
+    ZgwRequestLog::create(['connection' => 'main', 'method' => 'GET', 'resource' => '/old', 'status_code' => 200, 'created_at' => now()->subDays(40)]);
+    ZgwRequestLog::create(['connection' => 'main', 'method' => 'GET', 'resource' => '/recent', 'status_code' => 200, 'created_at' => now()->subDays(10)]);
+
+    $this->artisan('zgw:prune-request-logs')->assertSuccessful();
+
+    expect(ZgwRequestLog::count())->toBe(1)
+        ->and(ZgwRequestLog::first()->resource)->toBe('/recent');
+});

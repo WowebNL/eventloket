@@ -7,9 +7,12 @@ namespace App\Services\Notificaties;
 use App\Models\Application;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Passport\Client;
+use Laravel\Passport\Token;
 use RuntimeException;
+use Throwable;
 
 /**
  * Issues scoped Passport client-credentials tokens for the notificaties webhook.
@@ -65,6 +68,34 @@ class WebhookTokenIssuer
             clientId: (string) $client->getKey(),
             expiresAt: is_numeric($expiresIn) ? CarbonImmutable::now()->addSeconds((int) $expiresIn) : null,
         );
+    }
+
+    /**
+     * Retire a previously issued webhook credential: revoke its access token and
+     * delete the one-off client that minted it, so confidential clients do not
+     * accumulate across rotations. A fresh client is created per issuance, so the
+     * client is safe to delete once its token is no longer in use.
+     *
+     * Cleanup must never break the rotation that triggered it, so both steps are
+     * best-effort and any failure is logged rather than thrown.
+     */
+    public function revoke(?string $tokenId, ?string $clientId): void
+    {
+        if ($tokenId !== null && $tokenId !== '') {
+            try {
+                Token::find($tokenId)?->revoke();
+            } catch (Throwable $e) {
+                Log::warning('Could not revoke a previous webhook token.', ['exception' => $e->getMessage()]);
+            }
+        }
+
+        if ($clientId !== null && $clientId !== '') {
+            try {
+                Client::find($clientId)?->delete();
+            } catch (Throwable $e) {
+                Log::warning('Could not delete a previous webhook client.', ['exception' => $e->getMessage()]);
+            }
+        }
     }
 
     /**

@@ -13,7 +13,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Laravel\Passport\Token;
 use Throwable;
 
 /**
@@ -55,34 +54,37 @@ class RenewZgwAbonnementen implements ShouldQueue
 
     private function renew(ZgwAbonnement $abonnement, WebhookTokenIssuer $issuer): void
     {
+        $previousTokenId = $abonnement->token_id;
+        $previousClientId = $abonnement->client_id;
+
         $token = $issuer->issue();
 
-        (new NotificatiesApi($abonnement->connection))
-            ->patchAbonnement((string) $abonnement->abonnement_url, ['auth' => 'Bearer '.$token->token]);
+        try {
+            (new NotificatiesApi($abonnement->connection))
+                ->patchAbonnement((string) $abonnement->abonnement_url, ['auth' => 'Bearer '.$token->token]);
+        } catch (Throwable $e) {
+            // The patch failed, so the previous token still works. Retire the
+            // credential we just minted so it does not leak, and let the caller
+            // log and move on.
+            $issuer->revoke($token->tokenId, $token->clientId);
 
-        $previousTokenId = $abonnement->token_id;
+            throw $e;
+        }
 
         $abonnement->update([
             'token_id' => $token->tokenId,
+            'client_id' => $token->clientId,
             'expires_at' => $token->expiresAt,
             'last_renewed_at' => now(),
         ]);
 
-        $this->revokePreviousToken($previousTokenId);
+        // The new token is registered, so the previous credential can be retired.
+        $issuer->revoke($previousTokenId, $previousClientId);
 
         Log::info('ZGW abonnement vernieuwd.', [
             'connection' => $abonnement->connection,
             'abonnement_url' => $abonnement->abonnement_url,
             'expires_at' => $token->expiresAt?->toIso8601String(),
         ]);
-    }
-
-    private function revokePreviousToken(?string $tokenId): void
-    {
-        if ($tokenId === null || $tokenId === '') {
-            return;
-        }
-
-        Token::find($tokenId)?->revoke();
     }
 }

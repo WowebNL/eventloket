@@ -2,11 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Livewire\ConnectionVerifier;
+use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
+use App\Models\User;
+use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\AbonnementRegistrar;
 use App\Services\Notificaties\NotificationRoundTripProbe;
-use App\Models\ZgwAbonnement;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -15,10 +18,25 @@ use function Pest\Livewire\livewire;
 
 const GEM = 'https://gemeente.example.com';
 
+/**
+ * A managing user (KoppelingBeheerder by default) attached to the given municipality.
+ */
+function managingUser(int $municipalityId, Role $role = Role::KoppelingBeheerder): User
+{
+    $user = User::factory()->create(['role' => $role]);
+    Municipality::findOrFail($municipalityId)->users()->attach($user);
+
+    return User::findOrFail($user->id);
+}
+
 beforeEach(function () {
     Cache::flush();
     $this->connection = MunicipalityZgwConnection::factory()->create();
     $this->name = "gemeente_{$this->connection->municipality_id}";
+
+    // The verifier authorises on MunicipalityZgwConnectionPolicy::verify, so the
+    // happy-path tests act as a managing user of the connection's municipality.
+    $this->actingAs(managingUser($this->connection->municipality_id));
 });
 
 function fakeConnectionOk(): void
@@ -182,4 +200,20 @@ it('offers a retry when the round trip times out', function () {
         ->assertSet('finished', false);
 
     expect($this->connection->refresh()->last_verified_at)->toBeNull();
+});
+
+it('forbids verifying a connection of another municipality', function () {
+    // A managing user, but of a different municipality than the connection.
+    $this->actingAs(managingUser(Municipality::factory()->create()->id));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->assertForbidden();
+});
+
+it('forbids a non-managing role from verifying the connection', function () {
+    // Attached to the right municipality, but a role that may not manage connections.
+    $this->actingAs(managingUser($this->connection->municipality_id, Role::Reviewer));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->assertForbidden();
 });

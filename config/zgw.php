@@ -100,4 +100,12 @@ return [
 
     ],
 
+    /*
+    | Retention window (in days) for the ZGW request log. The daily
+    | zgw:prune-request-logs command deletes rows older than this. The rows hold
+    | metadata only (no bodies, query string stripped), but the window is kept
+    | configurable so it can be tied to the organisation's logging policy.
+    */
+    'request_log_retention_days' => (int) env('ZGW_REQUEST_LOG_RETENTION_DAYS', 90),
+
 ];

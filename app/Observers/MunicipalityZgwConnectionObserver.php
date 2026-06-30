@@ -24,12 +24,38 @@ class MunicipalityZgwConnectionObserver
 {
     public function saved(MunicipalityZgwConnection $connection): void
     {
+        $this->auditSecretRotation($connection);
         $this->invalidate();
     }
 
     public function deleted(MunicipalityZgwConnection $connection): void
     {
         $this->invalidate();
+    }
+
+    /**
+     * The LogsActivity trait excludes the client secret from its field log, so a
+     * secret-only change would otherwise leave no trail. Record that the secret
+     * changed (never its value) as a separate, redacted audit entry.
+     */
+    private function auditSecretRotation(MunicipalityZgwConnection $connection): void
+    {
+        if (! $connection->wasChanged('client_secret')) {
+            return;
+        }
+
+        try {
+            activity()
+                ->performedOn($connection)
+                ->causedBy(auth()->user())
+                ->event('secret_rotated')
+                ->withProperties(['municipality_id' => $connection->municipality_id])
+                ->log('ZGW client secret rotated.');
+        } catch (Throwable $e) {
+            Log::warning('Could not record a ZGW client secret rotation.', [
+                'exception' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

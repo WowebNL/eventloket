@@ -12,6 +12,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class ListDocumentAuditTrails extends Component implements HasActions, HasSchemas, HasTable
@@ -20,6 +21,9 @@ class ListDocumentAuditTrails extends Component implements HasActions, HasSchema
     use InteractsWithSchemas;
     use InteractsWithTable;
 
+    // Server-derived from a ZGW audit-trail call; lock it so the browser cannot
+    // overwrite the rows shown back to the user.
+    #[Locked]
     public array $audittrail = [];
 
     public function mount($audittrail)

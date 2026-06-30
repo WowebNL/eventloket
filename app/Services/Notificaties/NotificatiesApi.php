@@ -54,6 +54,8 @@ final class NotificatiesApi
      */
     public function show(string $abonnementUrl): array
     {
+        $this->assertUrlAllowed($abonnementUrl);
+
         $response = Http::withHeaders($this->headers())->get($abonnementUrl);
         $response->throw();
 
@@ -94,6 +96,8 @@ final class NotificatiesApi
      */
     public function patchAbonnement(string $abonnementUrl, array $payload): array
     {
+        $this->assertUrlAllowed($abonnementUrl);
+
         $response = Http::withHeaders($this->headers())->patch($abonnementUrl, $payload);
         $response->throw();
 
@@ -102,7 +106,20 @@ final class NotificatiesApi
 
     public function deleteAbonnement(string $abonnementUrl): void
     {
+        $this->assertUrlAllowed($abonnementUrl);
+
         Http::withHeaders($this->headers())->delete($abonnementUrl)->throw();
+    }
+
+    /**
+     * Guard the abonnement URL against the connection's origin allowlist before
+     * sending the connection's bearer token to it. The abonnement URL comes from
+     * the remote Notificaties listing or stored state, so a compromised backend
+     * cannot redirect a credentialed request at an internal host.
+     */
+    private function assertUrlAllowed(string $url): void
+    {
+        Zgw::connection($this->connectionName)->assertUrlAllowed($url);
     }
 
     /**

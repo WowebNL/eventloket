@@ -1,15 +1,38 @@
 <?php
 
 use App\Jobs\Notificaties\RenewZgwAbonnementen;
+use App\Models\Application;
 use App\Models\ZgwAbonnement;
+use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Laravel\Passport\Client;
 
 function renewJwt(string $tokenId): string
 {
     $segment = fn (array $data): string => rtrim(strtr(base64_encode((string) json_encode($data)), '+/', '-_'), '=');
 
     return $segment(['typ' => 'JWT', 'alg' => 'RS256']).'.'.$segment(['jti' => $tokenId]).'.signature';
+}
+
+/**
+ * A real confidential webhook client, mirroring the one {@see WebhookTokenIssuer}
+ * mints, so a test can assert it is retired after a rotation.
+ */
+function webhookClient(): Client
+{
+    $application = Application::firstOrCreate(['name' => WebhookTokenIssuer::APPLICATION_NAME]);
+
+    return Client::create([
+        'owner_type' => Application::class,
+        'owner_id' => $application->id,
+        'name' => WebhookTokenIssuer::APPLICATION_NAME,
+        'secret' => Str::random(40),
+        'grant_types' => ['client_credentials'],
+        'redirect_uris' => [],
+        'revoked' => false,
+    ]);
 }
 
 /**
@@ -90,4 +113,46 @@ test('a failing renewal is caught and leaves the stored token unchanged', functi
     dispatch_sync(new RenewZgwAbonnementen);
 
     expect(ZgwAbonnement::first()->token_id)->toBe('old-token');
+});
+
+test('retires the previous webhook client after a successful renewal', function () {
+    Http::fake(renewStubs($this->jwt));
+
+    $previousClient = webhookClient();
+
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'token_id' => 'old-token',
+        'client_id' => $previousClient->getKey(),
+        'expires_at' => now()->addDays(5),
+    ]);
+
+    dispatch_sync(new RenewZgwAbonnementen);
+
+    $abonnement = ZgwAbonnement::first();
+
+    // The previous client is gone and exactly one (the freshly issued) webhook
+    // client remains, so clients do not accumulate across rotations.
+    expect(Client::find($previousClient->getKey()))->toBeNull()
+        ->and($abonnement->client_id)->not->toBeNull()
+        ->and((string) $abonnement->client_id)->not->toBe((string) $previousClient->getKey())
+        ->and(Client::where('name', WebhookTokenIssuer::APPLICATION_NAME)->count())->toBe(1);
+});
+
+test('retires the just-issued client when the renewal patch fails', function () {
+    Http::fake(renewStubs($this->jwt, patchStatus: 500));
+
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'token_id' => 'old-token',
+        'expires_at' => now()->addDays(5),
+    ]);
+
+    dispatch_sync(new RenewZgwAbonnementen);
+
+    // The patch failed, so the credential minted for it must not leak: no webhook
+    // client should be left behind.
+    expect(Client::where('name', WebhookTokenIssuer::APPLICATION_NAME)->count())->toBe(0);
 });

@@ -10,7 +10,10 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use RuntimeException;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * A municipality's own ZGW connection (its own OpenZaak / RX Mission / etc.).
@@ -43,13 +46,15 @@ use RuntimeException;
  * @property bool $show_adviesvragen_tab
  * @property bool $show_organisatievragen_tab
  * @property bool $suppress_notifications
- * @property \Illuminate\Support\Carbon|null $last_verified_at
+ * @property Carbon|null $last_verified_at
  */
 #[ObservedBy(MunicipalityZgwConnectionObserver::class)]
 class MunicipalityZgwConnection extends Model
 {
     /** @use HasFactory<MunicipalityZgwConnectionFactory> */
     use HasFactory;
+
+    use LogsActivity;
 
     protected $fillable = [
         'municipality_id',
@@ -102,6 +107,21 @@ class MunicipalityZgwConnection extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    /**
+     * Audit every change to a connection (who changed which endpoints and
+     * credentials, and from what to what). The client secret is never logged by
+     * value; a secret rotation is recorded separately as a redacted marker by
+     * {@see MunicipalityZgwConnectionObserver}.
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->logExcept(['client_secret']);
     }
 
     /**

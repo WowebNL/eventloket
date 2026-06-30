@@ -1,8 +1,12 @@
 <?php
 
+use App\Models\Application;
 use App\Models\ZgwAbonnement;
+use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Laravel\Passport\Client;
 
 function fakeWebhookJwt(string $tokenId): string
 {
@@ -40,6 +44,7 @@ test('registers an abonnement on the main connection and stores it', function ()
     expect($abonnement)->not->toBeNull()
         ->and($abonnement->abonnement_url)->toBe('https://nc.example.com/api/v1/abonnement/abc')
         ->and($abonnement->token_id)->toBe('tok-123')
+        ->and($abonnement->client_id)->not->toBeNull()
         ->and($abonnement->municipality_id)->toBeNull()
         ->and($abonnement->expires_at)->not->toBeNull()
         ->and($abonnement->last_renewed_at)->not->toBeNull();
@@ -48,6 +53,34 @@ test('registers an abonnement on the main connection and stores it', function ()
         && $request->method() === 'POST'
         && $request['auth'] === 'Bearer '.$this->jwt
         && collect($request['kanalen'])->pluck('naam')->contains('zaken'));
+});
+
+test('retires the previous client when re-registering an existing abonnement', function () {
+    $application = Application::firstOrCreate(['name' => WebhookTokenIssuer::APPLICATION_NAME]);
+    $previousClient = Client::create([
+        'owner_type' => Application::class,
+        'owner_id' => $application->id,
+        'name' => WebhookTokenIssuer::APPLICATION_NAME,
+        'secret' => Str::random(40),
+        'grant_types' => ['client_credentials'],
+        'redirect_uris' => [],
+        'revoked' => false,
+    ]);
+
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'token_id' => 'old-token',
+        'client_id' => $previousClient->getKey(),
+    ]);
+
+    $this->artisan('app:register-zgw-abonnementen --connection=main')->assertSuccessful();
+
+    $abonnement = ZgwAbonnement::where('connection', 'main')->first();
+
+    expect(Client::find($previousClient->getKey()))->toBeNull()
+        ->and((string) $abonnement->client_id)->not->toBe((string) $previousClient->getKey())
+        ->and(Client::where('name', WebhookTokenIssuer::APPLICATION_NAME)->count())->toBe(1);
 });
 
 test('skips a connection without a notificaties url', function () {
