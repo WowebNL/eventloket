@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
+use App\Models\Organisation;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -29,7 +30,7 @@ final class VergunningaanvraagOverigStep
 {
     public const UUID = 'e8f00982-ee47-4bec-bf31-a5c8d1b05e5e';
 
-    public static function make(): Step
+    public static function make(?Organisation $organisation = null): Step
     {
         return Step::make('Vergunningaanvraag: overig')
             ->key(self::UUID)
@@ -246,7 +247,7 @@ final class VergunningaanvraagOverigStep
 
                                 return ! ($get('geeftUOmwonendenEnNabijgelegenBedrijvenVoorafInformatieOverUwEvenementX') === 'Ja');
                             }),
-                        FileUpload::make('wiltUDeInformatieTekstAanDeOmwonendeAlsBijlageToevoegen')
+                        EventloketFileUpload::make('wiltUDeInformatieTekstAanDeOmwonendeAlsBijlageToevoegen', $organisation)
                             ->label('Wilt u de informatie-tekst aan de omwonende als bijlage toevoegen?'),
                     ]),
                 Fieldset::make('Organisatorische achtergrond')
@@ -310,7 +311,7 @@ final class VergunningaanvraagOverigStep
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
-                        FileUpload::make('uKuntHierHetHuisregelementUploaden')
+                        EventloketFileUpload::make('uKuntHierHetHuisregelementUploaden', $organisation)
                             ->label('U kunt hier het huisregelement uploaden')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('uKuntHierHetHuisregelementUploaden');
@@ -346,7 +347,7 @@ final class VergunningaanvraagOverigStep
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
-                        FileUpload::make('uploadDeVerzekeringspolis')
+                        EventloketFileUpload::make('uploadDeVerzekeringspolis', $organisation)
                             ->label('Upload de verzekeringspolis')
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('uploadDeVerzekeringspolis');

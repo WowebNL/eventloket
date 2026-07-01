@@ -118,7 +118,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 continue;
             }
             $mime = (string) $disk->mimeType($pad);
-            if (! DocumentUploadType::storedMimeTypeIsAllowed($mime)) {
+            if (! DocumentUploadType::storedFileIsAllowed($disk->path($pad), $mime, $origineleNaam)) {
                 Log::warning('UploadFormBijlagenToZGW: bijlage met niet-toegestaan bestandstype geweigerd', [
                     'zaak_id' => $this->zaak->id,
                     'pad' => $pad,
@@ -148,7 +148,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 'taal' => 'dut',
                 'bestandsnaam' => $bestandsnaam,
                 'bestandsomvang' => strlen($content),
-                'formaat' => $disk->mimeType($pad) ?: 'application/octet-stream',
+                'formaat' => DocumentUploadType::determineFormaat($pad, $bestandsnaam) ?: 'application/octet-stream',
                 'inhoud' => base64_encode($content),
                 'informatieobjecttype' => $informatieobjecttype,
                 'indicatieGebruiksrecht' => false,
