@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
+use App\Models\Organisation;
 use Carbon\Carbon;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -33,7 +34,7 @@ final class VergunningaanvraagVervolgvragenStep
 {
     public const UUID = '661aabb7-e927-4a75-8d95-0a665c5d83fe';
 
-    public static function make(): Step
+    public static function make(?Organisation $organisation = null): Step
     {
         return Step::make('Vergunningaanvraag: kenmerken')
             ->key(self::UUID)
@@ -280,7 +281,7 @@ final class VergunningaanvraagVervolgvragenStep
 
                                 return ! (in_array('A57', (array) $get('watVoorBouwselsPlaatsUOpDeLocaties'), true));
                             }),
-                        FileUpload::make('plaatstUTijdelijkeConstructiesTentenPodiaEtcDanDientUNaastHetVeiligheidsplanTevensEenDeelplanTijdelijkeConstructiesTeMakenEnTeUploadenAlsBijlage')
+                        EventloketFileUpload::make('plaatstUTijdelijkeConstructiesTentenPodiaEtcDanDientUNaastHetVeiligheidsplanTevensEenDeelplanTijdelijkeConstructiesTeMakenEnTeUploadenAlsBijlage', $organisation)
                             ->label('Plaatst u tijdelijke constructies (tenten, podia etc.) dan dient u naast het veiligheidsplan tevens een \'Deelplan Tijdelijke constructies\' te maken en te uploaden als bijlage.')
                             ->belowContent([
                                 Icon::make(Heroicon::InformationCircle),
