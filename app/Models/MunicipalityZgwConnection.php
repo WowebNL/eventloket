@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Observers\MunicipalityZgwConnectionObserver;
+use App\Services\Zgw\ZgwConnectionResolver;
 use Database\Factories\MunicipalityZgwConnectionFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
@@ -134,7 +135,7 @@ class MunicipalityZgwConnection extends Model
 
     /**
      * Whether this connection is live. Only an activated connection is honoured
-     * by the {@see \App\Services\Zgw\ZgwConnectionResolver}; an inactive one is
+     * by the {@see ZgwConnectionResolver}; an inactive one is
      * treated as if the municipality had no own connection ("main").
      */
     public function isActive(): bool
