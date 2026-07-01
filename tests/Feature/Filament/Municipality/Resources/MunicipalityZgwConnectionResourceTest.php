@@ -96,7 +96,9 @@ it('stores the vertrouwelijkheid map from the form', function () {
 
     $connection->refresh();
 
-    expect($connection->vertrouwelijkheid_map)->toBe([
+    // toEqual (==), not toBe (===): JSON object key order is not significant and
+    // differs by database driver (MySQL reorders the keys of the stored map).
+    expect($connection->vertrouwelijkheid_map)->toEqual([
         'visibility' => ['organiser' => ['zaakvertrouwelijk', 'vertrouwelijk']],
         'upload_default' => ['organiser' => 'vertrouwelijk', 'system' => 'confidentieel'],
     ]);

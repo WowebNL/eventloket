@@ -135,7 +135,9 @@ test('app:backfill-zaaktype-mappings seeds rows from the conventions and is idem
 
     $vergunning = MunicipalityZaaktypeMapping::forMunicipalityRole($heerlen, ZaaktypeRole::Vergunning);
     expect($vergunning->zaaktype_identificatie)->toBe('ZTC-VG')
-        ->and($vergunning->eigenschap_map)->toBe(ZaakeigenschappenMap::defaultEigenschapMap());
+        // toEqual (==), not toBe (===): the stored map's key order is not
+        // significant and differs by database driver (MySQL reorders JSON keys).
+        ->and($vergunning->eigenschap_map)->toEqual(ZaakeigenschappenMap::defaultEigenschapMap());
 
     expect(MunicipalityZaaktypeMapping::forMunicipalityRole($heerlen, ZaaktypeRole::Doorkomst)->zaaktype_identificatie)
         ->toBe('ZTC-DK');

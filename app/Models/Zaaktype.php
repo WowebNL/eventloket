@@ -44,6 +44,9 @@ class Zaaktype extends Model
             'role' => ZaaktypeRole::class,
             'hidden_resultaat_types' => 'array',
             'triggers_route_check' => 'boolean',
+            // Cast explicitly: MySQL returns a boolean column as an integer 1/0,
+            // so without this the value is not a real bool on that driver.
+            'is_active' => 'boolean',
         ];
     }
 
