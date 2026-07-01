@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\AddressNL;
+use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\State\FormState;
+use App\Models\Organisation;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -34,7 +35,7 @@ final class LocatieVanHetEvenement2Step
 {
     public const UUID = '2186344f-9821-45d1-bd52-9900ae15fcb6';
 
-    public static function make(): Step
+    public static function make(?Organisation $organisation = null): Step
     {
         return Step::make('Locatie')
             ->key(self::UUID)
@@ -143,7 +144,7 @@ final class LocatieVanHetEvenement2Step
                                     ->columnSpanFull()
                                     ->required(),
                             ]),
-                        FileUpload::make('gpxBestandVanDeRoute')
+                        EventloketFileUpload::make('gpxBestandVanDeRoute', $organisation)
                             ->label('GPX bestand van de route'),
                         TextInput::make('naamVanDeRoute')
                             ->label('Naam van de route')
