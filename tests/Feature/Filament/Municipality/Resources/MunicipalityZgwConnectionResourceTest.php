@@ -61,15 +61,68 @@ it('keeps the existing secret when the field is left blank on edit', function ()
         'client_secret' => 'gemeente-secret-at-least-32-bytes-long',
     ]);
 
+    // "name" is not a critical field, so saving it does not trigger the
+    // deactivation confirmation modal.
     livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
-        ->fillForm(['bronorganisatie_rsin' => '111111111'])
+        ->fillForm(['name' => 'Nieuwe naam'])
         ->call('save')
         ->assertHasNoFormErrors();
 
     $connection->refresh();
 
     expect($connection->client_secret)->toBe('gemeente-secret-at-least-32-bytes-long')
-        ->and($connection->bronorganisatie_rsin)->toBe('111111111');
+        ->and($connection->name)->toBe('Nieuwe naam');
+});
+
+it('holds the save behind a confirmation when a critical field changes', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->active()->create([
+        'zaken_url' => 'https://old.example.com/zaken/api/v1/',
+    ]);
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm(['zaken_url' => 'https://new.example.com/zaken/api/v1/'])
+        ->call('save')
+        ->assertActionMounted('confirmConnectionCriticalChange');
+
+    // Nothing is persisted and the connection stays live until the user confirms.
+    $connection->refresh();
+
+    expect($connection->zaken_url)->toBe('https://old.example.com/zaken/api/v1/')
+        ->and($connection->isActive())->toBeTrue();
+});
+
+it('saves and deactivates the connection once the critical change is confirmed', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->active()->create([
+        'zaken_url' => 'https://old.example.com/zaken/api/v1/',
+    ]);
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm(['zaken_url' => 'https://new.example.com/zaken/api/v1/'])
+        ->call('save')
+        ->assertActionMounted('confirmConnectionCriticalChange')
+        ->callMountedAction()
+        ->assertHasNoFormErrors();
+
+    $connection->refresh();
+
+    expect($connection->zaken_url)->toBe('https://new.example.com/zaken/api/v1/')
+        ->and($connection->isActive())->toBeFalse()
+        ->and($connection->last_verified_at)->toBeNull();
+});
+
+it('saves a non-critical change without asking for confirmation', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->active()->create();
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm(['name' => 'Nieuwe naam'])
+        ->call('save')
+        ->assertHasNoFormErrors()
+        ->assertActionNotMounted('confirmConnectionCriticalChange');
+
+    $connection->refresh();
+
+    expect($connection->name)->toBe('Nieuwe naam')
+        ->and($connection->isActive())->toBeTrue();
 });
 
 it('does not surface the stored secret in the edit form', function () {

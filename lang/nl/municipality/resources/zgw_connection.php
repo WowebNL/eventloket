@@ -166,6 +166,11 @@ return [
             'confirm' => 'Deactiveren',
             'success' => 'De koppeling is gedeactiveerd.',
         ],
+        'save_critical_change' => [
+            'modal_heading' => 'Kritieke instelling wijzigen',
+            'modal_description' => 'Je wijzigt een cruciale instelling van deze ZGW-koppeling. Daardoor wordt de koppeling automatisch op inactief gezet en moet je de verbinding eerst opnieuw testen en daarna opnieuw activeren. Zolang de ZGW-instantie inactief is, worden zaken van deze gemeente aangemaakt in de gezamenlijke Open Zaak-verbinding. Wil je doorgaan?',
+            'confirm' => 'Opslaan en deactiveren',
+        ],
     ],
 
 ];
