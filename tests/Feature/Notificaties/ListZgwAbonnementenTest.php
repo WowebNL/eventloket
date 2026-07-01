@@ -58,7 +58,7 @@ it('registers the runtime config for an explicit gemeente connection', function 
     // Regression: an explicit --connection=gemeente_X must register the
     // per-connection runtime config, otherwise it looks like it has no
     // notificaties URL even though it does.
-    $connection = MunicipalityZgwConnection::factory()->create();
+    $connection = MunicipalityZgwConnection::factory()->active()->create();
     $aboUrl = 'https://gemeente.example.com/notificaties/api/v1/abonnement/xyz';
 
     Http::fake([

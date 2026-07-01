@@ -12,6 +12,7 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZaaktypeMa
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Services\Zgw\ZaaktypeCatalogusOptions;
+use App\Services\Zgw\ZgwConnectionResolver;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\Checkbox;
@@ -78,13 +79,15 @@ class MunicipalityZaaktypeMappingResource extends Resource
                         Select::make('zaaktype_identificatie')
                             ->label(__('municipality/resources/zaaktype_mapping.fields.zaaktype_identificatie.label'))
                             ->searchable()
-                            // Load the (cached) zaaktypen list only when the user
-                            // opens the dropdown; on first render we just resolve
-                            // the label of the already-selected identificatie.
-                            ->getSearchResultsUsing(fn (?string $search): array => self::filterOptions(
-                                ZaaktypeCatalogusOptions::zaaktypen(self::connectionName()),
-                                $search,
-                            ))
+                            // A closure keeps this a dynamic select, so Filament
+                            // loads its options when the dropdown opens (and filters
+                            // client-side) instead of showing a bare search box. The
+                            // list is skipped on the initial page render so the
+                            // catalogi are only read on interaction; the selected
+                            // label is still resolved cheaply below.
+                            ->options(fn (): array => self::deferCatalogiRead()
+                                ? []
+                                : ZaaktypeCatalogusOptions::zaaktypen(self::connectionName()))
                             ->getOptionLabelUsing(fn (?string $value): ?string => self::labelFromOptions(
                                 ZaaktypeCatalogusOptions::zaaktypen(self::connectionName()),
                                 $value,
@@ -193,11 +196,13 @@ class MunicipalityZaaktypeMappingResource extends Resource
     }
 
     /**
-     * A select whose options come from the chosen zaaktype's catalogi. The
-     * (cached) catalogi list is fetched lazily — only when the user opens the
-     * dropdown — so rendering the edit form does not block on a burst of ZGW
-     * reads. The stored value is itself a readable label (omschrijving / naam),
-     * so the already-selected option shows without a remote read on load.
+     * A select whose options come from the chosen zaaktype's catalogi. A closure
+     * keeps it a dynamic select, so Filament loads the (cached) catalogi list when
+     * the dropdown opens and filters it client-side, so opening the select shows
+     * the full list rather than an empty search box. The list is skipped on the
+     * initial page render (see {@see deferCatalogiRead()}) so rendering the form
+     * does not read the catalogi; the stored value is itself a readable label
+     * (omschrijving / naam), so the already-selected option still shows.
      *
      * @param  callable(string, string): array<string, string>  $options
      */
@@ -206,12 +211,26 @@ class MunicipalityZaaktypeMappingResource extends Resource
         return Select::make($field)
             ->label($label ?? __("municipality/resources/zaaktype_mapping.fields.{$field}.label"))
             ->searchable()
-            ->getSearchResultsUsing(fn (Get $get, ?string $search): array => self::filterOptions(
-                self::optionsForSelectedZaaktype($get, $options),
-                $search,
-            ))
+            ->options(fn (Get $get): array => self::deferCatalogiRead()
+                ? []
+                : self::optionsForSelectedZaaktype($get, $options))
             ->getOptionLabelUsing(fn (?string $value): ?string => ($value === null || $value === '') ? null : $value)
             ->placeholder(__('municipality/resources/zaaktype_mapping.placeholder'));
+    }
+
+    /**
+     * Whether to skip reading the catalogi for a select's options right now.
+     *
+     * The options closures make each select dynamic so Filament fetches them when
+     * the dropdown is opened. On the initial full-page render there is no such
+     * interaction yet, so we return an empty list and avoid a burst of catalogi
+     * reads on load. Livewire sends the "X-Livewire" header on its interaction
+     * requests (including the dropdown-open options fetch), so its presence marks
+     * a moment where loading the list is both wanted and worthwhile.
+     */
+    private static function deferCatalogiRead(): bool
+    {
+        return ! request()->hasHeader('X-Livewire');
     }
 
     /**
@@ -228,31 +247,6 @@ class MunicipalityZaaktypeMappingResource extends Resource
         return is_string($identificatie) && $identificatie !== ''
             ? $builder(self::connectionName(), $identificatie)
             : [];
-    }
-
-    /**
-     * Filter an options map by the user's search term (case-insensitive, on both
-     * the stored value and its label). An empty search returns the full list.
-     *
-     * @param  array<string, string>  $options
-     * @return array<string, string>
-     */
-    private static function filterOptions(array $options, ?string $search): array
-    {
-        $search = is_string($search) ? trim($search) : '';
-
-        if ($search === '') {
-            return $options;
-        }
-
-        $needle = Str::lower($search);
-
-        return array_filter(
-            $options,
-            fn (string $label, string $value): bool => str_contains(Str::lower($label), $needle)
-                || str_contains(Str::lower($value), $needle),
-            ARRAY_FILTER_USE_BOTH,
-        );
     }
 
     /**
@@ -280,11 +274,19 @@ class MunicipalityZaaktypeMappingResource extends Resource
         }
     }
 
+    /**
+     * The connection whose catalogi drive the option lists. This is a management
+     * surface, so it reads the municipality's own connection even before it is
+     * activated (activation only gates whether the runtime path uses it for
+     * submissions), letting a koppeling be configured up front.
+     */
     private static function connectionName(): string
     {
         $tenant = Filament::getTenant();
 
-        return $tenant instanceof Municipality ? $tenant->zgwConnectionName() : 'main';
+        return $tenant instanceof Municipality
+            ? app(ZgwConnectionResolver::class)->forManagement($tenant)
+            : 'main';
     }
 
     /**

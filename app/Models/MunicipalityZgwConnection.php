@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Observers\MunicipalityZgwConnectionObserver;
 use Database\Factories\MunicipalityZgwConnectionFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -48,6 +49,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property bool $show_organisatievragen_tab
  * @property bool $suppress_notifications
  * @property Carbon|null $last_verified_at
+ * @property Carbon|null $activated_at
  */
 #[ObservedBy(MunicipalityZgwConnectionObserver::class)]
 class MunicipalityZgwConnection extends Model
@@ -82,6 +84,31 @@ class MunicipalityZgwConnection extends Model
         'show_organisatievragen_tab',
         'suppress_notifications',
         'last_verified_at',
+        'activated_at',
+    ];
+
+    /**
+     * Endpoint, credential and version fields that define which external ZGW a
+     * connection talks to. When any of these changes the connection must be
+     * re-verified and re-activated, so {@see MunicipalityZgwConnectionObserver}
+     * deactivates the connection on a dirty change to one of them.
+     *
+     * @var list<string>
+     */
+    public const CONNECTION_CRITICAL_FIELDS = [
+        'zaken_url',
+        'catalogi_url',
+        'documenten_url',
+        'besluiten_url',
+        'autorisaties_url',
+        'notificaties_url',
+        'version',
+        'client_id',
+        'client_secret',
+        'user_id',
+        'user_representation',
+        'bronorganisatie_rsin',
+        'allowed_hosts',
     ];
 
     protected $hidden = [
@@ -101,7 +128,28 @@ class MunicipalityZgwConnection extends Model
             'show_organisatievragen_tab' => 'boolean',
             'suppress_notifications' => 'boolean',
             'last_verified_at' => 'datetime',
+            'activated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Whether this connection is live. Only an activated connection is honoured
+     * by the {@see \App\Services\Zgw\ZgwConnectionResolver}; an inactive one is
+     * treated as if the municipality had no own connection ("main").
+     */
+    public function isActive(): bool
+    {
+        return $this->activated_at !== null;
+    }
+
+    /**
+     * Limit a query to activated (live) connections.
+     *
+     * @param  Builder<MunicipalityZgwConnection>  $query
+     */
+    public function scopeActive(Builder $query): void
+    {
+        $query->whereNotNull('activated_at');
     }
 
     /** @return BelongsTo<Municipality, $this> */

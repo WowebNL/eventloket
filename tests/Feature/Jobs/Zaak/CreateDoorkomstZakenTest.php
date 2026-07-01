@@ -113,7 +113,7 @@ function doorkomstScenario(bool $hoofdOwnInstance): array
         'geometry' => multipolygon([[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]),
     ]);
     if ($hoofdOwnInstance) {
-        MunicipalityZgwConnection::factory()->create(['municipality_id' => $hoofd->id]);
+        MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $hoofd->id]);
     }
 
     $passing = Municipality::factory()->create([

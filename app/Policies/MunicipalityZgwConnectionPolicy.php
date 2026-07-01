@@ -54,6 +54,15 @@ class MunicipalityZgwConnectionPolicy
         return $this->manages($user, $connection);
     }
 
+    /**
+     * Activate or deactivate this connection (toggle whether it is live and
+     * used by the resolver).
+     */
+    public function activate(User $user, MunicipalityZgwConnection $connection): bool
+    {
+        return $this->manages($user, $connection);
+    }
+
     public function restore(User $user, MunicipalityZgwConnection $connection): bool
     {
         return false;

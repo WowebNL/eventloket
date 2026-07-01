@@ -181,7 +181,7 @@ test('een notificatie van een eigen gemeente-host wordt geaccepteerd', function 
 
     // The connection's own host is not the global OpenZaak host, but it is a
     // trusted ZGW host, so its notifications must be accepted.
-    MunicipalityZgwConnection::factory()->create();
+    MunicipalityZgwConnection::factory()->active()->create();
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
         'actie' => 'create',
@@ -203,7 +203,7 @@ test('een ontvangen notificatie landt in het ZGW-logboek van de gemeente', funct
 
     // A per-municipality connection whose host uniquely identifies the gemeente,
     // so the notification is attributed to that municipality's logboek.
-    $connection = MunicipalityZgwConnection::factory()->create();
+    $connection = MunicipalityZgwConnection::factory()->active()->create();
     $name = "gemeente_{$connection->municipality_id}";
 
     $response = $this->postJson(route('api.open-notifications.listen'), [

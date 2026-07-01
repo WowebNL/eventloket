@@ -52,12 +52,6 @@ class AddZaakeigenschappenZGW implements ShouldQueue
 
         $eigenschappen = $map->buildEigenschappen($state);
 
-        // formsubmission_id: in OF een submission-kenmerk, bij ons het
-        // lokale public_id (= OpenZaak identificatie).
-        if ($this->zaak->public_id) {
-            $eigenschappen[] = ['formsubmission_id' => $this->zaak->public_id];
-        }
-
         $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
 
         foreach ($eigenschappen as $eigenschap) {

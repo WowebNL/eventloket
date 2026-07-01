@@ -41,11 +41,20 @@ class ZgwConnectionResolver
     public const ALLOWED_HOSTS_CACHE_KEY = 'zgw_allowed_notification_hosts';
 
     /**
-     * Memo of municipality id => resolved connection name.
+     * Memo of municipality id => resolved connection name (runtime path, gated
+     * on the connection being activated).
      *
      * @var array<int, string>
      */
     private array $resolved = [];
+
+    /**
+     * Memo of municipality id => resolved connection name (management path, not
+     * gated on activation).
+     *
+     * @var array<int, string>
+     */
+    private array $resolvedForManagement = [];
 
     /**
      * Resolve the connection name for any context that carries a municipality.
@@ -61,10 +70,14 @@ class ZgwConnectionResolver
     }
 
     /**
-     * Resolve the connection name for a municipality, falling back to "main".
+     * Resolve the connection name for a municipality on the runtime path (form
+     * submissions and everything acting on a zaak), falling back to "main".
      *
-     * Per-municipality DB-backed connections are wired in a later step; for now every
-     * municipality maps to the global "main" connection.
+     * This path is gated on activation: a configured but not-yet-activated
+     * connection is treated as absent so submissions keep going to "main" until
+     * the municipality goes live. Management surfaces that need to read the
+     * connection's catalogi while configuring it (before activation) must use
+     * {@see forManagement()} instead.
      */
     public function forMunicipality(?Municipality $municipality): string
     {
@@ -73,6 +86,25 @@ class ZgwConnectionResolver
         }
 
         return $this->resolved[$municipality->id] ??= $this->resolve($municipality);
+    }
+
+    /**
+     * Resolve the connection name for a municipality on the management path
+     * (configuring the zaaktype koppeling, syncing zaaktypen, reading catalogi),
+     * falling back to "main".
+     *
+     * Unlike {@see forMunicipality()} this is not gated on activation: a
+     * connection is used as soon as it exists, so a municipality can set up and
+     * verify its whole koppeling before it goes live. Activation only decides
+     * whether the runtime path uses the connection for submissions.
+     */
+    public function forManagement(?Municipality $municipality): string
+    {
+        if ($municipality === null) {
+            return self::DEFAULT_CONNECTION;
+        }
+
+        return $this->resolvedForManagement[$municipality->id] ??= $this->register($municipality);
     }
 
     /**
@@ -117,8 +149,10 @@ class ZgwConnectionResolver
 
     /**
      * Every host that belongs to a trusted ZGW connection: the main connection's
-     * URLs and allowed_hosts, the legacy OpenZaak host, and each per-municipality
-     * connection's explicit URLs and allowed_hosts. The notification webhook
+     * URLs and allowed_hosts, the legacy OpenZaak host, and each activated
+     * per-municipality connection's explicit URLs and allowed_hosts. An inactive
+     * connection processes no real zaken yet, so its host is not trusted until it
+     * is activated. The notification webhook
      * accepts a notification whose URLs point at any of these hosts, so a
      * municipality with its own ZGW host is no longer rejected, while unknown or
      * internal hosts still are.
@@ -141,7 +175,7 @@ class ZgwConnectionResolver
                 $hosts[$legacy] = true;
             }
 
-            foreach (MunicipalityZgwConnection::query()->get() as $connection) {
+            foreach (MunicipalityZgwConnection::query()->active()->get() as $connection) {
                 foreach ($this->connectionHosts($connection) as $host) {
                     $hosts[$host] = true;
                 }
@@ -152,14 +186,34 @@ class ZgwConnectionResolver
     }
 
     /**
-     * Resolve and register the connection for a municipality.
+     * Resolve and register the connection for a municipality on the runtime path.
      *
-     * When the municipality has its own connection, its config is registered
-     * once into the runtime config under "gemeente_{id}" (the ZgwManager reads
-     * config lazily per connection() call, so this takes effect immediately).
-     * An invalid config (e.g. a weak secret) is logged and falls back to "main".
+     * A connection that exists but has not been activated is ignored and the
+     * municipality routes to "main", exactly as if it had no own connection, so
+     * form submissions only reach the municipality's ZGW once it is live.
      */
     private function resolve(Municipality $municipality): string
+    {
+        $connection = $municipality->zgwConnection;
+
+        if ($connection === null || ! $connection->isActive()) {
+            return self::DEFAULT_CONNECTION;
+        }
+
+        return $this->register($municipality);
+    }
+
+    /**
+     * Register the municipality's connection config and return its name,
+     * regardless of activation.
+     *
+     * The config is registered once into the runtime config under "gemeente_{id}"
+     * (the ZgwManager reads config lazily per connection() call, so this takes
+     * effect immediately). Returns "main" when the municipality has no own
+     * connection, or when its config is invalid (e.g. a weak secret), which is
+     * logged.
+     */
+    private function register(Municipality $municipality): string
     {
         $connection = $municipality->zgwConnection;
 
@@ -184,9 +238,10 @@ class ZgwConnectionResolver
     }
 
     /**
-     * Map every host that uniquely identifies a single per-municipality
-     * connection to that municipality's id. Hosts shared with the main
-     * connection or with more than one municipality are left out (ambiguous).
+     * Map every host that uniquely identifies a single activated per-municipality
+     * connection to that municipality's id. Inactive connections are excluded.
+     * Hosts shared with the main connection or with more than one municipality
+     * are left out (ambiguous).
      *
      * Cached forever and invalidated by the connection observer.
      *
@@ -202,7 +257,7 @@ class ZgwConnectionResolver
                 $hostOwners[$host]['main'] = true;
             }
 
-            foreach (MunicipalityZgwConnection::query()->get() as $connection) {
+            foreach (MunicipalityZgwConnection::query()->active()->get() as $connection) {
                 foreach ($this->connectionHosts($connection) as $host) {
                     $hostOwners[$host][$connection->municipality_id] = true;
                 }

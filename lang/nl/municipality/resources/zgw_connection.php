@@ -117,6 +117,11 @@ return [
         'zaken_url' => ['label' => 'Zaken API'],
         'version' => ['label' => 'Versie'],
         'last_verified_at' => ['label' => 'Laatste controle'],
+        'activated_at' => [
+            'label' => 'Status',
+            'active' => 'Actief',
+            'inactive' => 'Inactief',
+        ],
         'updated_at' => ['label' => 'Laatst gewijzigd'],
     ],
 
@@ -145,6 +150,21 @@ return [
                 'success' => 'De verbinding is volledig gecontroleerd en werkt.',
                 'fail' => 'De controle is niet volledig geslaagd. Zie de stappen hierboven.',
             ],
+        ],
+        'activate' => [
+            'label' => 'Activeren',
+            'requires_verification' => 'Test eerst de verbinding voordat je deze koppeling activeert.',
+            'modal_heading' => 'Koppeling activeren',
+            'modal_description' => 'Vanaf nu worden zaken van deze gemeente via deze ZGW-instantie verwerkt.',
+            'confirm' => 'Activeren',
+            'success' => 'De koppeling is geactiveerd.',
+        ],
+        'deactivate' => [
+            'label' => 'Deactiveren',
+            'modal_heading' => 'Koppeling deactiveren',
+            'modal_description' => 'Zaken van deze gemeente vallen terug op de standaard ZGW-instantie tot de koppeling opnieuw wordt geactiveerd.',
+            'confirm' => 'Deactiveren',
+            'success' => 'De koppeling is gedeactiveerd.',
         ],
     ],
 

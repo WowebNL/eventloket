@@ -16,6 +16,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
@@ -340,6 +341,13 @@ class MunicipalityZgwConnectionResource extends Resource
                 TextColumn::make('version')
                     ->label(__('municipality/resources/zgw_connection.columns.version.label'))
                     ->placeholder('—'),
+                TextColumn::make('activated_at')
+                    ->label(__('municipality/resources/zgw_connection.columns.activated_at.label'))
+                    ->badge()
+                    ->color(fn ($state): string => $state ? 'success' : 'gray')
+                    ->formatStateUsing(fn ($state): string => $state
+                        ? __('municipality/resources/zgw_connection.columns.activated_at.active')
+                        : __('municipality/resources/zgw_connection.columns.activated_at.inactive')),
                 TextColumn::make('last_verified_at')
                     ->label(__('municipality/resources/zgw_connection.columns.last_verified_at.label'))
                     ->dateTime(config('app.date_format'))
@@ -354,7 +362,66 @@ class MunicipalityZgwConnectionResource extends Resource
             ])
             ->recordActions([
                 self::verifyConnectionAction(),
+                self::activateAction(),
+                self::deactivateAction(),
             ]);
+    }
+
+    /**
+     * Activate a connection so the resolver starts routing this municipality's
+     * ZGW traffic to it. Only available once the connection has been verified
+     * from the "Verbinding testen" modal.
+     */
+    public static function activateAction(): Action
+    {
+        return Action::make('activate')
+            ->label(__('municipality/resources/zgw_connection.actions.activate.label'))
+            ->icon(Heroicon::OutlinedCheckCircle)
+            ->color('success')
+            ->visible(fn (MunicipalityZgwConnection $record): bool => ! $record->isActive())
+            ->disabled(fn (MunicipalityZgwConnection $record): bool => $record->last_verified_at === null)
+            ->tooltip(fn (MunicipalityZgwConnection $record): ?string => $record->last_verified_at === null
+                ? __('municipality/resources/zgw_connection.actions.activate.requires_verification')
+                : null)
+            ->requiresConfirmation()
+            ->modalHeading(__('municipality/resources/zgw_connection.actions.activate.modal_heading'))
+            ->modalDescription(__('municipality/resources/zgw_connection.actions.activate.modal_description'))
+            ->modalSubmitActionLabel(__('municipality/resources/zgw_connection.actions.activate.confirm'))
+            ->authorize(fn (MunicipalityZgwConnection $record): bool => auth()->user()->can('activate', $record))
+            ->action(function (MunicipalityZgwConnection $record): void {
+                $record->update(['activated_at' => now()]);
+
+                Notification::make()
+                    ->success()
+                    ->title(__('municipality/resources/zgw_connection.actions.activate.success'))
+                    ->send();
+            });
+    }
+
+    /**
+     * Deactivate a connection so the resolver falls back to the "main"
+     * connection for this municipality again.
+     */
+    public static function deactivateAction(): Action
+    {
+        return Action::make('deactivate')
+            ->label(__('municipality/resources/zgw_connection.actions.deactivate.label'))
+            ->icon(Heroicon::OutlinedXCircle)
+            ->color('danger')
+            ->visible(fn (MunicipalityZgwConnection $record): bool => $record->isActive())
+            ->requiresConfirmation()
+            ->modalHeading(__('municipality/resources/zgw_connection.actions.deactivate.modal_heading'))
+            ->modalDescription(__('municipality/resources/zgw_connection.actions.deactivate.modal_description'))
+            ->modalSubmitActionLabel(__('municipality/resources/zgw_connection.actions.deactivate.confirm'))
+            ->authorize(fn (MunicipalityZgwConnection $record): bool => auth()->user()->can('activate', $record))
+            ->action(function (MunicipalityZgwConnection $record): void {
+                $record->update(['activated_at' => null]);
+
+                Notification::make()
+                    ->success()
+                    ->title(__('municipality/resources/zgw_connection.actions.deactivate.success'))
+                    ->send();
+            });
     }
 
     /**

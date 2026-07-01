@@ -73,7 +73,7 @@ test('effectiveHiddenResultaatTypesMap uses the row base and the blueprint overr
 
 test('saving a koppeling for an own-instance gemeente creates the local zaaktype row immediately', function () {
     $municipality = Municipality::factory()->create();
-    MunicipalityZgwConnection::factory()->create(['municipality_id' => $municipality->id]);
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $municipality->id]);
 
     $ownUrl = OWN_INSTANCE_BASE.'/catalogi/api/v1/zaaktypen/own-1';
 

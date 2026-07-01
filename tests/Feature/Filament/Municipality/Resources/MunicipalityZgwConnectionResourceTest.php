@@ -181,6 +181,36 @@ it('exposes the verify connection row action', function () {
         ->assertActionExists(TestAction::make('verify')->table($connection));
 });
 
+it('disables the activate action until the connection is verified', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create([
+        'last_verified_at' => null,
+    ]);
+
+    livewire(ListMunicipalityZgwConnections::class)
+        ->assertActionDisabled(TestAction::make('activate')->table($connection));
+});
+
+it('activates a verified connection', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create([
+        'last_verified_at' => now(),
+    ]);
+
+    livewire(ListMunicipalityZgwConnections::class)
+        ->assertActionEnabled(TestAction::make('activate')->table($connection))
+        ->callAction(TestAction::make('activate')->table($connection));
+
+    expect($connection->fresh()->isActive())->toBeTrue();
+});
+
+it('deactivates an active connection', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->active()->create();
+
+    livewire(ListMunicipalityZgwConnections::class)
+        ->callAction(TestAction::make('deactivate')->table($connection));
+
+    expect($connection->fresh()->isActive())->toBeFalse();
+});
+
 it('is not accessible to a reviewer', function () {
     $reviewer = User::factory()->create(['role' => Role::Reviewer]);
     $this->municipality->users()->attach($reviewer);

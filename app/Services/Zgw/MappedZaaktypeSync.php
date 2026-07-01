@@ -36,10 +36,12 @@ final class MappedZaaktypeSync
             return null;
         }
 
-        // Resolving registers the per-municipality connection config. An invalid
-        // or absent config falls back to "main", which this targeted sync skips:
-        // main rows are linked by name in SyncZaaktypen, not created here.
-        $connectionName = $this->resolver->forMunicipality($municipality);
+        // Resolving registers the per-municipality connection config. This is a
+        // management sync, so it uses the connection regardless of activation (a
+        // koppeling is configured before going live). An invalid or absent config
+        // falls back to "main", which this targeted sync skips: main rows are
+        // linked by name in SyncZaaktypen, not created here.
+        $connectionName = $this->resolver->forManagement($municipality);
 
         if ($connectionName === ZgwConnectionResolver::DEFAULT_CONNECTION) {
             return null;

@@ -48,4 +48,16 @@ class MunicipalityZgwConnectionFactory extends Factory
             'suppress_notifications' => false,
         ];
     }
+
+    /**
+     * A verified and activated (live) connection: the resolver routes the
+     * municipality's ZGW traffic to it.
+     */
+    public function active(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'last_verified_at' => now(),
+            'activated_at' => now(),
+        ]);
+    }
 }
