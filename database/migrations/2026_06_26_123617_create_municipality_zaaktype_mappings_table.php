@@ -39,7 +39,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['municipality_id', 'role']);
-            $table->index(['municipality_id', 'zaaktype_identificatie']);
+            // Explicit, shortened index name: the auto-generated name exceeds
+            // MySQL's 64-character identifier limit (PostgreSQL truncates it
+            // silently, MySQL errors), which would break the migration there.
+            $table->index(['municipality_id', 'zaaktype_identificatie'], 'municipality_zaaktype_map_identificatie_index');
         });
     }
 
