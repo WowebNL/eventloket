@@ -7,13 +7,13 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwResource;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Notifications\Messages\MailMessage;
-use App\Services\Zgw\ZgwResource;
 
 /**
  * note: municipality users are only informed if organisation withdraws a pending request

@@ -6,6 +6,7 @@ use App\Casts\AsGeoJson;
 use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
+use App\EventForm\Submit\ResolveZaaktype;
 use App\Models\Contracts\HasGeometry;
 use App\Models\Users\CoordinatorUser;
 use App\Models\Users\MunicipalityAdminUser;
@@ -172,7 +173,7 @@ class Municipality extends Model implements HasGeometry
      * The active doorkomst zaaktype to use when creating route-passage deelzaken
      * for this municipality, or null when none is configured.
      *
-     * Resolution order, mirroring {@see \App\EventForm\Submit\ResolveZaaktype}:
+     * Resolution order, mirroring {@see ResolveZaaktype}:
      *   1. the per-municipality blueprint mapping for the Doorkomst role;
      *   2. the explicit role column on a zaaktype of this municipality;
      *   3. the legacy doorkomst_zaaktype_id FK.

@@ -3,7 +3,6 @@
 namespace App\Providers\Filament;
 
 use App\AvatarProviders\LocalSvgAvatarProvider;
-use App\Services\Zgw\StatusPhase;
 use App\Filament\Advisor\Pages\Dashboard;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
 use App\Filament\Shared\Pages\EditProfile;
@@ -13,6 +12,7 @@ use App\Filament\Shared\Pages\PasswordReset\ResetPassword;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Advisory;
 use App\Models\Zaak;
+use App\Services\Zgw\StatusPhase;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Facades\Filament;
 use Filament\FontProviders\LocalFontProvider;

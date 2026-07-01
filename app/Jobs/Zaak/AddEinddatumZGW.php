@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Jobs\Zaak;
 
 use App\Models\Zaak;
-use App\Services\Zgw\ZgwResource;
 use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZgwResource;
 use Carbon\Carbon;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;

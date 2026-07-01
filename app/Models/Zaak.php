@@ -7,7 +7,6 @@ use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
-use App\Models\MunicipalityZgwConnection;
 use App\Observers\ZaakObserver;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionConfig;

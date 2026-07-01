@@ -17,7 +17,6 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Services\Zgw\ZaakReadModel;
-use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
@@ -25,6 +24,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 
 uses(RefreshDatabase::class);
 

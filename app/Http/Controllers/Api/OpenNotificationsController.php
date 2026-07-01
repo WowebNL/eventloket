@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\OpenNotificationRequest;
 use App\Jobs\ProcessOpenNotification;
+use App\Listeners\LogZgwRequest;
 use App\Models\ZgwRequestLog;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\ValueObjects\OpenNotification;
@@ -62,7 +63,7 @@ class OpenNotificationsController extends Controller
 
     /**
      * The URL path without its query string (which may carry personal data),
-     * matching how outbound requests are stored by {@see \App\Listeners\LogZgwRequest}.
+     * matching how outbound requests are stored by {@see LogZgwRequest}.
      */
     private function path(string $uri): string
     {
