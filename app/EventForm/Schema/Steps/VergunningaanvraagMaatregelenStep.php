@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
+use App\Models\Organisation;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -29,7 +30,7 @@ final class VergunningaanvraagMaatregelenStep
 {
     public const UUID = '8a5fb30f-287e-41a2-a9bc-e7340bdaaa99';
 
-    public static function make(): Step
+    public static function make(?Organisation $organisation = null): Step
     {
         return Step::make('Vergunningaanvraag: maatregelen')
             ->key(self::UUID)
@@ -86,7 +87,7 @@ final class VergunningaanvraagMaatregelenStep
                             ->options(JaNeeOptions::OPTIONS)
                             ->required()
                             ->live(),
-                        FileUpload::make('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen')
+                        EventloketFileUpload::make('uKuntHetAfvalplanHierUploadenOfLaterAlsBijlageToevoegen', $organisation)
                             ->label('U kunt het afvalplan hier uploaden of later als bijlage toevoegen.')
                             ->belowContent([
                                 Icon::make(Heroicon::InformationCircle),

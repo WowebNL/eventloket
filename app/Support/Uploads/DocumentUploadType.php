@@ -114,12 +114,17 @@ final class DocumentUploadType
     {
         $extension = strtolower((string) $file->getClientOriginalExtension());
 
-        // For email-like formats, enforce content / magic validation regardless of MIME type.
-        // This avoids accepting arbitrary content disguised with a safe MIME type.
-        if (in_array($extension, ['eml', 'emlx', 'msg'], true)) {
+        // For formats whose safety cannot be established from the (spoofable)
+        // MIME type alone, enforce content / magic validation regardless of the
+        // reported MIME type. This avoids accepting arbitrary content disguised
+        // with a safe MIME type, and lets us accept GPX (an XML dialect that is
+        // commonly detected as the deliberately-not-allowlisted text/xml)
+        // without opening up arbitrary XML.
+        if (in_array($extension, ['eml', 'emlx', 'msg', 'gpx'], true)) {
             return match ($extension) {
                 'eml', 'emlx' => self::looksLikeRfc822Email($file),
                 'msg' => self::looksLikeOutlookMsg($file),
+                'gpx' => self::looksLikeGpx((string) $file->getRealPath()),
             };
         }
 
@@ -146,6 +151,33 @@ final class DocumentUploadType
         self::assertConfigurationIsSafe($allowedMimeTypes);
 
         return self::mimeTypeIsAllowed($mimeType, $allowedMimeTypes);
+    }
+
+    /**
+     * Content-aware allowlist check for files that already live on disk.
+     *
+     * Mirrors {@see isAllowed()} for extensions whose safety cannot be
+     * established from a MIME type alone. GPX is XML and is commonly detected
+     * as text/xml, which we deliberately keep off the allowlist; we therefore
+     * confirm the actual bytes are GPX. Every other extension falls back to the
+     * MIME allowlist, so existing behaviour is unchanged.
+     *
+     * @param  string  $absolutePath  Absolute filesystem path to the stored file.
+     * @param  string  $detectedMimeType  MIME type as detected by the storage disk.
+     */
+    public static function storedFileIsAllowed(string $absolutePath, string $detectedMimeType, ?string $originalFileName = null): bool
+    {
+        $extension = strtolower(pathinfo((string) $originalFileName, PATHINFO_EXTENSION));
+
+        if ($extension === '') {
+            $extension = strtolower(pathinfo($absolutePath, PATHINFO_EXTENSION));
+        }
+
+        if ($extension === 'gpx') {
+            return self::looksLikeGpx($absolutePath);
+        }
+
+        return self::storedMimeTypeIsAllowed($detectedMimeType);
     }
 
     /**
@@ -257,6 +289,64 @@ final class DocumentUploadType
         }
 
         return $fileName.'.'.$extension;
+    }
+
+    /**
+     * Confirms that a file is a genuine GPX document by inspecting its bytes.
+     *
+     * GPX is an XML dialect, so we require an XML prologue, the <gpx> root
+     * element and the mandatory Topografix GPX namespace. Requiring all three
+     * means a plain text/xml file (which we intentionally keep off the
+     * allowlist) cannot pass by accident, while every schema-valid GPX export
+     * does.
+     */
+    private static function looksLikeGpx(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        $handle = @fopen($path, 'rb');
+
+        if ($handle === false) {
+            return false;
+        }
+
+        $head = @fread($handle, 16384);
+        @fclose($handle);
+
+        if (! is_string($head) || $head === '') {
+            return false;
+        }
+
+        // Reject binary files (NUL bytes) masquerading as XML.
+        if (str_contains($head, "\0")) {
+            return false;
+        }
+
+        // Strip an optional UTF-8 BOM before inspecting the document prologue.
+        if (str_starts_with($head, "\xEF\xBB\xBF")) {
+            $head = substr($head, 3);
+        }
+
+        // The document must open with the XML declaration or directly with the
+        // <gpx> root element.
+        $prologue = ltrim($head);
+
+        if (preg_match('/^<\?xml\b/i', $prologue) !== 1 && preg_match('/^<gpx\b/i', $prologue) !== 1) {
+            return false;
+        }
+
+        // Never accept documents that declare a DOCTYPE: real GPX files carry
+        // none, and refusing them avoids XML entity-expansion tricks.
+        if (preg_match('/<!DOCTYPE/i', $head) === 1) {
+            return false;
+        }
+
+        // Require both the <gpx> root element and the official Topografix GPX
+        // namespace (used by GPX 1.0 and 1.1). Both are mandated by the schema.
+        return preg_match('/<gpx\b/i', $head) === 1
+            && preg_match('#https?://www\.topografix\.com/GPX#i', $head) === 1;
     }
 
     private static function looksLikeRfc822Email(UploadedFile $file): bool

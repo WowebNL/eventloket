@@ -143,6 +143,10 @@ return [
         'eml' => 'message/rfc822',
         'emlx' => 'message/rfc822',
         'msg' => 'application/vnd.ms-outlook',
+        // GPX is XML and is detected as text/xml by libmagic; map it to the
+        // canonical GPX MIME type (which is on the upload allowlist) so it is
+        // stored and served correctly.
+        'gpx' => 'application/gpx+xml',
 
     ],
     'document_file_types' => env('APP_DOCUMENT_FILE_TYPES', [
