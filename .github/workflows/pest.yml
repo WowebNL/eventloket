@@ -1,5 +1,5 @@
 name: PestPHP unit Tests
-on: 
+on:
   pull_request:
   workflow_dispatch:
 
@@ -8,16 +8,23 @@ jobs:
     runs-on: ubuntu-latest
     name: Run Unit Tests
     services:
-      mysql:
-        image: mysql:8.0
+      # The application requires PostgreSQL with PostGIS (municipalities store
+      # spatial geometry and a migration runs CREATE EXTENSION postgis), so the
+      # test database must be PostGIS-enabled. MySQL cannot run the migrations.
+      postgres:
+        image: postgis/postgis:17-3.5
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: yes
-          MYSQL_DATABASE: tests
-          MYSQL_USER: eventloket
-          MYSQL_PASSWORD: eventloket
+          POSTGRES_DB: testing
+          POSTGRES_USER: sail
+          POSTGRES_PASSWORD: password
         ports:
-          - 3306:3306
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          - 5432:5432
+        options: --health-cmd="pg_isready -U sail -d testing" --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
 
     steps:
     - name: Checkout code
@@ -27,7 +34,7 @@ jobs:
       uses: shivammathur/setup-php@7c071dfe9dc99bdf297fa79cb49ea005b9fcadbc # v2
       with:
         php-version: 8.4
-        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, mysql, mysqli, pdo_mysql, bcmath, soap, intl, gd, exif, iconv, imagick
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, pgsql, pdo_pgsql, bcmath, soap, intl, gd, exif, iconv, imagick, redis
         coverage: none
 
     - name: Setup NodeJS
@@ -46,15 +53,17 @@ jobs:
       run: |
         cp .env.example .env
         php artisan key:generate
-        php artisan passport:keys 
+        php artisan passport:keys
         npm run build
     - name: Execute tests via PestPHP
       env:
         APP_ENV: testing
-        DB_CONNECTION: mysql
-        DB_DATABASE: tests
-        DB_USERNAME: eventloket
-        DB_PASSWORD: eventloket
+        DB_CONNECTION: pgsql
+        DB_DATABASE: testing
+        DB_USERNAME: sail
+        DB_PASSWORD: password
         DB_HOST: 127.0.0.1
-        DB_PORT: 3306
+        DB_PORT: 5432
+        REDIS_HOST: 127.0.0.1
+        REDIS_PORT: 6379
       run: vendor/bin/pest
