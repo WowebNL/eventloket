@@ -41,24 +41,29 @@ test('CSP contains required directives', function () {
         ->toContain("form-action 'self'");
 });
 
-test('CSP connect-src includes Vite WebSocket in debug mode', function () {
+test('CSP allows the Vite dev server in debug mode', function () {
     Config::set('app.debug', true);
 
     $response = $this->get('/up');
 
     $csp = $response->headers->get('Content-Security-Policy');
 
-    expect($csp)->toContain('ws://localhost:5173');
+    expect($csp)
+        ->toContain('ws://localhost:5173')
+        ->toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:5173")
+        ->toContain("style-src 'self' 'unsafe-inline' http://localhost:5173");
 });
 
-test('CSP connect-src does not include Vite WebSocket when debug is off', function () {
+test('CSP does not include the Vite dev server when debug is off', function () {
     Config::set('app.debug', false);
 
     $response = $this->get('/up');
 
     $csp = $response->headers->get('Content-Security-Policy');
 
-    expect($csp)->not->toContain('ws://localhost:5173');
+    expect($csp)
+        ->not->toContain('ws://localhost:5173')
+        ->not->toContain('http://localhost:5173');
 });
 
 test('HSTS header is absent in local environment', function () {
