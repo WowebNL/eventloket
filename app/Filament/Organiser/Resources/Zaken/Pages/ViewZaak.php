@@ -46,7 +46,7 @@ class ViewZaak extends ViewRecord
                 ->label('Aanvraag intrekken')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->visible(fn (Zaak $record): bool => ($record->openzaak && ! $record->openzaak->resultaat) && $record->intrekkenResultaatType !== null)
+                ->visible(fn (Zaak $record): bool => $record->organiserCanWithdraw() && ($record->openzaak && ! $record->openzaak->resultaat) && $record->intrekkenResultaatType !== null)
                 ->action(function (Zaak $record) {
                     /** @var OrganiserUser $user */
                     $user = auth()->user();
