@@ -125,9 +125,11 @@ class MunicipalityZaaktypeMappingResource extends Resource
                     ->visible(fn (Get $get): bool => filled($get('zaaktype_identificatie')))
                     ->schema([
                         self::catalogusSelect('initial_statustype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::statustypen($conn, $id)),
-                        self::catalogusSelect('eind_statustype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::statustypen($conn, $id)),
+                        self::catalogusSelect('eind_statustype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::statustypen($conn, $id))
+                            ->visible(fn (): bool => self::organiserWithdrawalAllowed()),
                         self::catalogusSelect('initiator_roltype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::roltypen($conn, $id)),
-                        self::catalogusSelect('ingetrokken_resultaattype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::resultaattypen($conn, $id)),
+                        self::catalogusSelect('ingetrokken_resultaattype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::resultaattypen($conn, $id))
+                            ->visible(fn (): bool => self::organiserWithdrawalAllowed()),
                         self::catalogusSelect('aanvraag_informatieobjecttype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::informatieobjecttypen($conn, $id)),
                         self::catalogusSelect('bijlage_informatieobjecttype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::informatieobjecttypen($conn, $id)),
                     ]),
@@ -299,5 +301,19 @@ class MunicipalityZaaktypeMappingResource extends Resource
         $tenant = Filament::getTenant();
 
         return $tenant instanceof Municipality && $tenant->zgwConnection !== null;
+    }
+
+    /**
+     * Whether an organiser may withdraw a zaak on this municipality's connection.
+     * When disabled the eind-statustype and ingetrokken-resultaattype do not need
+     * to be configured, so those two flow selects are hidden. The global "main"
+     * connection (no row) always allows withdrawal.
+     */
+    private static function organiserWithdrawalAllowed(): bool
+    {
+        $tenant = Filament::getTenant();
+        $connection = $tenant instanceof Municipality ? $tenant->zgwConnection : null;
+
+        return $connection === null || $connection->allow_organiser_withdrawal;
     }
 }
