@@ -55,10 +55,6 @@ return [
             'label' => 'Bronorganisatie RSIN',
             'helper' => 'RSIN die als bronorganisatie op elke zaak wordt gezet.',
         ],
-        'eigenschap_date_format' => [
-            'label' => 'Datumformaat zaakeigenschappen',
-            'helper' => 'Optioneel PHP-datumformaat voor zaakeigenschap-waarden (bijv. YmdHis). Leeg laten houdt het formulier-formaat aan.',
-        ],
         'vertrouwelijkheid_visibility' => [
             'label' => 'Zichtbare niveaus',
             'helper' => 'De vertrouwelijkheidsniveaus die deze rol mag zien. Leeg laten valt terug op de standaard.',

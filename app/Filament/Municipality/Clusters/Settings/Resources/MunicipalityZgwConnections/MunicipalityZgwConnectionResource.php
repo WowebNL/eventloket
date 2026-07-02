@@ -114,10 +114,6 @@ class MunicipalityZgwConnectionResource extends Resource
                             ->label(__('municipality/resources/zgw_connection.fields.bronorganisatie_rsin.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.bronorganisatie_rsin.helper'))
                             ->maxLength(9),
-                        TextInput::make('eigenschap_date_format')
-                            ->label(__('municipality/resources/zgw_connection.fields.eigenschap_date_format.label'))
-                            ->helperText(__('municipality/resources/zgw_connection.fields.eigenschap_date_format.helper'))
-                            ->maxLength(32),
                     ]),
 
                 Section::make(__('municipality/resources/zgw_connection.sections.features.heading'))

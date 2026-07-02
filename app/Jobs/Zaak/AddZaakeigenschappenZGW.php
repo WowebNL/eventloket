@@ -83,7 +83,6 @@ class AddZaakeigenschappenZGW implements ShouldQueue
                 'zaak' => $ozZaak->url,
                 'eigenschap' => (string) $catalogiEigenschap->url,
                 'waarde' => ZgwConnectionConfig::formatEigenschapWaarde(
-                    $connectionName,
                     $waardeString,
                     $catalogiEigenschap->specificatie?->formaat?->value,
                 ),
