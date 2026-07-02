@@ -82,7 +82,11 @@ class AddZaakeigenschappenZGW implements ShouldQueue
             $connection->zaken()->zaken()->zaakeigenschappen(basename($this->zaak->zgw_zaak_url))->store([
                 'zaak' => $ozZaak->url,
                 'eigenschap' => (string) $catalogiEigenschap->url,
-                'waarde' => ZgwConnectionConfig::formatEigenschapWaarde($connectionName, $waardeString),
+                'waarde' => ZgwConnectionConfig::formatEigenschapWaarde(
+                    $connectionName,
+                    $waardeString,
+                    $catalogiEigenschap->specificatie?->formaat?->value,
+                ),
             ]);
         }
     }
