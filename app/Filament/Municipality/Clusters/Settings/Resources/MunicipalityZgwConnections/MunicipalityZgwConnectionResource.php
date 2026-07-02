@@ -145,6 +145,10 @@ class MunicipalityZgwConnectionResource extends Resource
                         Toggle::make('suppress_notifications')
                             ->label(__('municipality/resources/zgw_connection.fields.suppress_notifications.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.suppress_notifications.helper')),
+                        Toggle::make('allow_organiser_withdrawal')
+                            ->label(__('municipality/resources/zgw_connection.fields.allow_organiser_withdrawal.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.allow_organiser_withdrawal.helper'))
+                            ->default(true),
                     ]),
 
                 Section::make(__('municipality/resources/zgw_connection.sections.vertrouwelijkheid.heading'))

@@ -114,4 +114,17 @@ class ZgwConnectionConfig
 
         return DocumentVertrouwelijkheden::Zaakvertrouwelijk->value;
     }
+
+    /**
+     * Whether an organiser may withdraw a zaak on this connection. Defaults to
+     * true, so the global "main" connection (and any connection without the key)
+     * keeps withdrawal enabled. Disabled per connection for a OneGround (RX
+     * Mission) backend, where the eind-status archives the zaak immediately.
+     */
+    public static function allowsOrganiserWithdrawal(string $connectionName): bool
+    {
+        $value = config("zgw.connections.{$connectionName}.allow_organiser_withdrawal");
+
+        return $value === null ? true : (bool) $value;
+    }
 }

@@ -35,6 +35,7 @@ test('without a connection row all behaviour defaults to the full feature set', 
     expect($zaak->showsTab('adviesvragen'))->toBeTrue();
     expect($zaak->showsTab('organisatievragen'))->toBeTrue();
     expect($zaak->suppressesNotifications())->toBeFalse();
+    expect($zaak->organiserCanWithdraw())->toBeTrue();
 });
 
 test('a municipality with its own connection cannot edit the risico classificatie', function () {
@@ -69,4 +70,16 @@ test('suppress_notifications is reflected by suppressesNotifications', function 
     $zaak = zaakForConnection(['suppress_notifications' => true]);
 
     expect($zaak->suppressesNotifications())->toBeTrue();
+});
+
+test('a connection allows organiser withdrawal by default', function () {
+    $zaak = zaakForConnection();
+
+    expect($zaak->organiserCanWithdraw())->toBeTrue();
+});
+
+test('allow_organiser_withdrawal disabled blocks organiser withdrawal', function () {
+    $zaak = zaakForConnection(['allow_organiser_withdrawal' => false]);
+
+    expect($zaak->organiserCanWithdraw())->toBeFalse();
 });
