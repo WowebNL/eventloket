@@ -58,15 +58,40 @@ class ZgwConnectionResolver
 
     /**
      * Resolve the connection name for any context that carries a municipality.
+     *
+     * A zaak resolves through its zaaktype: the zaaktype row records which
+     * instance hosts it, so zaken created on a main-fallback zaaktype keep
+     * reading from main even though their municipality runs its own instance.
      */
     public function for(Municipality|Zaak|Zaaktype|null $context): string
     {
         return match (true) {
             $context instanceof Municipality => $this->forMunicipality($context),
-            $context instanceof Zaak => $this->forMunicipality($context->municipality),
-            $context instanceof Zaaktype => $this->forMunicipality($context->municipality),
+            $context instanceof Zaak => $this->forZaaktype($context->zaaktype),
+            $context instanceof Zaaktype => $this->forZaaktype($context),
             default => self::DEFAULT_CONNECTION,
         };
+    }
+
+    /**
+     * The zaaktype's `connection` column records which instance hosts it. A
+     * main-catalogus row always lives on main, even while it is linked to an
+     * own-instance municipality as a fallback; only own-instance rows resolve
+     * through the municipality (which keeps the activation gating).
+     */
+    private function forZaaktype(?Zaaktype $zaaktype): string
+    {
+        if ($zaaktype === null) {
+            return self::DEFAULT_CONNECTION;
+        }
+
+        // Read via getAttribute(): the column name collides with Eloquent's own
+        // $connection property when accessed from model scope.
+        if ($zaaktype->getAttribute('connection') === self::DEFAULT_CONNECTION) {
+            return self::DEFAULT_CONNECTION;
+        }
+
+        return $this->forMunicipality($zaaktype->municipality);
     }
 
     /**

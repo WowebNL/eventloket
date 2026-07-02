@@ -22,6 +22,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -126,4 +127,104 @@ test('gemeente uit state matcht niets in de DB → exception', function () {
 
     expect(fn () => $this->resolve->forState($state))
         ->toThrow(RuntimeException::class);
+});
+
+test('valt terug op de gekoppelde main-rij als het eigen zaaktype inactief is', function () {
+    $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+
+    MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $heerlen->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'OWN-1',
+    ]));
+
+    // The mapped own-instance row lost its valid version and was deactivated.
+    Zaaktype::factory()->create([
+        'name' => 'Eigen evenementenvergunning',
+        'identificatie' => 'OWN-1',
+        'connection' => "gemeente_{$heerlen->id}",
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => false,
+    ]);
+
+    $fallback = Zaaktype::factory()->create([
+        'name' => 'Evenementenvergunning gemeente Heerlen',
+        'connection' => 'main',
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+
+    expect($this->resolve->forState($state)->id)->toBe($fallback->id);
+});
+
+test('een weer actief eigen zaaktype wint van een nog gekoppelde main-fallback', function () {
+    $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+
+    MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $heerlen->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'OWN-1',
+    ]));
+
+    $eigen = Zaaktype::factory()->create([
+        'name' => 'Eigen evenementenvergunning',
+        'identificatie' => 'OWN-1',
+        'connection' => "gemeente_{$heerlen->id}",
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    // The fallback link deliberately survives a restore (zaken created during
+    // the fallback derive their municipality through this row).
+    Zaaktype::factory()->create([
+        'name' => 'Evenementenvergunning gemeente Heerlen',
+        'connection' => 'main',
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+
+    expect($this->resolve->forState($state)->id)->toBe($eigen->id);
+});
+
+test('eigen-connectie-rij wint ook op de role-route als beide gekoppeld en actief zijn', function () {
+    $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+
+    // No mapping: resolution goes through the role column for both rows.
+    Zaaktype::factory()->create([
+        'name' => 'Evenementenvergunning gemeente Heerlen',
+        'connection' => 'main',
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    $eigen = Zaaktype::factory()->create([
+        'name' => 'Eigen evenementenvergunning',
+        'identificatie' => 'OWN-1',
+        'connection' => "gemeente_{$heerlen->id}",
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+
+    expect($this->resolve->forState($state)->id)->toBe($eigen->id);
 });

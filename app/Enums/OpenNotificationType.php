@@ -9,4 +9,5 @@ enum OpenNotificationType: string
     case ZaakStatusChanged = 'zaak_status_changed';
     case NewZaakDocument = 'new_zaak_document';
     case UpdatedZaakDocument = 'updated_zaak_document';
+    case ZaaktypeChanged = 'zaaktype_changed';
 }

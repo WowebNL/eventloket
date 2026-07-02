@@ -144,6 +144,47 @@ test('Open notifications endpoint handles document update notification', functio
 
 });
 
+test('Open notifications endpoint accepts zaaktypen channel notifications', function () {
+    Queue::fake([
+        ProcessOpenNotification::class,
+    ]);
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'partial_update',
+        'kanaal' => 'zaaktypen',
+        'resource' => 'zaaktype',
+        'kenmerken' => ['catalogus' => 'https://example.com/catalogi/api/v1/catalogussen/1'],
+        'hoofdObject' => 'https://example.com/catalogi/api/v1/zaaktypen/123',
+        'resourceUrl' => 'https://example.com/catalogi/api/v1/zaaktypen/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    Queue::assertPushed(ProcessOpenNotification::class);
+});
+
+test('Open notifications endpoint accepts the standard destroy actie', function () {
+    Queue::fake([
+        ProcessOpenNotification::class,
+    ]);
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'destroy',
+        'kanaal' => 'zaaktypen',
+        'resource' => 'zaaktype',
+        'hoofdObject' => 'https://example.com/catalogi/api/v1/zaaktypen/123',
+        'resourceUrl' => 'https://example.com/catalogi/api/v1/zaaktypen/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    Queue::assertPushed(ProcessOpenNotification::class);
+});
+
 test('hoofdObject met vreemde host wordt geweigerd (SSRF-bescherming)', function () {
     $response = $this->postJson(route('api.open-notifications.listen'), [
         'actie' => 'create',
