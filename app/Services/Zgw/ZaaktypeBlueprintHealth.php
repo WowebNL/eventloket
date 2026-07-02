@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Services\Zgw;
 
 use App\Enums\BlueprintFindingType;
+use App\Livewire\ConnectionVerifier;
 use App\Models\MunicipalityZaaktypeMapping;
+use App\Models\Zaaktype;
 use App\ValueObjects\ZGW\BlueprintFinding;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +26,7 @@ use Woweb\Zgw\Facades\Zgw;
  * data). Transport errors skip the affected checks with a warning instead of
  * producing findings: a flaky read must not raise false alarms.
  *
- * Reuse hooks: the {@see \App\Livewire\ConnectionVerifier} modal and the
+ * Reuse hooks: the {@see ConnectionVerifier} modal and the
  * koppeling form could surface these findings interactively as well.
  */
 final class ZaaktypeBlueprintHealth
@@ -217,7 +219,7 @@ final class ZaaktypeBlueprintHealth
     /**
      * The omschrijvingen of the informatieobjecttypen linked to the version,
      * resolved through the standard zaaktype-informatieobjecttypen relation
-     * (mirrors {@see \App\Models\Zaaktype::getDocumentTypes()} and
+     * (mirrors {@see Zaaktype::getDocumentTypes()} and
      * {@see ZaaktypeCatalogusOptions::informatieobjecttypen()}).
      *
      * @return Collection<int, string>|null

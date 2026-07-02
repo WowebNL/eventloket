@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace App\Services\Zgw;
 
+use App\Console\Commands\Zaaktypen\SyncZaaktypen;
+use App\EventForm\Submit\ResolveZaaktype;
 use App\Models\Municipality;
+use App\Models\Zaak;
 use App\Models\Zaaktype;
 
 /**
  * Activates the per-zaaktype fallback to the main connection: when a mapped
  * own-instance zaaktype has no valid definitief version anymore, the matching
  * main-catalogus zaaktype is linked to the municipality so
- * {@see \App\EventForm\Submit\ResolveZaaktype} finds it by role and new zaken
+ * {@see ResolveZaaktype} finds it by role and new zaken
  * are created on main.
  *
  * Invariant this creates: a main row linked to a municipality with an own ZGW
  * connection is an (active or historical) fallback. That link is never removed
  * on restore, because zaken created during the fallback window derive their
- * municipality through the zaaktype row ({@see \App\Models\Zaak::municipality()});
+ * municipality through the zaaktype row ({@see Zaak::municipality()});
  * the revived own-instance row simply wins again through the resolve ordering.
- * {@see \App\Console\Commands\Zaaktypen\SyncZaaktypen} preserves the link too:
+ * {@see SyncZaaktypen} preserves the link too:
  * it skips own-instance municipalities when linking and only unlinks inactive
  * rows. Connection resolution stays correct because the resolver honours the
  * row's `connection` column.
