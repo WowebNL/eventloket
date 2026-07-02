@@ -80,10 +80,14 @@ final class ZaaktypeBlueprintHealth
             $findings[] = new BlueprintFinding('initial_statustype', BlueprintFindingType::MappedValueNotFound, $mapping->initial_statustype);
         }
 
-        if (ZaaktypeBlueprint::eindStatustype($mapping, $statustypen) === null) {
-            $findings[] = new BlueprintFinding('eind_statustype', BlueprintFindingType::Missing);
-        } elseif ($mapping?->eind_statustype && $statustypen->firstWhere('omschrijving', $mapping->eind_statustype) === null) {
-            $findings[] = new BlueprintFinding('eind_statustype', BlueprintFindingType::MappedValueNotFound, $mapping->eind_statustype);
+        // The eind-statustype only needs configuring when withdrawal is enabled;
+        // when it is off the koppeling form hides the field, so do not report it.
+        if (ZgwConnectionConfig::allowsOrganiserWithdrawal($connectionName)) {
+            if (ZaaktypeBlueprint::eindStatustype($mapping, $statustypen) === null) {
+                $findings[] = new BlueprintFinding('eind_statustype', BlueprintFindingType::Missing);
+            } elseif ($mapping?->eind_statustype && $statustypen->firstWhere('omschrijving', $mapping->eind_statustype) === null) {
+                $findings[] = new BlueprintFinding('eind_statustype', BlueprintFindingType::MappedValueNotFound, $mapping->eind_statustype);
+            }
         }
 
         return $findings;
@@ -118,6 +122,12 @@ final class ZaaktypeBlueprintHealth
      */
     private function checkResultaattypen(string $connectionName, string $identificatie, string $url, ?MunicipalityZaaktypeMapping $mapping): array
     {
+        // The ingetrokken-resultaattype only applies to organiser withdrawal;
+        // when that is off the koppeling form hides the field, so do not report it.
+        if (! ZgwConnectionConfig::allowsOrganiserWithdrawal($connectionName)) {
+            return [];
+        }
+
         $resultaattypen = $this->index($connectionName, $identificatie, 'resultaattypen', $url);
 
         if ($resultaattypen === null) {

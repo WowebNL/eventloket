@@ -243,6 +243,7 @@ class MunicipalityZgwConnection extends Model
             'allowed_hosts' => $this->allowed_hosts,
             'bronorganisatie_rsin' => $this->bronorganisatie_rsin,
             'vertrouwelijkheid_map' => $this->vertrouwelijkheid_map,
+            'allow_organiser_withdrawal' => $this->allow_organiser_withdrawal,
         ];
 
         foreach ($overrides as $key => $value) {
