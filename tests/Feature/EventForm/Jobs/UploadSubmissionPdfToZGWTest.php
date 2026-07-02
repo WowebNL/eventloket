@@ -126,8 +126,9 @@ test('happy path: store-response zonder uuid → uuid wordt afgeleid, geen Argum
         ]),
     ]));
 
-    // Crucial: the store response carries NO `uuid`, exactly like the real ZGW
-    // client returns. The derived uuid must come from the trailing url segment.
+    // Crucial: the store response carries NO `uuid` (the real ZGW client only
+    // derives one for list items) and a null `beschrijving` (RX Mission omits it
+    // where OpenZaak returns an empty string). Neither may crash the job.
     Http::fake([
         '*/documenten/api/v1/enkelvoudiginformatieobjecten' => Http::response([
             'url' => 'https://zgw.example.com/documenten/api/v1/enkelvoudiginformatieobjecten/doc-9',
@@ -138,7 +139,7 @@ test('happy path: store-response zonder uuid → uuid wordt afgeleid, geen Argum
             'versie' => 1,
             'bestandsnaam' => 'aanvraagformulier.pdf',
             'inhoud' => 'https://zgw.example.com/documenten/api/v1/enkelvoudiginformatieobjecten/doc-9/download',
-            'beschrijving' => '',
+            'beschrijving' => null,
             'informatieobjecttype' => 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',
             'formaat' => 'application/pdf',
             'locked' => false,

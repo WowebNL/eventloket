@@ -18,7 +18,9 @@ class Informatieobject implements Arrayable
         public readonly string|int $versie,
         public readonly string $bestandsnaam,
         public readonly string $inhoud,
-        public readonly string $beschrijving,
+        // Optional in ZGW: OpenZaak returns an empty string, but some backends
+        // (e.g. RX Mission) omit it or return null.
+        public readonly ?string $beschrijving,
         public readonly string $informatieobjecttype,
         public readonly string $formaat,
         public readonly bool $locked,
