@@ -288,6 +288,29 @@ test('registers the initiator on the deelzaak from the form aanvrager data, not 
         && ($request->data()['betrokkeneIdentificatie']['statutaireNaam'] ?? null) === 'Woweb');
 });
 
+test('registers a natuurlijk_persoon initiator from the form name when there is no KvK', function () {
+    // A private aanvrager (no KvK). The name is not among the hashed snapshot
+    // keys, and the builder sends no BSN, so a valid natuurlijk_persoon rol is
+    // registered on the deelzaak.
+    fakeDoorkomstForInitiator();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->update(['form_state_snapshot' => routeSnapshotWithValues([
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Jansen',
+    ])]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen')
+        && $request->data()['betrokkeneType'] === 'natuurlijk_persoon'
+        && ($request->data()['betrokkeneIdentificatie']['geslachtsnaam'] ?? null) === 'Jansen'
+        && ($request->data()['betrokkeneIdentificatie']['voornamen'] ?? null) === 'Jan'
+        && ! array_key_exists('kvkNummer', $request->data()['betrokkeneIdentificatie']));
+});
+
 test('skips the initiator when the form has no aanvrager data', function () {
     fakeDoorkomstForInitiator();
 
