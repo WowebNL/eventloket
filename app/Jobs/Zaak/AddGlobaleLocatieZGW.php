@@ -45,8 +45,14 @@ class AddGlobaleLocatieZGW implements ShouldQueue
             'objectType' => 'overige',
             'objectTypeOverige' => 'GlobaleLocatie',
             'relatieomschrijving' => 'Globale locatie van het evenement',
+            // For objectType "overige" the ZGW ObjectOverige identification lives
+            // under objectIdentificatie.overigeData (a free-form object); a bare
+            // `naam` is rejected with a 400 (objectIdentificatie.overigeData is
+            // required).
             'objectIdentificatie' => [
-                'naam' => $locaties,
+                'overigeData' => [
+                    'naam' => $locaties,
+                ],
             ],
         ]);
     }
