@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Shared\Exports\AdvisorEventExporter;
 use App\Filament\Shared\Exports\BaseEventExporter;
 use App\Filament\Shared\Exports\ExtendedEventExporter;
@@ -435,19 +436,18 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected function applyHiddenResultaatTypesFilter(Builder $query)
     {
-        // Preload all zaaktypes that have a non-empty hidden_resultaat_types list.
-        // For each one, exclude zaken that both belong to that zaaktype AND have
-        // their resultaattype_url in the hidden list. Uses only Laravel abstractions
-        // so it works on both MySQL and PostgreSQL.
-        $zaaktypesWithHidden = Zaaktype::whereNotNull('hidden_resultaat_types')
-            ->whereJsonLength('hidden_resultaat_types', '>', 0)
-            ->get(['id', 'hidden_resultaat_types']);
+        // The effective hidden-resultaattype urls per zaaktype: the admin-managed
+        // row value, overridden by the per-municipality blueprint where a gemeente
+        // runs its own ZGW instance. For each one, exclude zaken that both belong
+        // to that zaaktype AND have their resultaattype_url in the hidden list.
+        // Uses only Laravel abstractions so it works on both MySQL and PostgreSQL.
+        foreach (Zaaktype::effectiveHiddenResultaatTypesMap() as $zaaktypeId => $hiddenUrls) {
+            if (empty($hiddenUrls)) {
+                continue;
+            }
 
-        foreach ($zaaktypesWithHidden as $zaaktype) {
-            $hiddenUrls = $zaaktype->hidden_resultaat_types;
-
-            $query->whereNot(function (Builder $q) use ($zaaktype, $hiddenUrls) {
-                $q->where('zaaktype_id', $zaaktype->id)
+            $query->whereNot(function (Builder $q) use ($zaaktypeId, $hiddenUrls) {
+                $q->where('zaaktype_id', $zaaktypeId)
                     ->whereNotNull('reference_data->resultaattype_url')
                     ->whereIn('reference_data->resultaattype_url', $hiddenUrls);
             });
@@ -551,28 +551,20 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected function zaaktypesFilter()
     {
-        return Select::make('zaaktypes')
+        // Filter on the logical role rather than on individual zaaktype rows:
+        // every municipality has its own concrete zaaktype with the same name, so
+        // a name list would show duplicates. The four roles cover all of them.
+        return Select::make('zaaktype_roles')
             ->label(__('resources/zaak.columns.zaaktype.label'))
-            ->options(function () {
-                $query = Zaaktype::query()->orderBy('name');
-
-                if (in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])) {
-                    /** @var Municipality $municipality */
-                    $municipality = Filament::getTenant();
-                    $query->where('municipality_id', $municipality->id);
-                }
-
-                return $query->pluck('name', 'id');
-            })
+            ->options(ZaaktypeRole::class)
             ->multiple()
-            ->searchable()
             ->preload();
     }
 
     protected function applyZaaktypesFilter(Builder $query, array $filters)
     {
-        if (! empty($filters['zaaktypes'])) {
-            $query->whereIn('zaaktype_id', $filters['zaaktypes']);
+        if (! empty($filters['zaaktype_roles'])) {
+            $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('role', $filters['zaaktype_roles']));
         }
     }
 }

@@ -17,6 +17,7 @@
  * van de werkelijkheid staan.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\ResolveZaaktype;
@@ -87,6 +88,25 @@ test('inactieve zaaktypes worden overgeslagen', function () {
 
     expect(fn () => $this->resolve->forState($state))
         ->toThrow(RuntimeException::class, 'Geen actief zaaktype');
+});
+
+test('resolveert op de expliciete role-kolom, ook als de naam niet de conventie volgt', function () {
+    $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+
+    // A name that does not match the prefix convention, but tagged with the role.
+    $verwacht = Zaaktype::factory()->create([
+        'name' => 'Aanvraag groot evenement Heerlen',
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+
+    expect($this->resolve->forState($state)->id)->toBe($verwacht->id);
 });
 
 test('geen gemeente herleidbaar uit state → exception', function () {

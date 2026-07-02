@@ -146,7 +146,7 @@ test('editing intern zaaknummer creates a new zaakeigenschap and updates referen
     $catalogiEigenschapUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/intern-zaaknummer';
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope([
             [
                 'url' => $catalogiEigenschapUrl,
                 'naam' => 'intern_zaaknummer',
@@ -154,7 +154,7 @@ test('editing intern zaaknummer creates a new zaakeigenschap and updates referen
                 'definitie' => 'Intern zaaknummer',
                 'specificatie' => [],
             ],
-        ], 200),
+        ]), 200),
         ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen*' => function (Request $request) use ($zgwZaakUrl, $catalogiEigenschapUrl) {
             return Http::response([
                 'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen/new-eigenschap',
@@ -192,6 +192,13 @@ test('deleting intern zaaknummer removes the zaakeigenschap and clears reference
 
     $existingEigenschapUrl = ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen/existing-eigenschap';
 
+    // ZGW returns 204 No Content for a successful DELETE; the new client requires it.
+    // Register this before fakeSingleZaak so its greedy ".../zaken/1*" stub does not
+    // catch the zaakeigenschap delete URL first (Http::fake is first-match-wins).
+    Http::fake([
+        $existingEigenschapUrl => Http::response(null, 204),
+    ]);
+
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak('1', [
         '_expand' => [
             'eigenschappen' => [
@@ -205,17 +212,6 @@ test('deleting intern zaaknummer removes the zaakeigenschap and clears reference
                 ],
             ],
         ],
-    ]);
-
-    Http::fake([
-        $existingEigenschapUrl => Http::response([
-            'url' => $existingEigenschapUrl,
-            'uuid' => 'existing-eigenschap',
-            'zaak' => $zgwZaakUrl,
-            'eigenschap' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/intern-zaaknummer',
-            'naam' => 'intern_zaaknummer',
-            'waarde' => '',
-        ], 200),
     ]);
 
     ZgwHttpFake::wildcardFake();

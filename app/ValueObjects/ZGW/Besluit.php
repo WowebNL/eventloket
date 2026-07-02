@@ -4,6 +4,7 @@ namespace App\ValueObjects\ZGW;
 
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 
 final readonly class Besluit implements Arrayable
 {
@@ -21,7 +22,7 @@ final readonly class Besluit implements Arrayable
         public string $ingangsdatum,
         public string $verzenddatum,
         public ?string $vervaldatum = null,
-        public ?BesluitType $besluittypeObject = null,
+        public ?BesluitTypeData $besluittypeObject = null,
         public ?Collection $besluitDocumenten = null,
         ...$otherParams
     ) {

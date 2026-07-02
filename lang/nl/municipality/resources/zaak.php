@@ -157,64 +157,6 @@ return [
             'advice_requests' => [
                 'label' => 'Adviesvragen',
             ],
-        ],
-    ],
-    'infolist_legacy' => [
-        'sections' => [
-            'information' => [
-                'label' => 'Informatie',
-                'description' => 'Informatie over de zaak',
-            ],
-            'actions' => [
-                'label' => 'Acties',
-                'description' => 'Voer wijzigingen uit binnen de zaak',
-                'actions' => [
-                    'edit_risico_classificatie' => [
-                        'label' => 'Wijzigen',
-                        'fields' => [
-                            'risico_classificatie' => [
-                                'label' => 'Risicoclassificatie',
-                            ],
-                            'risico_classificatie_toelichting' => [
-                                'label' => 'Toelichting risicoclassificatie',
-                                'helper_text' => 'Beargumenteer waarom je de risico classificatie wijzigt.',
-                            ],
-                        ],
-                    ],
-                    'edit_status' => [
-                        'label' => 'Wijzigen',
-                    ],
-                    'edit_intern_zaaknummer' => [
-                        'label' => 'Wijzigen',
-                        'placeholder' => 'Niet ingesteld',
-                        'fields' => [
-                            'intern_zaaknummer' => [
-                                'label' => 'Intern zaaknummer',
-                            ],
-                        ],
-                    ],
-                    'delete_intern_zaaknummer' => [
-                        'label' => 'Verwijderen',
-                    ],
-                ],
-                'handled_status_set_by' => [
-                    'label' => 'Door :user',
-                ],
-            ],
-        ],
-        'tabs' => [
-            'decisions' => [
-                'label' => 'Besluiten',
-            ],
-            'documents' => [
-                'label' => 'Bestanden',
-            ],
-            'messages' => [
-                'label' => 'Organisatievragen',
-            ],
-            'advice_requests' => [
-                'label' => 'Adviesvragen',
-            ],
             'locations' => [
                 'label' => 'Locaties',
                 'information' => [

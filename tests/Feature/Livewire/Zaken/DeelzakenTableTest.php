@@ -135,3 +135,57 @@ test('does not show zaken with a different data_object_url', function () {
         ->assertOk()
         ->assertCountTableRecords(0);
 });
+
+test('shows deelzaken linked through the local hoofdzaak relation', function () {
+    ZgwHttpFake::wildcardFake();
+
+    $hoofdzaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $deelzaakType = Zaaktype::factory()->create(['name' => 'Doorkomst vergunning']);
+
+    Zaak::factory()->count(2)->create([
+        'zaaktype_id' => $deelzaakType->id,
+        'organisation_id' => $this->organisation->id,
+        'hoofdzaak_id' => $hoofdzaak->id,
+    ]);
+
+    $this->actingAs($this->organiser);
+
+    livewire(DeelzakenTable::class, ['zaak' => $hoofdzaak])
+        ->assertOk()
+        ->assertCountTableRecords(2);
+});
+
+test('from a deelzaak it shows the hoofdzaak and its siblings', function () {
+    ZgwHttpFake::wildcardFake();
+
+    $hoofdzaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $deelzaakType = Zaaktype::factory()->create(['name' => 'Doorkomst vergunning']);
+
+    $deelzaak = Zaak::factory()->create([
+        'zaaktype_id' => $deelzaakType->id,
+        'organisation_id' => $this->organisation->id,
+        'hoofdzaak_id' => $hoofdzaak->id,
+    ]);
+
+    $sibling = Zaak::factory()->create([
+        'zaaktype_id' => $deelzaakType->id,
+        'organisation_id' => $this->organisation->id,
+        'hoofdzaak_id' => $hoofdzaak->id,
+    ]);
+
+    $this->actingAs($this->organiser);
+
+    // The viewing deelzaak is excluded; the hoofdzaak and the sibling deelzaak remain.
+    livewire(DeelzakenTable::class, ['zaak' => $deelzaak])
+        ->assertOk()
+        ->assertCanSeeTableRecords([$hoofdzaak, $sibling])
+        ->assertCountTableRecords(2);
+});

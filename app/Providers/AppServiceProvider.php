@@ -2,16 +2,13 @@
 
 namespace App\Providers;
 
-use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Auth\CaseInsensitiveUserProvider;
-use App\Console\Commands\Zaaktypen\SyncZaaktypen;
 use App\EventForm\Template\LabelRenderer;
 use App\Filament\Admin\Resources\ApplicationResource\Pages\ListApplications;
-use App\Jobs\ProcessOpenNotification;
-use App\Listeners\NotifySlackOfFailedJob;
 use App\Livewire\PersistTableStateHook;
 use App\Models\Export;
 use App\Models\Import;
+use App\Services\Zgw\ZgwConnectionResolver;
 use App\Support\CarbonBusinessDaysMixin;
 use App\Support\Uploads\DocumentUploadType;
 use Carbon\Carbon;
@@ -22,16 +19,13 @@ use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Contracts\View\View;
 use Illuminate\Notifications\Messages\MailMessage;
-use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
 use Livewire\Livewire;
-use Woweb\Openzaak\Openzaak;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -63,6 +57,11 @@ class AppServiceProvider extends ServiceProvider
         // schema-component-renders — anders zou de WeakMap-cache leeg
         // zijn bij elke Filament-resolution.
         $this->app->singleton(LabelRenderer::class);
+
+        // Resolves the ZGW connection name per municipality. Singleton so the
+        // per-municipality memo (and, later, runtime connection registration)
+        // lives for the whole request/worker.
+        $this->app->singleton(ZgwConnectionResolver::class);
 
         // Mirrors the session-persisted table state (filters, sort, search,
         // columns) into the database per user, so it survives a new session.
@@ -112,23 +111,16 @@ class AppServiceProvider extends ServiceProvider
             Password::defaults(fn () => Password::min(12)->mixedCase()->numbers()->symbols()->uncompromised());
         }
         Passport::tokensExpireIn(CarbonInterval::days(config('app.api.token_expire_in_days')));
+        Passport::tokensCan([
+            'api:access' => 'Algemene toegang tot de API endpoints',
+            'notifications:receive' => 'Toegang tot de open-notifications listen webhook',
+        ]);
 
         Carbon::mixin(new CarbonBusinessDaysMixin);
 
-        Event::listen(JobFailed::class, NotifySlackOfFailedJob::class);
-
-        $this->bindCustomMethods();
-    }
-
-    private function bindCustomMethods(): void
-    {
-        // ProcessOpenNotification blijft voor OpenZaak-notificaties (status,
-        // besluit, document). De ZGW-jobs hieronder lezen in de nieuwe flow
-        // hun input uit de lokale `Zaak` (via Laravel's SerializesModels),
-        // dus ze hebben geen ObjectsApi-argument meer nodig; de container
-        // regelt de Openzaak-injection via standaard method-resolution.
-        $this->app->bindMethod([ProcessOpenNotification::class, 'handle'], fn ($job) => $job->handle(openzaak: app(Openzaak::class), typeProcessor: app(GetIncommingNotificationType::class)));
-
-        $this->app->bindMethod([SyncZaaktypen::class, 'handle'], fn ($command) => $command->handle(app(Openzaak::class)));
+        // NotifySlackOfFailedJob and LogZgwRequest are registered automatically
+        // by Laravel's event discovery (they live in app/Listeners and type-hint
+        // their event). Registering them manually here as well would fire each
+        // listener twice, so we rely on discovery only.
     }
 }

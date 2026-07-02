@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Jobs\Submit;
 
-use App\Enums\DocumentVertrouwelijkheden;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
+use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Upload het zojuist gegenereerde inzendingsbewijs (PDF) als
@@ -55,11 +57,12 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
         $content = (string) Storage::disk('local')->get($path);
         $informatieobjecttype = $this->resolveInformatieobjecttype();
 
-        $oz = new Openzaak;
-        $info = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
+        $info = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
-            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'vertrouwelijkheidaanduiding' => ZgwConnectionConfig::systemUploadDefault($connectionName),
             'titel' => 'Aanvraagformulier '.$this->zaak->reference_data->naam_evenement,
             'auteur' => 'Eventloket',
             'taal' => 'dut',
@@ -71,7 +74,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             'indicatieGebruiksrecht' => false,
         ]));
 
-        $oz->zaken()->zaakinformatieobjecten()->store([
+        $connection->zaken()->zaakinformatieobjecten()->store([
             'zaak' => $this->zaak->zgw_zaak_url,
             'informatieobject' => $info->url,
         ]);
@@ -92,8 +95,12 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
 
     private function resolveInformatieobjecttype(): string
     {
-        $first = $this->zaak->zaaktype?->document_types?->first();
-        if (! $first || ! property_exists($first, 'url') || $first->url === '') {
+        // The aanvraagformulier PDF uses its own blueprint slot, falling back
+        // to the historical "first type" when none is configured.
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $chosen = ZaaktypeBlueprint::aanvraagInformatieobjecttype($mapping, $this->zaak->document_types);
+
+        if (! $chosen || ! $chosen->url) {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
                 .($this->zaak->zaaktype->id ?? '?')
@@ -101,6 +108,6 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             );
         }
 
-        return (string) $first->url;
+        return (string) $chosen->url;
     }
 }

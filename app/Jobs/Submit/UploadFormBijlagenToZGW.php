@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Jobs\Submit;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\EventForm\Schema\EventFormSchema;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
+use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Forms\Components\FileUpload;
@@ -17,7 +19,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ReflectionObject;
 use RuntimeException;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Upload alle FileUpload-bijlagen die de organisator op de bijlagen-
@@ -134,15 +136,16 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         }
 
         $informatieobjecttype = $this->resolveInformatieobjecttype();
-        $oz = new Openzaak;
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
 
         foreach ($aanwezig as $pad => $bestandsnaam) {
             $content = (string) $disk->get($pad);
 
-            $info = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+            $info = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
                 'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
                 'creatiedatum' => now()->format('Y-m-d'),
-                'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+                'vertrouwelijkheidaanduiding' => ZgwConnectionConfig::systemUploadDefault($connectionName),
                 'titel' => $bestandsnaam,
                 'auteur' => $this->zaak->organiserUser->name ?? 'Organisator',
                 'taal' => 'dut',
@@ -154,7 +157,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
                 'indicatieGebruiksrecht' => false,
             ]));
 
-            $oz->zaken()->zaakinformatieobjecten()->store([
+            $connection->zaken()->zaakinformatieobjecten()->store([
                 'zaak' => $this->zaak->zgw_zaak_url,
                 'informatieobject' => $info->url,
             ]);
@@ -221,15 +224,13 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
     }
 
     /**
-     * Voor nu: zoek het informatieobjecttype waarvan de omschrijving
-     * "bijlage" bevat (case-insensitive); valt terug op het eerste type
-     * als er geen treffer is. TODO: per upload-veld instelbaar maken,
-     * waarschijnlijk via een mapping op Zaaktype (per gemeente kan het
-     * informatieobjecttype namelijk verschillen per upload-veld).
+     * Resolve the informatieobjecttype for attachments via the blueprint:
+     * the mapped bijlage-type when configured, otherwise the type whose
+     * omschrijving contains "bijlage" (case-insensitive), otherwise the first.
      */
     private function resolveInformatieobjecttype(): string
     {
-        $types = $this->zaak->zaaktype?->document_types;
+        $types = $this->zaak->document_types;
         if (! $types || $types->isEmpty()) {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
@@ -238,12 +239,10 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
             );
         }
 
-        $bijlageType = $types->first(static fn ($type): bool => property_exists($type, 'omschrijving')
-            && str_contains(mb_strtolower($type->omschrijving), 'bijlage')
-        );
-        $chosen = $bijlageType ?? $types->first();
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $chosen = ZaaktypeBlueprint::bijlageInformatieobjecttype($mapping, $types);
 
-        if (! $chosen || ! property_exists($chosen, 'url') || $chosen->url === '') {
+        if (! $chosen || ! $chosen->url) {
             throw new RuntimeException(
                 'Geen informatieobjecttype gevonden voor zaaktype '
                 .($this->zaak->zaaktype->id ?? '?')

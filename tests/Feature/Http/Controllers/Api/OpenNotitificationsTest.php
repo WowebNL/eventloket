@@ -1,8 +1,7 @@
 <?php
 
-use App\Jobs\DocumentNotificationReceived;
-use App\Jobs\Zaak\ClearZaakCache;
-use App\Jobs\ZaakStatusNotificationReceived;
+use App\Jobs\ProcessOpenNotification;
+use App\Models\MunicipalityZgwConnection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
@@ -14,10 +13,13 @@ beforeEach(function () {
 
     $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
 
+    // The listen webhook requires the notifications:receive scope, so the token
+    // is requested with that scope (see EnsureClientIsResourceOwner on the route).
     $response = $this->postJson(route('passport.token'), [
         'grant_type' => 'client_credentials',
         'client_id' => $client->id,
         'client_secret' => '12345678',
+        'scope' => 'notifications:receive',
     ]);
 
     $body = $response->json();
@@ -60,7 +62,7 @@ test('Open notifications endpoint is reachable with valid access key', function 
 
 test('Open notifications endpoint handles update zaak eigenschap notification', function () {
     Queue::fake([
-        ClearZaakCache::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -75,13 +77,13 @@ test('Open notifications endpoint handles update zaak eigenschap notification', 
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(ClearZaakCache::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
 test('Open notifications endpoint handles zaak status changed notification', function () {
     Queue::fake([
-        ZaakStatusNotificationReceived::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -96,13 +98,13 @@ test('Open notifications endpoint handles zaak status changed notification', fun
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(ZaakStatusNotificationReceived::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
 test('Open notifications endpoint handles document creation notification', function () {
     Queue::fake([
-        DocumentNotificationReceived::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -117,13 +119,13 @@ test('Open notifications endpoint handles document creation notification', funct
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(DocumentNotificationReceived::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
 test('Open notifications endpoint handles document update notification', function () {
     Queue::fake([
-        DocumentNotificationReceived::class,
+        ProcessOpenNotification::class,
     ]);
 
     $response = $this->postJson(route('api.open-notifications.listen'), [
@@ -138,7 +140,7 @@ test('Open notifications endpoint handles document update notification', functio
     ]);
 
     $response->assertStatus(200);
-    Queue::assertPushed(DocumentNotificationReceived::class);
+    Queue::assertPushed(ProcessOpenNotification::class);
 
 });
 
@@ -172,4 +174,57 @@ test('resourceUrl met vreemde host wordt geweigerd (SSRF-bescherming)', function
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['resourceUrl']);
+});
+
+test('een notificatie van een eigen gemeente-host wordt geaccepteerd', function () {
+    Queue::fake([ProcessOpenNotification::class]);
+
+    // The connection's own host is not the global OpenZaak host, but it is a
+    // trusted ZGW host, so its notifications must be accepted.
+    MunicipalityZgwConnection::factory()->active()->create();
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://gemeente.example.com/zaken/api/v1/zaken/123',
+        'resourceUrl' => 'https://gemeente.example.com/zaken/api/v1/zaken/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+    Queue::assertPushed(ProcessOpenNotification::class);
+});
+
+test('een ontvangen notificatie landt in het ZGW-logboek van de gemeente', function () {
+    Queue::fake([ProcessOpenNotification::class]);
+
+    // A per-municipality connection whose host uniquely identifies the gemeente,
+    // so the notification is attributed to that municipality's logboek.
+    $connection = MunicipalityZgwConnection::factory()->active()->create();
+    $name = "gemeente_{$connection->municipality_id}";
+
+    $response = $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'create',
+        'kanaal' => 'zaken',
+        'resource' => 'status',
+        'hoofdObject' => 'https://gemeente.example.com/zaken/api/v1/zaken/123',
+        'resourceUrl' => 'https://gemeente.example.com/zaken/api/v1/statussen/456?foo=bar',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], [
+        'Authorization' => 'Bearer '.$this->access_token,
+    ]);
+
+    $response->assertStatus(200);
+
+    // The query string is stripped (it can carry personal data), as for outbound logs.
+    $this->assertDatabaseHas('zgw_request_logs', [
+        'connection' => $name,
+        'municipality_id' => $connection->municipality_id,
+        'method' => 'NOTIFY',
+        'resource' => '/zaken/api/v1/statussen/456',
+        'failed' => false,
+    ]);
 });

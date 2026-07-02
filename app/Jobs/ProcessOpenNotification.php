@@ -8,7 +8,6 @@ use App\Jobs\Zaak\ClearZaakCache;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Woweb\Openzaak\Openzaak;
 
 class ProcessOpenNotification implements ShouldQueue
 {
@@ -16,9 +15,9 @@ class ProcessOpenNotification implements ShouldQueue
 
     public function __construct(private OpenNotification $notification) {}
 
-    public function handle(Openzaak $openzaak, GetIncommingNotificationType $typeProcessor): void
+    public function handle(GetIncommingNotificationType $typeProcessor): void
     {
-        match ($typeProcessor->handle($openzaak, $this->notification)) {
+        match ($typeProcessor->handle($this->notification)) {
             OpenNotificationType::UpdateZaakEigenschap => ClearZaakCache::dispatch($this->notification),
             OpenNotificationType::ZaakStatusChanged => ZaakStatusNotificationReceived::dispatch($this->notification),
             OpenNotificationType::NewZaakDocument => DocumentNotificationReceived::dispatch($this->notification, true)->delay(now()->addSeconds(10)), // delay because document needs to be linked to the zaak first

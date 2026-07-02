@@ -55,14 +55,21 @@ test('upload action dispatches UploadDocumentsJob with file data', function () {
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen*' => Http::response([
+        // Document types are resolved via the zaaktype-informatieobjecttypen relation,
+        // each row linking to one informatieobjecttype fetched by its url.
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
             [
-                'uuid' => '1',
-                'url' => $documentTypeUrl,
-                'omschrijving' => 'Bijlage',
-                'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+                'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen/1',
                 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'informatieobjecttype' => $documentTypeUrl,
             ],
+        ]), 200),
+        $documentTypeUrl => Http::response([
+            'uuid' => '1',
+            'url' => $documentTypeUrl,
+            'omschrijving' => 'Bijlage',
+            'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
         ], 200),
         ZgwHttpFake::$baseUrl.'*' => Http::response([], 200),
     ]);

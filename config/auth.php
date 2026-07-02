@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Application;
 use App\Models\User;
 
 return [
@@ -69,6 +70,11 @@ return [
         'users' => [
             'driver' => 'case-insensitive-eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'applications' => [
+            'driver' => 'eloquent',
+            'model' => Application::class,
         ],
 
         // 'users' => [

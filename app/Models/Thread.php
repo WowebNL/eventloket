@@ -14,7 +14,7 @@ use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
-use App\ValueObjects\OzStatustype;
+use App\Services\Zgw\StatusPhase;
 use Database\Factories\ThreadFactory;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
 
 /**
  * @property ThreadType $type
@@ -160,10 +161,10 @@ class Thread extends Model
         // yet, for example for freshly created or imported zaken whose status has not been
         // synced from ZGW. In that case we skip the fallback rather than crash.
         if ($municipalityReviewerUsers->isEmpty()) {
-            /** @var OzStatustype|null $statustype */
+            /** @var StatusTypeData|null $statustype */
             $statustype = $this->zaak->statustype;
 
-            if ($statustype?->isReceived() || $statustype?->isFinalised()) {
+            if (StatusPhase::isReceived($statustype) || StatusPhase::isFinalised($statustype)) {
                 $municipalityReviewerUsers = collect($this->zaak->getMunicipalityHandlers());
             }
         }
