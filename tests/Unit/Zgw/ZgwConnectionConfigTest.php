@@ -23,6 +23,31 @@ it('leaves a non-date value unchanged even when a date format is configured', fu
     expect(ZgwConnectionConfig::formatEigenschapWaarde('main', 'ZAAK-2026-0001'))->toBe('ZAAK-2026-0001');
 });
 
+it('formats a datum_tijd eigenschap as a 14-char datetime regardless of the connection format', function () {
+    // The catalogus formaat wins: even with a date-only connection default, a
+    // datum_tijd eigenschap must be sent as YYYYMMDDHHMMSS (RX Mission rejects a
+    // bare date with a 400).
+    Config::set('zgw.connections.gemeente_1.eigenschap_date_format', 'Ymd');
+
+    expect(ZgwConnectionConfig::formatEigenschapWaarde('gemeente_1', '2026-07-18', 'datum_tijd'))
+        ->toBe('20260718000000');
+});
+
+it('formats a datum eigenschap as an 8-char date', function () {
+    expect(ZgwConnectionConfig::formatEigenschapWaarde('main', '2026-07-18T18:00:00', 'datum'))
+        ->toBe('20260718');
+});
+
+it('never date-formats a tekst eigenschap even when the connection sets a date format', function () {
+    // A tekst value that happens to parse as a date must not be mangled.
+    Config::set('zgw.connections.gemeente_1.eigenschap_date_format', 'Ymd');
+
+    expect(ZgwConnectionConfig::formatEigenschapWaarde('gemeente_1', '20260702', 'tekst'))
+        ->toBe('20260702');
+    expect(ZgwConnectionConfig::formatEigenschapWaarde('gemeente_1', '2026', 'tekst'))
+        ->toBe('2026');
+});
+
 it('falls back to the configured RSIN for bronorganisatie', function () {
     Config::set('zgw.connections.main.bronorganisatie_rsin', '820151130');
 
