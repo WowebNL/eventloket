@@ -24,20 +24,23 @@ function informatieobjectWithStatus(?string $status): Informatieobject
     );
 }
 
-test('definitief and missing status count as final', function (?string $status) {
+test('finalised and status-less documents count as final', function (?string $status) {
     expect(informatieobjectWithStatus($status)->isDefinitief())->toBeTrue();
 })->with([
     'definitief' => 'definitief',
-    'null' => null,
-    'empty' => '',
+    'gearchiveerd' => 'gearchiveerd',
+    'null (own upload)' => null,
+    'empty (own upload)' => '',
 ]);
 
-test('draft statuses are not final', function (string $status) {
+test('draft and unknown statuses are not final (strict allowlist)', function (string $status) {
     expect(informatieobjectWithStatus($status)->isDefinitief())->toBeFalse();
 })->with([
     'in_bewerking' => 'in_bewerking',
     'ter_vaststelling' => 'ter_vaststelling',
     'concept' => 'concept',
+    // Anything outside the allowlist is hidden, not just the known drafts.
+    'unknown status' => 'iets_onbekends',
 ]);
 
 test('a null beschrijving is accepted (some ZGW backends omit it)', function () {
