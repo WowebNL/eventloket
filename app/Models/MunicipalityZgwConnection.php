@@ -48,6 +48,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property bool $show_adviesvragen_tab
  * @property bool $show_organisatievragen_tab
  * @property bool $suppress_notifications
+ * @property bool $allow_organiser_withdrawal
  * @property Carbon|null $last_verified_at
  * @property Carbon|null $activated_at
  */
@@ -82,6 +83,7 @@ class MunicipalityZgwConnection extends Model
         'show_adviesvragen_tab',
         'show_organisatievragen_tab',
         'suppress_notifications',
+        'allow_organiser_withdrawal',
         'last_verified_at',
         'activated_at',
     ];
@@ -126,6 +128,7 @@ class MunicipalityZgwConnection extends Model
             'show_adviesvragen_tab' => 'boolean',
             'show_organisatievragen_tab' => 'boolean',
             'suppress_notifications' => 'boolean',
+            'allow_organiser_withdrawal' => 'boolean',
             'last_verified_at' => 'datetime',
             'activated_at' => 'datetime',
         ];

@@ -69,7 +69,7 @@ return [
         ],
         'lock_status_for_behandelaar' => [
             'label' => 'Status niet wijzigbaar door behandelaar',
-            'helper' => 'De behandelaar kan de status niet wijzigen en de zaak niet afronden in Eventloket. Intrekken door de organisator blijft mogelijk.',
+            'helper' => 'De behandelaar kan de status niet wijzigen en de zaak niet afronden in Eventloket. Intrekken door de organisator wordt apart geregeld met de instelling hieronder.',
         ],
         'show_besluiten_tab' => [
             'label' => 'Tabblad besluiten tonen',
@@ -90,6 +90,10 @@ return [
         'suppress_notifications' => [
             'label' => 'Geen notificaties versturen',
             'helper' => 'Onderdruk alle notificaties voor een zaak. Alleen de ontvangstbevestiging bij indienen wordt nog verstuurd.',
+        ],
+        'allow_organiser_withdrawal' => [
+            'label' => 'Intrekken door organisator toestaan',
+            'helper' => 'Sta toe dat een organisator een aanvraag intrekt via Eventloket. Zet dit uit voor een OneGround (RX Mission) koppeling: daar mislukt het intrekken omdat het zetten van de eindstatus de zaak meteen archiveert, wat pas mag als alle documenten gearchiveerd zijn.',
         ],
     ],
 

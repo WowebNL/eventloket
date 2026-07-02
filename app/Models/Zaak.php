@@ -138,6 +138,20 @@ class Zaak extends Model implements Eventable
     }
 
     /**
+     * Whether an organiser may withdraw ("intrekken") this zaak from inside
+     * Eventloket. Disabled per connection for a OneGround (RX Mission) backend,
+     * where setting the eind-status archives the zaak immediately and is
+     * rejected unless all related documents are already 'gearchiveerd'. The
+     * global "main" connection (no row) always allows withdrawal.
+     */
+    public function organiserCanWithdraw(): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        return $connection === null || $connection->allow_organiser_withdrawal;
+    }
+
+    /**
      * Whether a behandelaar may change the risico classificatie (and toelichting)
      * from inside Eventloket. The edit writes these eigenschappen by hardcoded
      * naam and bypasses the per-municipality blueprint, so it is only offered on
