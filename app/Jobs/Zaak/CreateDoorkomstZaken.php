@@ -12,6 +12,7 @@ use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Normalizers\OpenFormsNormalizer;
+use App\Services\Zgw\InitiatorRolBuilder;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwResource;
@@ -89,8 +90,14 @@ class CreateDoorkomstZaken implements ShouldQueue
             $this->zaak->zgw_zaak_url.'?expand=zaakobjecten,eigenschappen,rollen,zaakinformatieobjecten'
         ));
 
+        // The initiator is rebuilt from the form's aanvrager data (same source as
+        // the hoofdzaak), not copied from the hoofdzaak ZGW rol: that rol's
+        // betrokkeneIdentificatie is empty and its betrokkene url is not portable
+        // across instances.
+        $initiator = $map->buildInitiator($state);
+
         foreach ($passing as $muniRef) {
-            $this->createDeelzaakFor($hoofdConnectionName, $ozZaak, $muniRef, $state);
+            $this->createDeelzaakFor($hoofdConnectionName, $ozZaak, $muniRef, $state, $initiator);
         }
     }
 
@@ -114,7 +121,10 @@ class CreateDoorkomstZaken implements ShouldQueue
         return ArrayHelper::findElementWithKey($decoded, 'coordinates');
     }
 
-    private function createDeelzaakFor(string $hoofdConnectionName, ZaakReadModel $hoofdZaak, Municipality $muniRef, FormState $state): void
+    /**
+     * @param  array<string, mixed>  $initiator  output of ZaakeigenschappenMap::buildInitiator()
+     */
+    private function createDeelzaakFor(string $hoofdConnectionName, ZaakReadModel $hoofdZaak, Municipality $muniRef, FormState $state, array $initiator): void
     {
         /** @var Municipality|null $municipality */
         $municipality = Municipality::where('brk_identification', $muniRef->brk_identification)->first();
@@ -180,8 +190,8 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
 
         $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
-        $this->copyInitiator($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
-        $this->copyDocumenten($hoofdConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl);
+        $this->createInitiator($deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
+        $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl);
         $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
 
         $newOzZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
@@ -266,34 +276,50 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
     }
 
-    private function copyInitiator(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
+    /**
+     * Register the initiator on the deelzaak from the form's aanvrager data,
+     * mirroring the hoofdzaak initiator ({@see UpdateInitiatorZGW}).
+     * The hoofdzaak ZGW rol is deliberately not copied: its betrokkeneIdentificatie
+     * is empty and its betrokkene url points at the source instance.
+     *
+     * @param  array<string, mixed>  $initiator  output of ZaakeigenschappenMap::buildInitiator()
+     */
+    private function createInitiator(ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype, FormState $state, array $initiator): void
     {
-        if (! $ozZaak->initiator) {
+        if ($initiator === []) {
             return;
         }
 
         $roltypen = $deelConnection->catalogi()->roltypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url]);
         $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
-        $initiator = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
-        if (! $initiator) {
+        $roltype = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
+        if (! $roltype) {
             Log::warning('CreateDoorkomstZaken: no initiator roltype', ['zaak' => $newZaakUrl]);
 
             return;
         }
 
-        $source = $ozZaak->initiator;
-        $deelConnection->zaken()->rollen()->store([
-            'zaak' => $newZaakUrl,
-            'betrokkeneType' => $source['betrokkeneType'] ?? null,
-            'roltype' => $initiator['url'],
-            'roltoelichting' => $source['omschrijving'] ?? null,
-            'betrokkeneIdentificatie' => $source['betrokkeneIdentificatie'] ?? null,
-            'contactpersoonRol' => ($source['contactpersoonRol'] ?? null) ?: null,
-        ]);
+        $rolData = InitiatorRolBuilder::build($newZaakUrl, $roltype['url'], $state, $initiator);
+        if ($rolData === null) {
+            return;
+        }
+
+        $deelConnection->zaken()->rollen()->store($rolData);
     }
 
-    private function copyDocumenten(string $hoofdConnectionName, ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl): void
+    private function copyDocumenten(string $hoofdConnectionName, string $deelConnectionName, ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl): void
     {
+        // Documents are linked by informatieobject url. That url lives in the
+        // hoofdzaak's documenten API, which a different-instance target does not
+        // know ("unknown-service"), so cross-instance document links are skipped.
+        // Copying them would require downloading and re-uploading into the target
+        // documenten API.
+        if ($deelConnectionName !== $hoofdConnectionName) {
+            Log::warning('CreateDoorkomstZaken: skipping cross-instance document links', ['zaak' => $newZaakUrl]);
+
+            return;
+        }
+
         $zios = Zgw::connection($hoofdConnectionName)->zaken()->zaakinformatieobjecten()->index(['zaak' => $ozZaak->url]);
         foreach ($zios as $zio) {
             $informatieobjectUrl = Arr::get($zio, 'informatieobject');
