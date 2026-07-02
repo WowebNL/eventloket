@@ -64,12 +64,12 @@ class Zaaktype extends Model
     /**
      * The ZGW connection name to use for calls about this zaaktype.
      *
-     * Resolved by municipality, which also registers the per-municipality
-     * connection's runtime config. Because per-instance sync attributes a
-     * zaaktype to the municipality whose instance hosts it (see the `connection`
-     * column, used for sync scoping and admin display), this resolves to the same
-     * instance that owns the zaaktype URL, so catalogus reads and zaak creation
-     * stay on that instance, including the main fallback for shared zaaktypen.
+     * The resolver honours the row's `connection` column: a main-catalogus row
+     * always resolves to main (also while linked to an own-instance municipality
+     * as a fallback), and own-instance rows resolve via their municipality,
+     * which also registers the per-municipality connection's runtime config. So
+     * catalogus reads and zaak creation stay on the instance that owns the
+     * zaaktype URL.
      */
     public function zgwConnectionName(): string
     {

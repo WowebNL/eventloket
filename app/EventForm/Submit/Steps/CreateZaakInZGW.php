@@ -10,6 +10,7 @@ use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use Carbon\Carbon;
 use Throwable;
@@ -61,7 +62,7 @@ final class CreateZaakInZGW
      */
     private function resolveVersionUrl(string $connectionName, Zaaktype $zaaktype, FormState $state): string
     {
-        $identificatie = $this->mappingIdentificatie($zaaktype, $state) ?? $zaaktype->identificatie;
+        $identificatie = $this->mappingIdentificatie($connectionName, $zaaktype, $state) ?? $zaaktype->identificatie;
 
         if (is_string($identificatie) && $identificatie !== '') {
             try {
@@ -86,11 +87,18 @@ final class CreateZaakInZGW
      * The connection-catalogus zaaktype identificatie from the blueprint mapping
      * for this municipality and aanvraag-type, or null when no mapping applies.
      */
-    private function mappingIdentificatie(Zaaktype $zaaktype, FormState $state): ?string
+    private function mappingIdentificatie(string $connectionName, Zaaktype $zaaktype, FormState $state): ?string
     {
         $municipality = $zaaktype->municipality;
 
         if ($municipality === null) {
+            return null;
+        }
+
+        // During a main-fallback the zaak is created on "main" while the mapping's
+        // identificatie belongs to the municipality's own catalogus; skip it so the
+        // local row's own (main-catalogus) identificatie resolves the version.
+        if ($municipality->zgwConnection !== null && $connectionName === ZgwConnectionResolver::DEFAULT_CONNECTION) {
             return null;
         }
 

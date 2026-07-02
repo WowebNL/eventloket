@@ -57,6 +57,44 @@ it('resolves a zaak through its zaaktype', function () {
         ->and($zaak->zgwConnectionName())->toBe('main');
 });
 
+it('resolves an own-instance zaaktype to the municipality connection', function () {
+    $municipality = Municipality::factory()->create();
+    MunicipalityZgwConnection::factory()->for($municipality)->active()->create();
+
+    $zaaktype = Zaaktype::factory()->for($municipality)->create([
+        'connection' => "gemeente_{$municipality->id}",
+    ]);
+
+    expect($this->resolver->for($zaaktype))->toBe("gemeente_{$municipality->id}");
+});
+
+it('resolves a main zaaktype linked to an own-instance municipality to main', function () {
+    $municipality = Municipality::factory()->create();
+    MunicipalityZgwConnection::factory()->for($municipality)->active()->create();
+
+    // A main-catalogus row linked as a per-zaaktype fallback: the connection
+    // column wins over the municipality's own connection.
+    $fallback = Zaaktype::factory()->for($municipality)->create([
+        'connection' => 'main',
+    ]);
+
+    expect($this->resolver->for($fallback))->toBe('main')
+        ->and($fallback->zgwConnectionName())->toBe('main');
+});
+
+it('resolves a zaak on a fallback zaaktype to main, not the municipality connection', function () {
+    $municipality = Municipality::factory()->create();
+    MunicipalityZgwConnection::factory()->for($municipality)->active()->create();
+
+    $fallback = Zaaktype::factory()->for($municipality)->create([
+        'connection' => 'main',
+    ]);
+    $zaak = Zaak::factory()->for($fallback)->create();
+
+    expect($this->resolver->for($zaak))->toBe('main')
+        ->and($zaak->zgwConnectionName())->toBe('main');
+});
+
 it('maps an incoming zaak url back to a connection, falling back to main', function () {
     $municipality = Municipality::factory()->create();
     $zaaktype = Zaaktype::factory()->for($municipality)->create();

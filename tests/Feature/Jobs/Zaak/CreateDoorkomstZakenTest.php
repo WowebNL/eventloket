@@ -131,6 +131,9 @@ function doorkomstScenario(bool $hoofdOwnInstance): array
         'role' => ZaaktypeRole::Vergunning,
         'triggers_route_check' => true,
         'is_active' => true,
+        // The resolver routes by this column: an own-instance hoofdzaak carries
+        // its own connection name, a main hoofdzaak stays on main.
+        'connection' => $hoofdOwnInstance ? "gemeente_{$hoofd->id}" : 'main',
     ]);
 
     $hoofdzaak = Zaak::factory()->create([

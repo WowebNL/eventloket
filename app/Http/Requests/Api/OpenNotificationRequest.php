@@ -25,8 +25,10 @@ class OpenNotificationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'actie' => 'required|string|in:create,update,delete,partial_update',
-            'kanaal' => 'required|string|in:zaken,objecten,documenten,besluiten,autorisaties',
+            // The Notificaties API standard uses "destroy" for deletions; "delete"
+            // is kept for tolerance towards non-standard senders.
+            'actie' => 'required|string|in:create,update,delete,partial_update,destroy',
+            'kanaal' => 'required|string|in:zaken,objecten,documenten,besluiten,autorisaties,zaaktypen',
             'resource' => 'required|string',
             'hoofdObject' => ['required', 'url', $this->zgwHostRule()],
             'resourceUrl' => ['required', 'url', $this->zgwHostRule()],
