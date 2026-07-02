@@ -7,6 +7,7 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZaaktypeMa
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZaaktypeMappings\Pages\EditMunicipalityZaaktypeMapping;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Cache;
@@ -132,6 +133,41 @@ it('does not eagerly read the dependent catalogi when opening the edit form', fu
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/resultaattypen'));
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/eigenschappen'));
     Http::assertNotSent(fn ($request): bool => str_contains($request->url(), '/zaaktype-informatieobjecttypen'));
+});
+
+it('hides the eind-statustype and ingetrokken-resultaattype when withdrawal is disabled', function () {
+    $base = 'https://gemeente.example.com';
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $this->municipality->id,
+        'allow_organiser_withdrawal' => false,
+    ]);
+
+    Http::fake([
+        "{$base}/catalogi/api/v1/zaaktypen*" => Http::response(ZgwHttpFake::envelope([
+            ['identificatie' => 'EVT-1', 'omschrijving' => 'Evenementenvergunning', 'url' => "{$base}/catalogi/api/v1/zaaktypen/1"],
+        ])),
+        "{$base}/catalogi/api/v1/statustypen*" => Http::response(ZgwHttpFake::envelope([
+            ['omschrijving' => 'Afgehandeld', 'volgnummer' => 1, 'isEindstatus' => true],
+        ])),
+        "{$base}/catalogi/api/v1/roltypen*" => Http::response(ZgwHttpFake::envelope([
+            ['omschrijving' => 'Aanvrager', 'omschrijvingGeneriek' => 'initiator'],
+        ])),
+        "{$base}/catalogi/api/v1/resultaattypen*" => Http::response(ZgwHttpFake::envelope([
+            ['omschrijving' => 'Afgebroken', 'omschrijvingGeneriek' => 'Afgebroken'],
+        ])),
+        "{$base}/catalogi/api/v1/*" => Http::response(ZgwHttpFake::envelope([])),
+    ]);
+
+    livewire(CreateMunicipalityZaaktypeMapping::class)
+        ->fillForm([
+            'role' => ZaaktypeRole::Vergunning->value,
+            'zaaktype_identificatie' => 'EVT-1',
+        ])
+        ->assertFormFieldIsHidden('eind_statustype')
+        ->assertFormFieldIsHidden('ingetrokken_resultaattype')
+        ->assertFormFieldIsVisible('initial_statustype')
+        ->assertFormFieldIsVisible('initiator_roltype');
 });
 
 it('rejects a second mapping for the same role', function () {
