@@ -46,7 +46,8 @@ test('registers a GlobaleLocatie zaakobject with the composed location names', f
             && $request->method() === 'POST'
             && data_get($request->data(), 'objectType') === 'overige'
             && data_get($request->data(), 'objectTypeOverige') === 'GlobaleLocatie'
-            && data_get($request->data(), 'objectIdentificatie.naam') === 'Marktplein, Hoofdstraat';
+            // ZGW ObjectOverige requires the identification under overigeData.
+            && data_get($request->data(), 'objectIdentificatie.overigeData.naam') === 'Marktplein, Hoofdstraat';
     });
 });
 

@@ -18,7 +18,9 @@ class Informatieobject implements Arrayable
         public readonly string|int $versie,
         public readonly string $bestandsnaam,
         public readonly string $inhoud,
-        public readonly string $beschrijving,
+        // Optional in ZGW: OpenZaak returns an empty string, but some backends
+        // (e.g. RX Mission) omit it or return null.
+        public readonly ?string $beschrijving,
         public readonly string $informatieobjecttype,
         public readonly string $formaat,
         public readonly bool $locked,
@@ -51,14 +53,16 @@ class Informatieobject implements Arrayable
     /**
      * Whether this document may be shown to and notified about.
      *
-     * Explicit ZGW draft statuses (concepts) are hidden. Documents without an
-     * explicit status (our own uploads and legacy documents) and the
-     * "definitief" status are treated as final, so existing behaviour for the
-     * eigen OpenZaak is preserved while concepts from an external ZGW backend
-     * (e.g. RX Mission) are filtered out.
+     * Strict allowlist: only finalised documents are shown. A document without
+     * an explicit status (our own uploads and legacy documents) counts as final,
+     * as do the finalised ZGW statuses. Any other status — the draft statuses
+     * (in_bewerking, ter_vaststelling, concept) but also any unknown or future
+     * one — is treated as not final and hidden.
      */
     public function isDefinitief(): bool
     {
-        return ! in_array($this->status, ['in_bewerking', 'ter_vaststelling', 'concept'], true);
+        return $this->status === null
+            || $this->status === ''
+            || in_array($this->status, ['definitief', 'gearchiveerd'], true);
     }
 }

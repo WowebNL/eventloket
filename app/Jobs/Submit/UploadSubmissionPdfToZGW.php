@@ -8,6 +8,7 @@ use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -59,7 +60,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
 
         $connectionName = $this->zaak->zgwConnectionName();
         $connection = Zgw::connection($connectionName);
-        $info = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
+        $info = new Informatieobject(...ZgwResource::ensureUuid($connection->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
             'vertrouwelijkheidaanduiding' => ZgwConnectionConfig::systemUploadDefault($connectionName),
@@ -72,7 +73,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             'inhoud' => base64_encode($content),
             'informatieobjecttype' => $informatieobjecttype,
             'indicatieGebruiksrecht' => false,
-        ]));
+        ])));
 
         $connection->zaken()->zaakinformatieobjecten()->store([
             'zaak' => $this->zaak->zgw_zaak_url,

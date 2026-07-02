@@ -111,14 +111,14 @@ it('resolves a municipality with its own connection and registers its config', f
     MunicipalityZgwConnection::factory()->for($municipality)->active()->create([
         'zaken_url' => 'https://gemeente-a.example.com/zaken/api/v1/',
         'catalogi_url' => null,
-        'eigenschap_date_format' => 'YmdHis',
+        'bronorganisatie_rsin' => '999999999',
     ]);
 
     $name = $this->resolver->for($municipality);
 
     expect($name)->toBe("gemeente_{$municipality->id}")
         ->and(config("zgw.connections.{$name}.urls.zaken"))->toBe('https://gemeente-a.example.com/zaken/api/v1/')
-        ->and(config("zgw.connections.{$name}.eigenschap_date_format"))->toBe('YmdHis')
+        ->and(config("zgw.connections.{$name}.bronorganisatie_rsin"))->toBe('999999999')
         // Unset values are inherited from main.
         ->and(config("zgw.connections.{$name}.secret_rules.min_length"))->toBe(config('zgw.connections.main.secret_rules.min_length'))
         ->and(config("zgw.connections.{$name}.urls.catalogi"))->toBe(config('zgw.connections.main.urls.catalogi'));
