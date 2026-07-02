@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "43abb5e28e72d8d20125a529cabdcfd9",
+    "content-hash": "8d4a57153650db6e368115d5da13d9fb",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -10897,16 +10897,16 @@
         },
         {
             "name": "woweb/laravel-zgw-client",
-            "version": "v1.2.0",
+            "version": "v1.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WowebNL/laravel-zgw-client.git",
-                "reference": "e574c7cc20966263ec04bd156f0e9ecdcb8ab665"
+                "reference": "7d97193561c03b4109da2aaf42134a23a2f04be0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/e574c7cc20966263ec04bd156f0e9ecdcb8ab665",
-                "reference": "e574c7cc20966263ec04bd156f0e9ecdcb8ab665",
+                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/7d97193561c03b4109da2aaf42134a23a2f04be0",
+                "reference": "7d97193561c03b4109da2aaf42134a23a2f04be0",
                 "shasum": ""
             },
             "require": {
@@ -10926,12 +10926,12 @@
             "type": "library",
             "extra": {
                 "laravel": {
-                    "providers": [
-                        "Woweb\\Zgw\\ZgwServiceProvider"
-                    ],
                     "aliases": {
                         "Zgw": "Woweb\\Zgw\\Facades\\Zgw"
-                    }
+                    },
+                    "providers": [
+                        "Woweb\\Zgw\\ZgwServiceProvider"
+                    ]
                 }
             },
             "autoload": {
@@ -10939,41 +10939,7 @@
                     "Woweb\\Zgw\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Woweb\\Zgw\\Tests\\": "tests/",
-                    "Woweb\\Zgw\\Dev\\": "dev/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "@php vendor/bin/phpunit"
-                ],
-                "test:coverage": [
-                    "@php -d pcov.enabled=1 vendor/bin/phpunit --coverage-text"
-                ],
-                "test:coverage-html": [
-                    "@php -d pcov.enabled=1 vendor/bin/phpunit --coverage-html coverage"
-                ],
-                "contract:fetch": [
-                    "@php scripts/fetch-specs.php"
-                ],
-                "contract": [
-                    "@contract:fetch",
-                    "@php vendor/bin/phpunit --testsuite Contract"
-                ],
-                "contract:coverage": [
-                    "@contract:fetch",
-                    "@php vendor/bin/phpunit tests/Contract/CoverageReportTest.php"
-                ],
-                "dto:generate": [
-                    "@php scripts/generate-dtos.php",
-                    "@php vendor/bin/pint src/Data/Generated src/Data/Writes src/Data/Typed.php --quiet"
-                ],
-                "deptrac": [
-                    "@php vendor/bin/deptrac analyse --no-progress"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "EUPL-1.2"
             ],
@@ -10997,10 +10963,10 @@
                 "zgw"
             ],
             "support": {
-                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.2.0",
-                "issues": "https://github.com/WowebNL/laravel-zgw-client/issues"
+                "issues": "https://github.com/WowebNL/laravel-zgw-client/issues",
+                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.2.1"
             },
-            "time": "2026-06-26T18:19:21+00:00"
+            "time": "2026-07-02T13:50:56+00:00"
         },
         {
             "name": "woweb/openzaak",

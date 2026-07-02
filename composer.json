@@ -42,10 +42,6 @@
         "woweb/openzaak": {
             "type": "vcs",
             "url": "git@github.com:WowebNL/laravel-openzaak.git"
-        },
-        "woweb/laravel-zgw-client": {
-            "type": "vcs",
-            "url": "git@github.com:WowebNL/laravel-zgw-client.git"
         }
     },
     "autoload": {

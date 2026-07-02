@@ -64,8 +64,12 @@ class AddGeometryZGW implements ShouldQueue
                 'objectType' => 'adres',
                 'relatieomschrijving' => 'Adres van het evenement',
                 'objectIdentificatie' => [
+                    // ZGW ObjectAdres requires `identificatie` (the BAG
+                    // nummeraanduiding id); gorOpenbareRuimteNaam is the street
+                    // name, not the Locatieserver adres id.
+                    'identificatie' => $bagObject->nummeraanduiding_id,
                     'wplWoonplaatsNaam' => $bagObject->woonplaatsnaam,
-                    'gorOpenbareRuimteNaam' => $bagObject->id,
+                    'gorOpenbareRuimteNaam' => $bagObject->straatnaam,
                     'huisnummer' => $bagObject->huisnummer,
                     'huisletter' => $bagObject->huisletter,
                     'huisnummertoevoeging' => $bagObject->huisnummertoevoeging,

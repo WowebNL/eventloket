@@ -6,6 +6,7 @@ namespace App\Jobs\Zaak;
 
 use App\Models\User;
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -51,7 +52,7 @@ final class UploadDocumentsJob implements ShouldQueue
             $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($file['original_name'] ?? '', $formaat);
             $titel = ($file['titel'] ?? '') !== '' ? $file['titel'] : pathinfo($bestandsnaam, PATHINFO_FILENAME);
 
-            $informatieobject = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
+            $informatieobject = new Informatieobject(...ZgwResource::ensureUuid($connection->documenten()->enkelvoudiginformatieobjecten()->store([
                 'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
                 'creatiedatum' => now()->format('Y-m-d'),
                 'vertrouwelijkheidaanduiding' => $this->vertrouwelijkheidaanduiding,
@@ -64,7 +65,7 @@ final class UploadDocumentsJob implements ShouldQueue
                 'inhoud' => base64_encode((string) Storage::get($path)),
                 'informatieobjecttype' => $file['informatieobjecttype'],
                 'indicatieGebruiksrecht' => false,
-            ]));
+            ])));
 
             $connection->zaken()->zaakinformatieobjecten()->store([
                 'zaak' => $this->zaak->openzaak->url,
