@@ -27,6 +27,5 @@ it('derives the per-API base urls from OPENZAAK_URL', function () {
 it('carries the application-level technical params with OpenZaak defaults', function () {
     $main = config('zgw.connections.main');
 
-    expect($main['bronorganisatie_rsin'])->toBe('820151130')
-        ->and($main)->toHaveKey('eigenschap_date_format');
+    expect($main['bronorganisatie_rsin'])->toBe('820151130');
 });

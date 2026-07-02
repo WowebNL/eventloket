@@ -20,28 +20,21 @@ class ZgwConnectionConfig
     /**
      * Format a scalar zaakeigenschap value for the wire.
      *
-     * The catalogus eigenschap's formaat is authoritative for date types: a
-     * `datum` wants YYYYMMDD, a `datum_tijd` wants YYYYMMDDHHMMSS (which some
-     * backends such as RX Mission enforce strictly, rejecting a bare date with a
-     * 400). Non-date formats are never date-formatted, so a `tekst` value that
-     * happens to parse as a date is left untouched. When the caller does not
-     * know the formaat, we fall back to the connection-wide
-     * `eigenschap_date_format` override (the legacy OpenZaak behaviour).
+     * The catalogus eigenschap's formaat is authoritative: a `datum` wants
+     * YYYYMMDD, a `datum_tijd` wants YYYYMMDDHHMMSS (which some backends such as
+     * RX Mission enforce strictly, rejecting a bare date with a 400). Any other
+     * formaat (tekst, getal, or an unknown/absent one) is sent unchanged, so a
+     * text value that happens to parse as a date is never mangled.
      */
-    public static function formatEigenschapWaarde(string $connectionName, string $waarde, ?string $formaat = null): string
+    public static function formatEigenschapWaarde(string $waarde, ?string $formaat = null): string
     {
-        if ($waarde === '') {
-            return $waarde;
-        }
-
         $format = match ($formaat) {
             'datum' => 'Ymd',
             'datum_tijd' => 'YmdHis',
-            null => config("zgw.connections.{$connectionName}.eigenschap_date_format"),
             default => null,
         };
 
-        if (! is_string($format) || $format === '') {
+        if ($format === null || $waarde === '') {
             return $waarde;
         }
 
