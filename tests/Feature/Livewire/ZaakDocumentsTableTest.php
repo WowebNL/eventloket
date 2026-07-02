@@ -45,3 +45,23 @@ test('reviewer does see the version column', function () {
     livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
         ->assertTableColumnVisible('versie');
 });
+
+test('in submission-only mode the organiser cannot upload new files', function () {
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    $this->organisation->users()->attach($organiser, ['role' => OrganisationRole::Admin->value]);
+
+    $this->actingAs($organiser);
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak, 'submissionOnly' => true])
+        ->assertTableActionHidden('upload');
+});
+
+test('outside submission-only mode the upload action is available', function () {
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    $this->organisation->users()->attach($organiser, ['role' => OrganisationRole::Admin->value]);
+
+    $this->actingAs($organiser);
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak, 'submissionOnly' => false])
+        ->assertTableActionVisible('upload');
+});

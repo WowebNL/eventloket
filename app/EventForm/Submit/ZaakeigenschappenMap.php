@@ -42,6 +42,29 @@ final class ZaakeigenschappenMap
     ];
 
     /**
+     * The logical eigenschap keys this map can emit: the FormState-derived
+     * ones plus `locaties_evenement`, which is composed by the caller. These are
+     * the keys a per-municipality blueprint maps to concrete ZGW eigenschap namen.
+     *
+     * @return list<string>
+     */
+    public static function logicalKeys(): array
+    {
+        return [...array_keys(self::EIGENSCHAPPEN), 'locaties_evenement'];
+    }
+
+    /**
+     * The default (identity) eigenschap_map: our own OpenZaak names every
+     * eigenschap exactly like its logical key. Used to seed the blueprint.
+     *
+     * @return array<string, string>
+     */
+    public static function defaultEigenschapMap(): array
+    {
+        return array_combine(self::logicalKeys(), self::logicalKeys());
+    }
+
+    /**
      * Bouwt de lijst zaakeigenschappen uit de FormState. Format matcht
      * het oude Objects-API-record: `[{"naam_evenement": "..."}, ...]`.
      * Entries met lege waarde worden weggelaten — OF's `AddZaakeigenschappenZGW`
@@ -64,11 +87,6 @@ final class ZaakeigenschappenMap
         if ($locaties !== null && $locaties !== '') {
             $out[] = ['locaties_evenement' => $locaties];
         }
-
-        // formsubmission_id: OF gebruikte hiervoor `submission.kenmerk` —
-        // wij hebben geen submission-object, dus dit wordt het lokale
-        // zaak-public_id (= OpenZaak identificatie). Wordt door de caller
-        // toegevoegd want op build-tijd is dat nog niet bekend.
 
         return $out;
     }

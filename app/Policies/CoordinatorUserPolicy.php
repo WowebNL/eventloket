@@ -11,10 +11,17 @@ class CoordinatorUserPolicy
 {
     /**
      * Determine whether the user can view any models.
+     *
+     * Restricted to the roles that legitimately manage coordinators, mirroring
+     * update() and delete(), so the gate is not fail-open for other roles.
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        return in_array($user->role, [
+            Role::Admin,
+            Role::MunicipalityAdmin,
+            Role::ReviewerMunicipalityAdmin,
+        ], true);
     }
 
     /**

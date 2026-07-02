@@ -22,4 +22,7 @@ return [
     'organiser' => [
         'label' => 'Organisator',
     ],
+    'koppeling_beheerder' => [
+        'label' => 'Koppeling beheerder',
+    ],
 ];

@@ -3,17 +3,18 @@
 namespace App\Console\Commands\Doorkomst;
 
 use App\Models\Zaaktype;
+use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
-use Woweb\Openzaak\Connection\OpenzaakConnection;
+use Throwable;
+use Woweb\Zgw\Facades\Zgw;
 
 class SyncDeelzaaktypen extends Command
 {
     protected $signature = 'app:sync-deelzaaktypen';
 
-    protected $description = 'Koppelt doorkomst zaaktypen als deelzaaktypen aan evenementenvergunning zaaktypen in Open Zaak';
+    protected $description = 'Koppelt doorkomst zaaktypen als deelzaaktypen aan evenementenvergunning zaaktypen in onze eigen Open Zaak';
 
-    public function handle(): int
+    public function handle(ZgwConnectionResolver $resolver): int
     {
         $this->info('Deelzaaktypen koppelen aan evenementenvergunning zaaktypen...');
 
@@ -44,15 +45,15 @@ class SyncDeelzaaktypen extends Command
         $this->line("Doorkomst zaaktypen gevonden: {$doorkomstZaaktypen->count()}");
         $this->line("Evenementenvergunning zaaktypen gevonden: {$evenementenZaaktypen->count()}");
 
-        $connection = new OpenzaakConnection;
-        $headers = $connection->getHeaders();
-        $baseUrl = rtrim((string) config('openzaak.url'), '/').'/catalogi/api/v1/';
-
         $updated = 0;
         $alreadyCorrect = 0;
         $failed = 0;
+        $skipped = 0;
 
         foreach ($evenementenZaaktypen as $evenementenZaaktype) {
+            $connectionName = $evenementenZaaktype->zgwConnectionName();
+            $connection = Zgw::connection($connectionName);
+
             // All doorkomst zaaktypen except the one belonging to the same municipality
             $expectedUrls = $doorkomstZaaktypen
                 ->where('municipality_id', '!=', $evenementenZaaktype->municipality_id)
@@ -62,17 +63,17 @@ class SyncDeelzaaktypen extends Command
 
             sort($expectedUrls);
 
-            // Fetch the current zaaktype state from Open Zaak
-            $currentResponse = Http::withHeaders($headers)->get($evenementenZaaktype->zgw_zaaktype_url);
+            $uuid = basename((string) $evenementenZaaktype->zgw_zaaktype_url);
 
-            if (! $currentResponse->successful()) {
-                $this->warn("  Ophalen mislukt voor {$evenementenZaaktype->name}: HTTP {$currentResponse->status()}");
+            try {
+                $currentData = $connection->catalogi()->zaaktypen()->show($uuid);
+            } catch (Throwable $exception) {
+                $this->warn("  Ophalen mislukt voor {$evenementenZaaktype->name}: {$exception->getMessage()}");
                 $failed++;
 
                 continue;
             }
 
-            $currentData = $currentResponse->json();
             $currentUrls = $currentData['deelzaaktypen'] ?? [];
             sort($currentUrls);
 
@@ -84,52 +85,28 @@ class SyncDeelzaaktypen extends Command
             }
 
             $count = count($expectedUrls);
-            $this->line("  Bijwerken: {$evenementenZaaktype->name} ({$count} deelzaaktypen verwacht)");
 
-            $uuid = basename((string) $evenementenZaaktype->zgw_zaaktype_url);
-            $isConcept = (bool) ($currentData['concept'] ?? false);
-
-            // Open Zaak only allows patching structural fields (deelzaaktypen) on concept zaaktypen.
-            // If already published, unpublish first by forcing concept state via the force-publish workaround
-            // is not available — instead we rely on Open Zaak allowing PATCH when concept=true.
-            // If the zaaktype is published we attempt the PATCH anyway; some Open Zaak versions allow it.
-            if (! $isConcept) {
-                $this->line('    Zaaktype is gepubliceerd. Terugzetten naar concept...');
-
-                $conceptResponse = Http::withHeaders($headers)->patch(
-                    $baseUrl."zaaktypen/{$uuid}",
-                    ['concept' => true]
+            // Deelzaaktypen linking is a structural write. Externally managed instances
+            // are left untouched: the koppeling beheerder sets these up in their own catalogus.
+            if (! $resolver->isManaged($connectionName)) {
+                $this->warn(
+                    "  Overgeslagen (externe connectie '{$connectionName}'): {$evenementenZaaktype->name}. ".
+                    "Stel de {$count} deelzaaktypen handmatig in via de externe catalogus (read-only)."
                 );
+                $skipped++;
 
-                if (! $conceptResponse->successful()) {
-                    $urlList = collect($expectedUrls)->map(fn ($url) => "      - {$url}")->implode("\n");
-                    $this->warn(
-                        "    Terugzetten naar concept mislukt (HTTP {$conceptResponse->status()}).\n".
-                        "    Stel deelzaaktypen handmatig in via Open Zaak beheer — verwacht ({$count}):\n".
-                        $urlList
-                    );
-                    $failed++;
-
-                    continue;
-                }
+                continue;
             }
 
-            // PATCH deelzaaktypen
-            $patchResponse = Http::withHeaders($headers)->patch(
-                $baseUrl."zaaktypen/{$uuid}",
-                ['deelzaaktypen' => $expectedUrls]
-            );
+            $this->line("  Bijwerken: {$evenementenZaaktype->name} ({$count} deelzaaktypen verwacht)");
 
-            if (! $patchResponse->successful()) {
-                // Restore published state if we unpublished
-                if (! $isConcept) {
-                    Http::withHeaders($headers)->post($baseUrl."zaaktypen/{$uuid}/publish");
-                }
-
+            try {
+                $connection->catalogi()->zaaktypen()->patch($uuid, ['deelzaaktypen' => $expectedUrls]);
+            } catch (Throwable $exception) {
                 $urlList = collect($expectedUrls)->map(fn ($url) => "      - {$url}")->implode("\n");
                 $this->warn(
-                    "    PATCH mislukt (HTTP {$patchResponse->status()}).\n".
-                    "    Stel deelzaaktypen handmatig in via Open Zaak beheer — verwacht ({$count}):\n".
+                    "    Bijwerken mislukt: {$exception->getMessage()}\n".
+                    "    Een gepubliceerd zaaktype is immutable; pas de deelzaaktypen aan op een concept-versie of stel ze handmatig in ({$count}):\n".
                     $urlList
                 );
                 $failed++;
@@ -137,23 +114,12 @@ class SyncDeelzaaktypen extends Command
                 continue;
             }
 
-            // Re-publish if it was published before
-            if (! $isConcept) {
-                $publishResponse = Http::withHeaders($headers)->post($baseUrl."zaaktypen/{$uuid}/publish");
-
-                if (! $publishResponse->successful()) {
-                    $this->warn("    Deelzaaktypen bijgewerkt maar herpubliceren mislukt (HTTP {$publishResponse->status()}). Publiceer handmatig.");
-                } else {
-                    $this->line('    Hergepubliceerd.');
-                }
-            }
-
             $this->line("  <info>Deelzaaktypen bijgewerkt</info>: {$evenementenZaaktype->name}");
             $updated++;
         }
 
         $this->newLine();
-        $this->info("Klaar. Bijgewerkt: {$updated}, al correct: {$alreadyCorrect}, mislukt: {$failed}.");
+        $this->info("Klaar. Bijgewerkt: {$updated}, al correct: {$alreadyCorrect}, mislukt: {$failed}, overgeslagen (extern): {$skipped}.");
 
         return $failed === 0 ? Command::SUCCESS : Command::FAILURE;
     }

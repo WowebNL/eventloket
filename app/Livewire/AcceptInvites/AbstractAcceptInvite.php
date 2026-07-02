@@ -100,18 +100,19 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
 
     public function acceptInvite(): void
     {
-        if (! auth()->check()) {
+        $user = auth()->user();
+
+        if (! $user instanceof User) {
             abort(403);
         }
 
-        if (auth()->user()->email != $this->invite->email) {
+        if ($user->email != $this->invite->email) {
             abort(403);
         }
 
-        $this->attachTenantRelation(auth()->user());
+        $this->attachTenantRelation($user);
 
         if ($this->getPanelName() == 'admin') {
-            $user = auth()->user();
             $user->role = $this->getRole();
             $user->save();
         }

@@ -8,13 +8,15 @@ use App\Actions\Geospatial\CheckIntersects;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Normalizers\OpenFormsNormalizer;
+use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwResource;
 use App\Support\Helpers\ArrayHelper;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\OzZaak;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
 use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Io\GeoJsonReader;
 use Brick\Geo\LineString;
@@ -23,7 +25,9 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Connection\ZgwConnection;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Voor route-events (zaaktype met `triggers_route_check = true`): maakt
@@ -40,12 +44,12 @@ class CreateDoorkomstZaken implements ShouldQueue
 
     public function __construct(public readonly Zaak $zaak) {}
 
-    public function handle(Openzaak $openzaak, ZaakeigenschappenMap $map): void
+    public function handle(ZaakeigenschappenMap $map): void
     {
         if (! $this->zaak->zgw_zaak_url || ! $this->zaak->zaaktype) {
             return;
         }
-        if (! $this->zaak->zaaktype->triggers_route_check) {
+        if (! $this->zaak->zaaktype->effectiveTriggersRouteCheck()) {
             return;
         }
 
@@ -78,12 +82,15 @@ class CreateDoorkomstZaken implements ShouldQueue
             return;
         }
 
-        $ozZaak = new OzZaak(...$openzaak->get(
-            $this->zaak->zgw_zaak_url.'?expand=zaakobjecten,eigenschappen,rollen,zaakinformatieobjecten,deelzaken'
-        )->toArray());
+        $hoofdConnectionName = $this->zaak->zgwConnectionName();
+
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
+            $hoofdConnectionName,
+            $this->zaak->zgw_zaak_url.'?expand=zaakobjecten,eigenschappen,rollen,zaakinformatieobjecten'
+        ));
 
         foreach ($passing as $muniRef) {
-            $this->createDeelzaakFor($openzaak, $ozZaak, $muniRef, $state);
+            $this->createDeelzaakFor($hoofdConnectionName, $ozZaak, $muniRef, $state);
         }
     }
 
@@ -107,40 +114,62 @@ class CreateDoorkomstZaken implements ShouldQueue
         return ArrayHelper::findElementWithKey($decoded, 'coordinates');
     }
 
-    private function createDeelzaakFor(Openzaak $openzaak, OzZaak $hoofdZaak, Municipality $muniRef, FormState $state): void
+    private function createDeelzaakFor(string $hoofdConnectionName, ZaakReadModel $hoofdZaak, Municipality $muniRef, FormState $state): void
     {
         /** @var Municipality|null $municipality */
-        $municipality = Municipality::where('brk_identification', $muniRef->brk_identification)
-            ->with('doorkomstZaaktype')
-            ->first();
+        $municipality = Municipality::where('brk_identification', $muniRef->brk_identification)->first();
 
-        if (! $municipality || ! $municipality->doorkomst_zaaktype_id) {
+        if (! $municipality) {
             return;
         }
 
-        /** @var Zaaktype|null $doorkomstZaaktype */
-        $doorkomstZaaktype = $municipality->doorkomstZaaktype;
-        if (! $doorkomstZaaktype || ! $doorkomstZaaktype->is_active) {
+        // Resolve via the role=Doorkomst blueprint (own-instance municipalities)
+        // with a fallback to the legacy doorkomst_zaaktype_id. A municipality
+        // without any doorkomst zaaktype configured gets no deelzaak.
+        $doorkomstZaaktype = $municipality->resolveDoorkomstZaaktype();
+        if (! $doorkomstZaaktype) {
             return;
         }
 
-        $alreadyExists = collect($hoofdZaak->deelzaken)
-            ->contains(fn ($deel) => ($deel['zaaktype'] ?? null) === $doorkomstZaaktype->zgw_zaaktype_url);
+        // Idempotency: never create a second doorkomst zaak for the same
+        // (hoofdzaak × zaaktype). Tracked locally because the ZGW hoofdzaak/deelzaak
+        // relationship does not exist for cross-instance doorkomst zaken.
+        $alreadyExists = Zaak::query()
+            ->where('hoofdzaak_id', $this->zaak->id)
+            ->where('zaaktype_id', $doorkomstZaaktype->id)
+            ->exists();
         if ($alreadyExists) {
             return;
         }
 
-        $response = $openzaak->zaken()->zaken()->store([
+        // The deelzaak is created in the connection that hosts its doorkomst
+        // zaaktype: the municipality's own instance when it has its own doorkomst
+        // zaaktype, or main when it falls back to a main one. This keeps the
+        // deelzaak and its zaaktype in the same instance. Reads from the hoofdzaak
+        // keep using the hoofdzaak connection.
+        $deelConnectionName = $doorkomstZaaktype->zgwConnectionName();
+        $deelConnection = Zgw::connection($deelConnectionName);
+
+        $payload = [
             'zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url,
             'bronorganisatie' => $hoofdZaak->bronorganisatie,
             'verantwoordelijkeOrganisatie' => $hoofdZaak->bronorganisatie,
             'startdatum' => $hoofdZaak->startdatum,
             'omschrijving' => $hoofdZaak->omschrijving,
             'zaakgeometrie' => $hoofdZaak->zaakgeometrie,
-            'hoofdzaak' => $hoofdZaak->url,
-        ]);
+        ];
 
-        $newZaakUrl = $response->toArray()['url'] ?? null;
+        // ZGW only relates hoofdzaak/deelzaak within one instance: OpenZaak
+        // validates the hoofdzaak as one of its own zaken. Only link it when the
+        // doorkomst zaaktype lives in the same instance as the hoofdzaak; otherwise
+        // create a standalone zaak (the relationship is kept locally via hoofdzaak_id).
+        if ($deelConnectionName === $hoofdConnectionName) {
+            $payload['hoofdzaak'] = $hoofdZaak->url;
+        }
+
+        $response = $deelConnection->zaken()->zaken()->store($payload);
+
+        $newZaakUrl = $response['url'] ?? null;
         if (! $newZaakUrl) {
             Log::error('CreateDoorkomstZaken: failed to create deelzaak', [
                 'hoofdzaak' => $hoofdZaak->url,
@@ -150,14 +179,15 @@ class CreateDoorkomstZaken implements ShouldQueue
             return;
         }
 
-        $this->copyZaakeigenschappen($openzaak, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
-        $this->copyInitiator($openzaak, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
-        $this->copyDocumenten($openzaak, $hoofdZaak, $newZaakUrl);
-        $this->createInitieleStatus($openzaak, $newZaakUrl, $doorkomstZaaktype);
+        $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
+        $this->copyInitiator($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
+        $this->copyDocumenten($hoofdConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl);
+        $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
 
-        $newOzZaak = new OzZaak(...$openzaak->get(
+        $newOzZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
+            $deelConnectionName,
             $newZaakUrl.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen'
-        )->toArray());
+        ));
 
         $organisator = $this->resolveOrganisatorLabel($hoofdZaak);
 
@@ -166,6 +196,8 @@ class CreateDoorkomstZaken implements ShouldQueue
             [
                 'public_id' => $newOzZaak->identificatie,
                 'zaaktype_id' => $doorkomstZaaktype->id,
+                'hoofdzaak_id' => $this->zaak->id, // local hoofdzaak link (works cross-instance)
+                'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
                 'data_object_url' => null, // Objects API is in nieuwe flow weg
                 'organisation_id' => $this->zaak->organisation_id,
                 'organiser_user_id' => $this->zaak->organiser_user_id,
@@ -188,21 +220,22 @@ class CreateDoorkomstZaken implements ShouldQueue
         );
     }
 
-    private function resolveOrganisatorLabel(OzZaak $ozZaak): string
+    private function resolveOrganisatorLabel(ZaakReadModel $ozZaak): string
     {
-        if (! $ozZaak->initiator) {
+        $initiator = $ozZaak->initiator;
+        if (! $initiator) {
             return '';
         }
 
-        if ($ozZaak->initiator->betrokkeneType === 'natuurlijk_persoon') {
-            $id = $ozZaak->initiator->betrokkeneIdentificatie;
+        $type = $initiator['betrokkeneType'] ?? null;
+        $id = $initiator['betrokkeneIdentificatie'] ?? [];
 
+        if ($type === 'natuurlijk_persoon') {
             return trim(($id['voornamen'] ?? '').' '.($id['geslachtsnaam'] ?? ''));
         }
 
-        if ($ozZaak->initiator->betrokkeneType === 'niet_natuurlijk_persoon') {
-            $id = $ozZaak->initiator->betrokkeneIdentificatie;
-            $contactNaam = $ozZaak->initiator->contactpersoonRol['naam'] ?? '';
+        if ($type === 'niet_natuurlijk_persoon') {
+            $contactNaam = $initiator['contactpersoonRol']['naam'] ?? '';
 
             return trim(($id['statutaireNaam'] ?? '').' - '.$contactNaam);
         }
@@ -210,11 +243,12 @@ class CreateDoorkomstZaken implements ShouldQueue
         return '';
     }
 
-    private function copyZaakeigenschappen(Openzaak $openzaak, OzZaak $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
+    private function copyZaakeigenschappen(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
         $newUuid = basename($newZaakUrl);
-        $catalogi = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])
-            ->map(fn ($e) => new CatalogiEigenschap(...$e));
+        $catalogi = $deelConnection->catalogi()->eigenschappen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])
+            ->collect()
+            ->map(fn ($e) => EigenschapData::from($e));
 
         foreach ($ozZaak->eigenschappen_key_value as $naam => $waarde) {
             if (! $waarde) {
@@ -224,64 +258,67 @@ class CreateDoorkomstZaken implements ShouldQueue
             if (! $cat) {
                 continue;
             }
-            $openzaak->zaken()->zaken()->zaakeigenschappen($newUuid)->store([
+            $deelConnection->zaken()->zaken()->zaakeigenschappen($newUuid)->store([
                 'zaak' => $newZaakUrl,
-                'eigenschap' => $cat->url,
+                'eigenschap' => (string) $cat->url,
                 'waarde' => $waarde,
             ]);
         }
     }
 
-    private function copyInitiator(Openzaak $openzaak, OzZaak $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
+    private function copyInitiator(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
         if (! $ozZaak->initiator) {
             return;
         }
 
-        $roltypen = $openzaak->catalogi()->roltypen()->getAll(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url]);
-        $initiator = $roltypen->first(fn ($r) => ($r['omschrijvingGeneriek'] ?? null) === 'initiator');
+        $roltypen = $deelConnection->catalogi()->roltypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url]);
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $initiator = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
         if (! $initiator) {
             Log::warning('CreateDoorkomstZaken: no initiator roltype', ['zaak' => $newZaakUrl]);
 
             return;
         }
 
-        $openzaak->zaken()->rollen()->store([
+        $source = $ozZaak->initiator;
+        $deelConnection->zaken()->rollen()->store([
             'zaak' => $newZaakUrl,
-            'betrokkeneType' => $ozZaak->initiator->betrokkeneType,
+            'betrokkeneType' => $source['betrokkeneType'] ?? null,
             'roltype' => $initiator['url'],
-            'roltoelichting' => $ozZaak->initiator->omschrijving,
-            'betrokkeneIdentificatie' => $ozZaak->initiator->betrokkeneIdentificatie,
-            'contactpersoonRol' => $ozZaak->initiator->contactpersoonRol ?: null,
+            'roltoelichting' => $source['omschrijving'] ?? null,
+            'betrokkeneIdentificatie' => $source['betrokkeneIdentificatie'] ?? null,
+            'contactpersoonRol' => ($source['contactpersoonRol'] ?? null) ?: null,
         ]);
     }
 
-    private function copyDocumenten(Openzaak $openzaak, OzZaak $ozZaak, string $newZaakUrl): void
+    private function copyDocumenten(string $hoofdConnectionName, ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl): void
     {
-        $zios = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $ozZaak->url]);
+        $zios = Zgw::connection($hoofdConnectionName)->zaken()->zaakinformatieobjecten()->index(['zaak' => $ozZaak->url]);
         foreach ($zios as $zio) {
             $informatieobjectUrl = Arr::get($zio, 'informatieobject');
             if (! $informatieobjectUrl) {
                 continue;
             }
-            $openzaak->zaken()->zaakinformatieobjecten()->store([
+            $deelConnection->zaken()->zaakinformatieobjecten()->store([
                 'zaak' => $newZaakUrl,
                 'informatieobject' => $informatieobjectUrl,
             ]);
         }
     }
 
-    private function createInitieleStatus(Openzaak $openzaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
+    private function createInitieleStatus(ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
-        $statustypen = $openzaak->catalogi()->statustypen()->getAll(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url]);
-        $initieel = $statustypen->sortBy('volgnummer')->first();
+        $statustypen = $deelConnection->catalogi()->statustypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])->collect();
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $initieel = ZaaktypeBlueprint::initialStatustype($mapping, $statustypen);
         if (! $initieel) {
             Log::warning('CreateDoorkomstZaken: no statustype', ['zaak' => $newZaakUrl]);
 
             return;
         }
 
-        $openzaak->zaken()->statussen()->store([
+        $deelConnection->zaken()->statussen()->store([
             'zaak' => $newZaakUrl,
             'statustype' => $initieel['url'],
             'datumStatusGezet' => now()->toIso8601String(),

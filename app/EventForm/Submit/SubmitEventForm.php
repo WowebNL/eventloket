@@ -14,6 +14,7 @@ use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
+use App\Jobs\Zaak\AddGlobaleLocatieZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\SetInitialStatusZGW;
@@ -45,6 +46,7 @@ use Illuminate\Support\Facades\Log;
  *   - AddEinddatumZGW
  *   - UpdateInitiatorZGW
  *   - AddGeometryZGW
+ *   - AddGlobaleLocatieZGW  (locaties_evenement als zaakobject "GlobaleLocatie")
  *   - CreateDoorkomstZaken  (alleen bij route-events)
  *   - HashIdentifyingAttributes  (laatste in chain; anonimiseert BSN/KvK zodat
  *     alle eerdere jobs bij retry nog de originele data kunnen lezen)
@@ -121,6 +123,7 @@ final class SubmitEventForm
             new AddEinddatumZGW($zaak),
             new UpdateInitiatorZGW($zaak),
             new AddGeometryZGW($zaak),
+            new AddGlobaleLocatieZGW($zaak),
             new CreateDoorkomstZaken($zaak),
             new HashIdentifyingAttributes($zaak),
         ])->dispatch();

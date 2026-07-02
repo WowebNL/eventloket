@@ -23,6 +23,7 @@ class Informatieobject implements Arrayable
         public readonly string $formaat,
         public readonly bool $locked,
         public readonly ?Besluit $besluit = null,
+        public readonly ?string $status = null,
         ...$otherParams
     ) {}
 
@@ -43,6 +44,21 @@ class Informatieobject implements Arrayable
             'formaat' => $this->formaat,
             'locked' => $this->locked,
             'besluit' => $this->besluit?->toArray(),
+            'status' => $this->status,
         ];
+    }
+
+    /**
+     * Whether this document may be shown to and notified about.
+     *
+     * Explicit ZGW draft statuses (concepts) are hidden. Documents without an
+     * explicit status (our own uploads and legacy documents) and the
+     * "definitief" status are treated as final, so existing behaviour for the
+     * eigen OpenZaak is preserved while concepts from an external ZGW backend
+     * (e.g. RX Mission) are filtered out.
+     */
+    public function isDefinitief(): bool
+    {
+        return ! in_array($this->status, ['in_bewerking', 'ter_vaststelling', 'concept'], true);
     }
 }
