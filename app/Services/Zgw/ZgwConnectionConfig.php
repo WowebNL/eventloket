@@ -18,17 +18,23 @@ use Throwable;
 class ZgwConnectionConfig
 {
     /**
-     * Apply the optional eigenschap date format to a scalar zaakeigenschap value.
+     * Format a scalar zaakeigenschap value for the wire.
      *
-     * When the connection sets `eigenschap_date_format` (e.g. 'YmdHis' for RX
-     * Mission) and the value parses as a date, it is reformatted. Otherwise the
-     * value is returned unchanged, which is the legacy OpenZaak behaviour.
+     * The catalogus eigenschap's formaat is authoritative: a `datum` wants
+     * YYYYMMDD, a `datum_tijd` wants YYYYMMDDHHMMSS (which some backends such as
+     * RX Mission enforce strictly, rejecting a bare date with a 400). Any other
+     * formaat (tekst, getal, or an unknown/absent one) is sent unchanged, so a
+     * text value that happens to parse as a date is never mangled.
      */
-    public static function formatEigenschapWaarde(string $connectionName, string $waarde): string
+    public static function formatEigenschapWaarde(string $waarde, ?string $formaat = null): string
     {
-        $format = config("zgw.connections.{$connectionName}.eigenschap_date_format");
+        $format = match ($formaat) {
+            'datum' => 'Ymd',
+            'datum_tijd' => 'YmdHis',
+            default => null,
+        };
 
-        if (! is_string($format) || $format === '' || $waarde === '') {
+        if ($format === null || $waarde === '') {
             return $waarde;
         }
 

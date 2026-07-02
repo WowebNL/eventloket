@@ -93,4 +93,75 @@ class ZgwResource
 
         return $data;
     }
+
+    /**
+     * Map a catalogus' informatieobjecttypen by their omschrijving.
+     *
+     * The ZGW standard types the `informatieobjecttype` field of a
+     * zaaktype-informatieobjecttype relation as a string: OpenZaak returns a
+     * followable URL, but some backends (e.g. RX Mission) return the
+     * omschrijving inline. This resolves such an omschrijving back to the full
+     * informatieobjecttype resource (including its real url) by listing the
+     * catalogus and keying on omschrijving.
+     *
+     * When several versions share an omschrijving, the one valid today wins;
+     * otherwise the first one seen is kept.
+     *
+     * @return array<string, array<string, mixed>> omschrijving => resource (uuid-ensured)
+     */
+    public static function informatieobjecttypenByOmschrijving(string $connectionName, string $catalogusUrl): array
+    {
+        $today = now('Europe/Amsterdam')->toDateString();
+        $map = [];
+
+        $items = Zgw::connection($connectionName)
+            ->catalogi()
+            ->informatieobjecttypen()
+            ->index(['catalogus' => $catalogusUrl]);
+
+        foreach ($items as $item) {
+            $omschrijving = $item['omschrijving'] ?? null;
+            if (! is_string($omschrijving) || $omschrijving === '') {
+                continue;
+            }
+
+            if (! isset($map[$omschrijving])) {
+                $map[$omschrijving] = self::ensureUuid($item);
+
+                continue;
+            }
+
+            // Already have one for this omschrijving; only replace it when the
+            // incoming version is valid today and the stored one is not, so the
+            // first (or first valid-today) entry otherwise wins deterministically.
+            if (self::isValidOn($item, $today) && ! self::isValidOn($map[$omschrijving], $today)) {
+                $map[$omschrijving] = self::ensureUuid($item);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * Whether a catalogi resource's geldigheid window covers the given date.
+     *
+     * Dates are ZGW `YYYY-MM-DD` strings, which compare correctly lexically.
+     *
+     * @param  array<string, mixed>  $resource
+     */
+    private static function isValidOn(array $resource, string $date): bool
+    {
+        $begin = $resource['beginGeldigheid'] ?? null;
+        $einde = $resource['eindeGeldigheid'] ?? null;
+
+        if (is_string($begin) && $begin !== '' && $begin > $date) {
+            return false;
+        }
+
+        if (is_string($einde) && $einde !== '' && $einde < $date) {
+            return false;
+        }
+
+        return true;
+    }
 }

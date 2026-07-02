@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Jobs\Zaak\UploadDocumentsJob;
 use App\Models\Zaak;
 use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
@@ -264,7 +265,7 @@ class UploadDocumentAction
         $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
         $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
 
-        $informatieobject = new Informatieobject(...$connection->documenten()->enkelvoudiginformatieobjecten()->store([
+        $informatieobject = new Informatieobject(...ZgwResource::ensureUuid($connection->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
             'vertrouwelijkheidaanduiding' => $vertrouwelijkheidaanduiding,
@@ -277,7 +278,7 @@ class UploadDocumentAction
             'inhoud' => base64_encode(Storage::get($data['file'])),
             'informatieobjecttype' => $data['informatieobjecttype'],
             'indicatieGebruiksrecht' => false,
-        ]));
+        ])));
 
         $connection->zaken()->zaakinformatieobjecten()->store([
             'zaak' => $zaak->openzaak->url,

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\AdviceStatus;
+use App\Enums\Role;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
@@ -30,6 +31,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
 use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
@@ -362,11 +364,60 @@ class Zaak extends Model implements Eventable
                 if (app()->runningInConsole()) {
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
                     return $documenten->values();
-                } else {
-                    return $documenten->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role)))->values();
                 }
+
+                return $this->filterDocumentenForRole($documenten, auth()->user()->role);
             },
         );
+    }
+
+    /**
+     * Filter a document collection to what the given role may see: the
+     * vertrouwelijkheid levels configured (or defaulted) for that role, plus —
+     * for an organiser — the documents they submitted themselves, which they may
+     * always see regardless of the configured visibility.
+     *
+     * @param  Collection<int, Informatieobject>  $documenten
+     * @return Collection<int, Informatieobject>
+     */
+    public function filterDocumentenForRole(Collection $documenten, Role $role): Collection
+    {
+        $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), $role);
+
+        $ownDocumentUuids = $role === Role::Organiser
+            ? $this->organiserSubmittedDocumentUuids()
+            : collect();
+
+        return $documenten->filter(
+            fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, $allowed)
+                || $ownDocumentUuids->contains($informatieobject->uuid)
+        )->values();
+    }
+
+    /**
+     * The uuids of the documents the organiser submitted for this zaak (the
+     * aanvraag-PDF and the form bijlagen), identified via the activity log:
+     * document-created events on this zaak caused by the zaak's organiser. Used
+     * so an organiser always sees their own files regardless of the configured
+     * vertrouwelijkheid visibility.
+     *
+     * @return Collection<int, string>
+     */
+    private function organiserSubmittedDocumentUuids(): Collection
+    {
+        if (! $this->organiser_user_id) {
+            return collect();
+        }
+
+        return Activity::query()
+            ->where('log_name', 'document')
+            ->where('event', 'created')
+            ->where('subject_id', $this->getKey())
+            ->where('causer_id', $this->organiser_user_id)
+            ->get()
+            ->map(fn (Activity $activity) => data_get($activity->properties, 'document_uuid'))
+            ->filter(fn ($uuid): bool => is_string($uuid))
+            ->values();
     }
 
     /** @return Attribute<Collection<Informatieobject>, void> */

@@ -39,7 +39,6 @@ class MunicipalityZgwConnectionFactory extends Factory
             'allowed_hosts' => [],
             'bronorganisatie_rsin' => null,
             'vertrouwelijkheid_map' => null,
-            'eigenschap_date_format' => null,
             'lock_status_for_behandelaar' => false,
             'show_besluiten_tab' => true,
             'show_bestanden_tab' => true,
