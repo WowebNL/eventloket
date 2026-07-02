@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Woweb\Zgw\Facades\Zgw;
 
@@ -208,20 +210,81 @@ class Zaaktype extends Model
         return Cache::rememberForever('zaaktype_document_types_v2_'.md5($connectionName.'|'.$url), function () use ($connectionName, $url) {
             // Resolve document types via the standard zaaktype-informatieobjecttypen
             // relation rather than the informatieobjecttypen?zaaktype= filter, which
-            // not every ZGW instance supports. Each relation row links to one
-            // informatieobjecttype that we then fetch by url.
+            // not every ZGW instance supports.
             $relations = Zgw::connection($connectionName)
                 ->catalogi()
                 ->zaaktypeInformatieobjecttypen()
                 ->index(['zaaktype' => $url]);
 
             $collection = collect();
+            // Memo of catalogus url => (omschrijving => informatieobjecttype), so a
+            // catalogus is listed at most once per resolution (no per-relation N+1).
+            $catalogusMaps = [];
+
             foreach ($relations as $relation) {
-                $informatieobjecttypeUrl = $relation['informatieobjecttype'] ?? null;
-                if (! is_string($informatieobjecttypeUrl) || $informatieobjecttypeUrl === '') {
+                $value = $relation['informatieobjecttype'] ?? null;
+                if (! is_string($value) || $value === '') {
                     continue;
                 }
-                $collection->push(InformatieObjectTypeData::from(ZgwResource::byUrl($connectionName, $informatieobjecttypeUrl)));
+
+                // The ZGW standard types `informatieobjecttype` as a string:
+                // OpenZaak returns a followable URL, while some backends (e.g. RX
+                // Mission) return the omschrijving inline. Follow a URL; resolve an
+                // omschrijving against its catalogus. A single unresolvable type is
+                // skipped (and logged) rather than aborting the whole list — a job
+                // that needs a specific type still fails loudly downstream when
+                // that type is absent from the resolved list.
+                if (str_starts_with($value, 'http')) {
+                    try {
+                        $collection->push(InformatieObjectTypeData::from(ZgwResource::byUrl($connectionName, $value)));
+                    } catch (Throwable $e) {
+                        Log::warning('Zaaktype::getDocumentTypes: informatieobjecttype-URL niet op te halen, overgeslagen', [
+                            'connection' => $connectionName,
+                            'informatieobjecttype' => $value,
+                            'exception' => $e->getMessage(),
+                        ]);
+                    }
+
+                    continue;
+                }
+
+                $catalogusUrl = $relation['catalogus'] ?? null;
+                if (! is_string($catalogusUrl) || $catalogusUrl === '') {
+                    Log::warning('Zaaktype::getDocumentTypes: informatieobjecttype-omschrijving zonder catalogus, overgeslagen', [
+                        'connection' => $connectionName,
+                        'omschrijving' => $value,
+                    ]);
+
+                    continue;
+                }
+
+                if (! array_key_exists($catalogusUrl, $catalogusMaps)) {
+                    try {
+                        $catalogusMaps[$catalogusUrl] = ZgwResource::informatieobjecttypenByOmschrijving($connectionName, $catalogusUrl);
+                    } catch (Throwable $e) {
+                        // Cache the empty result so a second omschrijving on the same
+                        // failing catalogus does not re-hit the API within this run.
+                        $catalogusMaps[$catalogusUrl] = [];
+                        Log::warning('Zaaktype::getDocumentTypes: informatieobjecttypen van catalogus niet op te halen, overgeslagen', [
+                            'connection' => $connectionName,
+                            'catalogus' => $catalogusUrl,
+                            'exception' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                $resource = $catalogusMaps[$catalogusUrl][$value] ?? null;
+                if ($resource === null) {
+                    Log::warning('Zaaktype::getDocumentTypes: informatieobjecttype-omschrijving niet gevonden in catalogus, overgeslagen', [
+                        'connection' => $connectionName,
+                        'catalogus' => $catalogusUrl,
+                        'omschrijving' => $value,
+                    ]);
+
+                    continue;
+                }
+
+                $collection->push(InformatieObjectTypeData::from($resource));
             }
 
             return $collection;

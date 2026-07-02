@@ -42,7 +42,6 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property array<int, string>|null $allowed_hosts
  * @property string|null $bronorganisatie_rsin
  * @property array<string, mixed>|null $vertrouwelijkheid_map
- * @property string|null $eigenschap_date_format
  * @property bool $lock_status_for_behandelaar
  * @property bool $show_besluiten_tab
  * @property bool $show_bestanden_tab
@@ -77,7 +76,6 @@ class MunicipalityZgwConnection extends Model
         'allowed_hosts',
         'bronorganisatie_rsin',
         'vertrouwelijkheid_map',
-        'eigenschap_date_format',
         'lock_status_for_behandelaar',
         'show_besluiten_tab',
         'show_bestanden_tab',
@@ -242,7 +240,6 @@ class MunicipalityZgwConnection extends Model
             'allowed_hosts' => $this->allowed_hosts,
             'bronorganisatie_rsin' => $this->bronorganisatie_rsin,
             'vertrouwelijkheid_map' => $this->vertrouwelijkheid_map,
-            'eigenschap_date_format' => $this->eigenschap_date_format,
         ];
 
         foreach ($overrides as $key => $value) {
