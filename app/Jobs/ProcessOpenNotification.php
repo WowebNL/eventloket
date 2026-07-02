@@ -22,6 +22,10 @@ class ProcessOpenNotification implements ShouldQueue
             OpenNotificationType::ZaakStatusChanged => ZaakStatusNotificationReceived::dispatch($this->notification),
             OpenNotificationType::NewZaakDocument => DocumentNotificationReceived::dispatch($this->notification, true)->delay(now()->addSeconds(10)), // delay because document needs to be linked to the zaak first
             OpenNotificationType::UpdatedZaakDocument => DocumentNotificationReceived::dispatch($this->notification, false)->delay(now()->addSeconds(10)),
+            // Delay so the burst of notifications a zaaktype publish fires
+            // (zaaktype update + child-resource creates, all sharing the same
+            // hoofdObject) collapses into the one unique job.
+            OpenNotificationType::ZaaktypeChanged => ZaaktypeNotificationReceived::dispatch($this->notification)->delay(now()->addSeconds(30)),
             default => null,
         };
     }

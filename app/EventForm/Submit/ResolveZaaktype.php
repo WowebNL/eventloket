@@ -9,6 +9,7 @@ use App\EventForm\State\FormState;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
+use Illuminate\Database\Eloquent\Builder;
 use RuntimeException;
 
 /**
@@ -68,20 +69,35 @@ final class ResolveZaaktype
 
     private function resolveByRole(Municipality $municipality, ZaaktypeRole $role): ?Zaaktype
     {
-        return Zaaktype::query()
-            ->where('municipality_id', $municipality->id)
-            ->where('is_active', true)
-            ->where('role', $role->value)
-            ->first();
+        return $this->preferOwnConnection(
+            Zaaktype::query()
+                ->where('municipality_id', $municipality->id)
+                ->where('is_active', true)
+                ->where('role', $role->value),
+        )->first();
     }
 
     private function resolveByNamePrefix(Municipality $municipality, ZaaktypeRole $role): ?Zaaktype
     {
-        return Zaaktype::query()
-            ->where('municipality_id', $municipality->id)
-            ->where('is_active', true)
-            ->where('name', 'like', $role->namePrefix().'%')
-            ->first();
+        return $this->preferOwnConnection(
+            Zaaktype::query()
+                ->where('municipality_id', $municipality->id)
+                ->where('is_active', true)
+                ->where('name', 'like', $role->namePrefix().'%'),
+        )->first();
+    }
+
+    /**
+     * During a main-fallback both the (inactive) own-instance row and the linked
+     * main row can exist for a municipality; once the own row is active again it
+     * must win deterministically over the still-linked main fallback row.
+     *
+     * @param  Builder<Zaaktype>  $query
+     * @return Builder<Zaaktype>
+     */
+    private function preferOwnConnection(Builder $query): Builder
+    {
+        return $query->orderByRaw("case when connection = 'main' then 1 else 0 end");
     }
 
     private function resolveMunicipality(FormState $state): Municipality

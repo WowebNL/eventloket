@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands\Zaaktypen;
 
+use App\Enums\ZaaktypeRefreshStatus;
 use App\Enums\ZaaktypeRole;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaaktype;
-use App\Services\Zgw\MappedZaaktypeSync;
+use App\Services\Zgw\ZaaktypeRefresher;
 use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -33,7 +34,7 @@ class SyncZaaktypen extends Command
     /**
      * Execute the console command.
      */
-    public function handle(MappedZaaktypeSync $mappedSync)
+    public function handle(ZaaktypeRefresher $refresher)
     {
         $this->info('Syncing zaaktypen...');
 
@@ -48,7 +49,7 @@ class SyncZaaktypen extends Command
         // Municipalities with their own ZGW instance only get local rows for the
         // zaaktypen they actually use (their mappings), read one by one from their
         // own instance rather than importing the whole external catalogus.
-        $this->refreshOwnInstanceZaaktypen($mappedSync);
+        $this->refreshOwnInstanceZaaktypen($refresher);
 
         return Command::SUCCESS;
     }
@@ -200,12 +201,11 @@ class SyncZaaktypen extends Command
     /**
      * Targeted refresh of own-instance zaaktypen: for each municipality that runs
      * its own ZGW instance, refresh only the distinct identificaties it has mapped,
-     * reading each one from its own instance via {@see MappedZaaktypeSync}.
-     *
-     * Own-instance rows are not deactivated here: a stale-but-mapped doorkomst
-     * zaaktype must keep working, so removal is left to the beheerder unmapping it.
+     * reading each one from its own instance via {@see ZaaktypeRefresher}, so the
+     * sync engages the same fallback/restore transitions and warnings as the
+     * zaaktypen-kanaal webhook.
      */
-    private function refreshOwnInstanceZaaktypen(MappedZaaktypeSync $mappedSync): void
+    private function refreshOwnInstanceZaaktypen(ZaaktypeRefresher $refresher): void
     {
         $this->info('Refreshing own-instance zaaktypen...');
 
@@ -223,7 +223,9 @@ class SyncZaaktypen extends Command
                 ->pluck('zaaktype_identificatie');
 
             foreach ($identificaties as $identificatie) {
-                if ($mappedSync->ensure($municipality, $identificatie) !== null) {
+                $result = $refresher->refreshOwnInstance($municipality, $identificatie);
+
+                if ($result->status === ZaaktypeRefreshStatus::Refreshed) {
                     $this->line("  Gemeente {$municipality->id}: zaaktype {$identificatie} ververst.");
                 }
             }

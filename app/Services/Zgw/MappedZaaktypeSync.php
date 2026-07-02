@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services\Zgw;
 
+use App\Enums\ZaaktypeRefreshStatus;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
+use App\ValueObjects\ZGW\ZaaktypeRefreshResult;
 use Illuminate\Support\Facades\Log;
 use Throwable;
-use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Creates or refreshes the single local {@see Zaaktype} row a municipality needs
@@ -32,8 +33,26 @@ final class MappedZaaktypeSync
      */
     public function ensure(Municipality $municipality, string $identificatie): ?Zaaktype
     {
+        $result = $this->refresh($municipality, $identificatie);
+
+        return $result->status === ZaaktypeRefreshStatus::Refreshed ? $result->zaaktype : null;
+    }
+
+    /**
+     * Refresh the local row for (municipality, identificatie) and report what
+     * happened, distinguishing the outcomes {@see ensure()} conflates:
+     *
+     * - Refreshed: a definitief version exists; the row was created or updated.
+     * - Unavailable: the catalogus answered but no definitief version exists
+     *   anymore; an existing row is deactivated so it stops resolving at submit.
+     * - Failed: the catalogus could not be read, or this sync does not apply
+     *   (no own connection). Nothing changes: a transient outage must not flip
+     *   routing or trigger a fallback.
+     */
+    public function refresh(Municipality $municipality, string $identificatie): ZaaktypeRefreshResult
+    {
         if ($identificatie === '') {
-            return null;
+            return new ZaaktypeRefreshResult(ZaaktypeRefreshStatus::Failed);
         }
 
         // Resolving registers the per-municipality connection config. This is a
@@ -44,11 +63,11 @@ final class MappedZaaktypeSync
         $connectionName = $this->resolver->forManagement($municipality);
 
         if ($connectionName === ZgwConnectionResolver::DEFAULT_CONNECTION) {
-            return null;
+            return new ZaaktypeRefreshResult(ZaaktypeRefreshStatus::Failed);
         }
 
         try {
-            $version = $this->definitiefVersion($connectionName, $identificatie);
+            $version = ZaaktypeVersion::currentDefinitief($connectionName, $identificatie);
         } catch (Throwable $e) {
             Log::warning('MappedZaaktypeSync: kon zaaktype niet ophalen', [
                 'municipality_id' => $municipality->id,
@@ -57,13 +76,51 @@ final class MappedZaaktypeSync
                 'exception' => $e->getMessage(),
             ]);
 
-            return null;
+            return new ZaaktypeRefreshResult(ZaaktypeRefreshStatus::Failed);
         }
 
         if ($version === null) {
-            return null;
+            return $this->deactivate($connectionName, $identificatie);
         }
 
+        return $this->upsert($municipality, $connectionName, $identificatie, $version);
+    }
+
+    /**
+     * No definitief version exists anymore: deactivate the local row so
+     * ResolveZaaktype stops matching it. The row itself is kept (existing zaken
+     * reference it and it revives on the next successful refresh).
+     */
+    private function deactivate(string $connectionName, string $identificatie): ZaaktypeRefreshResult
+    {
+        $zaaktype = Zaaktype::query()
+            ->where('identificatie', $identificatie)
+            ->where('connection', $connectionName)
+            ->first();
+
+        if ($zaaktype === null) {
+            return new ZaaktypeRefreshResult(ZaaktypeRefreshStatus::Unavailable);
+        }
+
+        $becameInactive = $zaaktype->is_active;
+
+        if ($becameInactive) {
+            $zaaktype->is_active = false;
+            $zaaktype->save();
+        }
+
+        return new ZaaktypeRefreshResult(
+            ZaaktypeRefreshStatus::Unavailable,
+            $zaaktype,
+            becameInactive: $becameInactive,
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $version
+     */
+    private function upsert(Municipality $municipality, string $connectionName, string $identificatie, array $version): ZaaktypeRefreshResult
+    {
         $role = MunicipalityZaaktypeMapping::query()
             ->where('municipality_id', $municipality->id)
             ->where('zaaktype_identificatie', $identificatie)
@@ -77,6 +134,9 @@ final class MappedZaaktypeSync
                 'is_active' => true,
             ],
         );
+
+        $urlChanged = $zaaktype->wasRecentlyCreated || $zaaktype->wasChanged('zgw_zaaktype_url');
+        $becameActive = ! $zaaktype->wasRecentlyCreated && $zaaktype->wasChanged('is_active');
 
         // municipality_id is guarded from mass assignment and the role comes from
         // the mapping, so both are set explicitly.
@@ -96,32 +156,11 @@ final class MappedZaaktypeSync
             $zaaktype->save();
         }
 
-        return $zaaktype;
-    }
-
-    /**
-     * The current definitief version of an identificatie: the one valid today,
-     * falling back to any definitief version. Mirrors the resolution used by
-     * {@see ZaaktypeCatalogusOptions}.
-     *
-     * @return array<string, mixed>|null
-     */
-    private function definitiefVersion(string $connectionName, string $identificatie): ?array
-    {
-        $version = Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
-            'identificatie' => $identificatie,
-            'status' => 'definitief',
-            'datumGeldigheid' => now('Europe/Amsterdam')->toDateString(),
-        ])->first()
-            ?? Zgw::connection($connectionName)->catalogi()->zaaktypen()->index([
-                'identificatie' => $identificatie,
-                'status' => 'definitief',
-            ])->first();
-
-        if (! is_array($version) || ! is_string($version['url'] ?? null) || $version['url'] === '') {
-            return null;
-        }
-
-        return $version;
+        return new ZaaktypeRefreshResult(
+            ZaaktypeRefreshStatus::Refreshed,
+            $zaaktype,
+            urlChanged: $urlChanged,
+            becameActive: $becameActive,
+        );
     }
 }
