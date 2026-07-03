@@ -187,9 +187,6 @@ return [
                     'label' => 'Kaart',
                 ],
             ],
-            'log' => [
-                'label' => 'Log',
-            ],
             'related_cases' => [
                 'label' => 'Gerelateerde zaken',
             ],

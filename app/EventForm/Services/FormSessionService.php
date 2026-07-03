@@ -25,7 +25,7 @@ class FormSessionService
             'user_uuid' => $user->uuid,
             'organiser_uuid' => $organisation->uuid,
             'kvk' => $organisation->coc_number ?? '',
-            'organisation_name' => $organisation->name,
+            'organisation_name' => $organisation->isPersonal() ? '' : $organisation->name,
             'organisation_email' => $organisation->email ?? '',
             'organisation_phone' => $organisation->phone ?? '',
             'user_email' => $user->email,

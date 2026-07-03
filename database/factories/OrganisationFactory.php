@@ -20,13 +20,26 @@ class OrganisationFactory extends Factory
     public function definition(): array
     {
         return [
-            'type' => fake()->randomElement(OrganisationType::cases()),
+            'type' => OrganisationType::Business,
             'name' => fake()->company,
             'coc_number' => (string) fake()->numberBetween(10000000, 99999999),
             'address' => fake()->address,
             'email' => 'test@domain.com',
             'phone' => fake()->phoneNumber,
         ];
+    }
+
+    /**
+     * State for a personal environment ("Mijn omgeving"): no Chamber of
+     * Commerce number, created when a user registers without a company.
+     */
+    public function personal(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => OrganisationType::Personal,
+            'name' => 'Mijn omgeving',
+            'coc_number' => null,
+        ]);
     }
 
     /**

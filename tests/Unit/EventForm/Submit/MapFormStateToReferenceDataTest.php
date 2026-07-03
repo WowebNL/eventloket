@@ -11,8 +11,11 @@
  * vallen terug op "nu" via de VO).
  */
 
+use App\Enums\OrganisationType;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\MapFormStateToReferenceData;
+use App\Models\Organisation;
+use App\Models\User;
 
 beforeEach(function () {
     $this->map = new MapFormStateToReferenceData;
@@ -76,6 +79,40 @@ test('gebouw-tak: naam_locatie_evenement uit adresVanDeGebouwEn-repeater', funct
     $ref = $this->map->build($state, 'Ingediend', '');
 
     expect($ref->naam_locatie_evenement)->toBe('Sporthal De Geusselt');
+});
+
+test('zakelijke organisatie → organisator is de organisatienaam', function () {
+    $org = new Organisation(['type' => OrganisationType::Business, 'name' => 'Woweb Events']);
+    $user = new User(['first_name' => 'Jan', 'last_name' => 'Jansen', 'name' => 'Jan Jansen']);
+
+    $state = new FormState(
+        values: [
+            'EvenementStart' => '2026-06-14T14:00',
+            'EvenementEind' => '2026-06-14T18:00',
+        ],
+        system: ['authOrganisation' => $org, 'authUser' => $user],
+    );
+
+    $ref = $this->map->build($state, 'Ingediend', '');
+
+    expect($ref->organisator)->toBe('Woweb Events');
+});
+
+test('persoonlijke organisatie → organisator valt terug op de persoonsnaam', function () {
+    $org = new Organisation(['type' => OrganisationType::Personal, 'name' => 'Mijn omgeving']);
+    $user = new User(['first_name' => 'Jan', 'last_name' => 'Jansen', 'name' => 'Jan Jansen']);
+
+    $state = new FormState(
+        values: [
+            'EvenementStart' => '2026-06-14T14:00',
+            'EvenementEind' => '2026-06-14T18:00',
+        ],
+        system: ['authOrganisation' => $org, 'authUser' => $user],
+    );
+
+    $ref = $this->map->build($state, 'Ingediend', '');
+
+    expect($ref->organisator)->toBe('Jan Jansen');
 });
 
 test('registratiedatum wordt gezet op "nu" bij elke build', function () {

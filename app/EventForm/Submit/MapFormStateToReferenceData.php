@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Submit;
 
 use App\EventForm\State\FormState;
+use App\Models\Organisation;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Carbon\Carbon;
 
@@ -120,7 +121,8 @@ final class MapFormStateToReferenceData
         $user = $state->get('authUser');
         $org = $state->get('authOrganisation');
 
-        if (is_object($org) && isset($org->name)) {
+        if (is_object($org) && isset($org->name)
+            && ! ($org instanceof Organisation && $org->isPersonal())) {
             return (string) $org->name;
         }
         if (is_object($user) && isset($user->name)) {

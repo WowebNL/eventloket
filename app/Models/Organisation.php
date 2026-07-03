@@ -45,6 +45,11 @@ class Organisation extends Model
         return $this->postbus_address !== null;
     }
 
+    public function isPersonal(): bool
+    {
+        return $this->type === OrganisationType::Personal;
+    }
+
     /** @return Attribute<BagObject|null, void> */
     protected function bagAddress(): Attribute
     {
