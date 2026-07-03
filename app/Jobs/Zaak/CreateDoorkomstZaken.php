@@ -425,7 +425,10 @@ class CreateDoorkomstZaken implements ShouldQueue
         $payload = [
             'bronorganisatie' => $bronorganisatie,
             'creatiedatum' => $eio['creatiedatum'] ?? now()->format('Y-m-d'),
-            'vertrouwelijkheidaanduiding' => $eio['vertrouwelijkheidaanduiding'] ?? ZgwConnectionConfig::systemUploadDefault($deelConnectionName),
+            // Determined by the target connection, not copied from the source: the
+            // source instance's confidentiality scheme need not match the target's,
+            // so a copied value can be wrong on the deel connection.
+            'vertrouwelijkheidaanduiding' => ZgwConnectionConfig::systemUploadDefault($deelConnectionName),
             'titel' => $eio['titel'] ?? ($eio['bestandsnaam'] ?? 'Document'),
             'auteur' => $eio['auteur'] ?? 'Onbekend',
             'taal' => $eio['taal'] ?? 'dut',
