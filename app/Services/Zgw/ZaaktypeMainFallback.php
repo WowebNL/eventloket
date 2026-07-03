@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Zgw;
 
 use App\Console\Commands\Zaaktypen\SyncZaaktypen;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\Models\Municipality;
 use App\Models\Zaak;
@@ -40,10 +41,24 @@ final class ZaaktypeMainFallback
             return null;
         }
 
+        return $this->activateForRole($municipality, $ownZaaktype->role);
+    }
+
+    /**
+     * Link the matching active main-catalogus zaaktype (same role, name ending
+     * in "gemeente {name}") to the municipality. Returns the linked row, or
+     * null when the main catalogus has no candidate for this role.
+     *
+     * Used both by the fallback on an unavailable own-instance zaaktype and by
+     * {@see ResolveZaaktype} when an own-instance municipality never coupled a
+     * role at all, so an aanvraag for that role is still created on main.
+     */
+    public function activateForRole(Municipality $municipality, ZaaktypeRole $role): ?Zaaktype
+    {
         $candidates = Zaaktype::query()
             ->where('connection', ZgwConnectionResolver::DEFAULT_CONNECTION)
             ->where('is_active', true)
-            ->where('role', $ownZaaktype->role->value)
+            ->where('role', $role->value)
             ->where(function ($query) use ($municipality) {
                 // A main row may already be linked to this municipality from
                 // before it switched to its own instance (legacy links survive).

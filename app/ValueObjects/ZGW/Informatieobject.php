@@ -53,16 +53,17 @@ class Informatieobject implements Arrayable
     /**
      * Whether this document may be shown to and notified about.
      *
-     * Strict allowlist: only finalised documents are shown. A document without
-     * an explicit status (our own uploads and legacy documents) counts as final,
-     * as do the finalised ZGW statuses. Any other status — the draft statuses
-     * (in_bewerking, ter_vaststelling, concept) but also any unknown or future
-     * one — is treated as not final and hidden.
+     * Strict allowlist: only the 'definitief' status and documents without an
+     * explicit status (our own uploads and legacy documents) are shown. Every
+     * other status is hidden. This includes the draft statuses (in_bewerking,
+     * ter_vaststelling, concept), 'gearchiveerd' (archived documents must never
+     * be shown, not even to users who may otherwise see documents), and any
+     * unknown or future status.
      */
     public function isDefinitief(): bool
     {
         return $this->status === null
             || $this->status === ''
-            || in_array($this->status, ['definitief', 'gearchiveerd'], true);
+            || $this->status === 'definitief';
     }
 }
