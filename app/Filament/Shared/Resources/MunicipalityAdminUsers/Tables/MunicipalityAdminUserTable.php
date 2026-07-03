@@ -37,7 +37,7 @@ class MunicipalityAdminUserTable
                     ->selectablePlaceholder(false)
                     ->afterStateUpdated(function () {
                         Notification::make()
-                            ->title(__('resources/municipality_admin.columns.role.notification'))
+                            ->title(__('municipality/resources/municipality_admin.columns.role.notification'))
                             ->success()
                             ->send();
                     }),
