@@ -335,6 +335,276 @@ test('does not create a doorkomst zaak when the passing gemeente has no doorkoms
     expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(0);
 });
 
+/**
+ * Metadata for a source enkelvoudiginformatieobject on the hoofdzaak's instance.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function sourceEioMeta(string $uuid, array $overrides = []): array
+{
+    return array_merge([
+        'url' => OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/'.$uuid,
+        'titel' => 'Situatietekening',
+        'auteur' => 'Jan Jansen',
+        'taal' => 'dut',
+        'bestandsnaam' => 'situatie.pdf',
+        'formaat' => 'application/pdf',
+        'vertrouwelijkheidaanduiding' => 'vertrouwelijk',
+        'creatiedatum' => '2026-06-15',
+        'informatieobjecttype' => OWN_HOST.'/catalogi/api/v1/informatieobjecttypen/src-bijlage',
+    ], $overrides);
+}
+
+test('copies documents cross-instance: downloads from the hoofdzaak and re-creates them in the deelzaak instance', function () {
+    Http::fake([
+        OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        // One document on the hoofdzaak.
+        OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([
+            ['informatieobject' => OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1'],
+        ]), 200),
+        // The download must be matched before the EIO-metadata glob.
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1/download*' => Http::response('PDFBYTES', 200),
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1*' => Http::response(sourceEioMeta('doc-1'), 200),
+        // Source informatieobjecttype omschrijving (matched exactly on the target).
+        OWN_HOST.'/catalogi/api/v1/informatieobjecttypen/src-bijlage*' => Http::response([
+            'url' => OWN_HOST.'/catalogi/api/v1/informatieobjecttypen/src-bijlage',
+            'omschrijving' => 'Bijlage',
+        ], 200),
+        // Target document types on the deel connection (main).
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
+            ['informatieobjecttype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage',
+            'omschrijving' => 'Bijlage',
+        ], 200),
+        // Target documenten store + zaakinformatieobjecten link.
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/new-doc-1',
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1',
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    // The source document was downloaded.
+    Http::assertSent(fn ($request) => $request->method() === 'GET'
+        && str_starts_with($request->url(), OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1/download'));
+
+    // A new document was created in the target instance from the downloaded bytes,
+    // with the target-mapped informatieobjecttype and copied metadata.
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && $request->data()['inhoud'] === base64_encode('PDFBYTES')
+        && $request->data()['informatieobjecttype'] === ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage'
+        && $request->data()['bronorganisatie'] === '123456789'
+        && $request->data()['titel'] === 'Situatietekening'
+        && $request->data()['auteur'] === 'Jan Jansen'
+        && $request->data()['vertrouwelijkheidaanduiding'] === 'vertrouwelijk'
+        && $request->data()['bestandsomvang'] === strlen('PDFBYTES'));
+
+    // The new copy is linked to the deelzaak, and the source url is never linked.
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten')
+        && ($request->data()['zaak'] ?? null) === ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'
+        && ($request->data()['informatieobject'] ?? null) === ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/new-doc-1');
+
+    Http::assertNotSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten')
+        && ($request->data()['informatieobject'] ?? null) === OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1');
+});
+
+test('links the existing document url and does not copy when the deelzaak shares the hoofdzaak instance', function () {
+    // Hoofdzaak on main; doorkomst zaaktype on main too, so both live in one
+    // instance and the document url is directly linkable.
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1'], 201);
+            }
+
+            return Http::response(ZgwHttpFake::envelope([
+                ['informatieobject' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1'],
+            ]), 200);
+        },
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    // The original informatieobject url is linked directly.
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten')
+        && ($request->data()['informatieobject'] ?? null) === ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1');
+
+    // No download and no re-upload happened.
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), '/download'));
+    Http::assertNotSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten'));
+});
+
+test('skips a document cross-instance when no target informatieobjecttype resolves, but still creates the deelzaak and its status', function () {
+    Http::fake([
+        OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([
+            ['informatieobject' => OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1'],
+        ]), 200),
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1/download*' => Http::response('PDFBYTES', 200),
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1*' => Http::response(sourceEioMeta('doc-1'), 200),
+        OWN_HOST.'/catalogi/api/v1/informatieobjecttypen/src-bijlage*' => Http::response([
+            'url' => OWN_HOST.'/catalogi/api/v1/informatieobjecttypen/src-bijlage',
+            'omschrijving' => 'Bijlage',
+        ], 200),
+        // Target has no document types: nothing to map to.
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        // Target statustype so the initial status is still set.
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1', 'volgnummer' => 1, 'omschrijving' => 'Ontvangen'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/statussen*' => Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/statussen/1'], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    // The deelzaak is still created locally.
+    expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
+
+    // No document was re-created in the target instance.
+    Http::assertNotSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten'));
+
+    // The initial status was still set.
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/statussen'));
+});
+
+test('a failing document copy does not abort the remaining documents or the deelzaak', function () {
+    Http::fake([
+        OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([
+            ['informatieobject' => OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1'],
+            ['informatieobject' => OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-2'],
+        ]), 200),
+        // First document's download fails; the second succeeds.
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1/download*' => Http::response('', 500),
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1*' => Http::response(sourceEioMeta('doc-1'), 200),
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-2/download*' => Http::response('BYTES2', 200),
+        OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-2*' => Http::response(sourceEioMeta('doc-2', [
+            'url' => OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-2',
+        ]), 200),
+        OWN_HOST.'/catalogi/api/v1/informatieobjecttypen/src-bijlage*' => Http::response([
+            'url' => OWN_HOST.'/catalogi/api/v1/informatieobjecttypen/src-bijlage',
+            'omschrijving' => 'Bijlage',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
+            ['informatieobjecttype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage',
+            'omschrijving' => 'Bijlage',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/new-doc-2',
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1',
+        ], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    // Exactly one document was re-created (the second): the failure of the first
+    // did not abort the loop.
+    $documentenPosts = collect(Http::recorded())
+        ->filter(fn ($pair) => $pair[0]->method() === 'POST'
+            && str_starts_with($pair[0]->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten'))
+        ->count();
+    expect($documentenPosts)->toBe(1);
+
+    // The deelzaak is still created locally.
+    expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
+});
+
 test('is idempotent: running twice does not create a second doorkomst zaak', function () {
     fakeDoorkomstZgw();
     $scenario = doorkomstScenario(hoofdOwnInstance: true);

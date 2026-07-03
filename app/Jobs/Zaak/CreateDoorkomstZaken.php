@@ -15,6 +15,7 @@ use App\Normalizers\OpenFormsNormalizer;
 use App\Services\Zgw\InitiatorRolBuilder;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Helpers\ArrayHelper;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -26,6 +27,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Woweb\Zgw\Facades\Zgw;
@@ -42,6 +44,15 @@ use Woweb\Zgw\Facades\Zgw;
 class CreateDoorkomstZaken implements ShouldQueue
 {
     use Queueable;
+
+    /**
+     * Memoized omschrijving of the hoofdzaak's aanvraag informatieobjecttype, used
+     * to recognise the aanvraag PDF when copying documents cross-instance. Resolved
+     * lazily once per job run ({@see self::hoofdAanvraagOmschrijving()}).
+     */
+    private ?string $hoofdAanvraagOmschrijving = null;
+
+    private bool $hoofdAanvraagResolved = false;
 
     public function __construct(public readonly Zaak $zaak) {}
 
@@ -191,7 +202,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
         $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
         $this->createInitiator($deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
-        $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl);
+        $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
         $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
 
         $newOzZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
@@ -307,18 +318,19 @@ class CreateDoorkomstZaken implements ShouldQueue
         $deelConnection->zaken()->rollen()->store($rolData);
     }
 
-    private function copyDocumenten(string $hoofdConnectionName, string $deelConnectionName, ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl): void
+    private function copyDocumenten(string $hoofdConnectionName, string $deelConnectionName, ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
-        // Documents are linked by informatieobject url. That url lives in the
-        // hoofdzaak's documenten API, which a different-instance target does not
-        // know ("unknown-service"), so cross-instance document links are skipped.
-        // Copying them would require downloading and re-uploading into the target
-        // documenten API.
-        if ($deelConnectionName !== $hoofdConnectionName) {
-            Log::warning('CreateDoorkomstZaken: skipping cross-instance document links', ['zaak' => $newZaakUrl]);
+        // Same instance: the informatieobject url is directly linkable. Cross
+        // instance: the url lives in the hoofdzaak's documenten API, which the
+        // target does not know, so each document is downloaded and re-created in the
+        // target documenten API before linking (see copyDocumentToTargetInstance).
+        $sameInstance = $deelConnectionName === $hoofdConnectionName;
 
-            return;
-        }
+        // Resolving a target informatieobjecttype is only needed cross-instance; the
+        // source type url is not portable and must be re-mapped by omschrijving. The
+        // mapping and the source-type omschrijvingen are resolved at most once here.
+        $deelMapping = $sameInstance ? null : MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $sourceTypeOmschrijvingen = [];
 
         $zios = Zgw::connection($hoofdConnectionName)->zaken()->zaakinformatieobjecten()->index(['zaak' => $ozZaak->url]);
         foreach ($zios as $zio) {
@@ -326,11 +338,211 @@ class CreateDoorkomstZaken implements ShouldQueue
             if (! $informatieobjectUrl) {
                 continue;
             }
+
+            if ($sameInstance) {
+                $deelConnection->zaken()->zaakinformatieobjecten()->store([
+                    'zaak' => $newZaakUrl,
+                    'informatieobject' => $informatieobjectUrl,
+                ]);
+
+                continue;
+            }
+
+            // A single failing document is logged and skipped so the remaining
+            // documents and the deelzaak's status/local record are still created:
+            // re-running the job would create a duplicate ZGW deelzaak (the
+            // idempotency check is local), so aborting here is worse than losing
+            // one document, which can be re-added by hand.
+            try {
+                $targetUrl = $this->copyDocumentToTargetInstance(
+                    $hoofdConnectionName,
+                    $deelConnectionName,
+                    $deelConnection,
+                    (string) $informatieobjectUrl,
+                    $ozZaak->bronorganisatie,
+                    $doorkomstZaaktype,
+                    $deelMapping,
+                    $sourceTypeOmschrijvingen,
+                );
+            } catch (Throwable $e) {
+                Log::error('CreateDoorkomstZaken: failed to copy document to target instance', [
+                    'zaak' => $newZaakUrl,
+                    'informatieobject' => $informatieobjectUrl,
+                    'exception' => $e->getMessage(),
+                ]);
+
+                continue;
+            }
+
+            if ($targetUrl === null) {
+                continue;
+            }
+
             $deelConnection->zaken()->zaakinformatieobjecten()->store([
                 'zaak' => $newZaakUrl,
-                'informatieobject' => $informatieobjectUrl,
+                'informatieobject' => $targetUrl,
             ]);
         }
+    }
+
+    /**
+     * Download an enkelvoudiginformatieobject from the hoofdzaak's documenten API
+     * and re-create it in the deelzaak's instance. Returns the new EIO url, or null
+     * when no target informatieobjecttype could be resolved (document then skipped).
+     *
+     * @param  array<string, string>  $sourceTypeOmschrijvingen  memo: source type url => omschrijving
+     */
+    private function copyDocumentToTargetInstance(
+        string $hoofdConnectionName,
+        string $deelConnectionName,
+        ZgwConnection $deelConnection,
+        string $informatieobjectUrl,
+        string $bronorganisatie,
+        Zaaktype $doorkomstZaaktype,
+        ?MunicipalityZaaktypeMapping $deelMapping,
+        array &$sourceTypeOmschrijvingen,
+    ): ?string {
+        $eio = ZgwResource::byUrl($hoofdConnectionName, $informatieobjectUrl);
+
+        $targetType = $this->resolveTargetInformatieobjecttype(
+            $hoofdConnectionName,
+            (string) ($eio['informatieobjecttype'] ?? ''),
+            $doorkomstZaaktype,
+            $deelMapping,
+            $sourceTypeOmschrijvingen,
+        );
+        if ($targetType === null) {
+            Log::warning('CreateDoorkomstZaken: no target informatieobjecttype for document copy', [
+                'informatieobject' => $informatieobjectUrl,
+                'zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url,
+            ]);
+
+            return null;
+        }
+
+        $content = ZgwResource::downloadDocument($hoofdConnectionName, (string) ($eio['uuid'] ?? ''));
+
+        $payload = [
+            'bronorganisatie' => $bronorganisatie,
+            'creatiedatum' => $eio['creatiedatum'] ?? now()->format('Y-m-d'),
+            'vertrouwelijkheidaanduiding' => $eio['vertrouwelijkheidaanduiding'] ?? ZgwConnectionConfig::systemUploadDefault($deelConnectionName),
+            'titel' => $eio['titel'] ?? ($eio['bestandsnaam'] ?? 'Document'),
+            'auteur' => $eio['auteur'] ?? 'Onbekend',
+            'taal' => $eio['taal'] ?? 'dut',
+            'bestandsnaam' => $eio['bestandsnaam'] ?? '',
+            'bestandsomvang' => strlen($content),
+            'formaat' => ($eio['formaat'] ?? '') ?: 'application/octet-stream',
+            'inhoud' => base64_encode($content),
+            'informatieobjecttype' => $targetType,
+            'indicatieGebruiksrecht' => false,
+        ];
+
+        // Preserve draft/definitief and the description when the source carries them.
+        if (! empty($eio['status'])) {
+            $payload['status'] = $eio['status'];
+        }
+        if (! empty($eio['beschrijving'])) {
+            $payload['beschrijving'] = $eio['beschrijving'];
+        }
+
+        $response = $deelConnection->documenten()->enkelvoudiginformatieobjecten()->store($payload);
+
+        $newUrl = $response['url'] ?? null;
+        if (! $newUrl) {
+            Log::error('CreateDoorkomstZaken: target documenten store returned no url', [
+                'informatieobject' => $informatieobjectUrl,
+            ]);
+
+            return null;
+        }
+
+        return (string) $newUrl;
+    }
+
+    /**
+     * Resolve the target-instance informatieobjecttype url for a copied document.
+     * The source type url is not portable across instances, so match by omschrijving:
+     * an exact omschrijving match on the deelzaaktype's types, else the aanvraag or
+     * bijlage blueprint slot, else null.
+     *
+     * @param  array<string, string>  $sourceTypeOmschrijvingen  memo: source type url => omschrijving
+     */
+    private function resolveTargetInformatieobjecttype(
+        string $hoofdConnectionName,
+        string $sourceTypeValue,
+        Zaaktype $doorkomstZaaktype,
+        ?MunicipalityZaaktypeMapping $deelMapping,
+        array &$sourceTypeOmschrijvingen,
+    ): ?string {
+        $types = $doorkomstZaaktype->documentTypesForUser();
+        if ($types->isEmpty()) {
+            return null;
+        }
+
+        $sourceOmschrijving = $this->sourceTypeOmschrijving($hoofdConnectionName, $sourceTypeValue, $sourceTypeOmschrijvingen);
+
+        if ($sourceOmschrijving !== '') {
+            $exact = $types->first(fn ($type) => property_exists($type, 'omschrijving') && $type->omschrijving === $sourceOmschrijving);
+            if ($exact) {
+                return (string) $exact->url;
+            }
+        }
+
+        // The aanvraag PDF maps to the deelzaaktype's aanvraag slot; anything else is
+        // treated as a bijlage.
+        $isAanvraag = $sourceOmschrijving !== '' && $sourceOmschrijving === $this->hoofdAanvraagOmschrijving();
+        $target = $isAanvraag
+            ? ZaaktypeBlueprint::aanvraagInformatieobjecttype($deelMapping, $types)
+            : ZaaktypeBlueprint::bijlageInformatieobjecttype($deelMapping, $types);
+
+        return $target ? (string) $target->url : null;
+    }
+
+    /**
+     * The omschrijving of a source informatieobjecttype value: a followable url is
+     * fetched (and memoized), an inline value is the omschrijving itself.
+     *
+     * @param  array<string, string>  $memo  source type url => omschrijving
+     */
+    private function sourceTypeOmschrijving(string $hoofdConnectionName, string $value, array &$memo): string
+    {
+        if ($value === '') {
+            return '';
+        }
+        if (! str_starts_with($value, 'http')) {
+            return $value;
+        }
+        if (array_key_exists($value, $memo)) {
+            return $memo[$value];
+        }
+
+        $type = ZgwResource::byUrl($hoofdConnectionName, $value);
+
+        return $memo[$value] = (string) ($type['omschrijving'] ?? '');
+    }
+
+    /**
+     * The omschrijving of the hoofdzaak's aanvraag informatieobjecttype, resolved
+     * from its own zaaktype blueprint and memoized for the whole job run.
+     */
+    private function hoofdAanvraagOmschrijving(): ?string
+    {
+        if ($this->hoofdAanvraagResolved) {
+            return $this->hoofdAanvraagOmschrijving;
+        }
+        $this->hoofdAanvraagResolved = true;
+
+        $zaaktype = $this->zaak->zaaktype;
+        if (! $zaaktype) {
+            return $this->hoofdAanvraagOmschrijving = null;
+        }
+
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($zaaktype);
+        $aanvraag = ZaaktypeBlueprint::aanvraagInformatieobjecttype($mapping, $zaaktype->documentTypesForUser());
+
+        return $this->hoofdAanvraagOmschrijving = ($aanvraag && property_exists($aanvraag, 'omschrijving'))
+            ? $aanvraag->omschrijving
+            : null;
     }
 
     private function createInitieleStatus(ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
