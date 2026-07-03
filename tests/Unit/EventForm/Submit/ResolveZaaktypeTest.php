@@ -23,13 +23,15 @@ use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaaktype;
+use App\Services\Zgw\ZaaktypeMainFallback;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->resolve = new ResolveZaaktype(new DetermineAanvraagType);
+    $this->resolve = new ResolveZaaktype(new DetermineAanvraagType, new ZaaktypeMainFallback);
 });
 
 test('vergunning voor Heerlen → Evenementenvergunning-zaaktype van Heerlen', function () {
@@ -198,6 +200,66 @@ test('een weer actief eigen zaaktype wint van een nog gekoppelde main-fallback',
     ]);
 
     expect($this->resolve->forState($state)->id)->toBe($eigen->id);
+});
+
+test('eigen-instantie-gemeente zonder gekoppeld type valt terug op de main-rij', function () {
+    $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+
+    // Heerlen runs its own ZGW instance.
+    MunicipalityZgwConnection::factory()->create(['municipality_id' => $heerlen->id]);
+
+    // Its own instance couples Vergunning, but not Melding.
+    Zaaktype::factory()->create([
+        'name' => 'Eigen evenementenvergunning',
+        'connection' => "gemeente_{$heerlen->id}",
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    // The main catalogus still has a Melding row for Heerlen, unlinked because
+    // Heerlen runs its own instance (SyncZaaktypen skips linking it).
+    $mainMelding = Zaaktype::factory()->create([
+        'name' => 'Melding evenement gemeente Heerlen',
+        'connection' => 'main',
+        'role' => ZaaktypeRole::Melding,
+        'municipality_id' => null,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee', // → Melding
+    ]);
+
+    $resolved = $this->resolve->forState($state);
+
+    expect($resolved->id)->toBe($mainMelding->id);
+    // The main row is now linked to Heerlen so a zaak created on it derives its
+    // municipality through the zaaktype.
+    expect($resolved->fresh()->municipality_id)->toBe($heerlen->id);
+});
+
+test('een main-gemeente zonder gekoppeld type valt niet terug via de main-fallback', function () {
+    // A municipality without its own instance whose main row is (mis)configured
+    // as unlinked must not silently get linked by the resolver; it still throws.
+    $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+
+    Zaaktype::factory()->create([
+        'name' => 'Melding evenement gemeente Heerlen',
+        'connection' => 'main',
+        'role' => ZaaktypeRole::Melding,
+        'municipality_id' => null,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+    ]);
+
+    expect(fn () => $this->resolve->forState($state))
+        ->toThrow(RuntimeException::class, 'Geen actief zaaktype');
 });
 
 test('eigen-connectie-rij wint ook op de role-route als beide gekoppeld en actief zijn', function () {
