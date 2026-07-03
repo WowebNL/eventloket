@@ -422,7 +422,9 @@ test('copies documents cross-instance: downloads from the hoofdzaak and re-creat
         && $request->data()['bronorganisatie'] === '123456789'
         && $request->data()['titel'] === 'Situatietekening'
         && $request->data()['auteur'] === 'Jan Jansen'
-        && $request->data()['vertrouwelijkheidaanduiding'] === 'vertrouwelijk'
+        // Determined by the target connection (systemUploadDefault → zaakvertrouwelijk),
+        // not copied from the source document (which is 'vertrouwelijk').
+        && $request->data()['vertrouwelijkheidaanduiding'] === 'zaakvertrouwelijk'
         && $request->data()['bestandsomvang'] === strlen('PDFBYTES'));
 
     // The new copy is linked to the deelzaak, and the source url is never linked.
