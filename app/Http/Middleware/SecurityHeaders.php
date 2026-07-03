@@ -36,10 +36,16 @@ class SecurityHeaders
 
     private function buildCsp(): string
     {
-        // connect-src must allow the Vite HMR WebSocket in local dev and the PDOK Locatieserver API.
+        // In local dev, assets (JS modules + CSS) are served by the Vite dev
+        // server on a separate origin, so it must be whitelisted for script-src,
+        // style-src and connect-src (the latter also for the HMR WebSocket).
         $connectSrc = "'self' https://api.pdok.nl";
+        $viteScriptSrc = '';
+        $viteStyleSrc = '';
         if (config('app.debug')) {
             $connectSrc .= ' ws://localhost:5173 ws://127.0.0.1:5173 http://localhost:5173';
+            $viteScriptSrc = ' http://localhost:5173';
+            $viteStyleSrc = ' http://localhost:5173';
         }
 
         $directives = [
@@ -48,9 +54,9 @@ class SecurityHeaders
             // which requires 'unsafe-eval'. Livewire injects inline <script> tags,
             // requiring 'unsafe-inline'. Both are unavoidable without a nonce-based
             // approach and full Alpine.js CSP build.
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'{$viteScriptSrc}",
             // Alpine generates inline style attributes at runtime.
-            "style-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline'{$viteStyleSrc}",
             // data: for locally-generated SVG avatar data URIs; blob: for
             // any canvas/object-URL created by UI components.
             "img-src 'self' data: blob: https://tile.openstreetmap.org",
