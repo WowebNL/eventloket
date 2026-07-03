@@ -215,6 +215,116 @@ test('sets the ZGW hoofdzaak reference when the doorkomst gemeente shares the ho
         && ($request->data()['hoofdzaak'] ?? null) === ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1');
 });
 
+/**
+ * Fake a cross-instance doorkomst (own-instance hoofdzaak, main deelzaak). The
+ * target roltypen expose an initiator roltype so the initiator is registered,
+ * and the rollen POST is captured.
+ */
+function fakeDoorkomstForInitiator(): void
+{
+    Http::fake([
+        OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/roltypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/roltypen/init', 'omschrijvingGeneriek' => 'initiator'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen*' => Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen/1'], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+function withPassingDoorkomstZaaktype(Municipality $passing): void
+{
+    Zaaktype::factory()->create([
+        'municipality_id' => $passing->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+}
+
+/** A route snapshot plus the given aanvrager form values. */
+function routeSnapshotWithValues(array $values): array
+{
+    return ['values' => array_merge(routeSnapshot()['values'], $values)];
+}
+
+test('registers the initiator on the deelzaak from the form aanvrager data, not the copied ZGW rol', function () {
+    // The initiator is rebuilt from the form (KvK + organisation name), matching
+    // the hoofdzaak. The hoofdzaak ZGW rol is not copied: its identificatie is
+    // empty and its betrokkene url is not portable across instances.
+    fakeDoorkomstForInitiator();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->update(['form_state_snapshot' => routeSnapshotWithValues([
+        'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+        'watIsDeNaamVanUwOrganisatie' => 'Woweb',
+    ])]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen')
+        && $request->data()['betrokkeneType'] === 'niet_natuurlijk_persoon'
+        && $request->data()['roltype'] === ZgwHttpFake::$baseUrl.'/catalogi/api/v1/roltypen/init'
+        && ($request->data()['betrokkeneIdentificatie']['kvkNummer'] ?? null) === '12345678'
+        && ($request->data()['betrokkeneIdentificatie']['statutaireNaam'] ?? null) === 'Woweb');
+});
+
+test('registers a natuurlijk_persoon initiator from the form name when there is no KvK', function () {
+    // A private aanvrager (no KvK). The name is not among the hashed snapshot
+    // keys, and the builder sends no BSN, so a valid natuurlijk_persoon rol is
+    // registered on the deelzaak.
+    fakeDoorkomstForInitiator();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->update(['form_state_snapshot' => routeSnapshotWithValues([
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Jansen',
+    ])]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen')
+        && $request->data()['betrokkeneType'] === 'natuurlijk_persoon'
+        && ($request->data()['betrokkeneIdentificatie']['geslachtsnaam'] ?? null) === 'Jansen'
+        && ($request->data()['betrokkeneIdentificatie']['voornamen'] ?? null) === 'Jan'
+        && ! array_key_exists('kvkNummer', $request->data()['betrokkeneIdentificatie']));
+});
+
+test('skips the initiator when the form has no aanvrager data', function () {
+    fakeDoorkomstForInitiator();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    // Only the route, no aanvrager fields → buildInitiator() is empty.
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
+    Http::assertNotSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen'));
+});
+
 test('does not create a doorkomst zaak when the passing gemeente has no doorkomst zaaktype', function () {
     fakeDoorkomstZgw();
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
