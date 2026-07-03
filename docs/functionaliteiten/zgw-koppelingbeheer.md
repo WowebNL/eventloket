@@ -1,8 +1,30 @@
 # ZGW-koppelingbeheer
 
+Versie: 1.0
+<br>Datum: 03-07-2026
+<br>Door: Michel Verhoeven
+
 Dit document beschrijft hoe een functioneel beheerder een ZGW-koppeling voor een gemeente opzet en onderhoudt in Eventloket. Het legt uit hoe de beheeromgeving werkt en geeft een volledig stappenplan, inclusief wat er aan de externe zaaksysteem-applicatie (bijvoorbeeld Open Zaak of OneGround) klaargezet moet worden.
 
 Dit document is geschreven voor functioneel beheerders. Er is geen technische ontwikkelkennis nodig, maar wel toegang tot beheer van het zaaksysteem van de betreffende gemeente (of contact met de leverancier daarvan).
+
+---
+
+## Inhoudsopgave
+
+1. [Achtergrond en begrippen](#1-achtergrond-en-begrippen)
+2. [Wie mag koppelingen beheren?](#2-wie-mag-koppelingen-beheren)
+3. [Waar vind je het koppelingbeheer?](#3-waar-vind-je-het-koppelingbeheer)
+4. [Voorbereiding aan de kant van het zaaksysteem](#4-voorbereiding-aan-de-kant-van-het-zaaksysteem)
+5. [De koppeling aanmaken in Eventloket](#5-de-koppeling-aanmaken-in-eventloket)
+6. [De verbinding testen en activeren](#6-de-verbinding-testen-en-activeren)
+7. [Zaaktype-koppelingen instellen](#7-zaaktype-koppelingen-instellen)
+8. [Doorkomsten over meerdere zaaksystemen](#8-doorkomsten-over-meerdere-zaaksystemen)
+9. [Nieuwe versies van een zaaktype](#9-nieuwe-versies-van-een-zaaktype)
+10. [Eindcontrole met een proefaanvraag](#10-eindcontrole-met-een-proefaanvraag)
+11. [Onderhoud en wijzigingen](#11-onderhoud-en-wijzigingen)
+12. [Het ZGW-logboek](#12-het-zgw-logboek)
+13. [Beknopte checklist](#13-beknopte-checklist)
 
 ---
 
@@ -52,6 +74,19 @@ De rol **Koppelingbeheerder** is speciaal bedoeld voor functioneel of technisch 
 5. Verstuur de uitnodiging. De genodigde ontvangt een e-mail met een link om een account aan te maken.
 
 ![Uitnodigingsformulier met het rol-keuzemenu waarin de optie Koppelingbeheerder zichtbaar is](../assets/zgw-koppelingbeheer/uitnodigen-koppelingbeheerder.webp)
+
+### Een koppelingbeheerder aanmaken vanuit het adminpaneel
+
+Een systeembeheerder kan een koppelingbeheerder ook vanuit het adminpaneel uitnodigen, zonder toegang tot het gemeentepaneel te hebben. Dit gaat via de betreffende gemeente:
+
+1. Ga naar het adminpaneel op `/admin` en open **Gemeenten**.
+2. Open de gemeente waarvoor je een beheerder wilt toevoegen.
+3. Ga naar het tabblad **Gemeentelijk beheerders**.
+4. Kies **Beheerder uitnodigen**.
+5. Vul naam en e-mailadres in en selecteer bij **Rol** de optie "Koppelingbeheerder".
+6. Verstuur de uitnodiging. De genodigde ontvangt dezelfde uitnodigingsmail als bij een uitnodiging vanuit het gemeentepaneel.
+
+De uitnodiging en de aangemaakte gebruiker zijn identiek, ongeacht vanuit welk paneel je ze aanmaakt. Openstaande uitnodigingen zie je in beide panelen terug bij de beheerders van de gemeente.
 
 ---
 
