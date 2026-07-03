@@ -24,21 +24,23 @@ function informatieobjectWithStatus(?string $status): Informatieobject
     );
 }
 
-test('finalised and status-less documents count as final', function (?string $status) {
+test('definitief and status-less documents count as final', function (?string $status) {
     expect(informatieobjectWithStatus($status)->isDefinitief())->toBeTrue();
 })->with([
     'definitief' => 'definitief',
-    'gearchiveerd' => 'gearchiveerd',
     'null (own upload)' => null,
     'empty (own upload)' => '',
 ]);
 
-test('draft and unknown statuses are not final (strict allowlist)', function (string $status) {
+test('draft, archived and unknown statuses are not final (strict allowlist)', function (string $status) {
     expect(informatieobjectWithStatus($status)->isDefinitief())->toBeFalse();
 })->with([
     'in_bewerking' => 'in_bewerking',
     'ter_vaststelling' => 'ter_vaststelling',
     'concept' => 'concept',
+    // Archived documents must never be shown, not even to users who may
+    // otherwise see documents.
+    'gearchiveerd' => 'gearchiveerd',
     // Anything outside the allowlist is hidden, not just the known drafts.
     'unknown status' => 'iets_onbekends',
 ]);
