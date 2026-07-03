@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\OrganisationType;
 use App\EventForm\Services\FormSessionService;
 use App\Models\Organisation;
 use App\Models\User;
@@ -12,6 +13,7 @@ beforeEach(function () {
 
 test('builds the expected payload shape', function () {
     $organisation = Organisation::factory()->create([
+        'type' => OrganisationType::Business,
         'name' => 'Woweb Events',
         'coc_number' => '12345678',
         'email' => 'events@woweb.nl',
@@ -38,6 +40,18 @@ test('builds the expected payload shape', function () {
     ])
         ->and($result['user_uuid'])->toBe($user->uuid)
         ->and($result['organiser_uuid'])->toBe($organisation->uuid);
+});
+
+test('returns empty organisation_name for a personal organisation', function () {
+    $organisation = Organisation::factory()->create([
+        'type' => OrganisationType::Personal,
+        'name' => 'Mijn omgeving',
+    ]);
+    $user = User::factory()->create();
+
+    $result = $this->service->buildFor($user, $organisation);
+
+    expect($result['organisation_name'])->toBe('');
 });
 
 test('returns empty string for organisation_address when no address on file', function () {
