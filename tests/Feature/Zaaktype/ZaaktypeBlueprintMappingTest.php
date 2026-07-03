@@ -15,12 +15,13 @@ use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
+use App\Services\Zgw\ZaaktypeMainFallback;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->resolve = new ResolveZaaktype(new DetermineAanvraagType);
+    $this->resolve = new ResolveZaaktype(new DetermineAanvraagType, new ZaaktypeMainFallback);
 });
 
 test('ResolveZaaktype picks the zaaktype by the blueprint identificatie, ignoring the name prefix', function () {

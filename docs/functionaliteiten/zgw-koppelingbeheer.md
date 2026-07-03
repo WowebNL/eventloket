@@ -28,7 +28,7 @@ Een koppeling doorloopt drie toestanden:
 2. **Getest.** De verbinding is met succes gecontroleerd. Pas dan kan de koppeling geactiveerd worden.
 3. **Actief.** De koppeling verwerkt daadwerkelijk de zaken van de gemeente. Zolang een koppeling niet actief is, blijft de gemeente op de hoofdkoppeling draaien.
 
-Belangrijk: het wijzigen van een cruciale instelling (een endpoint, inloggegeven of de versie) zet een actieve koppeling automatisch terug op inactief. De verbinding moet dan opnieuw getest en opnieuw geactiveerd worden. Dit voorkomt dat een verkeerde wijziging stil doorwerkt op productiezaken. Zie [sectie 8](#8-onderhoud-en-wijzigingen).
+Belangrijk: het wijzigen van een cruciale instelling (een endpoint, inloggegeven of de versie) zet een actieve koppeling automatisch terug op inactief. De verbinding moet dan opnieuw getest en opnieuw geactiveerd worden. Dit voorkomt dat een verkeerde wijziging stil doorwerkt op productiezaken. Zie [sectie 11](#11-onderhoud-en-wijzigingen).
 
 ---
 
@@ -108,7 +108,7 @@ De aangemaakte API-client moet voldoende rechten (autorisaties/scopes) hebben op
 - Aanmaken en lezen van besluiten.
 - Rechten om notificatie-abonnementen te registreren en te ontvangen.
 
-Zonder de juiste autorisaties lukt de verbinding technisch wel, maar mislukt het aanmaken van een zaak later alsnog. Test daarom altijd ook met een echte proefaanvraag (zie [sectie 7](#7-eindcontrole-met-een-proefaanvraag)).
+Zonder de juiste autorisaties lukt de verbinding technisch wel, maar mislukt het aanmaken van een zaak later alsnog. Test daarom altijd ook met een echte proefaanvraag (zie [sectie 10](#10-eindcontrole-met-een-proefaanvraag)).
 
 ### 4.4 Richt de zaaktypecatalogus in
 
@@ -123,22 +123,23 @@ Eventloket verwacht dat er in de catalogi zaaktypen bestaan voor de verschillend
 
 Zorg dat elk zaaktype dat de gemeente wil gebruiken bestaat en gepubliceerd is, en dat het beschikt over:
 
-- De **eigenschappen** die bij een evenement horen (start- en einddatums, naam evenement, soort evenement, aantal aanwezigen, risicoclassificatie, locaties). In de gedeelde hoofdkoppeling heten deze eigenschappen exact zoals de logische sleutels in Eventloket. In een eigen zaaksysteem mogen ze anders heten; die vertaling leg je later vast in de zaaktype-koppeling (zie [sectie 6](#6-zaaktype-koppelingen-instellen)).
+- De **eigenschappen** die bij een evenement horen (start- en einddatums, naam evenement, soort evenement, aantal aanwezigen, risicoclassificatie, locaties). In de gedeelde hoofdkoppeling heten deze eigenschappen exact zoals de logische sleutels in Eventloket. In een eigen zaaksysteem mogen ze anders heten; die vertaling leg je later vast in de zaaktype-koppeling (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
 - De **statustypen** die de zaak doorloopt, met minimaal een begin-status en een eindstatus.
 - Een **roltype** voor de initiator (de organisator/aanvrager).
 - De **resultaattypen**, waaronder een resultaattype voor "Ingetrokken".
 - De **informatieobjecttypen** (documenttypen) voor de aanvraag-PDF en voor bijlagen.
 
+Houd bij het uitbrengen van nieuwe versies van een zaaktype de namen van statustypen, roltypen, resultaattypen, documenttypen en eigenschappen gelijk. Eventloket herkent deze onderdelen op naam. Zolang de namen gelijk blijven, werkt een nieuwe versie automatisch door zonder aanpassing in Eventloket (zie [sectie 9](#9-nieuwe-versies-van-een-zaaktype)).
 
 ### 4.5 Bereid notificaties voor
 
-Als de gemeente wil dat statuswijzigingen vanuit het zaaksysteem terugkomen in Eventloket (bijvoorbeeld wanneer een behandelaar in het zaaksysteem iets wijzigt), moet de Notificaties API beschikbaar zijn. Eventloket registreert zelf automatisch een abonnement op deze API tijdens de verbindingstest. Zorg alleen dat:
+Als de gemeente wil dat wijzigingen vanuit het zaaksysteem terugkomen in Eventloket (bijvoorbeeld wanneer een behandelaar in het zaaksysteem iets wijzigt), moet de Notificaties API beschikbaar zijn. Eventloket registreert zelf automatisch een abonnement op deze API tijdens de verbindingstest. Het abonnement omvat de kanalen zaken, besluiten, documenten en zaaktypen; via dat laatste kanaal verwerkt Eventloket ook automatisch nieuwe versies van zaaktypen (zie [sectie 9](#9-nieuwe-versies-van-een-zaaktype)). Zorg alleen dat:
 
 - De Notificaties API bereikbaar is vanaf Eventloket.
 - De API-client rechten heeft om een abonnement te registreren.
 - De callback-URL van Eventloket bereikbaar is vanaf het zaaksysteem. Eventloket vult deze callback zelf in bij het registreren van het abonnement.
 
-Als er geen Notificaties API wordt ingevuld, blijft de rest van de koppeling gewoon werken; alleen automatische statusupdates vanuit het zaaksysteem ontbreken dan.
+Als er geen Notificaties API wordt ingevuld, blijft de rest van de koppeling gewoon werken. Automatische statusupdates vanuit het zaaksysteem en de automatische verwerking van zaaktype-wijzigingen ontbreken dan; wijzigingen aan zaaktypen worden in dat geval pas opgepikt bij een handmatige synchronisatie door een platformbeheerder.
 
 ---
 
@@ -176,18 +177,20 @@ Vul hier de base-URL's in die je in [sectie 4.1](#41-zorg-dat-de-zgw-apis-beschi
 
 - **Toegestane hosts.** Extra origins (naast de vijf base-URL's) waarvandaan deze koppeling documenten mag ophalen. Meestal leeg te laten.
 - **Bronorganisatie RSIN.** Het RSIN dat als bronorganisatie op elke zaak wordt gezet. Vul het RSIN van de gemeente in als het zaaksysteem dit vereist; laat leeg om de waarde van de hoofdkoppeling te erven (RSIN van de veiligheidsregio).
-- **Datumformaat zaakeigenschappen.** Optioneel PHP-datumformaat voor datumwaarden in zaakeigenschappen (bijvoorbeeld `YmdHis`). Sommige zaaksystemen, zoals Rx.Mission, verwachten datums in een specifiek formaat. Laat leeg om het standaardformaat aan te houden. Vraag dit bij twijfel na bij de leverancier.
+
+Datums in zaakeigenschappen hebben geen instelling nodig. Eventloket leest per eigenschap in de catalogus of het om een datum of een datum met tijd gaat en levert de waarde automatisch in het bijbehorende formaat aan.
 
 ### 5.5 Eventloket-functies
 
 In deze sectie bepaal je hoe Eventloket zaken van deze koppeling toont en notificeert. De standaardwaarden houden het volledige gedrag aan; pas ze alleen aan als de werkwijze van de gemeente daarom vraagt.
 
-- **Status niet wijzigbaar door behandelaar.** Als dit aan staat, kan de behandelaar de status van een zaak niet vanuit Eventloket wijzigen en de zaak niet afronden. De status wordt dan volledig in het zaaksysteem beheerd. Intrekken door de organisator blijft mogelijk.
+- **Status niet wijzigbaar door behandelaar.** Als dit aan staat, kan de behandelaar de status van een zaak niet vanuit Eventloket wijzigen en de zaak niet afronden. De status wordt dan volledig in het zaaksysteem beheerd. Of de organisator een aanvraag kan intrekken regel je apart met de instelling "Intrekken door organisator toestaan".
 - **Tabblad besluiten tonen.** Toont het tabblad Besluiten bij een zaak.
 - **Tabblad bestanden tonen.** Toont het tabblad Bestanden. Bij uitschakelen ziet de organisator nog wel de eigen aanvraag-bestanden, maar kunnen er geen nieuwe bestanden bijkomen.
 - **Tabblad adviesvragen tonen.** Toont het tabblad Adviesvragen bij een zaak.
 - **Tabblad organisatievragen tonen.** Toont het tabblad Organisatievragen bij een zaak.
 - **Geen notificaties versturen.** Onderdrukt alle notificaties voor zaken van deze koppeling. Alleen de ontvangstbevestiging bij het indienen wordt dan nog verstuurd.
+- **Intrekken door organisator toestaan.** Standaard aan. Als dit aan staat, kan een organisator een ingediende aanvraag intrekken via Eventloket. Zet dit uit voor een OneGround (Rx.Mission) koppeling: daar mislukt het intrekken, omdat het zetten van de eindstatus de zaak direct archiveert en dat pas is toegestaan als alle documenten gearchiveerd zijn. Staat deze instelling uit, dan hoef je in de zaaktype-koppeling ook geen eind-statustype en ingetrokken-resultaattype in te stellen; die velden verdwijnen daar dan (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
 
 ### 5.6 Vertrouwelijkheid
 
@@ -198,6 +201,11 @@ Hier bepaal je per rolgroep welke vertrouwelijkheidsniveaus zichtbaar zijn en we
 - **Standaard voor systeemdocumenten.** Het niveau voor automatisch gegenereerde documenten, namelijk de aanvraag-PDF en de formulier-bijlagen.
 
 Laat een veld leeg om de standaardwaarden van Eventloket aan te houden. De rol-gebaseerde filtering blijft altijd actief, ongeacht deze instellingen. Als alle drie de document-tabbladen zijn uitgeschakeld, verdwijnen de per-rol velden vanzelf, omdat er dan toch niet geüpload kan worden. De standaard voor systeemdocumenten blijft dan wel relevant.
+
+Twee vaste gedragsregels gelden altijd, los van deze instellingen:
+
+- Een organisator ziet de documenten die hij zelf heeft ingediend altijd terug, ook als het vertrouwelijkheidsniveau van die documenten buiten de zichtbare niveaus van de organisator valt.
+- Documenten uit het zaaksysteem worden alleen getoond wanneer ze definitief zijn (documentstatus "definitief", of een document zonder status). Concepten blijven voor alle rollen verborgen. Gearchiveerde documenten worden nooit getoond, ook niet aan iemand die documenten wel mag zien.
 
 3. Sla het formulier op. De koppeling is nu aangemaakt, maar nog **niet actief**. De gemeente draait dus nog steeds op de hoofdkoppeling totdat de koppeling is getest en geactiveerd.
 
@@ -218,12 +226,12 @@ Een nieuwe of gewijzigde koppeling moet eerst getest worden voordat je hem kunt 
 
 3. Als beide stappen slagen, wordt de datum en tijd van de geslaagde controle vastgelegd bij de koppeling ("Laatste controle"). Sluit het venster.
 
-Als een stap mislukt, toont het venster een algemene foutmelding. De precieze technische oorzaak wordt niet aan de gebruiker getoond, maar wel intern gelogd. Controleer in dat geval de endpoints, de inloggegevens en de autorisaties in het zaaksysteem, en raadpleeg zonodig het ZGW-logboek (zie [sectie 9](#9-het-zgw-logboek)).
+Als een stap mislukt, toont het venster een algemene foutmelding. De precieze technische oorzaak wordt niet aan de gebruiker getoond, maar wel intern gelogd. Controleer in dat geval de endpoints, de inloggegevens en de autorisaties in het zaaksysteem, en raadpleeg zonodig het ZGW-logboek (zie [sectie 12](#12-het-zgw-logboek)).
 
 ### 6.2 Activeren
 
 1. Zodra de verbinding met succes is getest, verschijnt bij de koppeling de actie **Activeren**. Deze actie is uitgeschakeld zolang er nog geen geslaagde controle is; de tooltip legt dan uit dat je eerst de verbinding moet testen.
-2. Klik op **Activeren** en bevestig in het venster. Vanaf dat moment worden alle nieuwe zaken van deze gemeente via haar eigen zaaksysteem verwerkt. **Let op dat je een koppeling pas activeert nadat je de zaaktyp-koppelingen hebt ingesteld.**
+2. Klik op **Activeren** en bevestig in het venster. Vanaf dat moment worden alle nieuwe zaken van deze gemeente via haar eigen zaaksysteem verwerkt. **Let op dat je een koppeling pas activeert nadat je de zaaktype-koppelingen hebt ingesteld (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).**
 
 De status van de koppeling in de lijst verspringt naar **Actief** (groen).
 
@@ -238,7 +246,7 @@ Wil je de gemeente tijdelijk terugzetten op de hoofdkoppeling, klik dan op **Dea
 
 De ZGW-koppeling uit de vorige secties regelt de verbinding. Daarnaast moet Eventloket weten welk zaaktype uit het externe zaaksysteem bij welke Eventloket-rol hoort, en hoe de velden van een aanvraag zich verhouden tot de eigenschappen in dat zaaktype. Dat leg je vast onder **Instellingen, Zaaktype-koppelingen**.
 
-Zonder zaaktype-koppeling valt Eventloket terug op de naam-conventie (zie de prefixen in [sectie 4.4](#44-richt-de-zaaktypecatalogus-in)). Werkt het externe zaaksysteem met afwijkende namen, dan is een expliciete koppeling noodzakelijk. Een extern zaaksysteem werkt vrijwel altijd met afwijkende namen dus stel altijd de zaaktype-koppelingen in om er zeker van te zijn dat de zaken goed worden aangemaakt.
+Zonder zaaktype-koppeling valt Eventloket terug op de naam-conventie (zie [sectie 4.4](#44-richt-de-zaaktypecatalogus-in)). Werkt het externe zaaksysteem met afwijkende namen, dan is een expliciete koppeling noodzakelijk. Een extern zaaksysteem werkt vrijwel altijd met afwijkende namen dus stel altijd de zaaktype-koppelingen in om er zeker van te zijn dat de zaken goed worden aangemaakt.
 
 De keuzelijsten in dit scherm worden live geladen uit de catalogi van de eigen ZGW-koppeling van de gemeente. Ze werken al voordat de koppeling geactiveerd is, zodat je alles vooraf kunt inrichten. De koppeling moet dus wel aangemaakt en getest zijn, zodat de catalogi bereikbaar zijn.
 
@@ -262,17 +270,88 @@ Maak per gebruikte type in Eventloket (Vergunning, vooraankondiging, melding en 
 
    Laat een veld leeg om terug te vallen op de standaard-heuristiek (Eventloket kiest dan zelf een passend type op basis van naam).
 
+   Staat op de ZGW-koppeling de instelling "Intrekken door organisator toestaan" uit, dan zijn de velden Eind-statustype en Ingetrokken-resultaattype hier niet zichtbaar; die zijn dan niet nodig omdat intrekken via Eventloket is uitgeschakeld.
+
+   Alle keuzes in dit scherm worden opgeslagen op naam, niet op technische verwijzing. Bij een nieuwe versie van het zaaktype blijft de koppeling daardoor gewoon werken zolang de namen gelijk blijven (zie [sectie 9](#9-nieuwe-versies-van-een-zaaktype)).
+
 5. De sectie **Gedrag** verschijnt alleen bij een gemeente met een eigen ZGW-koppeling en een gekozen zaaktype. Hierin regel je:
-   - **Route-check activeren.** Als aangevinkt, controleert Eventloket na het aanmaken van een zaak of de route door andere gemeenten loopt en maakt het automatisch deelzaken aan. Zet dit aan bij het Doorkomst-zaaktype.
+   - **Route-check activeren.** Als aangevinkt, controleert Eventloket na het aanmaken van een zaak of de route door andere gemeenten loopt en maakt het automatisch deelzaken aan. Zet dit aan bij het Doorkomst-zaaktype. Hoe die deelzaken over de verschillende zaaksystemen worden verdeeld, staat in [sectie 8](#8-doorkomsten-over-meerdere-zaaksystemen).
    - **Te verbergen resultaten.** Selecteer welke resultaattypen (bijvoorbeeld "Ingetrokken") niet zichtbaar moeten zijn in de kalender en de lijstweergave.
 
 6. Sla de koppeling op. Herhaal dit voor elke rol die de gemeente gebruikt.
 
 ![Het formulier Zaaktype-koppeling met de secties Eigenschappen, Flow-blockers en Gedrag](../assets/zgw-koppelingbeheer/zaaktype-koppeling-flow.webp)
 
+### Een type dat niet is gekoppeld valt terug op de hoofdkoppeling
+
+Het kan voorkomen dat een gemeente met een eigen ZGW-koppeling niet elk type in het eigen zaaksysteem heeft ingericht. Bijvoorbeeld: de gemeente heeft Vergunning en Vooraankondiging gekoppeld, maar Melding niet.
+
+Komt er dan toch een aanvraag binnen voor zo'n niet-gekoppeld type, dan blokkeert Eventloket die aanvraag niet. In plaats daarvan valt de aanvraag voor dat ene type automatisch terug op de hoofdkoppeling, zodat de zaak daar wordt aangemaakt en de aanvraag niet vastloopt. De overige types van de gemeente blijven gewoon op het eigen zaaksysteem draaien; de terugval geldt alleen voor het type dat niet is gekoppeld.
+
+Voorwaarde is wel dat de hoofdkoppeling een passend zaaktype voor die gemeente bevat (met dezelfde rol en een naam die eindigt op "gemeente" gevolgd door de gemeentenaam). Dat is doorgaans het geval, omdat de gedeelde hoofdkoppeling van de veiligheidsregio de zaaktypen voor alle gemeenten bevat. Ontbreekt zo'n zaaktype, dan kan de aanvraag voor dat type niet worden aangemaakt.
+
+Koppel je het type later alsnog in het eigen zaaksysteem, dan neemt het eigen zaaksysteem automatisch weer over voor nieuwe aanvragen. Reeds aangemaakte zaken blijven staan in het zaaksysteem waar ze zijn aangemaakt.
+
+Deze terugval is bedoeld als vangnet, niet als vervanging voor een volledige inrichting. Koppel dus bij voorkeur elk type dat de gemeente gebruikt expliciet, zodat aanvragen in het eigen zaaksysteem belanden en niet op de hoofdkoppeling.
+
 ---
 
-## 8. Eindcontrole met een proefaanvraag
+## 8. Doorkomsten over meerdere zaaksystemen
+
+Bij een doorkomst (een route die door meerdere gemeenten loopt, zoals een optocht of wielerwedstrijd) maakt Eventloket één hoofdzaak aan voor de gemeente waar de aanvraag binnenkomt, en daarnaast automatisch een deelzaak voor elke andere gemeente op de route. Dit gebeurt via de route-check uit [sectie 7](#7-zaaktype-koppelingen-instellen).
+
+Sinds gemeenten een eigen zaaksysteem kunnen hebben, belandt elke deelzaak in het zaaksysteem van de betreffende doorkomstgemeente. Heeft die gemeente een eigen actieve ZGW-koppeling, dan wordt de deelzaak daar aangemaakt; anders in de hoofdkoppeling. De hoofdzaak en de deelzaken kunnen dus in verschillende zaaksystemen staan.
+
+Eventloket regelt daarbij per deelzaak automatisch het volgende:
+
+- **Aanvrager.** De initiator wordt opnieuw vastgelegd op basis van de gegevens uit het aanvraagformulier, op dezelfde manier als bij de hoofdzaak. Er wordt dus niets uit het andere zaaksysteem gekopieerd dat daar niet zou passen.
+- **Documenten.** De aanvraag-PDF en de bijlagen van de hoofdzaak komen ook bij elke deelzaak terecht. Staan hoofdzaak en deelzaak in hetzelfde zaaksysteem, dan wordt het bestaande document gekoppeld. Staan ze in verschillende zaaksystemen, dan downloadt Eventloket het document uit het bronzaaksysteem en maakt het opnieuw aan in het doelzaaksysteem.
+- **Documenttype.** Bij het kopiëren zoekt Eventloket in het doelzaaksysteem een documenttype met exact dezelfde naam als in de bron. Bestaat dat niet, dan gebruikt het het aanvraag- of bijlage-documenttype uit de zaaktype-koppeling van de doorkomstgemeente.
+- **Vertrouwelijkheid.** Een gekopieerd document krijgt het vertrouwelijkheidsniveau dat bij de doelkoppeling is ingesteld als "Standaard voor systeemdocumenten" (zie [sectie 5.6](#56-vertrouwelijkheid)), niet het niveau uit het bronzaaksysteem. De vertrouwelijkheidsschema's van twee zaaksystemen hoeven immers niet overeen te komen.
+
+Als het kopiëren van één document mislukt, wordt dat document overgeslagen en intern gelogd; de deelzaak zelf, de overige documenten en de beginstatus komen gewoon door. Controleer bij een melding hierover het ZGW-logboek (zie [sectie 12](#12-het-zgw-logboek)).
+
+Voor een goede werking moet elke doorkomstgemeente met een eigen zaaksysteem het volgende ingericht hebben:
+
+- Een zaaktype-koppeling voor de rol Doorkomst, inclusief de documenttypen voor aanvraag en bijlagen.
+- Een geteste en geactiveerde ZGW-koppeling.
+
+---
+
+## 9. Nieuwe versies van een zaaktype
+
+Zaaktypen veranderen: een gemeente publiceert bijvoorbeeld een nieuwe versie met een extra statustype of aangepaste eigenschappen. Eventloket verwerkt zulke wijzigingen automatisch, zolang de Notificaties API is ingericht (zie [sectie 4.5](#45-bereid-notificaties-voor)). Er is dan geen handmatige actie in Eventloket nodig.
+
+### Wat gebeurt er als er een nieuwe versie wordt gepubliceerd?
+
+1. **Het zaaksysteem meldt de wijziging.** Bij het publiceren van een zaaktype stuurt het zaaksysteem een reeks berichten naar Eventloket (het zaaktype zelf plus alle onderliggende status-, rol- en resultaattypen). Eventloket wacht kort en bundelt die berichten tot één bijwerkactie, zodat de wijziging in één keer wordt verwerkt.
+2. **Eventloket schakelt over naar de nieuwe versie.** Eventloket zoekt de nieuwste gepubliceerde versie van het zaaktype op en gebruikt die vanaf dat moment voor alle nieuwe aanvragen. Tijdelijk opgeslagen gegevens die nog op de oude versie waren gebaseerd (zoals lijsten met statustypen) worden ververst.
+3. **Eventloket controleert de nieuwe versie.** Direct daarna controleert Eventloket of de nieuwe versie alles bevat wat nodig is om aanvragen te verwerken: een begin- en eindstatustype, het initiator-roltype, het resultaattype voor intrekken, de documenttypen voor aanvraag en bijlagen, en de eigenschappen die in de zaaktype-koppeling zijn vastgelegd (waaronder het interne zaaknummer). Onderdelen die door instellingen niet nodig zijn, worden overgeslagen; staat intrekken door de organisator bijvoorbeeld uit, dan worden het eindstatustype en het ingetrokken-resultaattype niet gecontroleerd.
+4. **Bij problemen krijg je een waarschuwing.** Ontbreekt er iets, of verwijst een naam in de zaaktype-koppeling naar iets dat in de nieuwe versie niet meer bestaat, dan ontvangen de gemeentebeheerders en koppelingbeheerders van de gemeente en de platformbeheerders een waarschuwing per e-mail en als melding in Eventloket. De waarschuwing benoemt precies welke onderdelen aandacht nodig hebben. Dezelfde onopgeloste waarschuwing wordt maximaal één keer per 24 uur herhaald; verandert de situatie, dan volgt direct een nieuwe melding.
+
+De controle draait ook wanneer je zelf een zaaktype-koppeling opslaat en wanneer een platformbeheerder een handmatige synchronisatie uitvoert. Zo wordt een probleem ook opgemerkt als een notificatie gemist is.
+
+### Waarom namen belangrijk zijn
+
+Eventloket onthoudt de keuzes uit de zaaktype-koppeling op naam (bijvoorbeeld de naam van het statustype), niet op technische verwijzing naar één specifieke versie. Daardoor geldt:
+
+- Blijven de namen in de nieuwe versie gelijk, dan werkt alles direct door zonder aanpassing in Eventloket.
+- Is een naam gewijzigd of verwijderd, dan wijst de waarschuwing je daarop en pas je de zaaktype-koppeling aan naar de nieuwe naam.
+
+### Automatische terugval op de hoofdkoppeling
+
+Het kan gebeuren dat een gekoppeld zaaktype tijdelijk helemaal geen geldige gepubliceerde versie meer heeft, bijvoorbeeld omdat het is ingetrokken of omdat er alleen nog een conceptversie bestaat. Eventloket schakelt dan voor dat ene zaaktype automatisch terug naar het overeenkomstige zaaktype van de hoofdkoppeling, zodat organisatoren aanvragen kunnen blijven indienen. Dit werkt per zaaktype: de andere zaaktypen van de gemeente blijven gewoon op het eigen zaaksysteem draaien.
+
+Daarbij geldt:
+
+- Lopende zaken blijven in het zaaksysteem waar ze zijn aangemaakt; alleen nieuwe aanvragen gaan tijdelijk naar de hoofdkoppeling.
+- Zodra er weer een geldige gepubliceerde versie van het eigen zaaktype is, neemt het eigen zaaksysteem het automatisch weer over.
+- Bij beide overgangen (terugval en herstel) ontvangen de beheerders een melding per e-mail en in Eventloket.
+- De terugval werkt alleen als de catalogus van de hoofdkoppeling een passend zaaktype voor de gemeente bevat (met dezelfde rol en een naam die eindigt op "gemeente" gevolgd door de gemeentenaam).
+
+---
+
+## 10. Eindcontrole met een proefaanvraag
 
 Een geslaagde verbindingstest bewijst dat Eventloket het zaaksysteem kan bereiken, maar niet dat alle autorisaties en zaaktype-instellingen kloppen. Voer daarom altijd een echte proef uit:
 
@@ -290,7 +369,7 @@ Pas als deze proef slaagt is de koppeling volledig bruikbaar.
 
 ---
 
-## 9. Onderhoud en wijzigingen
+## 11. Onderhoud en wijzigingen
 
 ### Cruciale wijzigingen zetten de koppeling offline
 
@@ -314,7 +393,7 @@ Elke wijziging aan een koppeling wordt geregistreerd in de activiteitenlog: wie 
 
 ---
 
-## 10. Het ZGW-logboek
+## 12. Het ZGW-logboek
 
 Onder **Instellingen, ZGW-logboek** staat een read-only overzicht van al het verkeer tussen Eventloket en het zaaksysteem van de gemeente. Dit is het eerste hulpmiddel bij het onderzoeken van problemen.
 
@@ -333,7 +412,7 @@ Je kunt filteren op mislukte aanroepen en op methode, en zoeken op resource of g
 
 ---
 
-## 11. Beknopte checklist
+## 13. Beknopte checklist
 
 Gebruik deze checklist als samenvatting bij het opzetten van een nieuwe gemeente-koppeling.
 
@@ -351,6 +430,8 @@ Gebruik deze checklist als samenvatting bij het opzetten van een nieuwe gemeente
 - [ ] De ZGW-koppeling is aangemaakt met endpoints, inloggegevens, functies en vertrouwelijkheid.
 - [ ] De verbinding is getest en, indien nodig, het notificatie-abonnement is geregistreerd.
 - [ ] De zaaktype-koppelingen zijn ingesteld per rol (zaaktype, eigenschappen, flow-blockers, gedrag).
+- [ ] Bij een OneGround (Rx.Mission) koppeling: de instelling "Intrekken door organisator toestaan" staat uit.
+- [ ] Bij het Doorkomst-zaaktype: de route-check staat aan en de documenttypen voor aanvraag en bijlagen zijn ingesteld.
 - [ ] De koppeling is geactiveerd.
 - [ ] Een proefaanvraag is met succes doorgekomen in het zaaksysteem.
 </content>
