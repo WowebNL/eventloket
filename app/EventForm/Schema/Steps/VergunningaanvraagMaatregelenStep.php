@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventDateTimePicker;
 use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\Models\Organisation;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -61,11 +61,11 @@ final class VergunningaanvraagMaatregelenStep
                                     ->label('Door wie?')
                                     ->required()
                                     ->maxLength(1000),
-                                DateTimePicker::make('starttijdSchoonmaak')
+                                EventDateTimePicker::make('starttijdSchoonmaak')
                                     ->label('Starttijd schoonmaak')
                                     ->seconds(false)
                                     ->required(),
-                                DateTimePicker::make('eindtijdSchoonmaak')
+                                EventDateTimePicker::make('eindtijdSchoonmaak')
                                     ->label('Eindtijd schoonmaak')
                                     ->seconds(false)
                                     ->afterOrEqual('starttijdSchoonmaak')
