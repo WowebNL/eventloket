@@ -1,6 +1,9 @@
 <?php
 
 use App\Enums\Role;
+use App\Filament\Admin\Resources\MunicipalityResource\Pages\EditMunicipality;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReportQuestionsRelationManager;
+use App\Filament\Municipality\Clusters\Settings\Resources\ReportQuestions\Pages\EditReportQuestion;
 use App\Filament\Municipality\Clusters\Settings\Resources\ReportQuestions\Pages\ListReportQuestions;
 use App\Models\Municipality;
 use App\Models\ReportQuestion;
@@ -159,6 +162,65 @@ test('reordering does not affect report questions of other municipalities', func
     expect($q2->fresh()->order)->toBe(1);
     expect($q1->fresh()->order)->toBe(2);
     expect($other->fresh()->order)->toBe(1); // untouched
+});
+
+test('reordering via admin relation manager does not cause unique constraint violations', function () {
+    $admin = User::factory()->create(['role' => Role::Admin]);
+    $municipality = Municipality::factory()->create();
+    $municipality->reportQuestions()->delete();
+
+    $questions = collect(range(1, 5))->map(fn ($i) => ReportQuestion::factory()->create([
+        'municipality_id' => $municipality->id,
+        'order' => $i,
+        'question' => "Question $i?",
+    ]));
+
+    $this->actingAs($admin);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    // Reverse the entire order (worst case for constraint violations)
+    $reversed = $questions->reverse()->pluck('id')->all();
+
+    livewire(ReportQuestionsRelationManager::class, [
+        'ownerRecord' => $municipality,
+        'pageClass' => EditMunicipality::class,
+    ])->call('reorderTable', $reversed);
+
+    foreach ($questions->reverse()->values() as $newPosition => $question) {
+        expect($question->fresh()->order)->toBe($newPosition + 1);
+    }
+});
+
+// ---------------------------------------------------------------------------
+// EditReportQuestion form validation
+// ---------------------------------------------------------------------------
+
+test('editing a report question with an empty question fails validation instead of writing null', function () {
+    $municipality = Municipality::factory()->create();
+    $municipality->reportQuestions()->delete();
+
+    $question = ReportQuestion::factory()->create([
+        'municipality_id' => $municipality->id,
+        'order' => 1,
+        'question' => 'Original question?',
+        'is_active' => true,
+    ]);
+
+    $user = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $user->municipalities()->attach($municipality);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($municipality);
+
+    livewire(EditReportQuestion::class, ['record' => $question->id])
+        ->fillForm(['question' => '', 'is_active' => false])
+        ->call('save')
+        ->assertHasFormErrors(['question' => 'required']);
+
+    // The original value must be untouched (no NULL written to the NOT NULL column).
+    expect($question->fresh()->question)->toBe('Original question?');
+    expect($question->fresh()->is_active)->toBeTrue();
 });
 
 // ---------------------------------------------------------------------------
