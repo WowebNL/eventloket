@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventDateTimePicker;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\State\FormState;
+use App\EventForm\Support\SafeDateTime;
 use App\EventForm\Template\LabelRenderer;
 use App\Filament\Organiser\Pages\Calendar;
 use App\Models\Organisation;
-use Carbon\Carbon;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -60,7 +60,7 @@ final class TijdenStep
                 }),
                 Grid::make(1)
                     ->schema([
-                        DateTimePicker::make('EvenementStart')
+                        EventDateTimePicker::make('EvenementStart')
                             ->label(Label::render('Wat is de start datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(today())
@@ -70,10 +70,11 @@ final class TijdenStep
                             ])
                             ->required()
                             ->afterStateUpdated(function (?string $state, Set $set): void {
-                                if (! $state) {
+                                $parsed = SafeDateTime::parse($state);
+                                if (! $parsed) {
                                     return;
                                 }
-                                $month = Carbon::parse($state)->month;
+                                $month = $parsed->month;
                                 $set('inWelkSeizoenVindtHetEvenementPlaats', in_array($month, [3, 4, 5, 9, 10, 11], strict: true) ? '0.25' : '0.5');
                             })
                             ->belowContent([
@@ -81,7 +82,7 @@ final class TijdenStep
                                 'Dit is het startmoment wanneer u bezoekers of deelnemers verwacht.',
                             ])
                             ->live(),
-                        DateTimePicker::make('EvenementEind')
+                        EventDateTimePicker::make('EvenementEind')
                             ->label(Label::render('Wat is de eind datum en tijdstip van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('EvenementStart') ?: today())
@@ -127,7 +128,7 @@ final class TijdenStep
                     ->live(),
                 Grid::make(1)
                     ->schema([
-                        DateTimePicker::make('OpbouwStart')
+                        EventDateTimePicker::make('OpbouwStart')
                             ->label(Label::render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(today())
@@ -146,7 +147,7 @@ final class TijdenStep
                                 return ! ($get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja');
                             })
                             ->live(),
-                        DateTimePicker::make('OpbouwEind')
+                        EventDateTimePicker::make('OpbouwEind')
                             ->label(Label::render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('OpbouwStart') ?: today())
@@ -177,7 +178,7 @@ final class TijdenStep
                     ->live(),
                 Grid::make(1)
                     ->schema([
-                        DateTimePicker::make('AfbouwStart')
+                        EventDateTimePicker::make('AfbouwStart')
                             ->label(Label::render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('EvenementEind') ?: today())
@@ -196,7 +197,7 @@ final class TijdenStep
                                 return ! ($get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja');
                             })
                             ->live(),
-                        DateTimePicker::make('AfbouwEind')
+                        EventDateTimePicker::make('AfbouwEind')
                             ->label(Label::render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('AfbouwStart') ?: $get('EvenementEind'))
