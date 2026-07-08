@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.3 - 2026-07-08
+
+### What's Changed
+
+* Fix: "Mijn omgeving" prefilled as organisation name on personal submissions by @Michel-Verhoeven in https://github.com/WowebNL/eventloket/pull/436
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v1.0.2...v1.0.3
+
 ## v1.0.2 - 2026-07-01
 
 ### What's Changed
@@ -96,6 +104,7 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 
 
+
 ```
 This is a major framework bump (Laravel 13, Filament 5). The private VCS map
 repositories were removed, so a clean `composer install` is recommended over an
@@ -127,6 +136,7 @@ the local field map tooling, not needed in production).
 
 ```
 php artisan migrate --force
+
 
 
 ```
@@ -175,6 +185,7 @@ php artisan eventform:backfill-snapshots-from-objects --dry-run --zaak=<id>
 php artisan eventform:backfill-snapshots-from-objects
 
 
+
 ```
 The command is idempotent (only touches cases without a snapshot), repeatable,
 and performs one external Objects API call per case. It is intentionally a
@@ -188,6 +199,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan filament:optimize
+
 
 
 ```
@@ -443,6 +455,7 @@ php artisan filament:optimize
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
