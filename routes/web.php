@@ -24,7 +24,14 @@ Route::get('/__version', function (Request $request) {
     $timestamp = $request->header(config('register.timestamp_header'));
     $signature = base64_decode((string) $request->header(config('register.signature_header')), true);
 
-    if (! $publicKey || ! $timestamp || $signature === false || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+    // Reject anything that is not a well formed key + signature before verifying.
+    // base64_decode('', true) returns '' (not false), so a missing or wrong length
+    // signature must be caught by the length check: sodium_crypto_sign_verify_detached
+    // throws on a signature that is not exactly SODIUM_CRYPTO_SIGN_BYTES, which would
+    // turn an unauthenticated request into a 500 and break the "always 404" guarantee.
+    if (! $publicKey || ! $timestamp || $signature === false
+        || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES
+        || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
         abort(404);
     }
 

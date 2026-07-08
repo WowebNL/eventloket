@@ -58,6 +58,27 @@ it('404s on an invalid signature', function () {
     $this->get('/__version', $headers)->assertNotFound();
 });
 
+it('404s on a malformed signature with a valid timestamp, without throwing', function () {
+    registerKeypair();
+    $timestamp = (string) time();
+
+    // Empty signature header: base64_decode('') is '' (not false), so the length
+    // guard must catch it before sodium_crypto_sign_verify_detached throws.
+    $this->get('/__version', ['X-Register-Timestamp' => $timestamp])->assertNotFound();
+
+    // Short, non 64-byte signature.
+    $this->get('/__version', [
+        'X-Register-Timestamp' => $timestamp,
+        'X-Register-Signature' => base64_encode('too-short'),
+    ])->assertNotFound();
+
+    // Not valid base64 at all.
+    $this->get('/__version', [
+        'X-Register-Timestamp' => $timestamp,
+        'X-Register-Signature' => '!!!not-base64!!!',
+    ])->assertNotFound();
+});
+
 it('404s on a stale timestamp even with an otherwise valid signature', function () {
     $secret = registerKeypair();
 
