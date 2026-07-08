@@ -45,39 +45,30 @@ Route::get('/__version', function (Request $request) {
         abort(404);
     }
 
-    $base = base_path();
+    // Deploy-time facts come from the version file written by
+    // `php artisan register:build-version` on deploy (config('register.version_file')).
+    // No git and no exec on a web request. A missing file (local dev, or before the
+    // first deploy with the command) simply leaves the git fields null.
+    $version = [];
+    $versionFile = (string) config('register.version_file');
+    if (is_file($versionFile)) {
+        $decoded = json_decode((string) file_get_contents($versionFile), true);
+        if (is_array($decoded)) {
+            $version = $decoded;
+        }
+    }
 
+    $base = base_path();
     $composerLockHash = is_file($base.'/composer.lock')
         ? 'sha256:'.hash_file('sha256', $base.'/composer.lock')
         : null;
 
-    // Version info: prefer a deploy written VERSION file, then env, then git. Git is
-    // read at request time (best effort, guarded by function_exists('exec')).
-    $gitTag = null;
-    $gitSha = null;
-    $branch = null;
-    if (is_file($base.'/VERSION')) {
-        $gitTag = trim((string) file_get_contents($base.'/VERSION')) ?: null;
-    }
-    $gitTag = $gitTag ?: (config('register.app_version') ?: null);
-    if (function_exists('exec')) {
-        $gitTag = $gitTag ?: (@exec('git -C '.escapeshellarg($base).' describe --tags --always 2>/dev/null') ?: null);
-        $gitSha = @exec('git -C '.escapeshellarg($base).' rev-parse HEAD 2>/dev/null') ?: null;
-        // A deploy pinned to a tag is detached ("HEAD"), which reports no branch.
-        $branch = @exec('git -C '.escapeshellarg($base).' rev-parse --abbrev-ref HEAD 2>/dev/null') ?: null;
-        if ($branch === 'HEAD') {
-            $branch = null;
-        }
-    }
-
     // Extra runtimes for the register's end of life check, keyed by endoflife.date
-    // slug: the Node toolchain (best effort) and the container OS. Omitted if absent.
+    // slug: the container OS (read without exec) plus the Node toolchain if the
+    // deploy recorded it in the version file.
     $runtimes = [];
-    if (function_exists('exec')) {
-        $node = @exec('node -v 2>/dev/null');
-        if ($node && preg_match('/(\d+\.\d+\.\d+)/', $node, $m)) {
-            $runtimes['nodejs'] = $m[1];
-        }
+    if (! empty($version['nodejs'])) {
+        $runtimes['nodejs'] = $version['nodejs'];
     }
     if (is_readable('/etc/os-release')) {
         $osRelease = parse_ini_file('/etc/os-release') ?: [];
@@ -89,11 +80,11 @@ Route::get('/__version', function (Request $request) {
     return response()->json([
         'php' => PHP_VERSION,
         'framework' => app()->version(),
-        'git_tag' => $gitTag,
-        'git_sha' => $gitSha,
+        'git_tag' => $version['git_tag'] ?? null,
+        'git_sha' => $version['git_sha'] ?? null,
         'composer_lock_hash' => $composerLockHash,
         'app_env' => app()->environment(),
-        'branch' => $branch,
+        'branch' => $version['branch'] ?? null,
         'runtimes' => $runtimes,
         'checked_at' => now()->toIso8601String(),
     ]);

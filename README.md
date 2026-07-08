@@ -140,6 +140,14 @@ Next to running migrations, seeders and npm build you need to run additional com
 php artisan passport:keys 
 ```
 
+Write the version file that the `/__version` endpoint serves to the service-register. Run it on every deploy, passing the released tag (the sha and branch are read from git):
+
+```bash
+php artisan register:build-version --tag="$DEPLOY_VERSION"
+```
+
+This writes `storage/app/version.json`. The endpoint reads it instead of shelling out to git per request. In the staging deploy this is done automatically by the workflow in the `sla-vrzl` repo.
+
 ## Contributing
 
 1. Create a feature branch from the `main` branch

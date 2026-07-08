@@ -19,10 +19,11 @@ return [
 
     'verify_key' => env('REGISTER_VERIFY_KEY'),
 
-    // Optional version override, used when no VERSION file is written at deploy time
-    // and before falling back to `git describe`. Read via config so it survives
-    // config:cache (env() would return null there).
-    'app_version' => env('APP_VERSION'),
+    // Path to the version file written at deploy time by `register:build-version`.
+    // The /__version route reads the deploy-time facts (git tag/sha/branch) from
+    // here instead of shelling out to git per request. It lives outside public/ so
+    // it is never web-served, and is regenerated on every deploy.
+    'version_file' => storage_path('app/version.json'),
 
     'timestamp_header' => 'X-Register-Timestamp',
     'signature_header' => 'X-Register-Signature',
