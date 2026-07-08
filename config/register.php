@@ -23,6 +23,10 @@ return [
     // The /__version route reads the deploy-time facts (git tag/sha/branch) from
     // here instead of shelling out to git per request. It lives outside public/ so
     // it is never web-served, and is regenerated on every deploy.
+    //
+    // There is deliberately no env/APP_VERSION fallback: if a deploy does not run
+    // `register:build-version`, the endpoint simply reports null git fields. So the
+    // deploy step that writes this file must actually run on every deploy.
     'version_file' => storage_path('app/version.json'),
 
     'timestamp_header' => 'X-Register-Timestamp',

@@ -86,6 +86,9 @@ Route::get('/__version', function (Request $request) {
         'app_env' => app()->environment(),
         'branch' => $version['branch'] ?? null,
         'runtimes' => $runtimes,
+        // When the deploy happened (from the version file) versus when this response
+        // was built. For the register, deployed_at is usually the more useful clock.
+        'deployed_at' => $version['deployed_at'] ?? null,
         'checked_at' => now()->toIso8601String(),
     ]);
 });

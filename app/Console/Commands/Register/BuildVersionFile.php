@@ -32,8 +32,8 @@ class BuildVersionFile extends Command
 
     public function handle(): int
     {
-        $tag = $this->stringOption('tag') ?? $this->git(['describe', '--tags', '--always']);
-        $sha = $this->stringOption('sha') ?? $this->git(['rev-parse', 'HEAD']);
+        $tag = $this->stringOption('tag') ?? $this->git('describe --tags --always');
+        $sha = $this->stringOption('sha') ?? $this->git('rev-parse HEAD');
         $branch = $this->stringOption('branch') ?? $this->currentBranch();
         $node = $this->stringOption('node') ?? $this->nodeVersion();
 
@@ -68,10 +68,13 @@ class BuildVersionFile extends Command
         return is_string($value) && trim($value) !== '' ? trim($value) : null;
     }
 
-    /** Run a git subcommand in the app root; null on any failure or empty output. */
-    private function git(array $args): ?string
+    /**
+     * Run a git subcommand in the app root; null on any failure or empty output.
+     * The arguments are static (no user input), so a string command is safe here.
+     */
+    private function git(string $args): ?string
     {
-        $result = Process::path(base_path())->run(array_merge(['git'], $args));
+        $result = Process::path(base_path())->run('git '.$args);
 
         if (! $result->successful()) {
             return null;
@@ -85,7 +88,7 @@ class BuildVersionFile extends Command
     /** The checked out branch, or null when detached (a tag deploy reports HEAD). */
     private function currentBranch(): ?string
     {
-        $branch = $this->git(['rev-parse', '--abbrev-ref', 'HEAD']);
+        $branch = $this->git('rev-parse --abbrev-ref HEAD');
 
         return ($branch === null || $branch === 'HEAD') ? null : $branch;
     }
@@ -93,7 +96,7 @@ class BuildVersionFile extends Command
     /** The Node.js version (major.minor.patch), or null if node is not available. */
     private function nodeVersion(): ?string
     {
-        $result = Process::run(['node', '-v']);
+        $result = Process::run('node -v');
 
         if ($result->successful() && preg_match('/(\d+\.\d+\.\d+)/', $result->output(), $m) === 1) {
             return $m[1];

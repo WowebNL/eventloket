@@ -1,10 +1,23 @@
 <?php
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Process;
 
 // The /__version route reads no database. It lives in the Unit suite so it runs
 // without RefreshDatabase (which the Feature suite applies globally): no migrations
 // and no database connection are needed to verify the signature gate and payload.
+
+afterEach(function () {
+    foreach (glob(sys_get_temp_dir().'/register-version-test-*.json') ?: [] as $file) {
+        @unlink($file);
+    }
+});
+
+/** A unique temp path for a version file, cleaned up in afterEach(). */
+function tempVersionPath(): string
+{
+    return sys_get_temp_dir().'/register-version-test-'.uniqid().'.json';
+}
 
 /** Set the register public key in config and return the matching secret key. */
 function registerKeypair(): string
@@ -18,7 +31,7 @@ function registerKeypair(): string
 /** Point the route at a temp version file with the given contents. */
 function useVersionFile(array $data): string
 {
-    $path = tempnam(sys_get_temp_dir(), 'ver').'.json';
+    $path = tempVersionPath();
     File::put($path, json_encode($data));
     config(['register.version_file' => $path]);
 
@@ -69,6 +82,7 @@ it('exposes the deploy-time version from the version file', function () {
             'git_tag' => 'v1.2.3',
             'git_sha' => 'abc123def456',
             'branch' => null,
+            'deployed_at' => '2026-07-08T10:00:00+00:00',
         ])
         ->assertJsonPath('runtimes.nodejs', '22.1.0');
 });
@@ -83,7 +97,7 @@ it('returns null git fields when the version file is missing', function () {
 });
 
 it('register:build-version writes the version file from the given options', function () {
-    $path = tempnam(sys_get_temp_dir(), 'ver').'.json';
+    $path = tempVersionPath();
     config(['register.version_file' => $path]);
 
     $this->artisan('register:build-version', [
@@ -100,8 +114,41 @@ it('register:build-version writes the version file from the given options', func
         ->and($data['branch'])->toBe('main')
         ->and($data['nodejs'])->toBe('20.11.0')
         ->and($data)->toHaveKey('deployed_at');
+});
 
-    @unlink($path);
+it('omits nodejs from the version file when node is unavailable', function () {
+    // No --node option, and `node -v` fails, so the field is left out entirely.
+    Process::fake(['node*' => Process::result(errorOutput: 'not found', exitCode: 127)]);
+
+    $path = tempVersionPath();
+    config(['register.version_file' => $path]);
+
+    $this->artisan('register:build-version', [
+        '--tag' => 'v9.9.9',
+        '--sha' => 'deadbeef',
+        '--branch' => 'main',
+    ])->assertSuccessful();
+
+    expect(json_decode(File::get($path), true))->not->toHaveKey('nodejs');
+});
+
+it('falls back to git for the sha when the option is omitted', function () {
+    // --sha omitted, so the command reads it from git; --branch/--node given so
+    // only the sha lookup runs.
+    Process::fake([
+        'git rev-parse HEAD' => Process::result(output: "cafebabe1234\n"),
+        'node*' => Process::result(exitCode: 127),
+    ]);
+
+    $path = tempVersionPath();
+    config(['register.version_file' => $path]);
+
+    $this->artisan('register:build-version', [
+        '--tag' => 'v9.9.9',
+        '--branch' => 'main',
+    ])->assertSuccessful();
+
+    expect(json_decode(File::get($path), true)['git_sha'])->toBe('cafebabe1234');
 });
 
 it('404s without a signature so the route is invisible', function () {
