@@ -219,13 +219,14 @@ Datums in zaakeigenschappen hebben geen instelling nodig. Eventloket leest per e
 
 In deze sectie bepaal je hoe Eventloket zaken van deze koppeling toont en notificeert. De standaardwaarden houden het volledige gedrag aan; pas ze alleen aan als de werkwijze van de gemeente daarom vraagt.
 
+- **Dit is een OneGround koppeling.** Standaard uit. Zet dit aan wanneer de koppeling naar een OneGround (Rx.Mission) zaaksysteem wijst. OneGround wijkt op een paar punten af van de ZGW-standaard en dit vinkje schakelt het bijbehorende gedrag in. De globale locatie van een evenement wordt dan als kale tekst meegestuurd in plaats van als object, en het intrekken door een organisator wordt geblokkeerd (zie de instelling hieronder). Zet dit vinkje aan als eerste stap bij het inrichten van een OneGround-koppeling. De volledige lijst van OneGround-bijzonderheden staat in [OneGround aandachtspunten](oneground-aandachtspunten.md).
 - **Status niet wijzigbaar door behandelaar.** Als dit aan staat, kan de behandelaar de status van een zaak niet vanuit Eventloket wijzigen en de zaak niet afronden. De status wordt dan volledig in het zaaksysteem beheerd. Of de organisator een aanvraag kan intrekken regel je apart met de instelling "Intrekken door organisator toestaan".
 - **Tabblad besluiten tonen.** Toont het tabblad Besluiten bij een zaak.
 - **Tabblad bestanden tonen.** Toont het tabblad Bestanden. Bij uitschakelen ziet de organisator nog wel de eigen aanvraag-bestanden, maar kunnen er geen nieuwe bestanden bijkomen.
 - **Tabblad adviesvragen tonen.** Toont het tabblad Adviesvragen bij een zaak.
 - **Tabblad organisatievragen tonen.** Toont het tabblad Organisatievragen bij een zaak.
 - **Geen notificaties versturen.** Onderdrukt alle notificaties voor zaken van deze koppeling. Alleen de ontvangstbevestiging bij het indienen wordt dan nog verstuurd.
-- **Intrekken door organisator toestaan.** Standaard aan. Als dit aan staat, kan een organisator een ingediende aanvraag intrekken via Eventloket. Zet dit uit voor een OneGround (Rx.Mission) koppeling: daar mislukt het intrekken, omdat het zetten van de eindstatus de zaak direct archiveert en dat pas is toegestaan als alle documenten gearchiveerd zijn. Staat deze instelling uit, dan hoef je in de zaaktype-koppeling ook geen eind-statustype en ingetrokken-resultaattype in te stellen; die velden verdwijnen daar dan (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
+- **Intrekken door organisator toestaan.** Standaard aan. Als dit aan staat, kan een organisator een ingediende aanvraag intrekken via Eventloket. Bij een OneGround (Rx.Mission) koppeling mislukt het intrekken, omdat het zetten van de eindstatus de zaak direct archiveert en dat pas is toegestaan als alle documenten gearchiveerd zijn. Zodra het vinkje "Dit is een OneGround koppeling" aan staat, wordt deze instelling daarom automatisch uitgezet en vergrendeld, en is intrekken niet mogelijk. Staat intrekken uit, dan hoef je in de zaaktype-koppeling ook geen eind-statustype en ingetrokken-resultaattype in te stellen; die velden verdwijnen daar dan (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
 
 ### 5.6 Vertrouwelijkheid
 

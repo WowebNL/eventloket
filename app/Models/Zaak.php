@@ -139,16 +139,18 @@ class Zaak extends Model implements Eventable
 
     /**
      * Whether an organiser may withdraw ("intrekken") this zaak from inside
-     * Eventloket. Disabled per connection for a OneGround (RX Mission) backend,
-     * where setting the eind-status archives the zaak immediately and is
-     * rejected unless all related documents are already 'gearchiveerd'. The
-     * global "main" connection (no row) always allows withdrawal.
+     * Eventloket. Always disabled for a OneGround (RX Mission) connection, where
+     * setting the eind-status archives the zaak immediately and is rejected
+     * unless all related documents are already 'gearchiveerd'; otherwise it
+     * follows the connection's own toggle. The global "main" connection (no row)
+     * always allows withdrawal.
      */
     public function organiserCanWithdraw(): bool
     {
         $connection = $this->zgwConnectionModel();
 
-        return $connection === null || $connection->allow_organiser_withdrawal;
+        return $connection === null
+            || (! $connection->is_oneground && $connection->allow_organiser_withdrawal);
     }
 
     /**
