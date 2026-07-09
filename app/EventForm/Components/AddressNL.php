@@ -43,6 +43,8 @@ final class AddressNL
     public const REQUIRED_SUBFIELDS = [
         'postcode',
         'huisnummer',
+        'straatnaam',
+        'woonplaatsnaam',
     ];
 
     /** @return list<string> */
@@ -80,11 +82,16 @@ final class AddressNL
                     ->maxLength(10)
                     ->live(onBlur: true)
                     ->afterStateUpdated(self::lookupCallback($key)),
+                // Straatnaam and woonplaatsnaam are auto-filled by the PDOK
+                // lookup, but that call can fail to fire; making them required
+                // forces a fallback where the organiser fills them in manually.
                 TextInput::make("{$key}.straatnaam")
                     ->label('Straatnaam')
+                    ->required()
                     ->maxLength(255),
                 TextInput::make("{$key}.woonplaatsnaam")
                     ->label('Plaats')
+                    ->required()
                     ->maxLength(255),
             ]);
     }

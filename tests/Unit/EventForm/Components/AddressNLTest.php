@@ -29,8 +29,10 @@ describe('AddressNL', function () {
             ->and($keys)->toContain('adresVanHetGebouw.woonplaatsnaam');
     });
 
-    test('postcode and huisnummer are the required subfields', function () {
-        expect(AddressNL::REQUIRED_SUBFIELDS)->toBe(['postcode', 'huisnummer']);
+    test('postcode, huisnummer, straatnaam and woonplaatsnaam are the required subfields', function () {
+        // straatnaam and woonplaatsnaam are required so a failed PDOK auto-fill
+        // can be recovered by filling them in manually.
+        expect(AddressNL::REQUIRED_SUBFIELDS)->toBe(['postcode', 'huisnummer', 'straatnaam', 'woonplaatsnaam']);
     });
 
     test('huisletter is not in the required subfields list', function () {
