@@ -155,7 +155,9 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
         && $request->data()['titel'] === 'buurtfeest-veiligheidsplan.pdf'
         && $request->data()['inhoud'] === base64_encode('fake pdf content')
         && $request->data()['informatieobjecttype'] === 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1'
-        && $request->data()['bronorganisatie'] === '820151130');
+        && $request->data()['bronorganisatie'] === '820151130'
+        // Every document we push is sent with the finalised 'definitief' status.
+        && $request->data()['status'] === 'definitief');
 
     Http::assertSent(fn ($request) => str_contains($request->url(), '/zaken/api/v1/zaakinformatieobjecten')
         && $request->method() === 'POST'
