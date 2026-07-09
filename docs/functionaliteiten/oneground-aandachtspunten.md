@@ -18,7 +18,7 @@ Dit wijkt af van de standaard Open Zaak, waar de eindstatus de archiefstatus nie
 
 ### Wat je moet instellen
 
-Zet op de ZGW-koppeling de instelling **Intrekken door organisator toestaan** uit. De intrekken-actie verdwijnt dan uit Eventloket, zodat een organisator niet in de mislukkende flow terechtkomt. In de bijbehorende zaaktype-koppeling zijn het eind-statustype en het ingetrokken-resultaattype dan ook niet meer nodig en die velden verdwijnen.
+Zet op de ZGW-koppeling de instelling **Dit is een OneGround koppeling** aan. Daarmee wordt het intrekken door een organisator automatisch geblokkeerd: de instelling "Intrekken door organisator toestaan" wordt uitgezet en vergrendeld, en de intrekken-actie verdwijnt uit Eventloket, zodat een organisator niet in de mislukkende flow terechtkomt. In de bijbehorende zaaktype-koppeling zijn het eind-statustype en het ingetrokken-resultaattype dan ook niet meer nodig en die velden verdwijnen.
 
 ### De fundamentele oplossing
 
@@ -67,7 +67,7 @@ OneGround geeft in de relatie tussen zaaktype en informatieobjecttype de omschri
 Deze twee punten raken elke koppeling, maar kwamen naar boven bij de OneGround-integratie.
 
 - **Adres.** Een BAG-adres wordt als zaakobject van type "adres" geregistreerd. Het veld `objectIdentificatie.identificatie` (de BAG nummeraanduiding-id) is verplicht. Zonder dat veld volgt een 400. Eventloket haalt die id op bij de Locatieserver en stuurt de straatnaam mee als openbare-ruimtenaam.
-- **GlobaleLocatie.** De evenementlocaties worden als zaakobject van type "overige" (objectTypeOverige "GlobaleLocatie") meegestuurd. Voor dat type moet de identificatie onder `objectIdentificatie.overigeData` staan (een vrij-vorm object). Een kale `objectIdentificatie.naam` wordt door zowel Open Zaak als OneGround geweigerd met een 400.
+- **GlobaleLocatie.** De evenementlocaties worden als zaakobject van type "overige" (objectTypeOverige "GlobaleLocatie") meegestuurd. Voor dat type moet de identificatie onder `objectIdentificatie.overigeData` staan; een kale `objectIdentificatie.naam` wordt door zowel Open Zaak als OneGround geweigerd met een 400. Hier speelt wel een verschil in vorm. De ZGW-standaard typeert `overigeData` als een vrij-vorm object, dus voor Open Zaak stuurt Eventloket `{"naam": "..."}`. OneGround wijkt af en verwacht (en toont) `overigeData` als een kale tekst. Staat het vinkje **Dit is een OneGround koppeling** aan, dan stuurt Eventloket de locatienamen daarom als kale tekst in plaats van als object.
 
 ---
 
@@ -93,7 +93,7 @@ De volledige uitleg staat in de sectie over doorkomsten in [ZGW-koppelingbeheer]
 
 ## Samenvatting van in te stellen punten voor OneGround
 
-- Zet **Intrekken door organisator toestaan** uit (punt 1).
+- Zet **Dit is een OneGround koppeling** aan. Dat blokkeert meteen het intrekken door de organisator (punt 1) en zorgt dat de globale locatie in het OneGround-formaat wordt meegestuurd (punt 6).
 - Overweeg **Status niet wijzigbaar door behandelaar** als de gemeente de status volledig in OneGround beheert (punt 8).
 - Controleer bij het inrichten van de zaaktype-koppeling dat de eigenschappen en documenttypen goed laden (punt 5). Dat is meteen de bevestiging dat de juiste zaaktype-versie is gekozen.
 - Voer altijd een proefaanvraag uit en controleer dat de zaak, de eigenschappen, de aanvrager, de documenten en de beginstatus correct in OneGround terechtkomen (zie de eindcontrole in [ZGW-koppelingbeheer](zgw-koppelingbeheer.md)).

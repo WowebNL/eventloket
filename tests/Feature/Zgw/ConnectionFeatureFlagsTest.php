@@ -83,3 +83,13 @@ test('allow_organiser_withdrawal disabled blocks organiser withdrawal', function
 
     expect($zaak->organiserCanWithdraw())->toBeFalse();
 });
+
+test('a OneGround connection always blocks organiser withdrawal', function () {
+    // Even with withdrawal explicitly enabled, OneGround cannot complete it.
+    $zaak = zaakForConnection([
+        'allow_organiser_withdrawal' => true,
+        'is_oneground' => true,
+    ]);
+
+    expect($zaak->organiserCanWithdraw())->toBeFalse();
+});

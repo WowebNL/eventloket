@@ -95,3 +95,28 @@ it('uses the connection system upload default when configured', function () {
 
     expect(ZgwConnectionConfig::systemUploadDefault('gemeente_9'))->toBe('vertrouwelijk');
 });
+
+it('reports a connection as OneGround only when the flag is set', function () {
+    Config::set('zgw.connections.gemeente_9.is_oneground', true);
+    Config::set('zgw.connections.main.is_oneground', false);
+
+    expect(ZgwConnectionConfig::isOneGround('gemeente_9'))->toBeTrue()
+        ->and(ZgwConnectionConfig::isOneGround('main'))->toBeFalse()
+        // An unset flag defaults to false.
+        ->and(ZgwConnectionConfig::isOneGround('gemeente_42'))->toBeFalse();
+});
+
+it('allows organiser withdrawal by default and honours the toggle', function () {
+    Config::set('zgw.connections.gemeente_9.allow_organiser_withdrawal', false);
+
+    expect(ZgwConnectionConfig::allowsOrganiserWithdrawal('main'))->toBeTrue()
+        ->and(ZgwConnectionConfig::allowsOrganiserWithdrawal('gemeente_9'))->toBeFalse();
+});
+
+it('always blocks organiser withdrawal on a OneGround connection', function () {
+    // Even with withdrawal explicitly enabled, OneGround blocks it.
+    Config::set('zgw.connections.gemeente_9.allow_organiser_withdrawal', true);
+    Config::set('zgw.connections.gemeente_9.is_oneground', true);
+
+    expect(ZgwConnectionConfig::allowsOrganiserWithdrawal('gemeente_9'))->toBeFalse();
+});

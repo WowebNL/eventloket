@@ -93,7 +93,11 @@ return [
         ],
         'allow_organiser_withdrawal' => [
             'label' => 'Intrekken door organisator toestaan',
-            'helper' => 'Sta toe dat een organisator een aanvraag intrekt via Eventloket. Zet dit uit voor een OneGround (RX Mission) koppeling: daar mislukt het intrekken omdat het zetten van de eindstatus de zaak meteen archiveert, wat pas mag als alle documenten gearchiveerd zijn.',
+            'helper' => 'Sta toe dat een organisator een aanvraag intrekt via Eventloket. Niet beschikbaar voor een OneGround (RX Mission) koppeling: daar mislukt het intrekken omdat het zetten van de eindstatus de zaak meteen archiveert, wat pas mag als alle documenten gearchiveerd zijn.',
+        ],
+        'is_oneground' => [
+            'label' => 'Dit is een OneGround koppeling',
+            'helper' => 'Zet dit aan voor een OneGround (RX Mission) koppeling. OneGround wijkt op punten af van de ZGW-standaard: de globale locatie wordt als kale tekst meegestuurd in plaats van als object, en intrekken door de organisator wordt geblokkeerd.',
         ],
     ],
 
