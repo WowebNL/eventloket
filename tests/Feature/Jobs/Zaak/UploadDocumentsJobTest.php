@@ -110,6 +110,12 @@ test('job uploads each file to OpenZaak and links it to the zaak', function () {
         && $request->method() === 'POST'
         && $request->data()['titel'] === 'Tweede document'
     );
+
+    // Every stored document carries the finalised 'definitief' status.
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && $request->method() === 'POST'
+        && $request->data()['status'] === 'definitief'
+    );
 });
 
 test('job clears the documenten cache after uploading', function () {
