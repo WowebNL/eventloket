@@ -278,6 +278,7 @@ class UploadDocumentAction
             'inhoud' => base64_encode(Storage::get($data['file'])),
             'informatieobjecttype' => $data['informatieobjecttype'],
             'indicatieGebruiksrecht' => false,
+            'status' => Informatieobject::STATUS_DEFINITIEF,
         ])));
 
         $connection->zaken()->zaakinformatieobjecten()->store([

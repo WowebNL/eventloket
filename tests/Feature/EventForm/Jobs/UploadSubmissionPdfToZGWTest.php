@@ -151,6 +151,12 @@ test('happy path: store-response zonder uuid → uuid wordt afgeleid, geen Argum
 
     (new UploadSubmissionPdfToZGW($zaak))->handle();
 
+    // Item 5: the document store carries the finalised 'definitief' status so
+    // behandelaars and downstream systems treat the aanvraagformulier as final.
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && $request->method() === 'POST'
+        && $request->data()['status'] === 'definitief');
+
     // The link POST proves the job survived past the value-object construction
     // and used the document url derived alongside the uuid.
     Http::assertSent(fn ($request) => str_contains($request->url(), '/zaken/api/v1/zaakinformatieobjecten')

@@ -62,6 +62,30 @@ test('creating a new document version creates a document activity log entry', fu
         ->and($activity->properties->get('titel'))->toBe('Bijgewerkt document');
 });
 
+test('creating a new document version patches the document with the definitief status', function () {
+    Storage::fake('local');
+    Storage::put('documents/new-version.pdf', '%PDF-1.4 updated pdf content');
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1',
+    ]);
+
+    $this->actingAs($this->reviewer);
+
+    NewDocumentVersionAction::createNewDocumentVersion('existing-doc-uuid', [
+        'titel' => 'Bijgewerkt document',
+        'file' => 'documents/new-version.pdf',
+        'file_name' => 'new-version.pdf',
+    ], $zaak);
+
+    // The new version is pushed as a finalised document, not a draft.
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten/existing-doc-uuid')
+        && $request->method() === 'PATCH'
+        && $request->data()['status'] === 'definitief');
+});
+
 test('creating a new document version clears the documenten cache', function () {
     Storage::fake('local');
     Storage::put('documents/new-version.pdf', '%PDF-1.4 updated pdf content');

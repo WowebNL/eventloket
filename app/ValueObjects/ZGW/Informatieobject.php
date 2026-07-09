@@ -7,6 +7,13 @@ use Illuminate\Contracts\Support\Arrayable;
 /** note: an informatieobject is a document */
 class Informatieobject implements Arrayable
 {
+    /**
+     * ZGW document status for a finalised document. We send this on every
+     * document we push to a ZGW connection so behandelaars and downstream
+     * systems treat our uploads as final rather than drafts.
+     */
+    public const STATUS_DEFINITIEF = 'definitief';
+
     /** @phpstan-ignore constructor.unusedParameter */
     public function __construct(
         public readonly string $uuid,
@@ -64,6 +71,6 @@ class Informatieobject implements Arrayable
     {
         return $this->status === null
             || $this->status === ''
-            || $this->status === 'definitief';
+            || $this->status === self::STATUS_DEFINITIEF;
     }
 }
