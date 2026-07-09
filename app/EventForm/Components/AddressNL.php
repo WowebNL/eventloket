@@ -43,6 +43,8 @@ final class AddressNL
     public const REQUIRED_SUBFIELDS = [
         'postcode',
         'huisnummer',
+        'straatnaam',
+        'woonplaatsnaam',
     ];
 
     /** @return list<string> */
@@ -62,36 +64,53 @@ final class AddressNL
                     ->label('Postcode')
                     ->required()
                     ->maxLength(7)
-                    ->live(onBlur: true)
+                    ->live(debounce: '750ms')
                     ->afterStateUpdated(self::lookupCallback($key)),
                 TextInput::make("{$key}.huisnummer")
                     ->label('Huisnummer')
                     ->required()
                     ->numeric()
-                    ->live(onBlur: true)
+                    ->live(debounce: '750ms')
                     ->afterStateUpdated(self::lookupCallback($key)),
                 TextInput::make("{$key}.huisletter")
                     ->label('Huisletter')
                     ->maxLength(1)
-                    ->live(onBlur: true)
+                    ->live(debounce: '750ms')
                     ->afterStateUpdated(self::lookupCallback($key)),
                 TextInput::make("{$key}.huisnummertoevoeging")
                     ->label('Toevoeging')
                     ->maxLength(10)
-                    ->live(onBlur: true)
+                    ->live(debounce: '750ms')
                     ->afterStateUpdated(self::lookupCallback($key)),
+                // Straatnaam and woonplaatsnaam are auto-filled by the PDOK
+                // lookup, but that call can fail to fire; making them required
+                // forces a fallback where the organiser fills them in manually.
                 TextInput::make("{$key}.straatnaam")
                     ->label('Straatnaam')
+                    ->required()
                     ->maxLength(255),
                 TextInput::make("{$key}.woonplaatsnaam")
                     ->label('Plaats')
+                    ->required()
                     ->maxLength(255),
             ]);
     }
 
     /**
-     * Bouwt de after-state-updated closure die op blur van postcode of
-     * huisnummer de straat/plaats uit PDOK haalt en in de form-state zet.
+     * Whether the PDOK lookup has enough input to be worthwhile: it needs both
+     * a postcode and a huisnummer. Huisletter and huisnummertoevoeging only
+     * refine an already-valid postcode + huisnummer combination.
+     */
+    public static function hasLookupInput(mixed $postcode, mixed $huisnummer): bool
+    {
+        return is_string($postcode) && $postcode !== ''
+            && $huisnummer !== null && $huisnummer !== '';
+    }
+
+    /**
+     * Bouwt de after-state-updated closure die, na een debounce op één van de
+     * adresvelden, de straat/plaats uit PDOK haalt en in de form-state zet.
+     * Doet niets zolang postcode en huisnummer niet allebei gevuld zijn.
      */
     private static function lookupCallback(string $key): \Closure
     {
@@ -99,15 +118,12 @@ final class AddressNL
             $postcode = $get("{$key}.postcode");
             $huisnummer = $get("{$key}.huisnummer");
 
-            if (! is_string($postcode) || $postcode === '') {
-                return;
-            }
-            if ($huisnummer === null || $huisnummer === '') {
+            if (! self::hasLookupInput($postcode, $huisnummer)) {
                 return;
             }
 
             $bag = app(LocatieserverService::class)->getBagObjectByPostcodeHuisnummer(
-                $postcode,
+                (string) $postcode,
                 (string) $huisnummer,
                 is_string($get("{$key}.huisletter")) ? $get("{$key}.huisletter") : null,
                 is_string($get("{$key}.huisnummertoevoeging")) ? $get("{$key}.huisnummertoevoeging") : null,

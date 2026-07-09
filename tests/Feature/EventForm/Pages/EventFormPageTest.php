@@ -320,3 +320,29 @@ test('na adres-invul → gemeenteVariabelen wordt automatisch gefetched (label-p
     // de waarde 500 kan invullen.
     expect($page->state()->get('gemeenteVariabelen.aanwezigen'))->toBe(500.0);
 });
+
+test('a draft with a malformed datetime year mounts without crashing', function (string $badValue) {
+    // Een native datetime-local input laat een organisator een jaartal met te
+    // veel cijfers typen. Die waarde is in het concept opgeslagen en liet
+    // Filaments datetime-cast crashen bij het heropenen (Sentry EVENTLOKET-10).
+    $state = FormState::empty();
+    $state->setField('EvenementStart', $badValue);
+    // Ook een geneste repeater-waarde (het pad waar EVENTLOKET-10 vandaan kwam).
+    $state->setField(
+        'geefAanOpWelkeDataEnTijdenUDeVoorwerpenWiltPlaatsenOpDeOpenbareWegOfGroteVoertuigenWiltParkerenInDeBuurtVanHetEvenement',
+        [['voorwerp' => 'kraam', 'startTijdstipVoorwerp' => $badValue]],
+    );
+    $this->draft->update(['state' => $state->toSnapshot()]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])
+        ->assertOk();
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
+    // De misvormde waarde is bij het laden opgeschoond naar null.
+    expect($page->state()->get('EvenementStart'))->toBeNull();
+})->with([
+    'five digit year' => '20256-09-20T16:00',
+    'six digit year' => '202026-08-22T13:00',
+]);

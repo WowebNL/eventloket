@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventDateTimePicker;
 use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
@@ -12,7 +13,6 @@ use App\EventForm\Schema\Label;
 use App\Models\Organisation;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -72,11 +72,11 @@ final class VergunningaanvraagOverigStep
                                     ->columnSpanFull()
                                     ->showMyLocationButton(false)
                                     ->required(),
-                                DateTimePicker::make('startTijdstipVoorwerp')
+                                EventDateTimePicker::make('startTijdstipVoorwerp')
                                     ->label('Start tijdstip')
                                     ->seconds(false)
                                     ->required(),
-                                DateTimePicker::make('eindTijdstipVoorwerp')
+                                EventDateTimePicker::make('eindTijdstipVoorwerp')
                                     ->label('Eind tijdstip')
                                     ->seconds(false)
                                     ->afterOrEqual('startTijdstipVoorwerp')

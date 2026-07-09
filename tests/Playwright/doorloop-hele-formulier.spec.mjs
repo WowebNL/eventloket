@@ -76,12 +76,13 @@ test('walkthrough: doorloop het hele formulier', async ({ page }) => {
         // Heerlen-postcode: gemeente Heerlen (GM0917) heeft zaaktypes in de
         // DB; Maastricht zou ook werken zodra z'n zaaktypes gesynct zijn.
         await vulEindigendOp(page, 'input', '.adresVanHetGebouwWaarUwEvenementPlaatsvindt1.postcode', '6411CD');
-        // Tab weg om blur te triggeren → PDOK-lookup straatnaam/plaats
         await page.keyboard.press('Tab');
         await page.waitForTimeout(500);
         await vulEindigendOp(page, 'input', '.adresVanHetGebouwWaarUwEvenementPlaatsvindt1.huisnummer', '1');
         await page.keyboard.press('Tab');
-        // Wacht op PDOK-lookup én LocationServerCheckService
+        // De adresvelden gebruiken een debounce (750ms); daarna vult de
+        // PDOK-lookup straatnaam/plaats (nu verplichte velden). Ruim wachten
+        // dekt de debounce + PDOK-lookup + LocationServerCheckService.
         await page.waitForTimeout(4000);
 
         await page.screenshot({ path: 'test-results/walkthrough/stap-03.png', fullPage: true });

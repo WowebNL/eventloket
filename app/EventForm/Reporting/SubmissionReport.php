@@ -89,6 +89,18 @@ final class SubmissionReport
     ];
 
     /**
+     * Repeaters whose rows are event locations. Their rows are labelled
+     * "<repeater> — locatie N" instead of the generic "— rij N".
+     *
+     * @var list<string>
+     */
+    private const LOCATION_REPEATER_KEYS = [
+        'adresVanDeGebouwEn',
+        'locatieSOpKaart',
+        'routesOpKaart',
+    ];
+
+    /**
      * @return list<array{label: string, value: string, sub?: list<array{label: string, value: string}>, table?: array{header: list<string>, rows: list<list<string>>}}>
      */
     private function extractEntries(Step $step, FormState $state): array
@@ -131,16 +143,26 @@ final class SubmissionReport
                     return;
                 }
                 $repeaterLabel = $this->renderLabel($component, $stubLivewire);
-                foreach (array_values($rows) as $rowIndex => $rowData) {
+                // Location repeaters read as "locatie N", other repeaters as
+                // the generic "rij N".
+                $rowNoun = in_array($key, self::LOCATION_REPEATER_KEYS, true) ? 'locatie' : 'rij';
+                // Iterate rows by their actual key: a UUID in the live wizard
+                // state (samenvatting), a numeric index in the dehydrated submit
+                // snapshot (PDF). Reading by a forced numeric index only resolved
+                // the snapshot, so the live samenvatting showed no repeater rows.
+                // A separate counter drives the displayed row number.
+                $rowNumber = 0;
+                foreach ($rows as $rowKey => $rowData) {
                     if (! is_array($rowData)) {
                         continue;
                     }
-                    $subEntries = $this->extractRowEntries($component, $state, "{$fullKey}.{$rowIndex}", $stubLivewire);
+                    $subEntries = $this->extractRowEntries($component, $state, "{$fullKey}.{$rowKey}", $stubLivewire);
                     if ($subEntries === []) {
                         continue;
                     }
+                    $rowNumber++;
                     $entries[] = [
-                        'label' => sprintf('%s — rij %d', $repeaterLabel, $rowIndex + 1),
+                        'label' => sprintf('%s — %s %d', $repeaterLabel, $rowNoun, $rowNumber),
                         'value' => '',
                         'sub' => $subEntries,
                     ];

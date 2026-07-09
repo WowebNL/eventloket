@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\State;
 
+use App\EventForm\Support\SafeDateTime;
 use Illuminate\Contracts\Support\Arrayable;
 
 /**
@@ -266,6 +267,11 @@ class FormState implements Arrayable
             self::arrayFrom($snapshot, 'variables'),
             self::arrayFrom($snapshot, 'values'),
         );
+
+        // Heel drafts die een misvormde datumwaarde bevatten (jaartal met te
+        // veel cijfers). Zonder dit crasht Filaments datetime-cast bij het
+        // renderen van zo'n opgeslagen concept.
+        $values = SafeDateTime::sanitizeState($values);
 
         return new self(
             values: $values,

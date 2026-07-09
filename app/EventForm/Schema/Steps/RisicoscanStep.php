@@ -7,7 +7,7 @@ namespace App\EventForm\Schema\Steps;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\State\FormState;
-use Carbon\Carbon;
+use App\EventForm\Support\SafeDateTime;
 use Filament\Forms\Components\Radio;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Icon;
@@ -188,12 +188,12 @@ final class RisicoscanStep
                         if ($state !== null) {
                             return;
                         }
-                        $start = $get('EvenementStart');
+                        $start = SafeDateTime::parse($get('EvenementStart'));
                         if (! $start) {
                             return;
                         }
                         // Lente (mrt–mei) en herfst (sep–nov) → 0.25; zomer (jun–aug) en winter (dec–feb) → 0.5
-                        $month = Carbon::parse($start)->month;
+                        $month = $start->month;
                         $set('inWelkSeizoenVindtHetEvenementPlaats', in_array($month, [3, 4, 5, 9, 10, 11], strict: true) ? '0.25' : '0.5');
                     })
                     ->required()
