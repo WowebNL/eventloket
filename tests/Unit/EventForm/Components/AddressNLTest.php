@@ -39,4 +39,14 @@ describe('AddressNL', function () {
         expect(AddressNL::REQUIRED_SUBFIELDS)->not->toContain('huisletter')
             ->and(AddressNL::REQUIRED_SUBFIELDS)->not->toContain('huisnummertoevoeging');
     });
+
+    test('hasLookupInput only allows a lookup when both postcode and huisnummer are filled', function () {
+        expect(AddressNL::hasLookupInput('6411CD', '12'))->toBeTrue()
+            // A numeric huisnummer (from the numeric input) is accepted.
+            ->and(AddressNL::hasLookupInput('6411CD', 12))->toBeTrue()
+            ->and(AddressNL::hasLookupInput('6411CD', ''))->toBeFalse()
+            ->and(AddressNL::hasLookupInput('6411CD', null))->toBeFalse()
+            ->and(AddressNL::hasLookupInput('', '12'))->toBeFalse()
+            ->and(AddressNL::hasLookupInput(null, '12'))->toBeFalse();
+    });
 });
