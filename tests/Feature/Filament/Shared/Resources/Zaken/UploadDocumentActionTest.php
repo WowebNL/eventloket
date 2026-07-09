@@ -147,11 +147,13 @@ test('upload action successfully stores a document via OpenZaak and dispatches r
         'file_name' => 'test-document.pdf',
     ], $zaak);
 
-    // Assert the POST to create the informatieobject was made
+    // Assert the POST to create the informatieobject was made, with the
+    // finalised 'definitief' status.
     Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
         && $request->method() === 'POST'
         && $request->data()['titel'] === 'Testbestand'
         && $request->data()['vertrouwelijkheidaanduiding'] === DocumentVertrouwelijkheden::Zaakvertrouwelijk->value
+        && $request->data()['status'] === 'definitief'
     );
 
     // Assert the POST to link the document to the zaak was made

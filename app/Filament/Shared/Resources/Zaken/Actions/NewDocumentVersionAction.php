@@ -5,6 +5,7 @@ namespace App\Filament\Shared\Resources\Zaken\Actions;
 use App\Models\Zaak;
 use App\Support\Documents\DocumentVersionAuthorizer;
 use App\Support\Uploads\DocumentUploadType;
+use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -82,6 +83,7 @@ class NewDocumentVersionAction
                     'formaat' => $formaat,
                     'lock' => $lockString,
                     'indicatieGebruiksrecht' => false,
+                    'status' => Informatieobject::STATUS_DEFINITIEF,
                 ]
             );
         } finally {
