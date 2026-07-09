@@ -244,3 +244,19 @@
 .leaflet-pm-action.action-finishMode, .leaflet-pm-action.action-finish {
     display: none!important;
 }
+
+/*
+ * Info-icoontjes bij de hint-teksten onder een veld (belowContent) staan
+ * standaard op primary-500 — vrijwel dezelfde blauwtint als een aangevinkt
+ * keuzebolletje (primary-600). Op tabbladen met veel keuzevragen (bijv. de
+ * risico-scan) leest dat verwarrend. Een tint lichter maakt duidelijk dat
+ * het icoon een hint is, geen selectie. Gescoped op de belowContent-
+ * container zodat andere schema-icoontjes hun kleur houden.
+ */
+.fi-sc.fi-inline .fi-sc-icon.fi-color {
+    color: var(--color-400);
+}
+
+:is(.dark .fi-sc.fi-inline .fi-sc-icon.fi-color) {
+    color: var(--color-300);
+}
