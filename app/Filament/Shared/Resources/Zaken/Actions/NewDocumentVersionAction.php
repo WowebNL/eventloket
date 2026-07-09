@@ -11,7 +11,9 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 use Woweb\Zgw\Facades\Zgw;
 
 class NewDocumentVersionAction
@@ -65,20 +67,37 @@ class NewDocumentVersionAction
         $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
         $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
         $lockString = $connection->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
-        $connection->documenten()->enkelvoudiginformatieobjecten()->patch($documentUuid,
-            [
-                'inhoud' => base64_encode(Storage::get($data['file'])),
-                'titel' => $data['titel'],
-                'auteur' => auth()->user()->name,
-                'bestandsnaam' => $bestandsnaam,
-                'bestandsomvang' => Storage::size($data['file']),
-                'formaat' => $formaat,
-                'lock' => $lockString,
-                'indicatieGebruiksrecht' => false,
-                'status' => Informatieobject::STATUS_DEFINITIEF,
-            ]
-        );
-        $connection->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);
+
+        // Always release the lock, even when the patch fails. Without this a
+        // failed patch left the document locked, and every subsequent "Nieuwe
+        // versie" attempt then failed on the lock with a 400 "document is al
+        // gelocked" — surfacing as an error for every user on that document.
+        try {
+            $connection->documenten()->enkelvoudiginformatieobjecten()->patch($documentUuid,
+                [
+                    'inhoud' => base64_encode(Storage::get($data['file'])),
+                    'titel' => $data['titel'],
+                    'auteur' => auth()->user()->name,
+                    'bestandsnaam' => $bestandsnaam,
+                    'bestandsomvang' => Storage::size($data['file']),
+                    'formaat' => $formaat,
+                    'lock' => $lockString,
+                    'indicatieGebruiksrecht' => false,
+                    'status' => Informatieobject::STATUS_DEFINITIEF,
+                ]
+            );
+        } finally {
+            try {
+                $connection->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);
+            } catch (Throwable $unlockError) {
+                // Never let a failing unlock mask the original patch error.
+                Log::warning('Releasing the document lock after a new-version patch did not succeed', [
+                    'zaak_id' => $zaak->id,
+                    'document_uuid' => $documentUuid,
+                    'error' => $unlockError->getMessage(),
+                ]);
+            }
+        }
 
         Storage::delete($data['file']);
 
