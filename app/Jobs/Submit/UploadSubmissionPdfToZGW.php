@@ -73,6 +73,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
             'inhoud' => base64_encode($content),
             'informatieobjecttype' => $informatieobjecttype,
             'indicatieGebruiksrecht' => false,
+            'status' => Informatieobject::STATUS_DEFINITIEF,
         ])));
 
         $connection->zaken()->zaakinformatieobjecten()->store([

@@ -65,6 +65,7 @@ final class UploadDocumentsJob implements ShouldQueue
                 'inhoud' => base64_encode((string) Storage::get($path)),
                 'informatieobjecttype' => $file['informatieobjecttype'],
                 'indicatieGebruiksrecht' => false,
+                'status' => Informatieobject::STATUS_DEFINITIEF,
             ])));
 
             $connection->zaken()->zaakinformatieobjecten()->store([
