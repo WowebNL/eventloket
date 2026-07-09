@@ -73,3 +73,33 @@ test('unknown postcode yields within=false and empty items', function () {
         ->and($result['all']['within'])->toBeFalse()
         ->and($result['all']['items'])->toBe([]);
 });
+
+test('a degenerate polygon is skipped instead of crashing the engine', function () {
+    // Een half-getekende polygoon (ring met minder dan vier punten) liet
+    // PostGIS crashen ("Polygon must have at least four points in each ring"),
+    // wat als 500 tijdens de Livewire-update naar buiten kwam (Sentry
+    // EVENTLOKET-Z). De service slaat zo'n geometrie nu over.
+    $service = new LocationServerCheckService;
+
+    $result = $service->execute(new LocationServerCheckInput(
+        polygons: [
+            ['type' => 'Polygon', 'coordinates' => [[[0.5, 0.5], [0.5, 1.5], [0.5, 0.5]]]],
+        ],
+    ));
+
+    expect($result['polygons']['items'])->toHaveCount(0)
+        ->and($result['all']['items'])->toBe([]);
+});
+
+test('a valid polygon is still processed by the engine', function () {
+    $service = new LocationServerCheckService;
+
+    $result = $service->execute(new LocationServerCheckInput(
+        polygons: [
+            ['type' => 'Polygon', 'coordinates' => [[[0.5, 0.5], [0.5, 1.5], [1.5, 1.5], [1.5, 0.5], [0.5, 0.5]]]],
+        ],
+    ));
+
+    expect($result['polygons']['items'])->toHaveCount(1)
+        ->and($result['polygons']['items']->first()['brk_identification'])->toBe('GM0882');
+});

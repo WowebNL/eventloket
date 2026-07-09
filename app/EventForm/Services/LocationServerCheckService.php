@@ -6,16 +6,18 @@ namespace App\EventForm\Services;
 
 use App\Actions\Geospatial\CheckIntersects;
 use App\Actions\Geospatial\CheckWithin;
+use App\Actions\Geospatial\GeoJsonGeometryValidator;
 use App\Models\Municipality;
 use App\Services\LocatieserverService;
 use Brick\Geo\Engine\GeometryEngine;
 use Brick\Geo\Engine\PdoEngine;
+use Brick\Geo\Geometry;
 use Brick\Geo\Io\GeoJsonReader;
 use Brick\Geo\LineString;
-use Brick\Geo\Polygon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Bepaalt welke gemeenten geraakt of doorkruist worden door opgegeven
@@ -46,8 +48,10 @@ class LocationServerCheckService
         if ($input->polygons !== null) {
             [$engine, $intersects, $within] = $this->ensureEngine($engine, $intersects, $within);
             foreach ($input->polygons as $polygonObject) {
-                /** @var Polygon $polygon */
-                $polygon = (new GeoJsonReader)->read((string) json_encode($polygonObject));
+                $polygon = $this->readProcessableGeometry($polygonObject);
+                if ($polygon === null) {
+                    continue;
+                }
                 $items = $intersects->checkIntersectsWithModels($polygon);
                 $response = $this->mergeItems($response, $items, ['all.items', 'polygons.items']);
                 $response = $this->mergeWithin(
@@ -60,19 +64,21 @@ class LocationServerCheckService
 
         if ($input->line !== null) {
             [$engine, $intersects, $within] = $this->ensureEngine($engine, $intersects, $within);
-            /** @var LineString $line */
-            $line = (new GeoJsonReader)->read((string) json_encode($input->line));
-            $response = $this->absorbLineIntoSingleLine($response, $line, $intersects, $within);
+            $line = $this->readProcessableGeometry($input->line);
+            if ($line instanceof LineString) {
+                $response = $this->absorbLineIntoSingleLine($response, $line, $intersects, $within);
+            }
         }
 
         if ($input->lines !== null) {
             [$engine, $intersects, $within] = $this->ensureEngine($engine, $intersects, $within);
             foreach ($input->lines as $lineObject) {
-                $line = (new GeoJsonReader)->read((string) json_encode($lineObject));
+                $line = $this->readProcessableGeometry($lineObject);
                 if (! $line instanceof LineString) {
-                    // Sla geometrieën over die geen lijn zijn; de collect-laag
-                    // filtert dit al af, maar dit vangt edge-cases in oude
-                    // draft-state op.
+                    // Sla geometrieën over die geen (bruikbare) lijn zijn; de
+                    // collect-laag filtert dit al af, maar dit vangt
+                    // edge-cases in oude draft-state en half-getekende
+                    // routes op.
                     continue;
                 }
                 $response = $this->appendLineToLinesArray($response, $line, $intersects, $within);
@@ -133,6 +139,33 @@ class LocationServerCheckService
             $intersects ?? new CheckIntersects($engine),
             $within ?? new CheckWithin($engine),
         ];
+    }
+
+    /**
+     * Read a decoded GeoJSON geometry into a Brick geometry, or return null
+     * when it is degenerate (e.g. an unfinished polygon with fewer than four
+     * ring positions) or otherwise unreadable. Passing such a geometry to the
+     * engine makes PostGIS throw and crashes the whole Livewire update.
+     */
+    private function readProcessableGeometry(mixed $geometryObject): ?Geometry
+    {
+        if (! is_array($geometryObject) || ! GeoJsonGeometryValidator::isProcessable($geometryObject)) {
+            Log::info('Skipping degenerate GeoJSON geometry in location check.', [
+                'type' => is_array($geometryObject) ? ($geometryObject['type'] ?? null) : null,
+            ]);
+
+            return null;
+        }
+
+        try {
+            return (new GeoJsonReader)->read((string) json_encode($geometryObject));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to read GeoJSON geometry in location check.', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**

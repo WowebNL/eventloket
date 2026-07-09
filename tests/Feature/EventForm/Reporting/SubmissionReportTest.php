@@ -30,6 +30,8 @@ use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Wizard\Step;
 
 test('lege state → geen secties (alle stappen worden overgeslagen)', function () {
@@ -305,6 +307,67 @@ test('Repeater-rijen worden uitgeklapt naar sub-entries in plaats van samengevat
     $subValues = collect($repeaterRow['sub'])->pluck('value')->all();
     expect($subValues)->toContain('Buurtcentrum De Hoek')
         ->and($subValues)->toContain('6411CD');
+});
+
+test('repeater rows keyed by uuid (live samenvatting state) resolve their sub-fields', function () {
+    // The samenvatting builds sections from the live FormState, where repeater
+    // rows are keyed by a uuid, not by a numeric index. Reading rows by a forced
+    // numeric index left the samenvatting empty while the PDF (numeric snapshot)
+    // worked. Rows must resolve by their actual key.
+    $state = new FormState(values: [
+        'adresVanDeGebouwEn' => [
+            '3d2b7a1e-5c44-4b8a-9f21-0a1b2c3d4e5f' => [
+                'naamVanDeLocatieGebouw' => 'Buurtcentrum De Hoek',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6411CD',
+                    'huisnummer' => '1',
+                    'straatnaam' => 'Geleenstraat',
+                    'woonplaatsnaam' => 'Heerlen',
+                ],
+            ],
+        ],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build(
+        $state,
+        [LocatieVanHetEvenement2Step::make()],
+    );
+
+    $row = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['sub']));
+    expect($row)->not->toBeNull()
+        // A location repeater is labelled "locatie N", not "rij N".
+        ->and($row['label'])->toContain('locatie 1')
+        ->and($row['label'])->not->toContain('rij');
+
+    $subValues = collect($row['sub'])->pluck('value')->all();
+    expect($subValues)->toContain('Buurtcentrum De Hoek')
+        ->and($subValues)->toContain('Geleenstraat')
+        ->and($subValues)->toContain('Heerlen');
+});
+
+test('a non-location repeater keeps the generic "rij" label', function () {
+    // The "locatie N" wording only applies to the event-location repeaters; a
+    // generic repeater (e.g. tents) keeps "rij N".
+    $state = new FormState(values: [
+        'tenten' => [
+            'a-uuid-key' => ['aantalTenten' => '3'],
+        ],
+    ]);
+
+    $step = Step::make('Test')->schema([
+        Repeater::make('tenten')
+            ->label('Tenten')
+            ->schema([
+                TextInput::make('aantalTenten')->label('Aantal tenten'),
+            ]),
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [$step]);
+
+    $row = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['sub']));
+    expect($row)->not->toBeNull()
+        ->and($row['label'])->toContain('rij 1')
+        ->and($row['label'])->not->toContain('locatie');
 });
 
 test('Map-state met geojson levert een SVG mee in de entry', function () {

@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventDatePicker;
+use App\EventForm\Components\EventDateTimePicker;
 use App\EventForm\Components\EventloketFileUpload;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
+use App\EventForm\Support\SafeDateTime;
 use App\Models\Organisation;
-use Carbon\Carbon;
 use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -329,12 +329,13 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->label('Achternaam van de persoon')
                                     ->required()
                                     ->maxLength(1000),
-                                DatePicker::make('geboortedatumPersoonAlcohol')
+                                EventDatePicker::make('geboortedatumPersoonAlcohol')
                                     ->label('Geboortedatum persoon')
                                     ->required()
                                     ->live()
                                     ->afterStateUpdated(function (?string $state, callable $set): void {
-                                        $bereikt = $state ? Carbon::parse($state)->age >= 21 : null;
+                                        $geboortedatum = SafeDateTime::parse($state);
+                                        $bereikt = $geboortedatum ? $geboortedatum->age >= 21 : null;
                                         $set('heeftDeLeeftijdVan21JaarBereiktPersoonAlcohol', match ($bereikt) {
                                             true => 'Ja',
                                             false => 'Nee',
@@ -553,11 +554,11 @@ final class VergunningaanvraagVervolgvragenStep
                                     ->label('Naam van de doorgang')
                                     ->required()
                                     ->maxLength(1000),
-                                DateTimePicker::make('startVanDeAfsluiting')
+                                EventDateTimePicker::make('startVanDeAfsluiting')
                                     ->label('Start van de afsluiting')
                                     ->seconds(false)
                                     ->required(),
-                                DateTimePicker::make('eindVanDeAfsluiting')
+                                EventDateTimePicker::make('eindVanDeAfsluiting')
                                     ->label('Eind van de afsluiting')
                                     ->seconds(false)
                                     ->afterOrEqual('startVanDeAfsluiting')

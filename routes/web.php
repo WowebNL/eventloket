@@ -15,6 +15,90 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// service-register version probe. The register signs a "timestamp\npath" message
+// with its private ed25519 key; we verify it with the public key in config and
+// reject stale timestamps. Every failure returns 404 so the route is invisible to
+// anyone without a valid signature. The response exposes only version metadata.
+Route::get('/__version', function (Request $request) {
+    $publicKey = base64_decode((string) config('register.verify_key'), true);
+    $timestamp = $request->header(config('register.timestamp_header'));
+    $signature = base64_decode((string) $request->header(config('register.signature_header')), true);
+
+    // Reject anything that is not a well formed key + signature before verifying.
+    // base64_decode('', true) returns '' (not false), so a missing or wrong length
+    // signature must be caught by the length check: sodium_crypto_sign_verify_detached
+    // throws on a signature that is not exactly SODIUM_CRYPTO_SIGN_BYTES, which would
+    // turn an unauthenticated request into a 500 and break the "always 404" guarantee.
+    if (! $publicKey || ! $timestamp || $signature === false
+        || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES
+        || strlen($signature) !== SODIUM_CRYPTO_SIGN_BYTES) {
+        abort(404);
+    }
+
+    // Reject stale or future timestamps to stop replay.
+    if (abs(time() - (int) $timestamp) > (int) config('register.clock_skew')) {
+        abort(404);
+    }
+
+    $message = $timestamp."\n".$request->getPathInfo();
+    if (! sodium_crypto_sign_verify_detached($signature, $message, $publicKey)) {
+        abort(404);
+    }
+
+    $base = base_path();
+
+    $composerLockHash = is_file($base.'/composer.lock')
+        ? 'sha256:'.hash_file('sha256', $base.'/composer.lock')
+        : null;
+
+    // Version info: prefer a deploy written VERSION file, then env, then git. Git is
+    // read at request time (best effort, guarded by function_exists('exec')).
+    $gitTag = null;
+    $gitSha = null;
+    $branch = null;
+    if (is_file($base.'/VERSION')) {
+        $gitTag = trim((string) file_get_contents($base.'/VERSION')) ?: null;
+    }
+    $gitTag = $gitTag ?: (config('register.app_version') ?: null);
+    if (function_exists('exec')) {
+        $gitTag = $gitTag ?: (@exec('git -C '.escapeshellarg($base).' describe --tags --always 2>/dev/null') ?: null);
+        $gitSha = @exec('git -C '.escapeshellarg($base).' rev-parse HEAD 2>/dev/null') ?: null;
+        // A deploy pinned to a tag is detached ("HEAD"), which reports no branch.
+        $branch = @exec('git -C '.escapeshellarg($base).' rev-parse --abbrev-ref HEAD 2>/dev/null') ?: null;
+        if ($branch === 'HEAD') {
+            $branch = null;
+        }
+    }
+
+    // Extra runtimes for the register's end of life check, keyed by endoflife.date
+    // slug: the Node toolchain (best effort) and the container OS. Omitted if absent.
+    $runtimes = [];
+    if (function_exists('exec')) {
+        $node = @exec('node -v 2>/dev/null');
+        if ($node && preg_match('/(\d+\.\d+\.\d+)/', $node, $m)) {
+            $runtimes['nodejs'] = $m[1];
+        }
+    }
+    if (is_readable('/etc/os-release')) {
+        $osRelease = parse_ini_file('/etc/os-release') ?: [];
+        if (! empty($osRelease['ID']) && ! empty($osRelease['VERSION_ID'])) {
+            $runtimes[$osRelease['ID']] = $osRelease['VERSION_ID'];
+        }
+    }
+
+    return response()->json([
+        'php' => PHP_VERSION,
+        'framework' => app()->version(),
+        'git_tag' => $gitTag,
+        'git_sha' => $gitSha,
+        'composer_lock_hash' => $composerLockHash,
+        'app_env' => app()->environment(),
+        'branch' => $branch,
+        'runtimes' => $runtimes,
+        'checked_at' => now()->toIso8601String(),
+    ]);
+});
+
 Route::middleware('signed')
     ->get('admin/admin-invites/{token}', AcceptAdminInvite::class)
     ->name('admin-invites.accept');
