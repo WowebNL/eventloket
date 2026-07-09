@@ -6,6 +6,7 @@ namespace App\Jobs\Zaak;
 
 use App\Models\Zaak;
 use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -45,14 +46,15 @@ class AddGlobaleLocatieZGW implements ShouldQueue
             'objectType' => 'overige',
             'objectTypeOverige' => 'GlobaleLocatie',
             'relatieomschrijving' => 'Globale locatie van het evenement',
-            // For objectType "overige" the ZGW ObjectOverige identification lives
-            // under objectIdentificatie.overigeData (a free-form object); a bare
-            // `naam` is rejected with a 400 (objectIdentificatie.overigeData is
-            // required).
+            // For objectType "overige" the identification lives under
+            // objectIdentificatie.overigeData, which is required. The ZGW
+            // standard types it as a free-form object, so OpenZaak wants
+            // `{naam: ...}`; OneGround (RX Mission) deviates and stores/expects
+            // overigeData as a bare string, so send just the names there.
             'objectIdentificatie' => [
-                'overigeData' => [
-                    'naam' => $locaties,
-                ],
+                'overigeData' => ZgwConnectionConfig::isOneGround($connectionName)
+                    ? $locaties
+                    : ['naam' => $locaties],
             ],
         ]);
     }
