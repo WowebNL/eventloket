@@ -118,13 +118,29 @@ class ZgwConnectionConfig
     /**
      * Whether an organiser may withdraw a zaak on this connection. Defaults to
      * true, so the global "main" connection (and any connection without the key)
-     * keeps withdrawal enabled. Disabled per connection for a OneGround (RX
-     * Mission) backend, where the eind-status archives the zaak immediately.
+     * keeps withdrawal enabled. Always disabled for a OneGround (RX Mission)
+     * backend, where setting the eind-status archives the zaak immediately (and
+     * OneGround rejects that unless all documents are already 'gearchiveerd').
      */
     public static function allowsOrganiserWithdrawal(string $connectionName): bool
     {
+        if (self::isOneGround($connectionName)) {
+            return false;
+        }
+
         $value = config("zgw.connections.{$connectionName}.allow_organiser_withdrawal");
 
         return $value === null ? true : (bool) $value;
+    }
+
+    /**
+     * Whether this connection talks to a OneGround (RX Mission) backend, which
+     * deviates from the ZGW standard on a few points (bare-string overigeData,
+     * eager archiving on eind-status). Defaults to false so the global "main"
+     * connection and any OpenZaak connection keep standard behaviour.
+     */
+    public static function isOneGround(string $connectionName): bool
+    {
+        return (bool) config("zgw.connections.{$connectionName}.is_oneground");
     }
 }

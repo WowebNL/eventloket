@@ -46,6 +46,7 @@ class MunicipalityZgwConnectionFactory extends Factory
             'show_organisatievragen_tab' => true,
             'suppress_notifications' => false,
             'allow_organiser_withdrawal' => true,
+            'is_oneground' => false,
         ];
     }
 

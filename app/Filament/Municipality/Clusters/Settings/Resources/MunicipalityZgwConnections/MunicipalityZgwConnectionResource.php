@@ -21,6 +21,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -145,10 +146,23 @@ class MunicipalityZgwConnectionResource extends Resource
                         Toggle::make('suppress_notifications')
                             ->label(__('municipality/resources/zgw_connection.fields.suppress_notifications.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.suppress_notifications.helper')),
+                        Toggle::make('is_oneground')
+                            ->label(__('municipality/resources/zgw_connection.fields.is_oneground.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.is_oneground.helper'))
+                            ->live()
+                            // A OneGround backend cannot complete the withdrawal
+                            // flow, so turning this on forces withdrawal off.
+                            ->afterStateUpdated(function (Set $set, ?bool $state): void {
+                                if ($state) {
+                                    $set('allow_organiser_withdrawal', false);
+                                }
+                            }),
                         Toggle::make('allow_organiser_withdrawal')
                             ->label(__('municipality/resources/zgw_connection.fields.allow_organiser_withdrawal.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.allow_organiser_withdrawal.helper'))
-                            ->default(true),
+                            ->default(true)
+                            // Withdrawal is never possible on a OneGround backend.
+                            ->disabled(fn (Get $get): bool => (bool) $get('is_oneground')),
                     ]),
 
                 Section::make(__('municipality/resources/zgw_connection.sections.vertrouwelijkheid.heading'))

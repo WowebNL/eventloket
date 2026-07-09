@@ -49,6 +49,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
  * @property bool $show_organisatievragen_tab
  * @property bool $suppress_notifications
  * @property bool $allow_organiser_withdrawal
+ * @property bool $is_oneground
  * @property Carbon|null $last_verified_at
  * @property Carbon|null $activated_at
  */
@@ -84,6 +85,7 @@ class MunicipalityZgwConnection extends Model
         'show_organisatievragen_tab',
         'suppress_notifications',
         'allow_organiser_withdrawal',
+        'is_oneground',
         'last_verified_at',
         'activated_at',
     ];
@@ -129,6 +131,7 @@ class MunicipalityZgwConnection extends Model
             'show_organisatievragen_tab' => 'boolean',
             'suppress_notifications' => 'boolean',
             'allow_organiser_withdrawal' => 'boolean',
+            'is_oneground' => 'boolean',
             'last_verified_at' => 'datetime',
             'activated_at' => 'datetime',
         ];
@@ -244,6 +247,7 @@ class MunicipalityZgwConnection extends Model
             'bronorganisatie_rsin' => $this->bronorganisatie_rsin,
             'vertrouwelijkheid_map' => $this->vertrouwelijkheid_map,
             'allow_organiser_withdrawal' => $this->allow_organiser_withdrawal,
+            'is_oneground' => $this->is_oneground,
         ];
 
         foreach ($overrides as $key => $value) {

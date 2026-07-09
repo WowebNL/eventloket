@@ -306,14 +306,16 @@ class MunicipalityZaaktypeMappingResource extends Resource
     /**
      * Whether an organiser may withdraw a zaak on this municipality's connection.
      * When disabled the eind-statustype and ingetrokken-resultaattype do not need
-     * to be configured, so those two flow selects are hidden. The global "main"
-     * connection (no row) always allows withdrawal.
+     * to be configured, so those two flow selects are hidden. Always disabled for
+     * a OneGround connection; otherwise it follows the connection's own toggle.
+     * The global "main" connection (no row) always allows withdrawal.
      */
     private static function organiserWithdrawalAllowed(): bool
     {
         $tenant = Filament::getTenant();
         $connection = $tenant instanceof Municipality ? $tenant->zgwConnection : null;
 
-        return $connection === null || $connection->allow_organiser_withdrawal;
+        return $connection === null
+            || (! $connection->is_oneground && $connection->allow_organiser_withdrawal);
     }
 }

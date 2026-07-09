@@ -170,6 +170,43 @@ it('hides the eind-statustype and ingetrokken-resultaattype when withdrawal is d
         ->assertFormFieldIsVisible('initiator_roltype');
 });
 
+it('hides the eind-statustype and ingetrokken-resultaattype on a OneGround connection', function () {
+    $base = 'https://gemeente.example.com';
+
+    // Withdrawal is left enabled; a OneGround connection blocks it regardless.
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $this->municipality->id,
+        'allow_organiser_withdrawal' => true,
+        'is_oneground' => true,
+    ]);
+
+    Http::fake([
+        "{$base}/catalogi/api/v1/zaaktypen*" => Http::response(ZgwHttpFake::envelope([
+            ['identificatie' => 'EVT-1', 'omschrijving' => 'Evenementenvergunning', 'url' => "{$base}/catalogi/api/v1/zaaktypen/1"],
+        ])),
+        "{$base}/catalogi/api/v1/statustypen*" => Http::response(ZgwHttpFake::envelope([
+            ['omschrijving' => 'Afgehandeld', 'volgnummer' => 1, 'isEindstatus' => true],
+        ])),
+        "{$base}/catalogi/api/v1/roltypen*" => Http::response(ZgwHttpFake::envelope([
+            ['omschrijving' => 'Aanvrager', 'omschrijvingGeneriek' => 'initiator'],
+        ])),
+        "{$base}/catalogi/api/v1/resultaattypen*" => Http::response(ZgwHttpFake::envelope([
+            ['omschrijving' => 'Afgebroken', 'omschrijvingGeneriek' => 'Afgebroken'],
+        ])),
+        "{$base}/catalogi/api/v1/*" => Http::response(ZgwHttpFake::envelope([])),
+    ]);
+
+    livewire(CreateMunicipalityZaaktypeMapping::class)
+        ->fillForm([
+            'role' => ZaaktypeRole::Vergunning->value,
+            'zaaktype_identificatie' => 'EVT-1',
+        ])
+        ->assertFormFieldIsHidden('eind_statustype')
+        ->assertFormFieldIsHidden('ingetrokken_resultaattype')
+        ->assertFormFieldIsVisible('initial_statustype')
+        ->assertFormFieldIsVisible('initiator_roltype');
+});
+
 it('rejects a second mapping for the same role', function () {
     fakeCatalogus();
 

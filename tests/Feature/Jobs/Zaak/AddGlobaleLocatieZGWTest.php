@@ -51,6 +51,24 @@ test('registers a GlobaleLocatie zaakobject with the composed location names', f
     });
 });
 
+test('sends overigeData as a bare string on a OneGround connection', function () {
+    // OneGround (RX Mission) deviates from the ZGW standard: it stores/expects
+    // overigeData as a plain string, not the standard free-form object. The zaak
+    // here resolves to the "main" connection, so we flag main as OneGround.
+    config(['zgw.connections.main.is_oneground' => true]);
+
+    $zaak = zaakWithLocaties('Marktplein, Hoofdstraat');
+
+    dispatch(new AddGlobaleLocatieZGW($zaak));
+
+    Http::assertSent(function ($request) {
+        return str_contains($request->url(), '/zaken/api/v1/zaakobjecten')
+            && $request->method() === 'POST'
+            && data_get($request->data(), 'objectTypeOverige') === 'GlobaleLocatie'
+            && data_get($request->data(), 'objectIdentificatie.overigeData') === 'Marktplein, Hoofdstraat';
+    });
+});
+
 test('does nothing when there are no location names', function () {
     $zaak = zaakWithLocaties(null);
 
