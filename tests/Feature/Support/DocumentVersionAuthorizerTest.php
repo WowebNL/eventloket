@@ -56,10 +56,38 @@ test('advisor is blocked when the original creator is unknown', function () {
     expect(DocumentVersionAuthorizer::canAddVersion($advisor, $this->zaak, 'doc-uuid'))->toBeFalse();
 });
 
-test('municipality user can add a new version when the original creator is unknown', function () {
+test('a document with an unknown creator can only be versioned by a platform admin', function () {
+    // Previously a municipality user could version an ownerless document. The
+    // ownership rule now restricts this to the platform admin: without a
+    // resolvable creator there is no owner.
     $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $admin = User::factory()->create(['role' => Role::Admin]);
 
-    expect(DocumentVersionAuthorizer::canAddVersion($reviewer, $this->zaak, 'doc-uuid'))->toBeTrue();
+    expect(DocumentVersionAuthorizer::canAddVersion($reviewer, $this->zaak, 'doc-uuid'))->toBeFalse()
+        ->and(DocumentVersionAuthorizer::canAddVersion($admin, $this->zaak, 'doc-uuid'))->toBeTrue();
+});
+
+test('only a platform admin can add a version of the system aanvraagformulier', function () {
+    // The aanvraagformulier PDF is logged as created by the organiser, but it is
+    // a system document: no role except the platform admin may replace it.
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    $this->organisation->users()->attach($organiser, ['role' => OrganisationRole::Admin->value]);
+
+    activity('document')
+        ->event('created')
+        ->causedBy($organiser)
+        ->performedOn($this->zaak)
+        ->withProperties(['document_uuid' => 'aanvraag-uuid', 'filename' => 'aanvraagformulier.pdf'])
+        ->log('created');
+
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $advisor = User::factory()->create(['role' => Role::Advisor]);
+    $admin = User::factory()->create(['role' => Role::Admin]);
+
+    expect(DocumentVersionAuthorizer::canAddVersion($organiser, $this->zaak, 'aanvraag-uuid'))->toBeFalse()
+        ->and(DocumentVersionAuthorizer::canAddVersion($reviewer, $this->zaak, 'aanvraag-uuid'))->toBeFalse()
+        ->and(DocumentVersionAuthorizer::canAddVersion($advisor, $this->zaak, 'aanvraag-uuid'))->toBeFalse()
+        ->and(DocumentVersionAuthorizer::canAddVersion($admin, $this->zaak, 'aanvraag-uuid'))->toBeTrue();
 });
 
 test('organiser can add a new version of a document created by an organiser', function () {
