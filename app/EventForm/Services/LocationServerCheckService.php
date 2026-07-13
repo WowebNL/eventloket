@@ -310,15 +310,22 @@ class LocationServerCheckService
 
     /**
      * @param  array<string, mixed>  $response
-     * @param  array{postcode: string, houseNumber: string}  $address
+     * @param  array{postcode: string, houseNumber: string, brkIdentification?: ?string}  $address
      * @return array<string, mixed>
      */
     private function absorbAddress(array $response, array $address): array
     {
-        $brkId = $this->locatieserver->getBrkIdentificationByPostcodeHuisnummer(
-            $address['postcode'],
-            $address['houseNumber'],
-        );
+        // Reuse the BRK gemeente resolved by the address auto-fill when it is
+        // available, so we skip a second PDOK lookup for the same address. Only
+        // manually entered addresses (whose auto-fill did not resolve) fall back
+        // to the postcode + house number lookup here.
+        $brkId = $address['brkIdentification'] ?? null;
+        if (! is_string($brkId) || $brkId === '') {
+            $brkId = $this->locatieserver->getBrkIdentificationByPostcodeHuisnummer(
+                $address['postcode'],
+                $address['houseNumber'],
+            );
+        }
         $municipality = $brkId
             ? Municipality::where('brk_identification', $brkId)
                 ->select(['brk_identification', 'name'])
