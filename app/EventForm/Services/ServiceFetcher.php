@@ -74,10 +74,18 @@ class ServiceFetcher
                 (string) $state->get('EvenementEind'),
                 (string) $state->get('evenementInGemeente.brk_identification'),
             ])),
+            // Hash op de effectieve input van de location-check (de
+            // gefilterde geometrieën en complete adressen), niet op de ruwe
+            // editgrids. Zo bust een half getypt adres (alleen een postcode,
+            // of een gewijzigde locatienaam) de cache niet: dat blijft een
+            // cache-hit en scheelt een overbodige PDOK-lookup en berekening.
+            // Polygonen en lijnen zitten via hun gefilterde geometrieën nog
+            // steeds in de hash, dus de gemeentebepaling voor kaart-items
+            // triggert ongewijzigd.
             'inGemeentenResponse' => sha1((string) json_encode([
-                'p' => $state->get('locatieSOpKaart'),
-                'l' => $state->get('routesOpKaart'),
-                'a' => $state->get('adresVanDeGebouwEn'),
+                'p' => $this->collectPolygonsFromEditgrid($state->get('locatieSOpKaart')),
+                'l' => $this->collectLinesFromEditgrid($state->get('routesOpKaart')),
+                'a' => $this->collectAddressesFromEditgrid($state->get('adresVanDeGebouwEn')),
             ])),
             default => null,
         };
