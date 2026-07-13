@@ -73,6 +73,33 @@ test('an existing postcode + house number auto-fills street and city', function 
         ->and($component->get("$base.woonplaatsnaam"))->toBe('Nuth');
 });
 
+test('a successful lookup stores the resolved BRK gemeente for the address', function () {
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+    $base = seedGebouwRow($component);
+
+    $component
+        ->set("$base.postcode", '6361 BZ')
+        ->set("$base.huisnummer", '1');
+
+    // Reused by the location gate so it need not do a second PDOK lookup to
+    // determine this address's gemeente. 'GM' + the PDOK gemeentecode (1954).
+    expect($component->get("$base.brkGemeente"))->toBe('GM1954');
+});
+
+test('a failed lookup clears the stored BRK gemeente', function () {
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+    $base = seedGebouwRow($component);
+
+    $component
+        ->set("$base.postcode", '6361 BZ')
+        ->set("$base.huisnummer", '1');
+    expect($component->get("$base.brkGemeente"))->toBe('GM1954');
+
+    $component->set("$base.huisnummer", '999');
+
+    expect($component->get("$base.brkGemeente"))->toBeEmpty();
+});
+
 test('changing to a non-existent house number clears the stale street/city and notifies', function () {
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
     $base = seedGebouwRow($component);

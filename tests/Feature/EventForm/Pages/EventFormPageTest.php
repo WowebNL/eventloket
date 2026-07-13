@@ -6,6 +6,7 @@ use App\Enums\MunicipalityVariableType;
 use App\Enums\Role;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Schema\EventFormSchema;
+use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormPage;
@@ -14,7 +15,27 @@ use App\Models\MunicipalityVariable;
 use App\Models\Organisation;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Filament\Support\Exceptions\Halt;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
+
+/**
+ * Haal de `afterValidation`-gate-closure van de locatiestap op zodat we 'm
+ * direct met een echte EventFormPage als `$livewire` kunnen aanroepen. Een
+ * volledige wizard-navigatie zou de hele 18-staps wizard renderen en tegen de
+ * memory-limit aanlopen; deze closure bevat de gate-beslislogica geïsoleerd.
+ */
+function locatieGateCallback(): Closure
+{
+    $step = LocatieVanHetEvenement2Step::make();
+    $ref = new ReflectionProperty($step, 'afterValidation');
+    $ref->setAccessible(true);
+
+    /** @var Closure $callback */
+    $callback = $ref->getValue($step);
+
+    return $callback;
+}
 
 beforeEach(function () {
     $this->user = User::factory()->create(['role' => Role::Organiser]);
@@ -346,3 +367,93 @@ test('a draft with a malformed datetime year mounts without crashing', function 
     'five digit year' => '20256-09-20T16:00',
     'six digit year' => '202026-08-22T13:00',
 ]);
+
+test('gate: één gemeente uit een aangevuld adres → doorgelaten zonder tweede PDOK-call', function () {
+    Municipality::firstOrCreate(['brk_identification' => 'GM0917'], ['name' => 'Heerlen']);
+    Http::fake();
+
+    /** @var EventFormPage $page */
+    $page = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])->instance();
+    $page->data['adresVanDeGebouwEn'] = [
+        'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+            'postcode' => '6411AA', 'huisnummer' => '1', 'brkGemeente' => 'GM0917',
+        ]],
+    ];
+
+    // Mag niet blokkeren: precies één gemeente bepaald.
+    locatieGateCallback()($page);
+
+    expect($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0917');
+    Http::assertNothingSent();
+});
+
+test('gate: geen locatie-input → blokkeert (Halt) en geen gemeente bepaald', function () {
+    /** @var EventFormPage $page */
+    $page = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])->instance();
+
+    expect(fn () => locatieGateCallback()($page))->toThrow(Halt::class);
+    expect($page->state()->get('evenementInGemeente'))->toBeNull();
+});
+
+test('gate: twee gemeenten zonder keuze blokkeert en toont de keuze-radio; na keuze doorgelaten', function () {
+    Municipality::firstOrCreate(['brk_identification' => 'GM0917'], ['name' => 'Heerlen']);
+    Municipality::firstOrCreate(['brk_identification' => 'GM0935'], ['name' => 'Maastricht']);
+    Http::fake();
+
+    /** @var EventFormPage $page */
+    $page = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])->instance();
+    $page->data['adresVanDeGebouwEn'] = [
+        'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+            'postcode' => '6411AA', 'huisnummer' => '1', 'brkGemeente' => 'GM0917',
+        ]],
+        'row-2' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+            'postcode' => '6211AA', 'huisnummer' => '1', 'brkGemeente' => 'GM0935',
+        ]],
+    ];
+
+    // Meerdere gemeenten, geen keuze → blokkeren.
+    expect(fn () => locatieGateCallback()($page))->toThrow(Halt::class);
+    // De response staat wél in de state zodat de keuze-radio zichtbaar wordt.
+    expect($page->state()->get('inGemeentenResponse.all.items'))->toHaveCount(2);
+
+    // Nu een gemeente kiezen → doorgelaten.
+    $page->data['userSelectGemeente'] = 'GM0935';
+    locatieGateCallback()($page);
+
+    expect($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0935');
+    Http::assertNothingSent();
+});
+
+test('gate: een getekend vlak bepaalt de gemeente autoritatief (kaart blijft werken)', function () {
+    Municipality::factory()->create([
+        'brk_identification' => 'GM0999',
+        'name' => 'Testgemeente',
+        'geometry' => '{"type":"MultiPolygon","coordinates":[[[[-1,-1],[1,-1],[1,1],[-1,1],[-1,-1]]]]}',
+    ]);
+
+    /** @var EventFormPage $page */
+    $page = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])->instance();
+    $page->data['locatieSOpKaart'] = [
+        'row-1' => [
+            'naamVanDeLocatieKaart' => 'Plein',
+            'buitenLocatieVanHetEvenement' => [
+                'lat' => 0.0, 'lng' => 0.0,
+                'geojson' => [
+                    'type' => 'FeatureCollection',
+                    'features' => [[
+                        'type' => 'Feature',
+                        'properties' => new stdClass,
+                        'geometry' => [
+                            'type' => 'Polygon',
+                            'coordinates' => [[[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]]],
+                        ],
+                    ]],
+                ],
+            ],
+        ],
+    ];
+
+    locatieGateCallback()($page);
+
+    expect($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0999');
+});
