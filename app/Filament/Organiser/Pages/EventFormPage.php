@@ -514,7 +514,13 @@ class EventFormPage extends Page implements HasForms
         }
 
         if (in_array($field, ['locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'], true)) {
-            $fetcher->fetch('inGemeentenResponse', $this->state);
+            // Reactieve check tijdens het typen/tekenen: adressen tellen alleen
+            // mee als hun gemeente al uit de auto-fill bekend is, zodat deze
+            // synchrone call nooit een trage PDOK-lookup voor een adres doet.
+            // De autoritatieve, volledige check draait op de gate (Volgende) in
+            // `runLocationGate()`. Kaart-items (vlak/lijn) worden hier gewoon
+            // reactief gedetecteerd — die hebben de invoer-race niet.
+            $fetcher->fetch('inGemeentenResponse', $this->state, authoritativeAddresses: false);
             $this->resetStaleGemeenteKeuze();
 
             // Na een succesvolle BAG-lookup kan FormDerivedState een
@@ -528,6 +534,31 @@ class EventFormPage extends Page implements HasForms
             $fetcher->fetch('gemeenteVariabelen', $this->state);
             $fetcher->fetch('evenementenInDeGemeente', $this->state);
         }
+    }
+
+    /**
+     * Autoritatieve gemeentebepaling op de gate (Volgende in de locatiestap).
+     * Draait de volledige location-check over alle huidige inputs (adressen,
+     * vlakken én lijnen), inclusief de PDOK-fallback voor handmatig ingevoerde
+     * adressen zonder bekende gemeente, en werkt de dependent-fetches en de
+     * state-snapshot bij zodat de afgeleide `evenementInGemeente` en de
+     * zichtbaarheidsregels (keuze-radio, bevestigingstekst) direct kloppen.
+     *
+     * De locatiestap (`LocatieVanHetEvenement2Step::afterValidation`) roept dit
+     * aan en beslist daarna op basis van `evenementInGemeente` of de gebruiker
+     * verder mag.
+     */
+    public function runLocationGate(): void
+    {
+        $this->state->absorbFields($this->data ?? []);
+
+        $fetcher = app(ServiceFetcher::class);
+        $fetcher->fetch('inGemeentenResponse', $this->state);
+        $this->resetStaleGemeenteKeuze();
+        $fetcher->fetch('gemeenteVariabelen', $this->state);
+        $fetcher->fetch('evenementenInDeGemeente', $this->state);
+
+        $this->stateSnapshot = $this->serializableSnapshot($this->state);
     }
 
     /**

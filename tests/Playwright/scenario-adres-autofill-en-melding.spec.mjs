@@ -103,11 +103,17 @@ test('een niet-bestaand adres maakt straat/plaats leeg en toont een melding', as
 });
 
 // Bevinding A: bij twee locaties gaat de autofill van (in deze run) de tweede
-// rij verloren — straat/plaats blijven leeg terwijl ze server-side wél bepaald
-// worden. Oorzaak is de gemeente-detect re-render die met de autofill-$set
-// botst (zelfde raceklasse als scenario-locatie-route-behoudt-velden). Welke
-// rij het slachtoffer is hangt van timing af. Fixme tot de gemeente-detect
-// re-render geïsoleerd is van de adresvelden.
+// rij verloren. De gemeente-detect voor adressen doet nu géén tweede PDOK-call
+// meer per commit (reactief wordt de al bekende gemeente uit de auto-fill
+// hergebruikt; de autoritatieve bepaling gebeurt op de gate bij Volgende), en
+// een niet-aangevuld adres kan altijd handmatig worden ingevuld want straat en
+// plaats zijn verplichte velden — de gebruiker komt dus nooit vast te zitten.
+// Wat blijft is de onderliggende Livewire-re-render-race: een commit van de ene
+// rij rendert het formulier opnieuw en wist daarbij de nog niet gesynchroniseerde
+// invoer van de andere rij, los van hoe goedkoop de fetch is. Bij Playwright's
+// instant-`fill()` (het strengste geval, strenger dan menselijk typen) treedt dat
+// nog op. Een deterministische fix vraagt het isoleren van de repeater-re-render
+// van de gemeente-updates; fixme tot dat er is.
 test.fixme('bevinding A: beide locatie-rijen vullen straat/plaats automatisch aan', async ({ page }) => {
     test.setTimeout(180_000);
     await totLocatieGebouw(page);
