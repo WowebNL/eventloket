@@ -142,6 +142,84 @@ describe('ServiceFetcher inGemeentenResponse', function () {
         expect($result)->toBeArray()
             ->and($result['all']['items'])->toHaveCount(1);
     });
+
+    test('adding a half-typed address does not re-run the gemeente check', function () {
+        Http::fake([
+            'api.pdok.nl/bzk/locatieserver/search/v3_1/free*' => Http::response([
+                'response' => ['docs' => [['gemeentecode' => '0882', 'gemeentenaam' => 'Maastricht']]],
+            ]),
+        ]);
+
+        $state = FormState::empty();
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6211AA', 'huisnummer' => '1']],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state);
+        Http::assertSentCount(1);
+
+        // A second row with only a postcode leaves the set of complete
+        // addresses unchanged, so the cache key stays the same and no new
+        // PDOK lookup is made.
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6211AA', 'huisnummer' => '1']],
+            'row-2' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6411CD']],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state);
+        Http::assertSentCount(1);
+
+        // Completing the second address changes the set, so the check re-runs
+        // (one PDOK lookup per complete address).
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6211AA', 'huisnummer' => '1']],
+            'row-2' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6411CD', 'huisnummer' => '32']],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state);
+        Http::assertSentCount(3);
+    });
+
+    test('reactive mode reuses the stored brkGemeente without a PDOK lookup', function () {
+        Municipality::factory()->create(['brk_identification' => 'GM0882', 'name' => 'Maastricht']);
+        Http::fake();
+
+        $state = FormState::empty();
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                'postcode' => '6211AA', 'huisnummer' => '1', 'brkGemeente' => 'GM0882',
+            ]],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state, authoritativeAddresses: false);
+
+        expect($state->get('inGemeentenResponse.all.items'))->toHaveCount(1)
+            ->and($state->get('inGemeentenResponse.all.items')[0]['brk_identification'])->toBe('GM0882');
+        Http::assertNothingSent();
+    });
+
+    test('reactive mode skips an address whose gemeente is not yet known (no PDOK during typing)', function () {
+        Municipality::factory()->create(['brk_identification' => 'GM0882', 'name' => 'Maastricht']);
+        // A PDOK response is available, but reactive mode must not reach for it:
+        // an address without a stored brkGemeente is left for the gate to resolve.
+        Http::fake([
+            'api.pdok.nl/bzk/locatieserver/search/v3_1/free*' => Http::response([
+                'response' => ['docs' => [['gemeentecode' => '0882', 'gemeentenaam' => 'Maastricht']]],
+            ]),
+        ]);
+
+        $state = FormState::empty();
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                'postcode' => '6211AA', 'huisnummer' => '1',
+            ]],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state, authoritativeAddresses: false);
+
+        expect($state->get('inGemeentenResponse'))->toBeNull();
+        Http::assertNothingSent();
+    });
 });
 
 describe('ServiceFetcher unknown variable', function () {

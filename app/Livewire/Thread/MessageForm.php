@@ -12,6 +12,7 @@ use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Message;
 use App\Models\Thread;
 use App\Services\Zgw\ZgwResource;
+use App\Support\Documents\DocumentVersionAuthorizer;
 use App\ValueObjects\MessageDocument;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
@@ -165,7 +166,15 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
                 Select::make('existing_document')
                     ->label('Selecteer bestaand document')
-                    ->options(fn () => $zaak->documenten->pluck('titel', 'uuid')->toArray())
+                    // Only offer documents the current user is allowed to add a
+                    // new version to (own group; the aanvraagformulier and
+                    // ownerless documents are admin-only). This mirrors the
+                    // visibility rule on the document table's "Nieuwe versie"
+                    // action; the action below enforces it server-side too.
+                    ->options(fn () => $zaak->documenten
+                        ->filter(fn (Informatieobject $document): bool => DocumentVersionAuthorizer::canAddVersion(auth()->user(), $zaak, $document->uuid))
+                        ->pluck('titel', 'uuid')
+                        ->toArray())
                     ->required()
                     ->visible(fn (Get $get): bool => $get('type') === 'version')
                     ->live()
@@ -195,6 +204,14 @@ class MessageForm extends Component implements HasActions, HasSchemas
                         ->success()
                         ->send();
                 } elseif ($data['type'] === 'version') {
+                    // Defence in depth: the options list is already filtered, but
+                    // a crafted request could still target a document the user is
+                    // not allowed to version.
+                    abort_unless(
+                        DocumentVersionAuthorizer::canAddVersion(auth()->user(), $this->thread->zaak, $data['existing_document']),
+                        403,
+                    );
+
                     NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
 
                     $this->thread->zaak->refresh(); // Need to refresh to re-initialize documenten

@@ -36,12 +36,26 @@ class ServiceFetcher
      */
     private \WeakMap $inputHashByState;
 
-    public function fetch(string $variable, FormState $state): void
+    /**
+     * @param  bool  $authoritativeAddresses  Bepaalt hoe adressen bijdragen aan
+     *                                        `inGemeentenResponse`. `true` (gate en
+     *                                        mount): alle complete adressen tellen
+     *                                        mee, met een PDOK-fallback voor
+     *                                        handmatige adressen zonder bekende
+     *                                        gemeente. `false` (reactief tijdens
+     *                                        typen): alleen adressen waarvan de
+     *                                        gemeente al uit de auto-fill bekend is
+     *                                        (`brkGemeente`) tellen mee, zodat de
+     *                                        reactieve check nooit een trage
+     *                                        PDOK-lookup doet en de invoer-race op
+     *                                        de adres-repeater niet optreedt.
+     */
+    public function fetch(string $variable, FormState $state, bool $authoritativeAddresses = true): void
     {
         $this->inputHashByState ??= new \WeakMap;
         $hashes = $this->inputHashByState[$state] ?? [];
 
-        $newHash = $this->inputHashFor($variable, $state);
+        $newHash = $this->inputHashFor($variable, $state, $authoritativeAddresses);
         if ($newHash !== null && ($hashes[$variable] ?? null) === $newHash) {
             return; // input ongewijzigd → resultaat staat al in state
         }
@@ -50,7 +64,7 @@ class ServiceFetcher
             'eventloketSession' => $this->fetchEventloketSession($state),
             'gemeenteVariabelen' => $this->fetchGemeenteVariabelen($state),
             'evenementenInDeGemeente' => $this->fetchEvenementenInDeGemeente($state),
-            'inGemeentenResponse' => $this->fetchInGemeentenResponse($state),
+            'inGemeentenResponse' => $this->fetchInGemeentenResponse($state, $authoritativeAddresses),
             default => null,
         };
 
@@ -64,7 +78,7 @@ class ServiceFetcher
      * Hash van de inputs die deze fetch-variant beïnvloeden. Twee
      * roundtrips met dezelfde hash hoeven niet opnieuw te fetchen.
      */
-    private function inputHashFor(string $variable, FormState $state): ?string
+    private function inputHashFor(string $variable, FormState $state, bool $authoritativeAddresses): ?string
     {
         return match ($variable) {
             'eventloketSession' => null, // gebeurt 1× bij mount, geen cache nodig
@@ -74,10 +88,18 @@ class ServiceFetcher
                 (string) $state->get('EvenementEind'),
                 (string) $state->get('evenementInGemeente.brk_identification'),
             ])),
+            // Hash op de effectieve input van de location-check (de
+            // gefilterde geometrieën en complete adressen), niet op de ruwe
+            // editgrids. Zo bust een half getypt adres (alleen een postcode,
+            // of een gewijzigde locatienaam) de cache niet: dat blijft een
+            // cache-hit en scheelt een overbodige PDOK-lookup en berekening.
+            // Polygonen en lijnen zitten via hun gefilterde geometrieën nog
+            // steeds in de hash, dus de gemeentebepaling voor kaart-items
+            // triggert ongewijzigd.
             'inGemeentenResponse' => sha1((string) json_encode([
-                'p' => $state->get('locatieSOpKaart'),
-                'l' => $state->get('routesOpKaart'),
-                'a' => $state->get('adresVanDeGebouwEn'),
+                'p' => $this->collectPolygonsFromEditgrid($state->get('locatieSOpKaart')),
+                'l' => $this->collectLinesFromEditgrid($state->get('routesOpKaart')),
+                'a' => $this->collectAddressesFromEditgrid($state->get('adresVanDeGebouwEn'), $authoritativeAddresses),
             ])),
             default => null,
         };
@@ -133,13 +155,13 @@ class ServiceFetcher
         $state->setVariable('evenementenInDeGemeente', $result['event_names']);
     }
 
-    private function fetchInGemeentenResponse(FormState $state): void
+    private function fetchInGemeentenResponse(FormState $state, bool $authoritativeAddresses): void
     {
         $input = new LocationServerCheckInput(
             polygons: $this->collectPolygonsFromEditgrid($state->get('locatieSOpKaart')),
             line: null,
             lines: $this->collectLinesFromEditgrid($state->get('routesOpKaart')),
-            addresses: $this->collectAddressesFromEditgrid($state->get('adresVanDeGebouwEn')),
+            addresses: $this->collectAddressesFromEditgrid($state->get('adresVanDeGebouwEn'), $authoritativeAddresses),
             address: null,
         );
 
@@ -151,9 +173,12 @@ class ServiceFetcher
     }
 
     /**
-     * @return list<array{postcode: string, houseNumber: string}>|null
+     * @param  bool  $authoritative  Zie `fetch()`. `false` slaat adressen zonder
+     *                               een via auto-fill bekende gemeente over, zodat
+     *                               de reactieve check geen PDOK-lookup nodig heeft.
+     * @return list<array{postcode: string, houseNumber: string, brkIdentification: ?string}>|null
      */
-    private function collectAddressesFromEditgrid(mixed $rows): ?array
+    private function collectAddressesFromEditgrid(mixed $rows, bool $authoritative): ?array
     {
         if (! is_array($rows) || $rows === []) {
             return null;
@@ -170,12 +195,25 @@ class ServiceFetcher
             }
             $postcode = $addr['postcode'] ?? null;
             $huisnummer = $addr['huisnummer'] ?? null;
-            if (is_string($postcode) && $postcode !== '' && ($huisnummer !== null && $huisnummer !== '')) {
-                $addresses[] = [
-                    'postcode' => $postcode,
-                    'houseNumber' => (string) $huisnummer,
-                ];
+            if (! (is_string($postcode) && $postcode !== '' && $huisnummer !== null && $huisnummer !== '')) {
+                continue;
             }
+
+            $brk = $addr['brkGemeente'] ?? null;
+            $brk = is_string($brk) && $brk !== '' ? $brk : null;
+
+            // Reactieve modus: alleen adressen meenemen waarvan de gemeente al
+            // uit de auto-fill bekend is. Een adres zonder `brkGemeente` zou een
+            // PDOK-lookup vergen; dat stellen we uit tot de gate (authoritative).
+            if (! $authoritative && $brk === null) {
+                continue;
+            }
+
+            $addresses[] = [
+                'postcode' => $postcode,
+                'houseNumber' => (string) $huisnummer,
+                'brkIdentification' => $brk,
+            ];
         }
 
         return $addresses === [] ? null : $addresses;

@@ -56,6 +56,25 @@ test('address input resolves to municipality via locatieserver', function () {
         ->and($item['name'])->toBe('Maastricht');
 });
 
+test('a provided brkIdentification is reused without a PDOK lookup', function () {
+    // The address auto-fill already resolved this address's gemeente, so the
+    // location gate passes it through as brkIdentification. The service must
+    // reuse it and skip the (redundant) postcode + house number PDOK lookup.
+    Http::fake();
+
+    $service = new LocationServerCheckService(new LocatieserverService);
+
+    $result = $service->execute(new LocationServerCheckInput(
+        address: ['postcode' => '6211AA', 'houseNumber' => '1', 'brkIdentification' => 'GM0882'],
+    ));
+
+    expect($result['all']['items'])->toHaveCount(1)
+        ->and($result['all']['items'][0]['brk_identification'])->toBe('GM0882')
+        ->and($result['all']['within'])->toBeTrue();
+
+    Http::assertNothingSent();
+});
+
 test('unknown postcode yields within=false and empty items', function () {
     Http::fake([
         'api.pdok.nl/bzk/locatieserver/search/v3_1/free*' => Http::response([

@@ -9,7 +9,7 @@
 // Filament v5 / Livewire 4 rendert `->live(onBlur: true)` als
 // `wire:model.live.blur` (in v4 was dat `wire:model.blur`). Beide varianten
 // blijven in de lijst zodat de selectors over Filament-versies heen werken.
-const MODIFIERS = ['', '.live', '.defer', '.blur', '.live.blur', '.debounce.500ms', '.live.debounce.500ms'];
+const MODIFIERS = ['', '.live', '.defer', '.blur', '.live.blur', '.debounce.500ms', '.live.debounce.500ms', '.debounce.750ms', '.live.debounce.750ms'];
 
 function selectorVoor(tag, attr) {
     // Bouw een CSS-selector die één van de wire:model-varianten matcht.

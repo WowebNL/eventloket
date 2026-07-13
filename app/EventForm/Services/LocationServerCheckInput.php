@@ -18,8 +18,8 @@ final readonly class LocationServerCheckInput
      * @param  list<array<string, mixed>>|null  $polygons  GeoJSON Polygon/MultiPolygon objecten
      * @param  array<string, mixed>|null  $line  GeoJSON LineString
      * @param  list<array<string, mixed>>|null  $lines  Lijst van GeoJSON LineStrings
-     * @param  list<array{postcode: string, houseNumber: string}>|null  $addresses
-     * @param  array{postcode: string, houseNumber: string}|null  $address
+     * @param  list<array{postcode: string, houseNumber: string, brkIdentification?: ?string}>|null  $addresses
+     * @param  array{postcode: string, houseNumber: string, brkIdentification?: ?string}|null  $address
      */
     public function __construct(
         public ?array $polygons = null,

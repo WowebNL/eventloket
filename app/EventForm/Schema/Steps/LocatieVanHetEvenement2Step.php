@@ -40,9 +40,34 @@ final class LocatieVanHetEvenement2Step
         return Step::make('Locatie')
             ->key(self::UUID)
             ->afterValidation(function ($livewire): void {
-                $evenementInGemeente = $livewire->state()->get('evenementInGemeente');
+                // Autoritatieve gemeentebepaling: draai de volledige location-check
+                // over adressen, vlakken en lijnen (met PDOK-fallback voor
+                // handmatige adressen) en werk de afgeleiden bij. Zo rust de harde
+                // eis "er moet een gemeente bepaald zijn" niet op het reactieve,
+                // per-toetsaanslag bijgehouden mechanisme maar op deze gate.
+                $livewire->runLocationGate();
 
-                if (empty($evenementInGemeente)) {
+                $state = $livewire->state();
+                $items = $state->get('inGemeentenResponse.all.items');
+                $aantalGemeenten = is_array($items) ? count($items) : 0;
+                $keuze = $state->get('userSelectGemeente');
+
+                // Meerdere gemeenten en nog geen keuze: toon de keuze-radio (die
+                // wordt zichtbaar doordat de response nu in de state staat) en
+                // blokkeer tot de organisator één gemeente kiest.
+                if ($aantalGemeenten >= 2 && (! is_string($keuze) || $keuze === '')) {
+                    Notification::make()
+                        ->title('Kies een gemeente')
+                        ->body('De ingevoerde locatie(s) of route valt binnen meerdere gemeenten. Kies hieronder de gemeente waarvoor u de aanvraag wilt doen voordat u verder gaat.')
+                        ->warning()
+                        ->send();
+
+                    throw new Halt;
+                }
+
+                // Geen enkele gemeente bepaald (0 gevonden, of buiten de regio):
+                // blokkeren zoals voorheen.
+                if (empty($state->get('evenementInGemeente'))) {
                     Notification::make()
                         ->title('Gemeente niet bepaald')
                         ->body('Vul een adres, locatie of route in zodat de gemeente automatisch bepaald kan worden voordat u verder gaat.')
