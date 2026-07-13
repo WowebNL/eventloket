@@ -66,7 +66,15 @@ class LocatieserverService
 
         if ($httpResponse->successful()) {
             $data = $httpResponse->json();
-            $item = Arr::first($data['response']['docs'] ?? [], function ($item) use ($huisletter, $huisnummertoevoeging) {
+            $item = Arr::first($data['response']['docs'] ?? [], function ($item) use ($postcode, $huisnummer, $huisletter, $huisnummertoevoeging) {
+                // PDOK's free-text search is fuzzy: a non-existent house number
+                // still returns the closest matching address. Guard against that
+                // by requiring the returned postcode and house number to match
+                // the input exactly, otherwise a wrong address gets auto-filled.
+                if (! $this->matchesPostcode($item, $postcode) || ! $this->matchesHuisnummer($item, $huisnummer)) {
+                    return false;
+                }
+
                 if ($huisletter && $huisnummertoevoeging) {
                     if (isset($item['huisletter']) && $item['huisletter'] === $huisletter && isset($item['huisnummertoevoeging']) && $item['huisnummertoevoeging'] === $huisnummertoevoeging) {
                         return true;
@@ -100,6 +108,42 @@ class LocatieserverService
         }
 
         return null;
+    }
+
+    /**
+     * Whether the PDOK document's postcode equals the requested postcode,
+     * ignoring casing and internal spacing ("6361 bz" matches "6361BZ").
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private function matchesPostcode(array $item, string $postcode): bool
+    {
+        if (! isset($item['postcode'])) {
+            return false;
+        }
+
+        return $this->normalizePostcode((string) $item['postcode']) === $this->normalizePostcode($postcode);
+    }
+
+    /**
+     * Whether the PDOK document's house number equals the requested one. PDOK
+     * may return the house number as an int, so both sides are compared as
+     * trimmed strings.
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private function matchesHuisnummer(array $item, string $huisnummer): bool
+    {
+        if (! isset($item['huisnummer'])) {
+            return false;
+        }
+
+        return trim((string) $item['huisnummer']) === trim($huisnummer);
+    }
+
+    private function normalizePostcode(string $postcode): string
+    {
+        return strtoupper((string) preg_replace('/\s+/', '', $postcode));
     }
 
     public function getBagObjectById(string $bagId): ?BagObject

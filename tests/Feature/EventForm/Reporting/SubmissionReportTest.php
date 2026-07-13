@@ -534,3 +534,34 @@ test('Radio met Closure-options resolveert label uit dynamische bron (#2 Michel:
     expect($waarden)->toContain('Beekdaelen')
         ->and($waarden)->not->toContain('GM1954');
 });
+
+test('the internal brkGemeente of an address does not leak into the report', function () {
+    // The address auto-fill stores the resolved BRK gemeente in a hidden
+    // subfield so the location gate can reuse it. That internal value must
+    // never surface in the human-facing summary/PDF.
+    $state = new FormState(values: [
+        'adresVanDeGebouwEn' => [
+            'row-1' => [
+                'naamVanDeLocatieGebouw' => 'Stadhuis',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6211AA',
+                    'huisnummer' => '1',
+                    'straatnaam' => 'Markt',
+                    'woonplaatsnaam' => 'Maastricht',
+                    'brkGemeente' => 'GM0882',
+                ],
+            ],
+        ],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [LocatieVanHetEvenement2Step::make()]);
+
+    $flat = (string) json_encode($sections);
+
+    // The address row is genuinely rendered (so the assertion is not vacuous)...
+    expect($flat)->toContain('Stadhuis')
+        ->and($flat)->toContain('Markt')
+        // ...but the internal gemeente value and key stay out of it.
+        ->and($flat)->not->toContain('GM0882')
+        ->and($flat)->not->toContain('brkGemeente');
+});
