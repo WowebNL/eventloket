@@ -142,6 +142,43 @@ describe('ServiceFetcher inGemeentenResponse', function () {
         expect($result)->toBeArray()
             ->and($result['all']['items'])->toHaveCount(1);
     });
+
+    test('adding a half-typed address does not re-run the gemeente check', function () {
+        Http::fake([
+            'api.pdok.nl/bzk/locatieserver/search/v3_1/free*' => Http::response([
+                'response' => ['docs' => [['gemeentecode' => '0882', 'gemeentenaam' => 'Maastricht']]],
+            ]),
+        ]);
+
+        $state = FormState::empty();
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6211AA', 'huisnummer' => '1']],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state);
+        Http::assertSentCount(1);
+
+        // A second row with only a postcode leaves the set of complete
+        // addresses unchanged, so the cache key stays the same and no new
+        // PDOK lookup is made.
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6211AA', 'huisnummer' => '1']],
+            'row-2' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6411CD']],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state);
+        Http::assertSentCount(1);
+
+        // Completing the second address changes the set, so the check re-runs
+        // (one PDOK lookup per complete address).
+        $state->setField('adresVanDeGebouwEn', [
+            'row-1' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6211AA', 'huisnummer' => '1']],
+            'row-2' => ['adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => ['postcode' => '6411CD', 'huisnummer' => '32']],
+        ]);
+
+        $this->fetcher->fetch('inGemeentenResponse', $state);
+        Http::assertSentCount(3);
+    });
 });
 
 describe('ServiceFetcher unknown variable', function () {
