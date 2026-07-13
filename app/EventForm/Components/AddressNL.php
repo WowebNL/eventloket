@@ -6,6 +6,7 @@ namespace App\EventForm\Components;
 
 use App\Services\LocatieserverService;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -122,25 +123,51 @@ final class AddressNL
                 return;
             }
 
-            $bag = app(LocatieserverService::class)->getBagObjectByPostcodeHuisnummer(
+            $service = app(LocatieserverService::class);
+            $huisletter = is_string($get("{$key}.huisletter")) ? $get("{$key}.huisletter") : null;
+            $huisnummertoevoeging = is_string($get("{$key}.huisnummertoevoeging")) ? $get("{$key}.huisnummertoevoeging") : null;
+
+            $bag = $service->getBagObjectByPostcodeHuisnummer(
                 (string) $postcode,
                 (string) $huisnummer,
-                is_string($get("{$key}.huisletter")) ? $get("{$key}.huisletter") : null,
-                is_string($get("{$key}.huisnummertoevoeging")) ? $get("{$key}.huisnummertoevoeging") : null,
+                $huisletter,
+                $huisnummertoevoeging,
             );
 
-            if ($bag === null) {
+            if ($bag !== null) {
+                $set("{$key}.straatnaam", $bag->straatnaam);
+                $set("{$key}.woonplaatsnaam", $bag->woonplaatsnaam);
+                if ($bag->huisletter !== null && $bag->huisletter !== '') {
+                    $set("{$key}.huisletter", $bag->huisletter);
+                }
+                if ($bag->huisnummertoevoeging !== null && $bag->huisnummertoevoeging !== '') {
+                    $set("{$key}.huisnummertoevoeging", $bag->huisnummertoevoeging);
+                }
+
                 return;
             }
 
-            $set("{$key}.straatnaam", $bag->straatnaam);
-            $set("{$key}.woonplaatsnaam", $bag->woonplaatsnaam);
-            if ($bag->huisletter !== null && $bag->huisletter !== '') {
-                $set("{$key}.huisletter", $bag->huisletter);
+            // No exact match. When only the huisletter/toevoeging refinement
+            // failed but the plain postcode + house number does resolve, the
+            // street/city are still valid, so leave them untouched. Only when
+            // the base combination itself does not exist do we clear the
+            // previously auto-filled street/city (so no stale address lingers)
+            // and tell the organiser they can fill it in manually.
+            if (($huisletter !== null && $huisletter !== '') || ($huisnummertoevoeging !== null && $huisnummertoevoeging !== '')) {
+                $baseBag = $service->getBagObjectByPostcodeHuisnummer((string) $postcode, (string) $huisnummer);
+                if ($baseBag !== null) {
+                    return;
+                }
             }
-            if ($bag->huisnummertoevoeging !== null && $bag->huisnummertoevoeging !== '') {
-                $set("{$key}.huisnummertoevoeging", $bag->huisnummertoevoeging);
-            }
+
+            $set("{$key}.straatnaam", null);
+            $set("{$key}.woonplaatsnaam", null);
+
+            Notification::make()
+                ->title('Geen adres gevonden')
+                ->body('Er is geen adres gevonden voor deze postcode en huisnummer. Controleer de invoer of vul straat en plaats zelf in.')
+                ->warning()
+                ->send();
         };
     }
 }
