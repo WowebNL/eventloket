@@ -108,8 +108,13 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ]))
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-eye'),
+                // Use hidden() rather than a second visible(): visible() would
+                // replace the action's own visibility closure and discard the
+                // DocumentVersionAuthorizer ownership check, making "Nieuwe
+                // versie" appear for everyone. hidden() is a separate condition
+                // that is AND-ed with that check.
                 NewDocumentVersionAction::make($this->zaak)
-                    ->visible(fn (): bool => ! $this->submissionOnly),
+                    ->hidden(fn (): bool => $this->submissionOnly),
                 ActionGroup::make([
                     Action::make('downloaden')
                     // ->label(__('municipality/resources/zaak.actions.download.label'))
