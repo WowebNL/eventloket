@@ -10897,16 +10897,16 @@
         },
         {
             "name": "woweb/laravel-zgw-client",
-            "version": "v1.2.2",
+            "version": "v1.2.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WowebNL/laravel-zgw-client.git",
-                "reference": "1c67993c8c1895085e3c54014fa300a7243998d8"
+                "reference": "8fb792973ceb88b5d76454d0090409e1b847c697"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/1c67993c8c1895085e3c54014fa300a7243998d8",
-                "reference": "1c67993c8c1895085e3c54014fa300a7243998d8",
+                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/8fb792973ceb88b5d76454d0090409e1b847c697",
+                "reference": "8fb792973ceb88b5d76454d0090409e1b847c697",
                 "shasum": ""
             },
             "require": {
@@ -10964,9 +10964,9 @@
             ],
             "support": {
                 "issues": "https://github.com/WowebNL/laravel-zgw-client/issues",
-                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.2.2"
+                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.2.3"
             },
-            "time": "2026-07-03T10:46:58+00:00"
+            "time": "2026-07-14T12:53:43+00:00"
         },
         {
             "name": "woweb/openzaak",
