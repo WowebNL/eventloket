@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
@@ -12,7 +13,12 @@ use App\Notifications\NewZaak;
 use App\Policies\CoordinatorUserPolicy;
 use App\Policies\ZaakPolicy;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Notification;
+use Tests\Fakes\ZgwHttpFake;
+
+use function Pest\Livewire\livewire;
 
 beforeEach(function () {
     $this->municipality = Municipality::factory()->create(['name' => 'Test Municipality']);
@@ -344,5 +350,95 @@ describe('CoordinatorUser model', function () {
         User::factory()->create(['role' => Role::Reviewer]);
 
         expect(CoordinatorUser::count())->toBe(1);
+    });
+});
+
+// --- Coordinator assignable as reviewer ---
+
+describe('coordinator assignable as reviewer', function () {
+    it('includes coordinators in the municipality reviewer users', function () {
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->municipality);
+
+        $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+        $reviewer->municipalities()->attach($this->municipality);
+
+        $reviewerAdmin = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+        $reviewerAdmin->municipalities()->attach($this->municipality);
+
+        $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+        $municipalityAdmin->municipalities()->attach($this->municipality);
+
+        $ids = $this->municipality->allReviewerUsers()->get()->pluck('id');
+
+        expect($ids)->toContain($coordinator->id)
+            ->toContain($reviewer->id)
+            ->toContain($reviewerAdmin->id)
+            ->not->toContain($municipalityAdmin->id);
+    });
+
+    it('lets a coordinator assign themselves as reviewer on a zaak', function () {
+        Notification::fake();
+        Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
+        Filament::setCurrentPanel(Filament::getPanel('municipality'));
+
+        $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+        ZgwHttpFake::wildcardFake();
+
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->municipality);
+
+        $zaak = Zaak::factory()->create([
+            'zaaktype_id' => $this->zaaktype->id,
+            'organisation_id' => $this->organisation->id,
+            'zgw_zaak_url' => $zgwZaakUrl,
+        ]);
+
+        $this->actingAs($coordinator);
+        Filament::setTenant($this->municipality);
+
+        livewire(ViewZaak::class, ['record' => $zaak->id])
+            ->assertOk()
+            ->callAction('assign_reviewer', data: [
+                'reviewer_user_id' => $coordinator->id,
+            ])
+            ->assertHasNoActionErrors()
+            ->assertNotified();
+
+        expect($zaak->refresh()->reviewer_user_id)->toBe($coordinator->id);
+        Notification::assertSentTo([$coordinator], AssignedToZaak::class);
+    });
+
+    it('does not offer a municipality admin as assignable reviewer', function () {
+        Notification::fake();
+        Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
+        Filament::setCurrentPanel(Filament::getPanel('municipality'));
+
+        $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+        ZgwHttpFake::wildcardFake();
+
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->municipality);
+
+        $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+        $municipalityAdmin->municipalities()->attach($this->municipality);
+
+        $zaak = Zaak::factory()->create([
+            'zaaktype_id' => $this->zaaktype->id,
+            'organisation_id' => $this->organisation->id,
+            'zgw_zaak_url' => $zgwZaakUrl,
+        ]);
+
+        $this->actingAs($coordinator);
+        Filament::setTenant($this->municipality);
+
+        livewire(ViewZaak::class, ['record' => $zaak->id])
+            ->assertOk()
+            ->callAction('assign_reviewer', data: [
+                'reviewer_user_id' => $municipalityAdmin->id,
+            ])
+            ->assertHasActionErrors(['reviewer_user_id']);
+
+        expect($zaak->refresh()->reviewer_user_id)->toBeNull();
     });
 });
