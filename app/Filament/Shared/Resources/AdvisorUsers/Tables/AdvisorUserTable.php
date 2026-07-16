@@ -45,8 +45,7 @@ class AdvisorUserTable
                             ->title(__('resources/advisor_user.columns.role.notification'))
                             ->success()
                             ->send();
-                    })
-                    ->searchable(),
+                    }),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
