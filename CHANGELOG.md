@@ -1,5 +1,85 @@
 # Changelog
 
+## untagged-7a2f9c4bdd06458abef7 - 2026-07-16
+
+### What's Changed
+
+This release bundles all changes from the v1.1.0 beta series (beta.1 through beta.7) on top of v1.0.3.
+
+#### ✨ New features
+
+* **Submission deadline advisory per municipality and risk classification** (#407, @LorensoD). Municipalities can configure a submission deadline (in weeks) per risk class (A, B, C). While filling in the event form, the organiser sees a green (on time) or orange (past deadline) notice after the risk scan and on the summary, and the deadline status is included in the submission PDF. When a municipality has not configured a deadline, nothing changes for that municipality.
+* **Coordinator role for municipalities** (#389, @LorensoD). A new coordinator role that receives new cases and assigns them to a reviewer. New cases are routed to coordinators when present, otherwise to all reviewers (previous behaviour). Adds a "Behandelaar toewijzen" action and an assignment notification to the assigned reviewer. Coordinators can also be assigned as reviewer themselves (#451, @Michel-Verhoeven) and are visible and manageable in the admin panel reviewer list (#452, @Michel-Verhoeven).
+* **Multi-document upload and bulk download** (#386, @LorensoD). Upload multiple documents at once via drag and drop or multi select, with a per-document title and a shared document type. Download a selection as a ZIP file (synchronous for 3 documents or fewer, asynchronous with a notification download link for more).
+* **Admin-configurable calendar colors** (#378, @LorensoD). Platform admins can set a color per status and resultaat combination. The color is applied to the calendar item bar and included in event exports. Shipped with a default set of colors for common statuses and results.
+* **Internal case number (intern zaaknummer)** (#376, @LorensoD). Record, edit and delete an internal case number per case. Shown as a sortable and searchable column for municipality staff and admins, and synced to OpenZaak as a zaakeigenschap.
+* **Persisted table settings per user** (#374, @LorensoD). Filters, sorting, search and column choices on Filament tables are now stored per user and restored after logout or session expiry.
+* **GPX uploads and hardened event-form file fields** (#410, @Michel-Verhoeven). GPX route files can now be uploaded. Because GPX is XML, files are validated by inspecting their content: a valid XML prologue, the `<gpx>` root element and the Topografix GPX namespace are required, while binary content and DOCTYPE declarations are rejected. All remaining bare file upload fields in the event form were converted to the hardened upload component, so every uploaded file is stored in the organisation upload directory, keeps its original filename, is private, and passes the document upload rule.
+* **Version endpoint for the service register** (#435, #437, @Michel-Verhoeven). A signed `/__version` endpoint for the service-register probe, served from a version.json that is generated at deploy time.
+
+#### 🐛 Bug fixes
+
+* **Restrict new document versions to the originating party** (#384, @Michel-Verhoeven). A new version of a document can only be added by someone from the same group (organisation, municipality or advisory service) that created the first version. The version column is now hidden for organisers.
+* **Restrict aanvraagformulier and ownerless document versions to platform admin** (#441, @Michel-Verhoeven).
+* **Fix address BAG lookup exactness and document-version authorization** (#445, @Michel-Verhoeven).
+* **Determine the event gemeente authoritatively on the location gate** (#449, @Michel-Verhoeven), with the gemeente check cached on the effective location input (#448, @Michel-Verhoeven).
+* **Fix location address in samenvatting and debounce the PDOK lookup** (#439, @Michel-Verhoeven).
+* **Fix search error in the advisory users table** (#452, @Michel-Verhoeven). Searching for an advisory service user no longer crashes.
+* **Fix null statustype crash when creating concept advice threads** (#408, @Michel-Verhoeven).
+* **Prevent datetime parse crash in the event form** (#432, @Michel-Verhoeven).
+* **Handle degenerate map geometries in the event form** (#433, @Michel-Verhoeven).
+* **Fix "Mijn omgeving" prefilled as organisation name on personal submissions** (#422, @Michel-Verhoeven).
+* **Fix missing zaak infolist translations** (intern zaaknummer, locations, related cases) (#429, @Michel-Verhoeven).
+* **Lighten the form hint info icons so they read as hints, not selections** (#444, @Michel-Verhoeven).
+
+#### 🔧 Other changes
+
+* Stop reporting InviteNotFoundException to Sentry (#431, @Michel-Verhoeven)
+* Raise the Horizon worker memory limit to 128MB (#419, @Michel-Verhoeven)
+* Fix CSP blocking Vite dev server assets in local dev (#415, @L2v2P-HLN)
+* Update .env.example (#413, @L2v2P-HLN)
+* Add Playwright organiser seeder and address-autofill E2E coverage (#447, @Michel-Verhoeven)
+* Update README.md: clarify the Docker/Sail quick start (#305, @L2v2P-HLN)
+
+#### 🚀 Deployment and upgrade notes
+
+Run the following when upgrading from v1.0.x.
+
+1. **Run database migrations.**
+   
+   ```bash
+   php artisan migrate --force
+   
+   ```
+   This adds the `table_states` table (#374), the `status_resultaat_colors` table with a default color set (#378), the `reviewer_user_id` column on `zaken` (#389), and seeds the indieningstermijn municipality variables (#407).
+   
+   It also backfills `reviewer_user_id` from the previous handler (#409), so the existing per reviewer working stock is restored automatically. No manual reassignment of cases is needed.
+   
+2. **Sync the intern zaaknummer eigenschap to OpenZaak (#376).**
+   
+   ```bash
+   php artisan app:sync-zaaktype-eigenschappen
+   
+   ```
+   This adds the `intern_zaaknummer` eigenschap to every active, synced zaaktype in OpenZaak. Run it after the zaaktypen have been synced (`app:sync-zaaktypen`). Without this, internal case numbers cannot be written to OpenZaak.
+   
+3. **Rebuild the front-end assets.**
+   
+   ```bash
+   npm install && npm run build
+   
+   ```
+   Needed for the new deadline notice styling (#407), the multi-document upload UI (#386) and the hardened upload fields (#410).
+   
+
+#### Contributors
+
+* @LorensoD (Lorenso D'Agostino)
+* @Michel-Verhoeven (Michel)
+* @L2v2P-HLN (Laurens van Piggelen, Heerlen)
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v1.0.3...v1.1.0
+
 ## v1.0.1 - 2026-06-24
 
 ### What's Changed
@@ -100,6 +180,7 @@ composer install --no-dev --optimize-autoloader
 npm ci && npm run build
 
 
+
 ```
 This is a major framework bump (Laravel 13, Filament 5). The private VCS map
 repositories were removed, so a clean `composer install` is recommended over an
@@ -131,6 +212,7 @@ the local field map tooling, not needed in production).
 
 ```
 php artisan migrate --force
+
 
 
 ```
@@ -179,6 +261,7 @@ php artisan eventform:backfill-snapshots-from-objects --dry-run --zaak=<id>
 php artisan eventform:backfill-snapshots-from-objects
 
 
+
 ```
 The command is idempotent (only touches cases without a snapshot), repeatable,
 and performs one external Objects API call per case. It is intentionally a
@@ -192,6 +275,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan filament:optimize
+
 
 
 ```
@@ -447,6 +531,7 @@ php artisan filament:optimize
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
