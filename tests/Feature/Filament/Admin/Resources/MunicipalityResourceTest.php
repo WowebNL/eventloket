@@ -178,6 +178,37 @@ test('admin can access reviewer users relation manager', function () {
         ->assertOk();
 });
 
+test('reviewer users relation manager includes coordinators and reviewer municipality admins', function () {
+    $municipality = Municipality::factory()->create();
+
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+    $reviewerAdmin = User::factory()->create(['role' => Role::ReviewerMunicipalityAdmin]);
+    $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+    $municipality->users()->attach([$reviewer->id, $coordinator->id, $reviewerAdmin->id, $municipalityAdmin->id]);
+
+    livewire(ReviewerUsersRelationManager::class, [
+        'ownerRecord' => $municipality,
+        'pageClass' => EditMunicipality::class,
+    ])
+        ->assertCanSeeTableRecords([$reviewer, $coordinator, $reviewerAdmin])
+        ->assertCanNotSeeTableRecords([$municipalityAdmin]);
+});
+
+test('admin can change a coordinator role in the reviewer users relation manager', function () {
+    $municipality = Municipality::factory()->create();
+    $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+    $municipality->users()->attach($coordinator);
+
+    livewire(ReviewerUsersRelationManager::class, [
+        'ownerRecord' => $municipality,
+        'pageClass' => EditMunicipality::class,
+    ])
+        ->call('updateTableColumnState', 'role', $coordinator->getKey(), Role::Reviewer->value);
+
+    expect($coordinator->fresh()->role)->toBe(Role::Reviewer);
+});
+
 test('admin can access variables relation manager', function () {
     $municipality = Municipality::factory()->create();
 
