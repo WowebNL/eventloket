@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
 use App\Filament\Admin\Resources\AdvisoryResource;
 use App\Filament\Admin\Resources\AdvisoryResource\Pages\CreateAdvisory;
@@ -169,6 +170,23 @@ test('admin can access users relation manager', function () {
         'pageClass' => EditAdvisory::class,
     ])
         ->assertOk();
+});
+
+test('admin can search advisor users by name in users relation manager', function () {
+    $advisory = Advisory::factory()->create();
+    $alpha = User::factory()->create(['first_name' => 'Alpha', 'last_name' => 'Advisor', 'role' => Role::Advisor]);
+    $beta = User::factory()->create(['first_name' => 'Beta', 'last_name' => 'Advisor', 'role' => Role::Advisor]);
+    $advisory->users()->attach($alpha, ['role' => AdvisoryRole::Member]);
+    $advisory->users()->attach($beta, ['role' => AdvisoryRole::Member]);
+
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $advisory,
+        'pageClass' => EditAdvisory::class,
+    ])
+        ->assertCanSeeTableRecords([$alpha, $beta])
+        ->searchTable('Alpha')
+        ->assertCanSeeTableRecords([$alpha])
+        ->assertCanNotSeeTableRecords([$beta]);
 });
 
 test('admin can attach advisor user to advisory', function () {
