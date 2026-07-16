@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReviewerUsersRelationManager extends RelationManager
 {
-    protected static string $relationship = 'reviewerUsers';
+    protected static string $relationship = 'allReviewerUsers';
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string
     {
