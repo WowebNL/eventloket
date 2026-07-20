@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'label' => 'Behandelaar met beheerdersrechten',
-    'plural_label' => 'Behandelaren met beheerdersrechten',
+    'label' => 'Gemeentelijk beheerder (+behandelaar)',
+    'plural_label' => 'Gemeentelijk beheerders (+behandelaar)',
 
     'columns' => [
 

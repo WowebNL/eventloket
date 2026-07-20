@@ -270,6 +270,17 @@ class EventFormPage extends Page implements HasForms
             $this->state->setVariable($field, $value);
         };
 
+        // Een persoonlijke organisatie draagt de placeholder-naam "Mijn
+        // omgeving". Die wordt niet meer voorgevuld, maar concepten van
+        // vóór die wijziging hebben 'm nog in hun opgeslagen state staan.
+        // De hele fieldset "Organisatie informatie" is verborgen zolang er
+        // geen KvK-nummer is, dus de organisator kan hier zelf nooit iets
+        // hebben ingevuld: wat er staat is altijd oude prefill.
+        $organisation = $this->state->get('authOrganisation');
+        if ($organisation instanceof Organisation && $organisation->isPersonal()) {
+            $this->state->setVariable('watIsDeNaamVanUwOrganisatie', '');
+        }
+
         // OF-rule RuleF56a54dd — user-velden uit session.
         $copy('eventloketSession.user_first_name', 'watIsUwVoornaam');
         $copy('eventloketSession.user_last_name', 'watIsUwAchternaam');

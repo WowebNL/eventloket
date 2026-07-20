@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\MunicipalityVariableType;
+use App\Enums\OrganisationType;
 use App\Enums\Role;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Schema\EventFormSchema;
@@ -456,4 +457,46 @@ test('gate: een getekend vlak bepaalt de gemeente autoritatief (kaart blijft wer
     locatieGateCallback()($page);
 
     expect($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0999');
+});
+
+test('mount clears the "Mijn omgeving" placeholder left in an old draft of a personal organisation', function () {
+    $this->organisation->update([
+        'type' => OrganisationType::Personal,
+        'name' => 'Mijn omgeving',
+    ]);
+
+    // Concept van vóór de fix: de placeholder staat al in de opgeslagen state.
+    $this->draft->update([
+        'state' => (new FormState(values: [
+            'watIsDeNaamVanUwOrganisatie' => 'Mijn omgeving',
+        ]))->toSnapshot(),
+    ]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
+    expect($page->state()->get('watIsDeNaamVanUwOrganisatie'))->toBe('');
+});
+
+test('mount keeps the organisation name for a business organisation', function () {
+    $this->organisation->update([
+        'type' => OrganisationType::Business,
+        'name' => 'Media Tuin',
+        'coc_number' => '12345678',
+    ]);
+
+    $this->draft->update([
+        'state' => (new FormState(values: [
+            'watIsDeNaamVanUwOrganisatie' => 'Media Tuin',
+        ]))->toSnapshot(),
+    ]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
+    expect($page->state()->get('watIsDeNaamVanUwOrganisatie'))->toBe('Media Tuin');
 });
