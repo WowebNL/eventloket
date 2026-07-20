@@ -18,10 +18,10 @@
  */
 
 use App\Enums\OrganisationType;
+use App\Enums\Role;
 use App\EventForm\State\FormState;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\SendSubmissionConfirmationEmail;
-use App\Enums\Role;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
