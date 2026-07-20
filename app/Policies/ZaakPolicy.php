@@ -56,7 +56,7 @@ class ZaakPolicy
     {
         return match ($user->role) {
             /** @phpstan-ignore-next-line */
-            Role::Reviewer, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => $user->canAccessMunicipality($zaak->zaaktype->municipality_id),
+            Role::Reviewer, Role::Coordinator, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin => $user->canAccessMunicipality($zaak->zaaktype->municipality_id),
             Role::Admin => true,
             default => false,
         };

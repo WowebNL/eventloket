@@ -150,6 +150,20 @@ describe('ZaakPolicy for coordinator', function () {
 
         expect($this->policy->uploadDocument($coordinator, $this->zaak))->toBeFalse();
     });
+
+    it('allows coordinator in same municipality to view the activity log', function () {
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->municipality);
+
+        expect($this->policy->viewActivity($coordinator, $this->zaak))->toBeTrue();
+    });
+
+    it('denies coordinator in different municipality from viewing the activity log', function () {
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->otherMunicipality);
+
+        expect($this->policy->viewActivity($coordinator, $this->zaak))->toBeFalse();
+    });
 });
 
 // --- Coordinator can finish a zaak ---
