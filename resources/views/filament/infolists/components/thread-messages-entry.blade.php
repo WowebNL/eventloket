@@ -24,32 +24,26 @@
                                             <p class="text-sm font-medium ">
                                                 {{ $message->user->name }}
                                             </p>
+                                            {{-- The role name comes from the Role enum so it stays in
+                                                 step with the labels used elsewhere in the application.
+                                                 The organisation behind it depends on the role. --}}
+                                            @php
+                                                $roleLabel = $message->user->role?->getLabel();
+                                                $roleContext = match ($message->user->role) {
+                                                    \App\Enums\Role::MunicipalityAdmin,
+                                                    \App\Enums\Role::ReviewerMunicipalityAdmin,
+                                                    \App\Enums\Role::Coordinator,
+                                                    \App\Enums\Role::Reviewer => $message->user->municipalities->pluck('name')->join(', '),
+                                                    \App\Enums\Role::Advisor => $message->user->advisories->pluck('name')->join(', '),
+                                                    \App\Enums\Role::Organiser => $message->user->organisations->pluck('name')->join(', '),
+                                                    default => null,
+                                                };
+                                                $roleDescription = filled($roleContext)
+                                                    ? "{$roleLabel} bij {$roleContext}"
+                                                    : $roleLabel;
+                                            @endphp
                                             <p class="text-sm text-gray-500 dark:text-gray-400">
-                                                @switch($message->user->role)
-                                                    @case(\App\Enums\Role::Admin)
-                                                        Platformbeheerder
-                                                        @break
-
-                                                    @case(\App\Enums\Role::MunicipalityAdmin)
-                                                    @case(\App\Enums\Role::ReviewerMunicipalityAdmin)
-                                                        Gemeentelijk beheerder bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
-                                                        @break
-
-                                                    @case(\App\Enums\Role::Reviewer)
-                                                        Behandelaar bij {{ $message->user->municipalities->pluck('name')->join(', ') }}
-                                                        @break
-
-                                                    @case(\App\Enums\Role::Advisor)
-                                                        Adviseur bij {{ $message->user->advisories->pluck('name')->join(', ') }}
-                                                        @break
-
-                                                    @case(\App\Enums\Role::Organiser)
-                                                        Organisator bij {{ $message->user->organisations->pluck('name')->join(', ') }}
-                                                        @break
-
-                                                    @default
-                                                        Default case...
-                                                @endswitch
+                                                {{ $roleDescription }}
                                             </p>
                                         </div>
                                         <div>
