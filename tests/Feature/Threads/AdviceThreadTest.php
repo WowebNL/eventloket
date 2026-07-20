@@ -819,3 +819,30 @@ test('sends new advice thread message notifications to all advisory admins of un
         NewAdviceThreadMessage::class,
     );
 });
+
+// The message header names the author's role via the Role enum, so a
+// coordinator no longer falls through to the placeholder default that the
+// hard-coded switch used to render.
+test('advice thread page names the role of a coordinator who posted a message', function () {
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+
+    $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+    $this->municipality->users()->attach($coordinator);
+
+    Message::create([
+        'thread_id' => $this->adviceThread->id,
+        'user_id' => $coordinator->id,
+        'body' => 'Ik verdeel deze zaak.',
+    ]);
+
+    $this->actingAs($this->reviewer);
+    Filament::setTenant($this->municipality);
+
+    livewire(ViewAdviceThread::class, [
+        'record' => $this->adviceThread->id,
+        'parentRecord' => $this->zaak,
+    ])
+        ->assertSuccessful()
+        ->assertSee('Coördinator (+behandelaar) bij Test Municipality')
+        ->assertDontSee('Default case');
+});

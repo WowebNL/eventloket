@@ -28,7 +28,7 @@ return [
                 ],
                 'is_coordinator' => [
                     'label' => 'Uitnodigen als coördinator',
-                    'helper_text' => 'Vink dit aan als de behandelaar zaken moet kunnen verdelen onder behandelaars. Een coördinator ontvangt meldingen van nieuwe zaken en wijst behandelaars toe, maar behandelt zaken niet zelf.',
+                    'helper_text' => 'Vink dit aan als de behandelaar zaken moet kunnen verdelen onder behandelaars. Een coördinator ontvangt meldingen van nieuwe zaken en wijst behandelaars toe, en behandelt daarnaast zelf ook zaken.',
                 ],
             ],
             'notification' => [

@@ -17,9 +17,13 @@
  * kunnen downloaden/in de mail zien.
  */
 
+use App\Enums\OrganisationType;
+use App\Enums\Role;
 use App\EventForm\State\FormState;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\SendSubmissionConfirmationEmail;
+use App\Models\Organisation;
+use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -139,4 +143,91 @@ test('risicoClassificatie wordt berekend uit de 14 risicoscan-velden en in de PD
     // (na JSON-deserialisatie van '0') eerder als "ontbrekend veld" werd gezien.
     $loadedState = FormState::fromSnapshot($zaak->fresh()->form_state_snapshot ?? []);
     expect($loadedState->get('risicoClassificatie'))->toBe('A');
+});
+
+/**
+ * Haalt de zichtbare tekst uit een dompdf-PDF: alle FlateDecode-streams
+ * decomprimeren en de null-bytes van de 16-bit glyph-IDs strippen, zodat
+ * een gewone str_contains werkt. Zelfde aanpak als in
+ * GenerateSubmissionPdfIntegrationTest.
+ */
+function tekstUitPdf(string $pdfBytes): string
+{
+    $tekst = '';
+    if (preg_match_all('/stream\s*\n(.*?)\nendstream/s', $pdfBytes, $matches)) {
+        foreach ($matches[1] as $stream) {
+            $decompressed = @gzuncompress($stream);
+            if ($decompressed !== false) {
+                $tekst .= str_replace("\x00", '', $decompressed);
+            }
+        }
+    }
+
+    return $tekst;
+}
+
+/**
+ * @param  array<string, mixed>  $organisationAttributes
+ */
+function pdfVoorOrganisatie(array $organisationAttributes, string $voornaam, string $achternaam): string
+{
+    $organisation = Organisation::factory()->create($organisationAttributes);
+    $zaaktype = Zaaktype::factory()->create(['name' => 'Evenementenvergunning']);
+    $organiser = User::factory()->create([
+        'first_name' => $voornaam,
+        'last_name' => $achternaam,
+        'name' => "{$voornaam} {$achternaam}",
+        'role' => Role::Organiser,
+    ]);
+
+    $state = new FormState(values: [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest Testlaan',
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'public_id' => 'ZAAK-ORG-1',
+        'zaaktype_id' => $zaaktype->id,
+        'organisation_id' => $organisation->id,
+        'organiser_user_id' => $organiser->id,
+        'form_state_snapshot' => $state->toSnapshot(),
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: '2026-06-14T14:00:00+02:00',
+            eind_evenement: '2026-06-14T18:00:00+02:00',
+            registratiedatum: now()->toIso8601String(),
+            status_name: 'Ingediend',
+            statustype_url: '',
+            risico_classificatie: 'A',
+            naam_locatie_eveneme: 'Buurtcentrum De Hoek',
+            naam_evenement: 'Buurtfeest Testlaan',
+        ),
+    ]);
+
+    Queue::fake();
+
+    (new GenerateSubmissionPdf($zaak))->handle();
+
+    return tekstUitPdf(Storage::disk('local')->get("zaken/{$zaak->id}/aanvraagformulier.pdf"));
+}
+
+test('laat de organisator-regel weg bij een aanvraag op persoonlijke titel', function () {
+    $tekst = pdfVoorOrganisatie([
+        'type' => OrganisationType::Personal,
+        'name' => 'Mijn omgeving',
+    ], 'Noah', 'Vermeulen');
+
+    // De organisator-regel verdwijnt volledig; de aanvrager staat er nog wel.
+    expect($tekst)->not->toContain('Mijn omgeving')
+        ->and($tekst)->not->toContain('Organisator:')
+        ->and($tekst)->toContain('Aanvrager:')
+        ->and($tekst)->toContain('Noah Vermeulen');
+});
+
+test('toont de organisatienaam als organisator bij een zakelijke aanvraag', function () {
+    $tekst = pdfVoorOrganisatie([
+        'type' => OrganisationType::Business,
+        'name' => 'Media Tuin',
+    ], 'Noah', 'Vermeulen');
+
+    expect($tekst)->toContain('Organisator:')
+        ->and($tekst)->toContain('Media Tuin');
 });

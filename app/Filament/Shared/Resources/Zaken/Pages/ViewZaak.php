@@ -458,7 +458,7 @@ class ViewZaak extends ViewRecord
                 ->closeModalByClickingAway(false)
                 ->modalSubmitAction(false)
                 ->modalCancelAction(false)
-                ->visible(fn (Zaak $record) => ! $record->reference_data->resultaat && ! $record->is_imported && $record->behandelaarCanChangeStatus() && in_array(auth()->user()->role, [Role::Reviewer, Role::ReviewerMunicipalityAdmin])),
+                ->visible(fn (Zaak $record) => ! $record->reference_data->resultaat && ! $record->is_imported && $record->behandelaarCanChangeStatus() && in_array(auth()->user()->role, [Role::Reviewer, Role::Coordinator, Role::ReviewerMunicipalityAdmin])),
         ];
     }
 
