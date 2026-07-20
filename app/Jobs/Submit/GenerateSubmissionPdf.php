@@ -51,8 +51,21 @@ final class GenerateSubmissionPdf implements ShouldQueue
         // is gegeven en wanneer.
         $akkoordGegeven = $state->get('akkoordVerwerkingGegevens') === true;
 
+        $this->zaak->loadMissing(['zaaktype', 'organisation', 'organiserUser']);
+
+        // Een aanvraag op persoonlijke titel hangt aan een organisatie met
+        // de placeholder-naam "Mijn omgeving". Die naam hoort niet in het
+        // inzendingsbewijs; de organisator is dan de persoon zelf, net als
+        // in MapFormStateToReferenceData.
+        $organisation = $this->zaak->organisation;
+        $aanvragerNaam = $this->zaak->organiserUser?->name;
+        $organisatorNaam = ($organisation !== null && ! $organisation->isPersonal())
+            ? $organisation->name
+            : ($aanvragerNaam !== null && $aanvragerNaam !== '' ? $aanvragerNaam : '—');
+
         $pdf = Pdf::loadView('pdf.submission-report', [
-            'zaak' => $this->zaak->loadMissing(['zaaktype', 'organisation']),
+            'zaak' => $this->zaak,
+            'organisatorNaam' => $organisatorNaam,
             'state' => $state,
             'sections' => $sections,
             'gemeenteNaam' => $gemeenteNaam,

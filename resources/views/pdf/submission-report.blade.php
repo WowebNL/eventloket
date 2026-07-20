@@ -52,7 +52,7 @@
         @if (! empty($gemeenteNaam))
             <div><strong>Gemeente:</strong> {{ $gemeenteNaam }}</div>
         @endif
-        <div><strong>Organisator:</strong> {{ $zaak->organisation?->name ?? '—' }}</div>
+        <div><strong>Organisator:</strong> {{ $organisatorNaam }}</div>
         <div><strong>Aanvrager:</strong> {{ $zaak->organiserUser?->name ?? '—' }}</div>
         <div><strong>Ingediend op:</strong> {{ $zaak->created_at?->timezone('Europe/Amsterdam')->translatedFormat('j F Y H:i') }}</div>
     </div>
