@@ -136,6 +136,62 @@ describe('ZaakPolicy for coordinator', function () {
 
         expect($this->policy->view($coordinator, $this->zaak))->toBeFalse();
     });
+
+    it('allows coordinator in same municipality to upload a document', function () {
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->municipality);
+
+        expect($this->policy->uploadDocument($coordinator, $this->zaak))->toBeTrue();
+    });
+
+    it('denies coordinator in different municipality from uploading a document', function () {
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->otherMunicipality);
+
+        expect($this->policy->uploadDocument($coordinator, $this->zaak))->toBeFalse();
+    });
+});
+
+// --- Coordinator can finish a zaak ---
+
+describe('coordinator can finish a zaak', function () {
+    beforeEach(function () {
+        Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
+        Filament::setCurrentPanel(Filament::getPanel('municipality'));
+
+        $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+        ZgwHttpFake::wildcardFake();
+
+        $this->zaak = Zaak::factory()->create([
+            'zaaktype_id' => $this->zaaktype->id,
+            'organisation_id' => $this->organisation->id,
+            'zgw_zaak_url' => $zgwZaakUrl,
+        ]);
+    });
+
+    it('shows the finish zaak action to a coordinator', function () {
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->municipality);
+
+        $this->actingAs($coordinator);
+        Filament::setTenant($this->municipality);
+
+        livewire(ViewZaak::class, ['record' => $this->zaak->id])
+            ->assertOk()
+            ->assertActionVisible('finish_zaak');
+    });
+
+    it('hides the finish zaak action from a municipality admin', function () {
+        $municipalityAdmin = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+        $municipalityAdmin->municipalities()->attach($this->municipality);
+
+        $this->actingAs($municipalityAdmin);
+        Filament::setTenant($this->municipality);
+
+        livewire(ViewZaak::class, ['record' => $this->zaak->id])
+            ->assertOk()
+            ->assertActionHidden('finish_zaak');
+    });
 });
 
 // --- getMunicipalityHandlers ---
