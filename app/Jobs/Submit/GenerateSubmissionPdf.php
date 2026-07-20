@@ -54,14 +54,13 @@ final class GenerateSubmissionPdf implements ShouldQueue
         $this->zaak->loadMissing(['zaaktype', 'organisation', 'organiserUser']);
 
         // Een aanvraag op persoonlijke titel hangt aan een organisatie met
-        // de placeholder-naam "Mijn omgeving". Die naam hoort niet in het
-        // inzendingsbewijs; de organisator is dan de persoon zelf, net als
-        // in MapFormStateToReferenceData.
+        // de placeholder-naam "Mijn omgeving". Er is dan geen organisator
+        // om te tonen — de aanvrager staat al op de regel eronder — dus
+        // blijft de regel helemaal weg uit de header.
         $organisation = $this->zaak->organisation;
-        $aanvragerNaam = $this->zaak->organiserUser?->name;
         $organisatorNaam = ($organisation !== null && ! $organisation->isPersonal())
             ? $organisation->name
-            : ($aanvragerNaam !== null && $aanvragerNaam !== '' ? $aanvragerNaam : '—');
+            : null;
 
         $pdf = Pdf::loadView('pdf.submission-report', [
             'zaak' => $this->zaak,

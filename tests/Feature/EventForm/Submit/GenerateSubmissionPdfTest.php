@@ -209,13 +209,16 @@ function pdfVoorOrganisatie(array $organisationAttributes, string $voornaam, str
     return tekstUitPdf(Storage::disk('local')->get("zaken/{$zaak->id}/aanvraagformulier.pdf"));
 }
 
-test('toont de persoonsnaam als organisator bij een aanvraag op persoonlijke titel', function () {
+test('laat de organisator-regel weg bij een aanvraag op persoonlijke titel', function () {
     $tekst = pdfVoorOrganisatie([
         'type' => OrganisationType::Personal,
         'name' => 'Mijn omgeving',
     ], 'Noah', 'Vermeulen');
 
+    // De organisator-regel verdwijnt volledig; de aanvrager staat er nog wel.
     expect($tekst)->not->toContain('Mijn omgeving')
+        ->and($tekst)->not->toContain('Organisator:')
+        ->and($tekst)->toContain('Aanvrager:')
         ->and($tekst)->toContain('Noah Vermeulen');
 });
 
@@ -225,5 +228,6 @@ test('toont de organisatienaam als organisator bij een zakelijke aanvraag', func
         'name' => 'Media Tuin',
     ], 'Noah', 'Vermeulen');
 
-    expect($tekst)->toContain('Media Tuin');
+    expect($tekst)->toContain('Organisator:')
+        ->and($tekst)->toContain('Media Tuin');
 });
