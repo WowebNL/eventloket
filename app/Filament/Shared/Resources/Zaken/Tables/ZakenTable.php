@@ -104,8 +104,8 @@ class ZakenTable
                     ->searchable()
                     ->forceSearchCaseInsensitive(),
 
-                TextColumn::make('reference_data.types_evenement')
-                    ->label(__('resources/zaak.columns.types_evenement.label'))
+                TextColumn::make('reference_data.locaties_evenement')
+                    ->label(__('resources/zaak.columns.locaties_evenement.label'))
                     ->badge()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
