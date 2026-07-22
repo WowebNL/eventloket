@@ -15,6 +15,7 @@ use App\Notifications\NewOrganiserThreadMessage;
 use App\Notifications\NewZaak;
 use App\Notifications\NewZaakDocument;
 use App\Notifications\Result;
+use App\Notifications\ZaakReleased;
 use App\Notifications\ZaakStatusChanged;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
@@ -64,6 +65,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             Role::MunicipalityAdmin => [],
             Role::Coordinator => [
                 NewZaak::class,
+                ZaakReleased::class,
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,
                 NewZaakDocument::class,
@@ -72,6 +74,7 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
             Role::Reviewer => [
                 NewZaak::class,
                 AssignedToZaak::class,
+                ZaakReleased::class,
                 NewAdviceThreadMessage::class,
                 NewOrganiserThread::class,
                 NewOrganiserThreadMessage::class,

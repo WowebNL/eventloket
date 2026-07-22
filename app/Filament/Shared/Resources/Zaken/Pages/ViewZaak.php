@@ -13,6 +13,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Notifications\AssignedToZaak;
 use App\Notifications\Result;
+use App\Notifications\ZaakReleased;
 use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\BesluitType;
@@ -81,6 +82,76 @@ class ViewZaak extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('claim_zaak')
+                ->label(__('municipality/resources/zaak.header_actions.claim_zaak.label'))
+                ->icon('heroicon-o-hand-raised')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading(__('municipality/resources/zaak.header_actions.claim_zaak.confirmation.title'))
+                ->modalDescription(__('municipality/resources/zaak.header_actions.claim_zaak.confirmation.description'))
+                ->visible(fn (Zaak $record) => ! $record->is_imported
+                    && ! $record->reference_data->resultaat
+                    && ! $record->reviewer_user_id
+                    && in_array(auth()->user()->role, [Role::Reviewer, Role::Coordinator, Role::ReviewerMunicipalityAdmin]))
+                ->action(function (Zaak $record) {
+                    // Guard against a colleague claiming between page load and click.
+                    $record->refresh();
+
+                    if ($record->reviewer_user_id) {
+                        Notification::make()
+                            ->warning()
+                            ->title(__('municipality/resources/zaak.header_actions.claim_zaak.notification.already_assigned'))
+                            ->send();
+
+                        $this->dispatch('refreshZaak');
+
+                        return;
+                    }
+
+                    $record->reviewer_user_id = auth()->id();
+                    $record->save();
+
+                    Notification::make()
+                        ->success()
+                        ->title(__('municipality/resources/zaak.header_actions.claim_zaak.notification.claimed'))
+                        ->send();
+
+                    $this->dispatch('refreshZaak');
+                }),
+            Action::make('release_zaak')
+                ->label(__('municipality/resources/zaak.header_actions.release_zaak.label'))
+                ->icon('heroicon-o-user-minus')
+                ->color('gray')
+                ->requiresConfirmation()
+                ->modalHeading(__('municipality/resources/zaak.header_actions.release_zaak.confirmation.title'))
+                ->modalDescription(__('municipality/resources/zaak.header_actions.release_zaak.confirmation.description'))
+                ->visible(fn (Zaak $record) => ! $record->is_imported
+                    && ! $record->reference_data->resultaat
+                    && $record->reviewer_user_id === auth()->id()
+                    && in_array(auth()->user()->role, [Role::Reviewer, Role::Coordinator, Role::ReviewerMunicipalityAdmin]))
+                ->action(function (Zaak $record) {
+                    $releasedBy = auth()->user();
+
+                    $record->reviewer_user_id = null;
+                    $record->save();
+
+                    // With no reviewer assigned this resolves to the coordinators,
+                    // or falls back to all reviewers when the municipality has none.
+                    foreach ($record->getMunicipalityHandlers() as $handler) {
+                        if ($handler->id === $releasedBy->id) {
+                            continue;
+                        }
+
+                        $handler->notify(new ZaakReleased($record, $releasedBy));
+                    }
+
+                    Notification::make()
+                        ->success()
+                        ->title(__('municipality/resources/zaak.header_actions.release_zaak.notification.released'))
+                        ->send();
+
+                    $this->dispatch('refreshZaak');
+                }),
             Action::make('assign_reviewer')
                 ->label(fn (Zaak $record) => $record->reviewer_user_id
                     ? __('municipality/resources/zaak.header_actions.assign_reviewer.label_change')
