@@ -40,6 +40,27 @@ return [
         ],
     ],
     'header_actions' => [
+        'claim_zaak' => [
+            'label' => 'Zaak oppakken',
+            'confirmation' => [
+                'title' => 'Zaak oppakken',
+                'description' => 'U wordt behandelaar van deze zaak. Weet u het zeker?',
+            ],
+            'notification' => [
+                'claimed' => 'U bent nu behandelaar van deze zaak',
+                'already_assigned' => 'Deze zaak is inmiddels al aan een behandelaar toegewezen',
+            ],
+        ],
+        'release_zaak' => [
+            'label' => 'Zaak vrijgeven',
+            'confirmation' => [
+                'title' => 'Zaak vrijgeven',
+                'description' => 'U wordt verwijderd als behandelaar en de zaak komt terug in de werkvoorraad. De coördinatoren worden geïnformeerd.',
+            ],
+            'notification' => [
+                'released' => 'Zaak vrijgegeven',
+            ],
+        ],
         'assign_reviewer' => [
             'label' => 'Behandelaar toewijzen',
             'label_change' => 'Behandelaar wijzigen',
