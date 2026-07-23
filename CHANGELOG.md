@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.1.1 - 2026-07-23
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Show event locations column instead of event types in zaken table (#458) @Michel-Verhoeven
+* Let handlers claim and release a zaak themselves (#457) @Michel-Verhoeven
+* Name the four municipality roles consistently (#456) @Michel-Verhoeven
+* Keep the "Mijn omgeving" placeholder out of the submission PDF (#455) @Michel-Verhoeven
+* Allow coordinators to finish a zaak, upload documents and view the activity log (#454) @Michel-Verhoeven
+
+#### Other changes
+
+* Add user-facing release notes for v1.1.1 (#459) @Michel-Verhoeven
+* Add user-facing release notes for v1.1.0 (#453) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v1.1.0...v1.1.1
+
 ## untagged-7a2f9c4bdd06458abef7 - 2026-07-16
 
 ### What's Changed
@@ -50,6 +69,7 @@ Run the following when upgrading from v1.0.x.
    ```bash
    php artisan migrate --force
    
+   
    ```
    This adds the `table_states` table (#374), the `status_resultaat_colors` table with a default color set (#378), the `reviewer_user_id` column on `zaken` (#389), and seeds the indieningstermijn municipality variables (#407).
    
@@ -60,6 +80,7 @@ Run the following when upgrading from v1.0.x.
    ```bash
    php artisan app:sync-zaaktype-eigenschappen
    
+   
    ```
    This adds the `intern_zaaknummer` eigenschap to every active, synced zaaktype in OpenZaak. Run it after the zaaktypen have been synced (`app:sync-zaaktypen`). Without this, internal case numbers cannot be written to OpenZaak.
    
@@ -67,6 +88,7 @@ Run the following when upgrading from v1.0.x.
    
    ```bash
    npm install && npm run build
+   
    
    ```
    Needed for the new deadline notice styling (#407), the multi-document upload UI (#386) and the hardened upload fields (#410).
@@ -181,6 +203,7 @@ npm ci && npm run build
 
 
 
+
 ```
 This is a major framework bump (Laravel 13, Filament 5). The private VCS map
 repositories were removed, so a clean `composer install` is recommended over an
@@ -212,6 +235,7 @@ the local field map tooling, not needed in production).
 
 ```
 php artisan migrate --force
+
 
 
 
@@ -262,6 +286,7 @@ php artisan eventform:backfill-snapshots-from-objects
 
 
 
+
 ```
 The command is idempotent (only touches cases without a snapshot), repeatable,
 and performs one external Objects API call per case. It is intentionally a
@@ -275,6 +300,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan filament:optimize
+
 
 
 
@@ -531,6 +557,7 @@ php artisan filament:optimize
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
