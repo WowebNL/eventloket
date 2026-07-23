@@ -6,14 +6,18 @@ namespace App\Jobs\Zaak;
 
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Normalizers\OpenFormsNormalizer;
-use App\ValueObjects\OzZaak;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
+use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwResource;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Schrijft zaakeigenschappen op de ZGW-zaak op basis van de FormState
@@ -30,28 +34,30 @@ class AddZaakeigenschappenZGW implements ShouldQueue
 
     public function __construct(public readonly Zaak $zaak) {}
 
-    public function handle(Openzaak $openzaak, ZaakeigenschappenMap $map): void
+    public function handle(ZaakeigenschappenMap $map): void
     {
         if (! $this->zaak->zgw_zaak_url) {
             return;
         }
 
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
+
         $state = FormState::fromSnapshot($this->zaak->form_state_snapshot ?? []);
-        $ozZaak = new OzZaak(...$openzaak->get($this->zaak->zgw_zaak_url.'?expand=eigenschappen')->toArray());
-        $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()
-            ->getAll(['zaaktype' => $ozZaak->zaaktype])
-            ->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url.'?expand=eigenschappen'));
+        $catalogiEigenschappen = $connection->catalogi()->eigenschappen()
+            ->index(['zaaktype' => $ozZaak->zaaktype])
+            ->collect()
+            ->map(fn ($eigenschap) => EigenschapData::from($eigenschap));
 
         $eigenschappen = $map->buildEigenschappen($state);
 
-        // formsubmission_id: in OF een submission-kenmerk, bij ons het
-        // lokale public_id (= OpenZaak identificatie).
-        if ($this->zaak->public_id) {
-            $eigenschappen[] = ['formsubmission_id' => $this->zaak->public_id];
-        }
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
 
         foreach ($eigenschappen as $eigenschap) {
-            $naam = (string) key($eigenschap);
+            // The logical key maps to the concrete eigenschap naam in this
+            // catalogus via the blueprint (default: identity).
+            $naam = ZaaktypeBlueprint::eigenschapNaam($mapping, (string) key($eigenschap));
             $waarde = current($eigenschap);
 
             if (Arr::first($ozZaak->eigenschappen, fn ($e) => $e->naam === $naam)) {
@@ -71,10 +77,15 @@ class AddZaakeigenschappenZGW implements ShouldQueue
                 continue;
             }
 
-            $openzaak->zaken()->zaken()->zaakeigenschappen(basename($this->zaak->zgw_zaak_url))->store([
+            $waardeString = is_scalar($waarde) ? (string) $waarde : (string) json_encode($waarde);
+
+            $connection->zaken()->zaken()->zaakeigenschappen(basename($this->zaak->zgw_zaak_url))->store([
                 'zaak' => $ozZaak->url,
-                'eigenschap' => $catalogiEigenschap->url,
-                'waarde' => is_scalar($waarde) ? (string) $waarde : (string) json_encode($waarde),
+                'eigenschap' => (string) $catalogiEigenschap->url,
+                'waarde' => ZgwConnectionConfig::formatEigenschapWaarde(
+                    $waardeString,
+                    $catalogiEigenschap->specificatie?->formaat?->value,
+                ),
             ]);
         }
     }

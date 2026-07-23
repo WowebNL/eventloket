@@ -32,6 +32,7 @@ use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
+use App\Jobs\Zaak\AddGlobaleLocatieZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\SetInitialStatusZGW;
@@ -117,10 +118,10 @@ function fakeOpenzaakZaakCreate(): string
         ], 201),
         // CreateLocalZaak resolves the initial statustype (volgnummer 1) so the
         // local zaak has a valid statustype_url from creation.
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'Ontvangen', 'volgnummer' => 1, 'isEindstatus' => false],
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'In behandeling', 'volgnummer' => 2, 'isEindstatus' => false],
-        ], 200),
+        ]), 200),
     ]);
 
     return $zaakUrl;
@@ -183,7 +184,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     expect(Draft::whereKey($activeDraft->id)->exists())->toBeFalse()
         ->and(Draft::whereKey($otherDraft->id)->exists())->toBeTrue();
 
-    // 5. De 8 jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    // 5. De jobs zitten samen in één Bus::chain() in de juiste volgorde.
     //    GenerateSubmissionPdf staat als eerste zodat de bevestigingsmail zo
     //    snel mogelijk verstuurd wordt. HashIdentifyingAttributes loopt als
     //    allerlaatste zodat alle eerdere jobs de plain BSN/KvK kunnen lezen.
@@ -194,6 +195,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
         AddEinddatumZGW::class,
         UpdateInitiatorZGW::class,
         AddGeometryZGW::class,
+        AddGlobaleLocatieZGW::class,
         CreateDoorkomstZaken::class,
         HashIdentifyingAttributes::class,
     ]);

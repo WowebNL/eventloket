@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Resources\MunicipalityResource\RelationManagers;
 
+use App\Filament\Shared\Resources\ReportQuestions\Concerns\SafelyReordersReportQuestions;
 use App\Filament\Shared\Resources\ReportQuestions\Schemas\ReportQuestionForm;
 use App\Filament\Shared\Resources\ReportQuestions\Tables\ReportQuestionsTable;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ReportQuestionsRelationManager extends RelationManager
 {
+    use SafelyReordersReportQuestions;
+
     protected static string $relationship = 'reportQuestions';
 
     public static function getTitle(Model $ownerRecord, string $pageClass): string

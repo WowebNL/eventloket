@@ -5,20 +5,18 @@ namespace App\Actions\OpenNotification;
 use App\Enums\OpenNotificationType;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Openzaak;
 
 /**
  * Check incoming notifications and dispatch correct handle event.
  *
- * De `CreateZaak`-tak is verwijderd — in de nieuwe Filament-flow maken
- * wij de zaak zelf aan bij submit, dus de OpenZaak-webhook die
- * OF-submissions triggerde is niet meer relevant. Status/besluit/
- * document-notificaties blijven wel werken omdat die ook bij onze
- * eigen zaken nog kunnen binnenkomen.
+ * The `CreateZaak` branch has been removed: in the Filament flow we create the
+ * zaak ourselves at submit, so the OpenZaak webhook that triggered Open Forms
+ * submissions is no longer relevant. Status/besluit/document notifications
+ * keep working because they can still arrive for our own zaken.
  */
 class GetIncommingNotificationType
 {
-    public function handle(Openzaak $openzaak, OpenNotification $notification): ?OpenNotificationType
+    public function handle(OpenNotification $notification): ?OpenNotificationType
     {
         $data = $notification->toArray();
 
@@ -31,6 +29,11 @@ class GetIncommingNotificationType
             return OpenNotificationType::NewZaakDocument;
         } elseif (($data['actie'] === 'update' || $data['actie'] === 'partial_update') && $data['kanaal'] === 'documenten' && $data['resource'] === 'enkelvoudiginformatieobject') {
             return OpenNotificationType::UpdatedZaakDocument;
+        } elseif ($data['kanaal'] === 'zaaktypen') {
+            // Every resource on this channel (zaaktype and its child resources
+            // like statustype or resultaattype) carries the zaaktype version url
+            // as hoofdObject, so one case covers publish, change and destroy.
+            return OpenNotificationType::ZaaktypeChanged;
         }
 
         // TODO: Implement other notification types

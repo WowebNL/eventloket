@@ -2,11 +2,14 @@
 
 namespace App\Jobs\Zaak;
 
+use App\Models\MunicipalityZaaktypeMapping;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use App\ValueObjects\FinishZaakObject;
-use App\ValueObjects\ZGW\StatusType;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Woweb\Openzaak\Openzaak;
+use RuntimeException;
+use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
+use Woweb\Zgw\Facades\Zgw;
 
 class AddFinalStatusZGW implements ShouldQueue
 {
@@ -20,9 +23,20 @@ class AddFinalStatusZGW implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(Openzaak $openzaak): void
+    public function handle(): void
     {
-        $finalStatusType = new StatusType(...$openzaak->catalogi()->statustypen()->getAll(['zaaktype' => $this->finishZaakObject->zaak->openzaak->zaaktype])->where('isEindstatus', true)->first());
-        $openzaak->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statustype' => $finalStatusType->url]));
+        $zaak = $this->finishZaakObject->zaak;
+        $connection = Zgw::connection($zaak->zgwConnectionName());
+
+        $statustypen = $connection->catalogi()->statustypen()->index(['zaaktype' => $zaak->openzaak->zaaktype])->collect();
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($zaak->zaaktype);
+        $eind = ZaaktypeBlueprint::eindStatustype($mapping, $statustypen);
+
+        if (! $eind) {
+            throw new RuntimeException(sprintf('Geen eind-statustype gevonden voor zaak %s.', $zaak->id));
+        }
+
+        $finalStatusType = StatusTypeData::from($eind);
+        $connection->zaken()->statussen()->store(array_merge($this->finishZaakObject->getPartialStatusData(), ['statustype' => (string) $finalStatusType->url]));
     }
 }

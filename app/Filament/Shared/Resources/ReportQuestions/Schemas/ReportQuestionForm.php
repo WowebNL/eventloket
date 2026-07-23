@@ -20,6 +20,7 @@ class ReportQuestionForm
                 TextInput::make('question')
                     ->label(__('resources/report_question.form.question.label'))
                     ->helperText(__('resources/report_question.form.question.helper_text'))
+                    ->required()
                     ->maxLength(1000)
                     ->columnSpanFull(),
                 Toggle::make('is_active')

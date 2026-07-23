@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Resources\Zaken\Tables;
 
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use App\Models\Advisory;
@@ -192,6 +193,17 @@ class ZakenTable
                     ->searchable()
                     ->multiple()
                     ->hidden(fn () => auth()->user()->role == Role::Organiser),
+                SelectFilter::make('role')
+                    ->label(__('resources/zaak.columns.zaaktype.label'))
+                    ->options(ZaaktypeRole::class)
+                    ->multiple()
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['values'])) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('role', $data['values']));
+                    }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([

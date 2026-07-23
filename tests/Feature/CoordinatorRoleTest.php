@@ -36,10 +36,23 @@ describe('CoordinatorUserPolicy', function () {
         $this->coordinatorUser->municipalities()->attach($this->municipality);
     });
 
-    it('allows anyone to viewAny', function () {
-        $reviewer = User::factory()->create(['role' => Role::Reviewer]);
-        expect($this->policy->viewAny($reviewer))->toBeTrue();
-    });
+    it('allows managing roles to viewAny', function (Role $role) {
+        $user = User::factory()->create(['role' => $role]);
+        expect($this->policy->viewAny($user))->toBeTrue();
+    })->with([
+        Role::Admin,
+        Role::MunicipalityAdmin,
+        Role::ReviewerMunicipalityAdmin,
+    ]);
+
+    it('denies non-managing roles from viewAny', function (Role $role) {
+        $user = User::factory()->create(['role' => $role]);
+        expect($this->policy->viewAny($user))->toBeFalse();
+    })->with([
+        Role::Reviewer,
+        Role::Coordinator,
+        Role::Organiser,
+    ]);
 
     it('allows admin to view coordinator user', function () {
         $admin = User::factory()->create(['role' => Role::Admin]);

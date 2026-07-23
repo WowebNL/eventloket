@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Reporting;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\DetermineAanvraagType;
 
 /**
  * Centrale berekening van de "onderdelen van uw aanvraag"-lijst.
@@ -25,24 +26,25 @@ final class TypeAanvraagOnderdelen
      */
     public static function buildList(FormState $state): array
     {
-        $items = [];
-
-        $waarvoor = $state->get('waarvoorWiltUEventloketGebruiken');
-        $afsluit = $state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer');
-
-        if ($waarvoor === 'vooraankondiging') {
-            $items[] = 'Vooraankondiging';
-        } elseif ($afsluit === 'Nee') {
-            $items[] = 'Melding';
-        } elseif ($waarvoor === 'evenement') {
-            $items[] = 'Evenementenvergunning';
+        // Zonder een keuze bij `waarvoorWiltUEventloketGebruiken` valt er nog
+        // niets te zeggen over het type aanvraag; dan tonen we geen (lege)
+        // sectie.
+        if (((string) ($state->get('waarvoorWiltUEventloketGebruiken') ?? '')) === '') {
+            return [];
         }
 
-        // `alcoholvergunning` is een afgeleide variabele die `'Ja'` of
-        // `null` returnt (zie FormDerivedState::alcoholvergunning) —
-        // niet een bool. Zonder die specifieke check zou de ontheffing
-        // nooit in de "Onderdelen aanvraag"-lijst belanden.
-        return $items;
+        // Leid het hoofdonderdeel af uit dezelfde canonieke bepaling die ook
+        // het zaaktype kiest (`ResolveZaaktype`) en de samenvatting/PDF stuurt
+        // (`SubmissionReport::isMelding`). Voorheen had deze methode een eigen,
+        // legacy-only kopie van die logica (alleen de wegafsluiting-vraag),
+        // waardoor gemeenten op het nieuwe ReportQuestion-systeem (zoals
+        // Heerlen) ten onrechte "Evenementenvergunning" zagen bij een melding.
+        $role = app(DetermineAanvraagType::class)->forState($state);
+
+        // De label-tekst is gelijk aan de zaaktype-naamprefix per rol
+        // (Vergunning => "Evenementenvergunning", Melding => "Melding",
+        // Vooraankondiging => "Vooraankondiging").
+        return [$role->namePrefix()];
     }
 
     /**

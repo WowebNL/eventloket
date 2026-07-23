@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\EventForm\Reporting;
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\DetermineAanvraagType;
 use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
@@ -44,6 +46,16 @@ use ReflectionObject;
  */
 final class SubmissionReport
 {
+    /**
+     * Velden die wel in de state zitten (vaak automatisch afgeleid) maar bij
+     * een melding niet in de samenvatting/PDF horen.
+     *
+     * @var list<string>
+     */
+    private const HIDDEN_FOR_MELDING = [
+        'inWelkSeizoenVindtHetEvenementPlaats',
+    ];
+
     /**
      * @param  list<Step>  $steps
      * @return list<array{title: string, entries: list<array{label: string, value: string}>}>
@@ -264,6 +276,15 @@ final class SubmissionReport
     }
 
     /**
+     * Of deze inzending een melding is (en dus geen vergunningaanvraag of
+     * vooraankondiging), via dezelfde bepaling als de zaaktype-routing.
+     */
+    private function isMelding(FormState $state): bool
+    {
+        return app(DetermineAanvraagType::class)->forState($state) === ZaaktypeRole::Melding;
+    }
+
+    /**
      * @return array{label: string, value: string, svg?: string}|null
      */
     private function buildEntry(Field $component, FormState $state, string $key, object $stubLivewire): ?array
@@ -272,6 +293,13 @@ final class SubmissionReport
         // resolved BRK gemeente) that is never meant for the human-facing
         // summary or PDF. Skip them regardless of value.
         if ($component instanceof Hidden) {
+            return null;
+        }
+
+        // Bij een melding wordt de risicoscan-stap niet ingevuld; het
+        // seizoen-veld wordt echter automatisch afgeleid uit de startdatum
+        // en zou anders alsnog in de samenvatting en PDF verschijnen.
+        if (in_array($key, self::HIDDEN_FOR_MELDING, true) && $this->isMelding($state)) {
             return null;
         }
 

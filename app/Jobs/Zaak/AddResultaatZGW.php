@@ -5,7 +5,7 @@ namespace App\Jobs\Zaak;
 use App\ValueObjects\FinishZaakObject;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class AddResultaatZGW implements ShouldQueue
 {
@@ -19,8 +19,9 @@ class AddResultaatZGW implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(Openzaak $openzaak): void
+    public function handle(): void
     {
-        $openzaak->zaken()->resultaten()->store($this->finishZaakObject->getResultaatData());
+        Zgw::connection($this->finishZaakObject->zaak->zgwConnectionName())
+            ->zaken()->resultaten()->store($this->finishZaakObject->getResultaatData());
     }
 }

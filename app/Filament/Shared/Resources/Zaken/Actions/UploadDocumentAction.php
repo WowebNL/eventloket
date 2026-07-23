@@ -6,6 +6,8 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Jobs\Zaak\UploadDocumentsJob;
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
@@ -20,7 +22,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class UploadDocumentAction
 {
@@ -35,11 +37,8 @@ class UploadDocumentAction
             ->modalAutofocus(false)
             ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
             ->action(function (array $data, Action $action) use ($zaak): void {
-                $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding'] ?? match (auth()->user()->role) {
-                    Role::Organiser => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
-                    Role::Advisor => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-                    default => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-                };
+                $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding']
+                    ?? ZgwConnectionConfig::uploadDefaultForRole($zaak->zgwConnectionName(), auth()->user()->role);
 
                 $fileNames = (array) ($data['file_names'] ?? []);
                 $metadata = array_values((array) ($data['document_metadata'] ?? []));
@@ -132,7 +131,7 @@ class UploadDocumentAction
 
         $fields[] = Select::make('bulk_informatieobjecttype')
             ->label(__('Documenttype voor alle bestanden instellen'))
-            ->options(fn () => $zaak->zaaktype->document_types->pluck('omschrijving', 'url')->toArray())
+            ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
             ->placeholder(__('Kies een type om dit voor alle bestanden tegelijk in te stellen'))
             ->visible(fn (Get $get): bool => ! empty($get('document_metadata')))
             ->live()
@@ -153,8 +152,8 @@ class UploadDocumentAction
         if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::MunicipalityAdmin, Role::Admin])) {
             $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
-                ->options(function () {
-                    $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
+                ->options(function () use ($zaak) {
+                    $vertrouwelijkheden = ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), auth()->user()->role);
                     $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
                     $options = [];
                     foreach ($rolesByVertrouwelijkheid as $key => $roles) {
@@ -178,7 +177,7 @@ class UploadDocumentAction
                     ->maxLength(255),
                 Select::make('informatieobjecttype')
                     ->label(__('Type document'))
-                    ->options(fn () => $zaak->zaaktype->document_types->pluck('omschrijving', 'url')->toArray())
+                    ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
                     ->required(),
                 Hidden::make('_temp_path'),
                 Hidden::make('path'),
@@ -198,7 +197,7 @@ class UploadDocumentAction
         $fields = [
             Select::make('informatieobjecttype')
                 ->label(__('Type document'))
-                ->options(fn () => $zaak->zaaktype->document_types->pluck('omschrijving', 'url')->toArray())
+                ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
                 ->required(),
         ];
 
@@ -206,8 +205,8 @@ class UploadDocumentAction
         if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin])) {
             $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
-                ->options(function () {
-                    $vertrouwelijkheden = DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role);
+                ->options(function () use ($zaak) {
+                    $vertrouwelijkheden = ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), auth()->user()->role);
                     $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
                     $options = [];
                     foreach ($rolesByVertrouwelijkheid as $key => $roles) {
@@ -257,18 +256,16 @@ class UploadDocumentAction
      */
     public static function uploadDocument(array $data, Zaak $zaak): Informatieobject
     {
-        $oz = new Openzaak;
+        $connectionName = $zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
 
-        $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding'] ?? match (auth()->user()->role) {
-            Role::Organiser => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
-            Role::Advisor => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-            default => DocumentVertrouwelijkheden::Vertrouwelijk->value,
-        };
+        $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding']
+            ?? ZgwConnectionConfig::uploadDefaultForRole($connectionName, auth()->user()->role);
 
         $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
         $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
 
-        $informatieobject = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+        $informatieobject = new Informatieobject(...ZgwResource::ensureUuid($connection->documenten()->enkelvoudiginformatieobjecten()->store([
             'bronorganisatie' => $zaak->openzaak->bronorganisatie,
             'creatiedatum' => now()->format('Y-m-d'),
             'vertrouwelijkheidaanduiding' => $vertrouwelijkheidaanduiding,
@@ -281,9 +278,10 @@ class UploadDocumentAction
             'inhoud' => base64_encode(Storage::get($data['file'])),
             'informatieobjecttype' => $data['informatieobjecttype'],
             'indicatieGebruiksrecht' => false,
-        ]));
+            'status' => Informatieobject::STATUS_DEFINITIEF,
+        ])));
 
-        $oz->zaken()->zaakinformatieobjecten()->store([
+        $connection->zaken()->zaakinformatieobjecten()->store([
             'zaak' => $zaak->openzaak->url,
             'informatieobject' => $informatieobject->url,
         ]);

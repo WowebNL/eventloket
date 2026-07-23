@@ -12,6 +12,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -31,10 +32,24 @@ class DeelzakenTable extends Component implements HasActions, HasSchemas, HasTab
 
     public function table(Table $table): Table
     {
+        // Relate doorkomst zaken through the local hoofdzaak link: from the
+        // hoofdzaak we see its deelzaken, from a deelzaak we see the hoofdzaak and
+        // its siblings. A non-empty data_object_url is kept as a fallback so legacy
+        // Objects-API deelzaken still group.
+        $rootId = $this->zaak->hoofdzaak_id ?? $this->zaak->id;
+        $dataObjectUrl = $this->zaak->data_object_url;
+
         return $table
             ->query(
-                Zaak::where('data_object_url', $this->zaak->data_object_url)
-                    ->where('id', '!=', $this->zaak->id)
+                Zaak::where('id', '!=', $this->zaak->id)
+                    ->where(function (Builder $query) use ($rootId, $dataObjectUrl) {
+                        $query->where('hoofdzaak_id', $rootId)
+                            ->orWhere('id', $rootId);
+
+                        if (! empty($dataObjectUrl)) {
+                            $query->orWhere('data_object_url', $dataObjectUrl);
+                        }
+                    })
                     ->with('zaaktype')
             )
             ->columns([

@@ -2,7 +2,6 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Pages;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Widgets\ActivityLogWidget;
 use App\Filament\Shared\Resources\Zaken\ZaakResource;
@@ -14,9 +13,10 @@ use App\Models\Zaak;
 use App\Notifications\AssignedToZaak;
 use App\Notifications\Result;
 use App\Notifications\ZaakReleased;
+use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\FinishZaakObject;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\ZGW\BesluitType;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
@@ -37,10 +37,12 @@ use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
+use Woweb\Zgw\Facades\Zgw;
 
 class ViewZaak extends ViewRecord
 {
@@ -235,7 +237,7 @@ class ViewZaak extends ViewRecord
                     if (($data['delete_in_openzaak'] ?? false) && $record->zgw_zaak_url) {
                         try {
                             $uuid = basename($record->zgw_zaak_url);
-                            $deleted = (new Openzaak)->zaken()->zaken()->delete($uuid);
+                            $deleted = Zgw::connection($record->zgwConnectionName())->zaken()->zaken()->delete($uuid);
 
                             if ($deleted) {
                                 // Clear zgw_zaak_url so the zaak cannot be restored
@@ -248,10 +250,16 @@ class ViewZaak extends ViewRecord
                                     ->send();
                             }
                         } catch (\Exception $e) {
+                            // The underlying error goes to the log only; the user
+                            // sees a generic message.
+                            Log::warning('ViewZaak: deleting the zaak in OpenZaak failed', [
+                                'zaak_id' => $record->id,
+                                'exception' => $e->getMessage(),
+                            ]);
+
                             Notification::make()
                                 ->warning()
                                 ->title(__('resources/zaak.actions.delete_zaak.error_open_zaak'))
-                                ->body($e->getMessage())
                                 ->send();
                         }
                     }
@@ -279,15 +287,15 @@ class ViewZaak extends ViewRecord
                                 Select::make('result_type')
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.result_type.label'))
                                     ->options(function (Zaak $record) {
-                                        $this->formResultaattypen = ((new Openzaak)->catalogi()->resultaattypen()->getAll([
+                                        $this->formResultaattypen = (Zgw::connection($record->zgwConnectionName())->catalogi()->resultaattypen()->index([
                                             'zaaktype' => $record->openzaak->zaaktype,
-                                        ])->filter(fn ($item) => $item['omschrijvingGeneriek'] !== 'Ingetrokken')->pluck('omschrijving', 'url')->toArray());
+                                        ])->collect()->filter(fn ($item) => $item['omschrijvingGeneriek'] !== 'Ingetrokken')->pluck('omschrijving', 'url')->toArray());
 
                                         return $this->formResultaattypen;
                                     })
-                                    ->afterStateUpdated(function (?string $state, Set $set) {
+                                    ->afterStateUpdated(function (?string $state, Set $set, Zaak $record) {
                                         if ($state) {
-                                            $resultType = (new Openzaak)->get($state)->toArray();
+                                            $resultType = ZgwResource::byUrl($record->zgwConnectionName(), $state);
                                             $besluittypen = [];
                                             if (isset($resultType['besluittypen']) && count($resultType['besluittypen']) > 0 && isset($resultType['besluittypeOmschrijving']) && $resultType['besluittypeOmschrijving']) {
                                                 foreach ($resultType['besluittypen'] as $key => $besluittype) {
@@ -351,7 +359,7 @@ class ViewZaak extends ViewRecord
                                             if (! $get('besluit_type')) {
                                                 return [];
                                             }
-                                            $besluittype = new BesluitType(...(new Openzaak)->get($get('besluit_type'))->toArray());
+                                            $besluittype = BesluitTypeData::from(ZgwResource::byUrl($record->zgwConnectionName(), $get('besluit_type')));
 
                                             // dd($record->documenten);
                                             return $record->documenten->filter(function ($document) use ($besluittype) {
@@ -405,7 +413,7 @@ class ViewZaak extends ViewRecord
                                     ->required(),
                                 Select::make('message_documenten')
                                     ->label(__('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.message_documenten.label'))
-                                    ->options(fn (Zaak $record) => $record->documenten->whereIn('vertrouwelijkheidaanduiding', DocumentVertrouwelijkheden::fromUserRole(Role::Organiser))->pluck('titel', 'url')->toArray())
+                                    ->options(fn (Zaak $record) => $record->documenten->whereIn('vertrouwelijkheidaanduiding', ZgwConnectionConfig::documentVisibilityForRole($record->zgwConnectionName(), Role::Organiser))->pluck('titel', 'url')->toArray())
                                     ->multiple()
                                     ->required(fn (Get $get) => $get('result_has_besluit'))
                                     ->helperText(fn (Get $get) => $get('result_has_besluit') ? __('municipality/resources/zaak.header_actions.finish_zaak.steps.result.schema.message_documenten.helper_text') : null)
@@ -521,7 +529,7 @@ class ViewZaak extends ViewRecord
                 ->closeModalByClickingAway(false)
                 ->modalSubmitAction(false)
                 ->modalCancelAction(false)
-                ->visible(fn (Zaak $record) => ! $record->reference_data->resultaat && ! $record->is_imported && in_array(auth()->user()->role, [Role::Reviewer, Role::Coordinator, Role::ReviewerMunicipalityAdmin])),
+                ->visible(fn (Zaak $record) => ! $record->reference_data->resultaat && ! $record->is_imported && $record->behandelaarCanChangeStatus() && in_array(auth()->user()->role, [Role::Reviewer, Role::Coordinator, Role::ReviewerMunicipalityAdmin])),
         ];
     }
 

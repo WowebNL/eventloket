@@ -25,7 +25,8 @@ enum DocumentVertrouwelijkheden: string
             Role::ReviewerMunicipalityAdmin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
             Role::Coordinator => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
             Role::Reviewer => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::Admin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value]
+            Role::Admin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::KoppelingBeheerder => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
         };
     }
 
