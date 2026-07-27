@@ -1,18 +1,22 @@
 <?php
 
 /**
- * UpdateInitiatorZGW zet de initiator-rol op de ZGW-zaak op basis van het
- * initiator-blok in de FormState-snapshot.
+ * UpdateInitiatorZGW sets the initiator rol on the ZGW zaak from the initiator
+ * block in the FormState snapshot.
  *
- * Belangrijkste gedrag dat hier wordt afgedekt: voor een organisatie met een
- * KvK-nummer sturen we als bedrijfsidentificatie uitsluitend `kvkNummer`, voor
- * elke connectie (OpenZaak inbegrepen). `annIdentificatie` wordt bewust
- * weggelaten omdat niet elke ZGW-instantie dat veld accepteert.
+ * Main behaviour covered here: for an organisation with a KvK number we send
+ * only `kvkNummer` as the company identifier, for every connection (OpenZaak
+ * included); `annIdentificatie` is deliberately omitted because not every ZGW
+ * instance accepts it. For a private aanvrager (no KvK) the rol carries a
+ * stable `anpIdentificatie` and the verblijfsadres from the form's address
+ * fieldset, so backends such as OneGround materialise a visible betrokkene.
  */
 
+use App\Enums\Role;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Models\Municipality;
+use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +25,7 @@ use Tests\Fakes\ZgwHttpFake;
 
 uses(RefreshDatabase::class);
 
-function zaakMetInitiator(array $values): Zaak
+function zaakMetInitiator(array $values, ?int $organiserUserId = null): Zaak
 {
     $muni = Municipality::factory()->create();
     $zaaktype = Zaaktype::factory()->create([
@@ -33,6 +37,7 @@ function zaakMetInitiator(array $values): Zaak
         'zaaktype_id' => $zaaktype->id,
         'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/abc-123',
         'form_state_snapshot' => ['values' => $values],
+        'organiser_user_id' => $organiserUserId,
     ]);
 }
 
@@ -83,6 +88,42 @@ test('stuurt voor een organisatie alleen kvkNummer als bedrijfsidentificatie', f
             && ($identificatie['kvkNummer'] ?? null) === '12345678'
             && ! array_key_exists('annIdentificatie', $identificatie)
             && ($identificatie['statutaireNaam'] ?? null) === 'Acme BV';
+    });
+});
+
+test('stuurt voor een particulier anpIdentificatie, naam en verblijfsadres mee', function () {
+    $user = User::factory()->state(['role' => Role::Organiser])->create();
+    $zaak = zaakMetInitiator([
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Jansen',
+        'watIsUwEMailadres' => 'jan@example.com',
+        'postcode' => '6411CD',
+        'huisnummer' => '32',
+        'straatnaam' => 'Coriovallumstraat',
+        'plaatsnaam' => 'Heerlen',
+    ], $user->id);
+
+    fakeZaakRoltypenEnRollen();
+
+    (new UpdateInitiatorZGW($zaak))->handle(app(ZaakeigenschappenMap::class));
+
+    Http::assertSent(function ($request) use ($user) {
+        if (! str_contains($request->url(), '/zaken/api/v1/rollen') || $request->method() !== 'POST') {
+            return false;
+        }
+
+        $identificatie = $request->data()['betrokkeneIdentificatie'] ?? [];
+        $adres = $identificatie['verblijfsadres'] ?? [];
+
+        return $request->data()['betrokkeneType'] === 'natuurlijk_persoon'
+            && ($request->data()['afwijkendeNaamBetrokkene'] ?? null) === 'Jan Jansen'
+            && ($identificatie['anpIdentificatie'] ?? null) === "EVL{$user->id}"
+            && ($identificatie['geslachtsnaam'] ?? null) === 'Jansen'
+            && ($identificatie['voornamen'] ?? null) === 'Jan'
+            && ($adres['aoaPostcode'] ?? null) === '6411CD'
+            && ($adres['aoaHuisnummer'] ?? null) === 32
+            && ($adres['gorOpenbareRuimteNaam'] ?? null) === 'Coriovallumstraat'
+            && ($adres['wplWoonplaatsNaam'] ?? null) === 'Heerlen';
     });
 });
 

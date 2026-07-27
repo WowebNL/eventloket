@@ -18,17 +18,18 @@ use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
- * Zet de initiator-rol op de ZGW-zaak op basis van het initiator-blok
- * in de FormState-snapshot. Twee varianten — matcht OF:
+ * Sets the initiator rol on the ZGW zaak from the initiator block in the
+ * FormState snapshot. Two variants, matching the aanvrager:
  *
- * - Heeft de aanvrager een KvK-nummer? → `niet_natuurlijk_persoon`
+ * - has a KvK number → `niet_natuurlijk_persoon`
  *   (statutaireNaam, kvkNummer, contactpersoon)
- * - Anders → `natuurlijk_persoon` (voornamen, geslachtsnaam, adres)
+ * - otherwise → `natuurlijk_persoon` (voornamen, geslachtsnaam,
+ *   anpIdentificatie, verblijfsadres)
  *
- * In de oude flow bestond er al een initiator-rol (door OF aangemaakt)
- * en deed deze job een PUT. In de nieuwe flow maken wij de zaak zelf
- * aan zonder initiator, dus moet hier een POST (nieuw rol) gebeuren.
- * Het initiator-roltype wordt opgezocht in de catalogi.
+ * In the legacy flow an initiator rol already existed (created by Open Forms)
+ * and this job did a PUT. In the native flow we create the zaak ourselves
+ * without an initiator, so a POST (new rol) happens here. The initiator
+ * roltype is looked up in the catalogi.
  */
 class UpdateInitiatorZGW implements ShouldQueue
 {
@@ -57,7 +58,13 @@ class UpdateInitiatorZGW implements ShouldQueue
             return;
         }
 
-        $rolData = InitiatorRolBuilder::build($ozZaak->url, $roltype, $state, $initiator);
+        $rolData = InitiatorRolBuilder::build(
+            $ozZaak->url,
+            $roltype,
+            $state,
+            $initiator,
+            InitiatorRolBuilder::anpIdentificatieForUser($this->zaak->organiser_user_id),
+        );
         if ($rolData === null) {
             return;
         }
