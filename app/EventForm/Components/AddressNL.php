@@ -126,6 +126,12 @@ final class AddressNL
             $postcode = $get("{$key}.postcode");
             $huisnummer = $get("{$key}.huisnummer");
 
+            // Invalidate the stored gemeente first: it belongs to the address as
+            // it was before this edit. The location check trusts it verbatim, so
+            // leaving it in place while the lookup below fails (or resolves a
+            // different address) would route the aanvraag to the wrong gemeente.
+            $set("{$key}.brkGemeente", null);
+
             if (! self::hasLookupInput($postcode, $huisnummer)) {
                 return;
             }
