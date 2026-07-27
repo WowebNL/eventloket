@@ -213,8 +213,16 @@ final class FormDerivedState
     {
         $pick = $this->state->get('userSelectGemeente');
         if (is_string($pick) && $pick !== '') {
-            // De `gemeenten`-map is keyed by brk_identification.
-            return $this->state->get("gemeenten.{$pick}");
+            // De `gemeenten`-map is keyed by brk_identification. A pick that is
+            // no longer among the municipalities found for the current location
+            // is stale (a copied aanvraag whose location has changed, or an
+            // edited location) and must not win: falling through to the
+            // auto-pick keeps the aanvraag with the actual location instead of
+            // silently routing it to the previous municipality.
+            $gemeente = $this->state->get("gemeenten.{$pick}");
+            if ($gemeente !== null) {
+                return $gemeente;
+            }
         }
 
         $items = $this->state->get('inGemeentenResponse.all.items');

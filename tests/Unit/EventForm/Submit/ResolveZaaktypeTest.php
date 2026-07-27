@@ -107,3 +107,45 @@ test('gemeente uit state matcht niets in de DB → exception', function () {
     expect(fn () => $this->resolve->forState($state))
         ->toThrow(RuntimeException::class);
 });
+
+test('gemeente die niet bij de gevonden locatie hoort → harde fout in plaats van een zaak in de verkeerde gemeente', function () {
+    // Vangt de situatie af waarin een verouderde gemeente in de state blijft
+    // staan (gekopieerde aanvraag, gewijzigde locatie). Zonder deze controle
+    // wordt de zaak stilzwijgend in de oude gemeente aangemaakt.
+    $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+    Zaaktype::factory()->create([
+        'name' => 'Evenementenvergunning gemeente Heerlen',
+        'municipality_id' => $heerlen->id,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'inGemeentenResponse' => ['all' => ['object' => [
+            'GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+        ]]],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+
+    expect(fn () => $this->resolve->forState($state))
+        ->toThrow(RuntimeException::class, 'hoort niet bij de gevonden gemeenten');
+});
+
+test('gemeente die wel bij de gevonden locatie hoort wordt gewoon gebruikt', function () {
+    $maastricht = Municipality::factory()->create(['name' => 'Maastricht', 'brk_identification' => 'GM0935']);
+    $verwacht = Zaaktype::factory()->create([
+        'name' => 'Evenementenvergunning gemeente Maastricht',
+        'municipality_id' => $maastricht->id,
+        'is_active' => true,
+    ]);
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0935'],
+        'inGemeentenResponse' => ['all' => ['object' => [
+            'GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+        ]]],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+
+    expect($this->resolve->forState($state)->id)->toBe($verwacht->id);
+});
