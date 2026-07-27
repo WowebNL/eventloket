@@ -489,6 +489,12 @@ class ViewZaak extends ViewRecord
                         $finishZaakObject->besluittype ? new AddBesluitZGW($finishZaakObject) : null,
                         new AddResultaatZGW($finishZaakObject),
                         new AddFinalStatusZGW($finishZaakObject),
+                        // The besluit and the final status change what ZGW
+                        // returns for this zaak. Invalidate here rather than
+                        // waiting for a notification: an external connection
+                        // without a working subscription would otherwise keep
+                        // serving the pre-besluit reads.
+                        fn () => $record->clearZgwCache(),
                         function () use ($record, $finishZaakObject) {
                             if ($record->organisation?->users) {
                                 foreach ($record->organisation->users as $recipient) {
