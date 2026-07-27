@@ -117,11 +117,25 @@ class Zaak extends Model implements Eventable
     }
 
     /**
-     * The per-municipality ZGW connection row, or null when this zaak runs on
-     * the global "main" connection (which has no row, hence default behaviour).
+     * The per-municipality ZGW connection row this zaak actually runs on, or
+     * null when it runs on the global "main" connection (which has no row, hence
+     * default behaviour).
+     *
+     * Gated on the resolved connection name so this never contradicts
+     * {@see zgwConnectionName()}, which is what every data call uses. Reading
+     * `municipality->zgwConnection` directly would return the municipality's
+     * connection even when the zaak reads from main: that happens for a zaak on
+     * a main-fallback zaaktype, and for every zaak of a municipality whose
+     * connection is not (or no longer) activated. Behaviour flags such as
+     * {@see showsTab()} would then describe a different instance than the one
+     * the data comes from.
      */
     public function zgwConnectionModel(): ?MunicipalityZgwConnection
     {
+        if ($this->zgwConnectionName() === ZgwConnectionResolver::DEFAULT_CONNECTION) {
+            return null;
+        }
+
         return $this->municipality?->zgwConnection;
     }
 
@@ -385,6 +399,16 @@ class Zaak extends Model implements Eventable
                 return $this->filterDocumentenForRole($documenten, auth()->user()->role);
             },
         );
+    }
+
+    /**
+     * How many documents ZGW holds for this zaak, before the status and role
+     * filters run. Lets a view tell "nothing has arrived yet" apart from
+     * "everything is filtered out", which otherwise look identical.
+     */
+    public function allDocumentsCount(): int
+    {
+        return $this->getDocuments()->count();
     }
 
     /**
