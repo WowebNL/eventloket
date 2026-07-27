@@ -16,17 +16,28 @@ enum DocumentVertrouwelijkheden: string
     case Geheim = 'geheim';
     case ZeerGegeheim = 'zeer_geheim';
 
+    /**
+     * The vertrouwelijkheid levels a role may see by default, ordered from least
+     * to most confidential.
+     *
+     * `openbaar` is included for every role: it is the least confidential level
+     * there is, so a role that may see zaakvertrouwelijk documents can certainly
+     * see public ones. Leaving it out meant a backend that labels documents
+     * `openbaar` (OneGround/RX Mission does this for system uploads) showed no
+     * documents at all, to nobody, while more confidential documents were
+     * visible.
+     */
     public static function fromUserRole(Role $role): array
     {
         return match ($role) {
-            Role::Organiser => [self::Zaakvertrouwelijk->value],
-            Role::Advisor => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value],
-            Role::MunicipalityAdmin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::ReviewerMunicipalityAdmin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::Coordinator => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::Reviewer => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::Admin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
-            Role::KoppelingBeheerder => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::Organiser => [self::Openbaar->value, self::Zaakvertrouwelijk->value],
+            Role::Advisor => [self::Openbaar->value, self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value],
+            Role::MunicipalityAdmin => [self::Openbaar->value, self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::ReviewerMunicipalityAdmin => [self::Openbaar->value, self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::Coordinator => [self::Openbaar->value, self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::Reviewer => [self::Openbaar->value, self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::Admin => [self::Openbaar->value, self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::KoppelingBeheerder => [self::Openbaar->value, self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
         };
     }
 

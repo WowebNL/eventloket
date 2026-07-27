@@ -24,23 +24,26 @@ function informatieobjectWithStatus(?string $status): Informatieobject
     );
 }
 
-test('definitief and status-less documents count as final', function (?string $status) {
-    expect(informatieobjectWithStatus($status)->isDefinitief())->toBeTrue();
+test('established, archived and status-less documents may be shown', function (?string $status) {
+    expect(informatieobjectWithStatus($status)->isVastgesteld())->toBeTrue();
 })->with([
     'definitief' => 'definitief',
+    // Archived means frozen for archival purposes, not unavailable: access is
+    // governed by the vertrouwelijkheidaanduiding, and a document that may no
+    // longer be seen is destroyed or transferred and then gone from the API.
+    // Hiding it made every document disappear the moment a zaak was closed on a
+    // backend that archives on the final status.
+    'gearchiveerd' => 'gearchiveerd',
     'null (own upload)' => null,
     'empty (own upload)' => '',
 ]);
 
-test('draft, archived and unknown statuses are not final (strict allowlist)', function (string $status) {
-    expect(informatieobjectWithStatus($status)->isDefinitief())->toBeFalse();
+test('draft and unknown statuses are not shown (strict allowlist)', function (string $status) {
+    expect(informatieobjectWithStatus($status)->isVastgesteld())->toBeFalse();
 })->with([
     'in_bewerking' => 'in_bewerking',
     'ter_vaststelling' => 'ter_vaststelling',
     'concept' => 'concept',
-    // Archived documents must never be shown, not even to users who may
-    // otherwise see documents.
-    'gearchiveerd' => 'gearchiveerd',
     // Anything outside the allowlist is hidden, not just the known drafts.
     'unknown status' => 'iets_onbekends',
 ]);

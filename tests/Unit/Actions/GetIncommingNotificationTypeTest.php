@@ -30,6 +30,13 @@ test('existing channels keep their classification', function () {
     expect(classify('partial_update', 'zaken', 'zaakeigenschap'))->toBe(OpenNotificationType::UpdateZaakEigenschap)
         ->and(classify('create', 'zaken', 'status'))->toBe(OpenNotificationType::ZaakStatusChanged)
         ->and(classify('create', 'documenten', 'enkelvoudiginformatieobject'))->toBe(OpenNotificationType::NewZaakDocument)
-        ->and(classify('update', 'documenten', 'enkelvoudiginformatieobject'))->toBe(OpenNotificationType::UpdatedZaakDocument)
-        ->and(classify('create', 'besluiten', 'besluit'))->toBeNull();
+        ->and(classify('update', 'documenten', 'enkelvoudiginformatieobject'))->toBe(OpenNotificationType::UpdatedZaakDocument);
+});
+
+test('the besluiten channel is classified so a zaak drops its cached besluiten', function () {
+    // We subscribe to this channel; before it was handled the notification was
+    // dropped and a besluit taken in the ZGW backend never reached the zaak.
+    expect(classify('create', 'besluiten', 'besluit'))->toBe(OpenNotificationType::BesluitChanged)
+        ->and(classify('update', 'besluiten', 'besluit'))->toBe(OpenNotificationType::BesluitChanged)
+        ->and(classify('create', 'besluiten', 'besluitinformatieobject'))->toBe(OpenNotificationType::BesluitChanged);
 });
