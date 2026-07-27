@@ -383,6 +383,43 @@ test('assign action is visible for advisory admin', function () {
         ->assertTableActionVisible('assign', $thread);
 });
 
+test('AdviceThreadInboxWidget hides threads whose zaak was soft deleted and renders without error', function () {
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->advisor);
+    Filament::setTenant($this->advisory);
+
+    $liveThread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Live Zaak Thread',
+    ]);
+
+    $deletedZaak = Zaak::factory()->create(['zaaktype_id' => $this->zaaktype->id]);
+    $orphanThread = AdviceThread::forceCreate([
+        'zaak_id' => $deletedZaak->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $this->advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Orphaned Thread',
+    ]);
+
+    // Soft delete the zaak: building the row URL requires the zaak, so an
+    // orphaned thread would otherwise crash the widget (Sentry EVENTLOKET-20).
+    $deletedZaak->delete();
+
+    livewire(AdviceThreadInboxWidget::class)
+        ->assertSuccessful()
+        ->filterTable('unread', 'all')
+        ->assertCanSeeTableRecords([$liveThread])
+        ->assertCanNotSeeTableRecords([$orphanThread]);
+});
+
 test('assign action is hidden for advisory member', function () {
     Filament::setCurrentPanel(Filament::getPanel('advisor'));
     $this->actingAs($this->advisor); // $this->advisor is a Member in beforeEach
