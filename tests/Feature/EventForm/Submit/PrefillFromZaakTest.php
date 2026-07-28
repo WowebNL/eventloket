@@ -213,10 +213,30 @@ test('de brkGemeente van gekopieerde adresrijen wordt gewist', function () {
     // Het verborgen brkGemeente-veld wordt door de locatiecheck verbatim
     // vertrouwd; een gekopieerde waarde zou een gewijzigd adres naar de oude
     // gemeente routeren.
+    //
+    // De rijvorm is die van de repeater in LocatieVanHetEvenement2Step: rijen
+    // gekeyed op uuid, met het adres genest onder de AddressNL-prefix. Dezelfde
+    // vorm die ServiceFetcher::collectAddressesFromEditgrid() uitleest.
     $sc = scenarioZaakMetSnapshot([
         'adresVanDeGebouwEn' => [
-            ['postcode' => '6411CD', 'huisnummer' => '32', 'straatnaam' => 'Coriovallumstraat', 'brkGemeente' => 'GM0917'],
-            ['postcode' => '6361BZ', 'huisnummer' => '1', 'straatnaam' => 'Deweverplein', 'brkGemeente' => 'GM1954'],
+            'row-1' => [
+                'naamVanDeLocatieGebouw' => 'Hoofdgebouw',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6411CD',
+                    'huisnummer' => '32',
+                    'straatnaam' => 'Coriovallumstraat',
+                    'brkGemeente' => 'GM0917',
+                ],
+            ],
+            'row-2' => [
+                'naamVanDeLocatieGebouw' => 'Bijgebouw',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6361BZ',
+                    'huisnummer' => '1',
+                    'straatnaam' => 'Deweverplein',
+                    'brkGemeente' => 'GM1954',
+                ],
+            ],
         ],
     ]);
 
@@ -224,11 +244,13 @@ test('de brkGemeente van gekopieerde adresrijen wordt gewist', function () {
     $adressen = $state->get('adresVanDeGebouwEn');
 
     expect($adressen)->toHaveCount(2)
-        ->and($adressen[0])->not->toHaveKey('brkGemeente')
-        ->and($adressen[1])->not->toHaveKey('brkGemeente')
+        ->and($adressen)->toHaveKeys(['row-1', 'row-2'])
+        ->and($adressen['row-1']['adresVanHetGebouwWaarUwEvenementPlaatsvindt1'])->not->toHaveKey('brkGemeente')
+        ->and($adressen['row-2']['adresVanHetGebouwWaarUwEvenementPlaatsvindt1'])->not->toHaveKey('brkGemeente')
         // De ingevulde adresgegevens zelf blijven staan.
-        ->and($adressen[0]['postcode'])->toBe('6411CD')
-        ->and($adressen[1]['straatnaam'])->toBe('Deweverplein');
+        ->and($adressen['row-1']['adresVanHetGebouwWaarUwEvenementPlaatsvindt1']['postcode'])->toBe('6411CD')
+        ->and($adressen['row-1']['naamVanDeLocatieGebouw'])->toBe('Hoofdgebouw')
+        ->and($adressen['row-2']['adresVanHetGebouwWaarUwEvenementPlaatsvindt1']['straatnaam'])->toBe('Deweverplein');
 });
 
 test('velden die niet meer in het schema zitten komen stil mee uit de snapshot', function () {
