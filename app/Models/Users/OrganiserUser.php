@@ -23,8 +23,12 @@ class OrganiserUser extends User implements FilamentUser, HasTenants
         return $this->belongsToMany(Organisation::class, 'organisation_user')->withPivot('role');
     }
 
-    public function canAccessOrganisation(int $organisationId, ?OrganisationRole $role = null): bool
+    public function canAccessOrganisation(?int $organisationId, ?OrganisationRole $role = null): bool
     {
+        if ($organisationId === null) {
+            return false;
+        }
+
         $query = $this->organisations()
             ->wherePivot('organisation_id', $organisationId);
 
