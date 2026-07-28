@@ -14,6 +14,15 @@ class Informatieobject implements Arrayable
      */
     public const STATUS_DEFINITIEF = 'definitief';
 
+    /**
+     * ZGW document status for a document that has been archived: its form and
+     * content are frozen for archival purposes. It is emphatically not a
+     * statement about availability, and the document stays retrievable until it
+     * is actually destroyed or transferred (at which point it disappears from
+     * the API on its own).
+     */
+    public const STATUS_GEARCHIVEERD = 'gearchiveerd';
+
     /** @phpstan-ignore constructor.unusedParameter */
     public function __construct(
         public readonly string $uuid,
@@ -58,19 +67,30 @@ class Informatieobject implements Arrayable
     }
 
     /**
-     * Whether this document may be shown to and notified about.
+     * Whether this document may be shown to and notified about, judged on its
+     * status alone. Who may see it is a separate question, answered by the
+     * vertrouwelijkheidaanduiding and the user's role.
      *
-     * Strict allowlist: only the 'definitief' status and documents without an
-     * explicit status (our own uploads and legacy documents) are shown. Every
-     * other status is hidden. This includes the draft statuses (in_bewerking,
-     * ter_vaststelling, concept), 'gearchiveerd' (archived documents must never
-     * be shown, not even to users who may otherwise see documents), and any
-     * unknown or future status.
+     * Allowlist: 'definitief', 'gearchiveerd', and documents without an explicit
+     * status (our own uploads and legacy documents). The draft statuses
+     * (in_bewerking, ter_vaststelling, concept) and any unknown or future status
+     * stay hidden.
+     *
+     * 'gearchiveerd' is included deliberately. In the ZGW standard it marks a
+     * document as frozen for archival purposes, not as unavailable; access is
+     * governed by the vertrouwelijkheidaanduiding and authorisations, and a
+     * document that may genuinely no longer be seen is destroyed or transferred
+     * and then simply no longer returned by the API. Excluding it made every
+     * document vanish the moment a zaak was closed on a backend that archives on
+     * the final status (OneGround/RX Mission does this immediately), which hid
+     * the permit and its attachments from the organiser exactly when they need
+     * them, and from the behandelaar consulting a closed dossier.
      */
-    public function isDefinitief(): bool
+    public function isVastgesteld(): bool
     {
         return $this->status === null
             || $this->status === ''
-            || $this->status === self::STATUS_DEFINITIEF;
+            || $this->status === self::STATUS_DEFINITIEF
+            || $this->status === self::STATUS_GEARCHIVEERD;
     }
 }

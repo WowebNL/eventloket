@@ -53,6 +53,18 @@ class Zaak extends Model implements Eventable
 {
     use HasFactory, HasUuids, LogsActivity, SoftDeletes;
 
+    /**
+     * How long the documents and besluiten read from ZGW are cached.
+     *
+     * These caches used to be kept forever and relied on ZGW notifications to be
+     * invalidated. That is not a safe assumption for an external connection: a
+     * subscription that is missing, unreachable or on an unhandled channel meant
+     * an empty list read once (before the documents existed) was served
+     * indefinitely. A short TTL bounds that failure to a few minutes; explicit
+     * invalidation via {@see clearZgwCache()} keeps the common path immediate.
+     */
+    private const ZGW_READ_CACHE_TTL = 300;
+
     protected $table = 'zaken';
 
     protected $fillable = [
@@ -386,10 +398,11 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                // Only show finalised documents; concepts from an external ZGW
+                // Only show established documents; concepts from an external ZGW
                 // backend are hidden (documents without an explicit status, such
-                // as our own uploads, count as final). See Informatieobject::isDefinitief().
-                $documenten = $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => $informatieobject->isDefinitief());
+                // as our own uploads, count as established, and so do archived
+                // ones). See Informatieobject::isVastgesteld().
+                $documenten = $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld());
 
                 if (app()->runningInConsole()) {
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
@@ -479,43 +492,79 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                // Only show a besluit once it has a finalised besluitdocument and
-                // its verzenddatum has been reached. See besluitIsPubliceerbaar().
+                // Only show a besluit once its send date has been reached. See
+                // besluitIsPubliceerbaar(). The besluitdocumenten are filtered to
+                // what the current role may see: map(), not each(), because the
+                // value object is readonly and a rebuilt besluit has to replace
+                // the original one.
+                $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role);
+
                 return $this->getBesluiten()
                     ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
-                    ->each(function (Besluit $besluit) {
-                        $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                            'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role))),
-                        ]));
-                    })
+                    ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                        'besluitDocumenten' => $besluit->besluitDocumenten
+                            ?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, $allowed))
+                            ->values(),
+                    ])))
                     ->values();
             },
         );
     }
 
     /**
-     * Whether a besluit may be shown to and notified about: it must have a
-     * finalised besluitdocument and a verzenddatum that has been reached (on or
-     * before today, Europe/Amsterdam). Besluiten created in Eventloket get a
-     * verzenddatum of today, so their behaviour is unchanged.
+     * Whether a besluit may be shown to and notified about: its send date must
+     * have been reached (on or before today, Europe/Amsterdam) and it must carry
+     * an established besluitdocument. Besluiten created in Eventloket get a
+     * verzenddatum of today and a document, so their behaviour is unchanged.
+     *
+     * A besluit taken in the ZGW backend itself need not have a
+     * besluitinformatieobject linked to it at all: on a OneGround (RX Mission)
+     * connection the decision document is commonly kept as a zaakdocument. The
+     * document requirement is therefore lifted for those connections, where the
+     * send date alone decides. Requiring it there hid every such besluit
+     * indefinitely.
      */
     private function besluitIsPubliceerbaar(Besluit $besluit): bool
     {
-        $heeftDefinitiefDocument = $besluit->besluitDocumenten?->contains(
-            fn (Informatieobject $document) => $document->isDefinitief()
-        ) ?? false;
+        $verzenddatum = $this->besluitVerzenddatum($besluit);
+        if ($verzenddatum === null) {
+            return false;
+        }
 
-        if (! $heeftDefinitiefDocument || empty($besluit->verzenddatum)) {
+        if (! $this->besluitHeeftVastgesteldDocument($besluit) && ! ZgwConnectionConfig::isOneGround($this->zgwConnectionName())) {
             return false;
         }
 
         try {
-            return Carbon::parse($besluit->verzenddatum, 'Europe/Amsterdam')
+            return Carbon::parse($verzenddatum, 'Europe/Amsterdam')
                 ->startOfDay()
                 ->lessThanOrEqualTo(Carbon::now('Europe/Amsterdam')->startOfDay());
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    private function besluitHeeftVastgesteldDocument(Besluit $besluit): bool
+    {
+        return $besluit->besluitDocumenten?->contains(
+            fn (Informatieobject $document) => $document->isVastgesteld()
+        ) ?? false;
+    }
+
+    /**
+     * The date that decides when a besluit becomes visible. `verzenddatum` is
+     * optional in the ZGW Besluiten API; `publicatiedatum` is the fallback for a
+     * besluit that was published without one.
+     */
+    private function besluitVerzenddatum(Besluit $besluit): ?string
+    {
+        if (! empty($besluit->verzenddatum)) {
+            return $besluit->verzenddatum;
+        }
+
+        $publicatiedatum = $besluit->otherParams['publicatiedatum'] ?? null;
+
+        return is_string($publicatiedatum) && $publicatiedatum !== '' ? $publicatiedatum : null;
     }
 
     private function getBesluiten(): Collection
@@ -524,7 +573,7 @@ class Zaak extends Model implements Eventable
             return collect();
         }
 
-        return Cache::rememberForever("zaak.{$this->id}.besluiten", function () {
+        return Cache::remember("zaak.{$this->id}.besluiten", self::ZGW_READ_CACHE_TTL, function () {
             $connection = Zgw::connection($this->zgwConnectionName());
             $direct = new DirectEndpoint($connection);
             $besluiten = $connection->besluiten()->besluiten()->index(['zaak' => $this->zgw_zaak_url]);
@@ -551,7 +600,7 @@ class Zaak extends Model implements Eventable
             return collect();
         }
 
-        return Cache::rememberForever("zaak.{$this->id}.documenten", function () {
+        return Cache::remember("zaak.{$this->id}.documenten", self::ZGW_READ_CACHE_TTL, function () {
             $connection = Zgw::connection($this->zgwConnectionName());
             $direct = new DirectEndpoint($connection);
             $zaakinformatieobjecten = $connection->zaken()->zaakinformatieobjecten()->index(['zaak' => $this->zgw_zaak_url]);

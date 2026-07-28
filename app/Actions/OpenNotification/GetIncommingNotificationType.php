@@ -29,6 +29,12 @@ class GetIncommingNotificationType
             return OpenNotificationType::NewZaakDocument;
         } elseif (($data['actie'] === 'update' || $data['actie'] === 'partial_update') && $data['kanaal'] === 'documenten' && $data['resource'] === 'enkelvoudiginformatieobject') {
             return OpenNotificationType::UpdatedZaakDocument;
+        } elseif ($data['kanaal'] === 'besluiten') {
+            // Every resource on this channel (besluit and besluitinformatieobject)
+            // carries the besluit url as hoofdObject. We subscribe to the channel,
+            // so without this branch a besluit taken in the ZGW backend itself was
+            // dropped and the zaak kept serving its cached besluiten.
+            return OpenNotificationType::BesluitChanged;
         } elseif ($data['kanaal'] === 'zaaktypen') {
             // Every resource on this channel (zaaktype and its child resources
             // like statustype or resultaattype) carries the zaaktype version url
