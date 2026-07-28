@@ -574,38 +574,57 @@ class EventFormPage extends Page implements HasForms
 
     /**
      * Cleart `userSelectGemeente` wanneer de zojuist berekende gemeente-
-     * intersectie de eerdere keuze van de organisator twijfelachtig
-     * maakt: route start+eindigt in dezelfde gemeente, terwijl 'ie wel
-     * door ≥2 gemeenten gaat. In zo'n geval moet de keuze opnieuw
-     * gemaakt worden — anders blijft een stale brk_identification de
-     * `evenementInGemeente`-derivation aansturen.
+     * intersectie de eerdere keuze van de organisator ongeldig of
+     * twijfelachtig maakt. Twee gevallen:
      *
-     * Migreert OF-rule `be547255-4a1b-4f37-96e8-919d5351e7a5`
-     * (AlsIsGelijkAanTrueEnReductieVanEvenemen). OF gebruikte
-     * `userSelectGemeente11` als trigger-marker (interne duplicate-key-
-     * suffix); wij hebben alleen één veld, dus checken we dat direct.
+     *   1. De keuze komt niet meer voor in de gevonden gemeenten. Dat gebeurt
+     *      wanneer de locatie is gewijzigd, en bij "Nieuwe aanvraag met deze
+     *      gegevens" waarbij de keuze van de bron-aanvraag nog in de state
+     *      stond. Zonder wissen blijft de radio zichtbaar op een gemeente die
+     *      niets met de huidige locatie te maken heeft.
+     *   2. Route start+eindigt in dezelfde gemeente, terwijl 'ie wel door ≥2
+     *      gemeenten gaat. Dan moet de keuze opnieuw gemaakt worden.
+     *      (Migreert OF-rule `be547255-4a1b-4f37-96e8-919d5351e7a5`.)
      */
     private function resetStaleGemeenteKeuze(): void
     {
-        $startEndEqual = $this->state->get('inGemeentenResponse.line.start_end_equal');
-        if ($startEndEqual !== true) {
-            return;
-        }
-
-        $namen = $this->state->get('evenementInGemeentenNamen');
-        if (! is_array($namen) || count($namen) < 2) {
-            return;
-        }
-
         $pick = $this->state->get('userSelectGemeente');
         if (! is_string($pick) || $pick === '') {
             return;
         }
 
-        $this->state->setVariable('userSelectGemeente', '');
-        if (is_array($this->data)) {
-            $this->data['userSelectGemeente'] = '';
+        if (! $this->gemeenteKeuzeIsGeldig($pick) || $this->routeStartEnEindigtInDezelfdeGemeente()) {
+            $this->state->setVariable('userSelectGemeente', '');
+            if (is_array($this->data)) {
+                $this->data['userSelectGemeente'] = '';
+            }
         }
+    }
+
+    /**
+     * Of de gekozen brk_identification voorkomt in de gemeenten die voor de
+     * huidige locatie zijn gevonden. Zonder gemeenten-map (nog geen
+     * locatie-check gedraaid) blijft de keuze staan.
+     */
+    private function gemeenteKeuzeIsGeldig(string $pick): bool
+    {
+        $gemeenten = $this->state->get('inGemeentenResponse.all.object');
+        if (! is_array($gemeenten) || $gemeenten === []) {
+            return true;
+        }
+
+        return array_key_exists($pick, $gemeenten);
+    }
+
+    private function routeStartEnEindigtInDezelfdeGemeente(): bool
+    {
+        if ($this->state->get('inGemeentenResponse.line.start_end_equal') !== true) {
+            return false;
+        }
+
+        $namen = $this->state->get('evenementInGemeentenNamen');
+
+        return is_array($namen) && count($namen) >= 2;
     }
 
     /**
