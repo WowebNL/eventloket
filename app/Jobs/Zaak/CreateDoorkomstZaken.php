@@ -310,7 +310,13 @@ class CreateDoorkomstZaken implements ShouldQueue
             return;
         }
 
-        $rolData = InitiatorRolBuilder::build($newZaakUrl, $roltype['url'], $state, $initiator);
+        $rolData = InitiatorRolBuilder::build(
+            $newZaakUrl,
+            $roltype['url'],
+            $state,
+            $initiator,
+            InitiatorRolBuilder::anpIdentificatieForUser($this->zaak->organiser_user_id),
+        );
         if ($rolData === null) {
             return;
         }
