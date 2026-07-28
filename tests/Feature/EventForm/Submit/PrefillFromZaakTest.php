@@ -183,6 +183,54 @@ test('gehashte waarden (hash:-prefix) worden gewist zodat applySessionPrefill ze
         ->and($state->get('auth_bsn'))->toBeNull();
 });
 
+test('locatie-afhankelijke state van de bron-zaak komt niet mee', function () {
+    // De gemeentekeuze en de locatieserver-resultaten horen bij de locatie van
+    // de bron-aanvraag. Zouden ze meekomen, dan wordt een kopie met een andere
+    // locatie alsnog in de oorspronkelijke gemeente aangevraagd.
+    $sc = scenarioZaakMetSnapshot([
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest 2027',
+        'userSelectGemeente' => 'GM0917',
+        'inGemeentenResponse' => ['all' => [
+            'items' => [['brk_identification' => 'GM0917', 'name' => 'Heerlen']],
+            'object' => ['GM0917' => ['brk_identification' => 'GM0917', 'name' => 'Heerlen']],
+        ]],
+        'gemeenteVariabelen' => ['use_new_report_questions' => true],
+        'evenementenInDeGemeente' => ['items' => []],
+        'evenementInGemeente' => ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+    ]);
+
+    $state = $this->loader->load($sc['zaak']->id, $sc['user'], $sc['org']);
+
+    expect($state->get('watIsDeNaamVanHetEvenementVergunning'))->toBe('Buurtfeest 2027')
+        ->and($state->get('userSelectGemeente'))->toBeNull()
+        ->and($state->get('inGemeentenResponse'))->toBeNull()
+        ->and($state->get('gemeenteVariabelen'))->toBeNull()
+        ->and($state->get('evenementenInDeGemeente'))->toBeNull()
+        ->and($state->get('evenementInGemeente'))->toBeNull();
+});
+
+test('de brkGemeente van gekopieerde adresrijen wordt gewist', function () {
+    // Het verborgen brkGemeente-veld wordt door de locatiecheck verbatim
+    // vertrouwd; een gekopieerde waarde zou een gewijzigd adres naar de oude
+    // gemeente routeren.
+    $sc = scenarioZaakMetSnapshot([
+        'adresVanDeGebouwEn' => [
+            ['postcode' => '6411CD', 'huisnummer' => '32', 'straatnaam' => 'Coriovallumstraat', 'brkGemeente' => 'GM0917'],
+            ['postcode' => '6361BZ', 'huisnummer' => '1', 'straatnaam' => 'Deweverplein', 'brkGemeente' => 'GM1954'],
+        ],
+    ]);
+
+    $state = $this->loader->load($sc['zaak']->id, $sc['user'], $sc['org']);
+    $adressen = $state->get('adresVanDeGebouwEn');
+
+    expect($adressen)->toHaveCount(2)
+        ->and($adressen[0])->not->toHaveKey('brkGemeente')
+        ->and($adressen[1])->not->toHaveKey('brkGemeente')
+        // De ingevulde adresgegevens zelf blijven staan.
+        ->and($adressen[0]['postcode'])->toBe('6411CD')
+        ->and($adressen[1]['straatnaam'])->toBe('Deweverplein');
+});
+
 test('velden die niet meer in het schema zitten komen stil mee uit de snapshot', function () {
     // Voorbeeld: een veld dat bij de vorige submit bestond maar inmiddels
     // vervangen is door een andere key. Dat mag niet crashen; de waarde
