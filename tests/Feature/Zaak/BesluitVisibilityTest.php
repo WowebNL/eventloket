@@ -180,12 +180,16 @@ test('the tab configuration model is unaffected by these visibility rules', func
     // Guard against a regression where showsTab() and the data reads disagree:
     // the flags live on the connection, the visibility rules do not.
     $municipality = Municipality::factory()->create();
-    MunicipalityZgwConnection::factory()->create([
+    MunicipalityZgwConnection::factory()->active()->create([
         'municipality_id' => $municipality->id,
         'show_besluiten_tab' => false,
     ]);
+    // An activated connection and an own-instance zaaktype: the flags only
+    // describe a zaak that actually reads from this connection.
     $zaak = Zaak::factory()->create([
-        'zaaktype_id' => Zaaktype::factory()->for($municipality)->create()->id,
+        'zaaktype_id' => Zaaktype::factory()->for($municipality)->create([
+            'connection' => "gemeente_{$municipality->id}",
+        ])->id,
     ]);
 
     expect($zaak->showsTab('besluiten'))->toBeFalse();
