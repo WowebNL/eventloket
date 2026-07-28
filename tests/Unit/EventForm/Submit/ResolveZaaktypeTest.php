@@ -21,6 +21,7 @@ use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\ResolveZaaktype;
+use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\MunicipalityZgwConnection;
@@ -311,8 +312,10 @@ test('gemeente die niet bij de gevonden locatie hoort → harde fout in plaats v
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
     ]);
 
+    // Een eigen exceptietype, zodat de submit-handler de organisator naar de
+    // locatiestap kan sturen in plaats van de generieke "probeer het opnieuw".
     expect(fn () => $this->resolve->forState($state))
-        ->toThrow(RuntimeException::class, 'hoort niet bij de gevonden gemeenten');
+        ->toThrow(GemeenteLocatieMismatchException::class, 'hoort niet bij de gevonden gemeenten');
 });
 
 test('gemeente die wel bij de gevonden locatie hoort wordt gewoon gebruikt', function () {
