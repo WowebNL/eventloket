@@ -1,6 +1,7 @@
 @php
     $stepLabels = [
         'connection' => __('municipality/resources/zgw_connection.actions.verify.steps.connection'),
+        'apis' => __('municipality/resources/zgw_connection.actions.verify.steps.apis'),
         'abonnement' => __('municipality/resources/zgw_connection.actions.verify.steps.abonnement'),
     ];
 @endphp

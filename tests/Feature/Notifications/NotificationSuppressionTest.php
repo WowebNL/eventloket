@@ -13,12 +13,17 @@ function zaakWithSuppression(bool $suppress): Zaak
 {
     $municipality = Municipality::factory()->create();
 
-    MunicipalityZgwConnection::factory()->create([
+    MunicipalityZgwConnection::factory()->active()->create([
         'municipality_id' => $municipality->id,
         'suppress_notifications' => $suppress,
     ]);
 
-    $zaaktype = Zaaktype::factory()->create(['municipality_id' => $municipality->id]);
+    // An activated connection and an own-instance zaaktype: only then does the
+    // zaak actually run on this connection, and only then do its flags apply.
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'connection' => "gemeente_{$municipality->id}",
+    ]);
 
     return Zaak::factory()->create([
         'zaaktype_id' => $zaaktype->id,

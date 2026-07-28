@@ -174,8 +174,50 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
             ->toolbarActions([
                 DownloadDocumentsAction::make($this->zaak),
             ])
-            ->emptyStateHeading('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...')
-            ->emptyStateDescription(null);
+            ->emptyStateHeading(fn (): string => $this->emptyStateHeading())
+            ->emptyStateDescription(fn (): ?string => $this->emptyStateDescription());
+    }
+
+    /**
+     * An empty table has three quite different causes, which used to be
+     * indistinguishable: nothing has arrived from ZGW yet, everything that did
+     * arrive is hidden by the visibility rules, or (in submission mode) the zaak
+     * only holds documents that were not part of the application. Saying "hold
+     * on, the files are coming" in the latter two cases sends the reader waiting
+     * for something that is never going to appear.
+     */
+    private function emptyStateHeading(): string
+    {
+        if ($this->zaak->documenten->isNotEmpty()) {
+            return __('Geen bestanden om te tonen');
+        }
+
+        return $this->zaakHasDocumentsInZgw()
+            ? __('Geen bestanden om te tonen')
+            : __('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...');
+    }
+
+    private function emptyStateDescription(): ?string
+    {
+        if ($this->zaak->documenten->isNotEmpty()) {
+            // Documents exist and are visible, but none of them belong to the
+            // application itself.
+            return __('Bij deze aanvraag zijn geen aanvraagdocumenten ingediend.');
+        }
+
+        return $this->zaakHasDocumentsInZgw()
+            ? __('Deze zaak bevat wel bestanden, maar die zijn niet zichtbaar met uw rechten of hun status. Neem contact op met de beheerder als u ze wel zou moeten zien.')
+            : null;
+    }
+
+    /**
+     * Whether ZGW holds any document for this zaak at all, before the status and
+     * role filters are applied. Distinguishes "nothing there yet" from
+     * "everything filtered out".
+     */
+    private function zaakHasDocumentsInZgw(): bool
+    {
+        return $this->zaak->allDocumentsCount() > 0;
     }
 
     public function render(): View
