@@ -12,6 +12,8 @@ categories:
     label: 'changelog: breaking'
   - title: '✨ New feautures'
     label: 'changelog: feature'
+  - title: '🔒 Security'
+    label: 'changelog: security'
   - title: '🐛 Bug Fixes'
     label: 'changelog: bug'
   - title: '📝 Documentation'
