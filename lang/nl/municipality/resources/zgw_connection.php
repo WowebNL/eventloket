@@ -33,6 +33,10 @@ return [
             'label' => 'Naam',
             'helper' => 'Optioneel label ter herkenning (bijv. de leverancier en gemeente). Heeft geen invloed op de werking.',
         ],
+        'url_inheritance' => [
+            'with_url' => 'Laat u dit veld leeg, dan wordt :url van de hoofdkoppeling gebruikt. Gegevens worden dan bij die instantie opgevraagd en blijven hier leeg.',
+            'without_url' => 'Laat u dit veld leeg, dan wordt de URL van de hoofdkoppeling gebruikt. Gegevens worden dan bij die instantie opgevraagd en blijven hier leeg.',
+        ],
         'zaken_url' => ['label' => 'Zaken API base-URL'],
         'catalogi_url' => ['label' => 'Catalogi API base-URL'],
         'documenten_url' => ['label' => 'Documenten API base-URL'],
@@ -136,11 +140,21 @@ return [
             'close' => 'Sluiten',
             'steps' => [
                 'connection' => 'Verbinding met de ZGW-instantie',
+                'apis' => 'Toegang tot de losse APIs',
                 'abonnement' => 'Notificatie-abonnement',
             ],
             'connection' => [
                 'success' => 'Eventloket kan deze ZGW-instantie bereiken.',
                 'error' => 'Kon de verbinding niet controleren. Probeer het later opnieuw of neem contact op met de beheerder.',
+            ],
+            'apis' => [
+                'success' => 'Zaken, documenten en besluiten zijn alle drie leesbaar.',
+                'error' => 'Deze APIs zijn niet leesbaar: :apis. Controleer de URL en de autorisatie. Let op: een leeg URL-veld neemt de URL van de hoofdkoppeling over, waardoor gegevens bij de verkeerde instantie worden opgevraagd.',
+                'names' => [
+                    'zaken' => 'Zaken',
+                    'documenten' => 'Documenten',
+                    'besluiten' => 'Besluiten',
+                ],
             ],
             'abonnement' => [
                 'healthy' => 'Het abonnement is geregistreerd en werkt.',

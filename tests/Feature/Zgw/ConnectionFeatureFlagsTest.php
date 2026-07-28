@@ -7,17 +7,27 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 
-function zaakForConnection(array $connectionAttributes = [], bool $withConnection = true): Zaak
+function zaakForConnection(array $connectionAttributes = [], bool $withConnection = true, bool $active = true): Zaak
 {
     $municipality = Municipality::factory()->create();
 
     if ($withConnection) {
-        MunicipalityZgwConnection::factory()->create(array_merge([
+        $factory = MunicipalityZgwConnection::factory();
+        if ($active) {
+            $factory = $factory->active();
+        }
+        $factory->create(array_merge([
             'municipality_id' => $municipality->id,
         ], $connectionAttributes));
     }
 
-    $zaaktype = Zaaktype::factory()->create(['municipality_id' => $municipality->id]);
+    // An own-instance zaaktype: the `connection` column records which instance
+    // hosts it, and it defaults to 'main'. A zaak on a main row reads from main
+    // and therefore keeps main's behaviour, which is covered separately below.
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'connection' => "gemeente_{$municipality->id}",
+    ]);
 
     return Zaak::factory()->create([
         'zaaktype_id' => $zaaktype->id,
@@ -92,4 +102,46 @@ test('a OneGround connection always blocks organiser withdrawal', function () {
     ]);
 
     expect($zaak->organiserCanWithdraw())->toBeFalse();
+});
+
+test('a connection that is not activated yet keeps the default behaviour', function () {
+    // Until activation the zaak reads from main, so the flags of the connection
+    // being prepared must not describe it. They used to, which meant the tabs and
+    // the status lock followed one instance while the data came from another.
+    $zaak = zaakForConnection([
+        'show_besluiten_tab' => false,
+        'show_bestanden_tab' => false,
+        'lock_status_for_behandelaar' => true,
+        'is_oneground' => true,
+    ], active: false);
+
+    expect($zaak->zgwConnectionName())->toBe('main')
+        ->and($zaak->showsTab('besluiten'))->toBeTrue()
+        ->and($zaak->showsTab('bestanden'))->toBeTrue()
+        ->and($zaak->behandelaarCanChangeStatus())->toBeTrue()
+        ->and($zaak->organiserCanWithdraw())->toBeTrue();
+});
+
+test('a zaak on a main-fallback zaaktype keeps the default behaviour', function () {
+    // The zaaktype records which instance hosts it. A main-catalogus row reads
+    // from main even while the municipality runs its own instance, so the
+    // connection's flags do not apply to this zaak either.
+    $municipality = Municipality::factory()->create();
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $municipality->id,
+        'show_bestanden_tab' => false,
+        'lock_status_for_behandelaar' => true,
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'municipality_id' => $municipality->id,
+            'connection' => 'main',
+        ])->id,
+        'zgw_zaak_url' => null,
+    ]);
+
+    expect($zaak->zgwConnectionName())->toBe('main')
+        ->and($zaak->showsTab('bestanden'))->toBeTrue()
+        ->and($zaak->behandelaarCanChangeStatus())->toBeTrue();
 });
