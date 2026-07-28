@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Submit;
 
 use App\EventForm\State\FormState;
+use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Models\Municipality;
 use App\Models\Zaaktype;
 use RuntimeException;
@@ -87,9 +88,14 @@ final class ResolveZaaktype
      * Without this a stale gemeente in the state (a copied aanvraag, an edited
      * location) would silently create the zaak for the previous municipality,
      * and with it on the previous municipality's ZGW instance. Failing the
-     * submit is the lesser harm; the organiser is sent back through the location
-     * step. A state without a location check result (older drafts) is left
-     * alone.
+     * submit is the lesser harm. A state without a location check result (older
+     * drafts) is left alone.
+     *
+     * @throws GemeenteLocatieMismatchException so the submit handler can tell
+     *                                          the organiser to revisit the
+     *                                          location step, instead of the
+     *                                          generic "try again" that a plain
+     *                                          failure produces.
      */
     private function assertMunicipalityMatchesLocation(FormState $state, string $brk): void
     {
@@ -99,11 +105,7 @@ final class ResolveZaaktype
         }
 
         if (! array_key_exists($brk, $gemeenten)) {
-            throw new RuntimeException(sprintf(
-                'De gemeente uit de FormState (%s) hoort niet bij de gevonden gemeenten voor de opgegeven locatie (%s).',
-                $brk,
-                implode(', ', array_keys($gemeenten)),
-            ));
+            throw new GemeenteLocatieMismatchException($brk, array_map(strval(...), array_keys($gemeenten)));
         }
     }
 }

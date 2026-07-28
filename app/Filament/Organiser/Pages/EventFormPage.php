@@ -11,6 +11,7 @@ use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Services\ServiceFetcher;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\SubmitEventForm;
+use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Models\Municipality;
 use App\Models\Organisation;
@@ -701,6 +702,21 @@ class EventFormPage extends Page implements HasForms
 
         try {
             $zaak = app(SubmitEventForm::class)->execute($this->state, $user, $org, $this->activeDraft());
+        } catch (GemeenteLocatieMismatchException $e) {
+            report($e);
+            $this->submitting = false;
+
+            // Opnieuw proberen lost dit nooit op: de gemeente in de state hoort
+            // niet bij de opgegeven locatie. De generieke "probeer het opnieuw"
+            // zou de organisator op een doodlopend pad zetten.
+            Notification::make()
+                ->danger()
+                ->title('Aanvraag niet ingediend')
+                ->body('De gemeente in uw aanvraag hoort niet bij de locatie die u heeft opgegeven. Ga terug naar de stap "Locatie", controleer het adres en bepaal de gemeente opnieuw.')
+                ->persistent()
+                ->send();
+
+            return;
         } catch (\Throwable $e) {
             report($e);
             // Reset zodat de gebruiker kan retry'en nu de fout zichtbaar is —
