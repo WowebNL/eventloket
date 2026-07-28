@@ -38,6 +38,28 @@ beforeEach(function () {
     $this->actingAs(managingUser($this->connection->municipality_id));
 });
 
+/**
+ * Fakes the per-component read checks the verifier runs after the base
+ * connection check. Pass an api name to make that one fail.
+ */
+function fakeApiReads(?string $failing = null): array
+{
+    $endpoints = [
+        'zaken' => GEM.'/zaken/api/v1/zaken*',
+        'documenten' => GEM.'/documenten/api/v1/enkelvoudiginformatieobjecten*',
+        'besluiten' => GEM.'/besluiten/api/v1/besluiten*',
+    ];
+
+    $fakes = [];
+    foreach ($endpoints as $api => $pattern) {
+        $fakes[$pattern] = $api === $failing
+            ? Http::response(['detail' => 'not found'], 404)
+            : Http::response(['count' => 0, 'next' => null, 'previous' => null, 'results' => []], 200);
+    }
+
+    return $fakes;
+}
+
 function healthyAbonnement(int $municipalityId, string $name): string
 {
     $aboUrl = GEM.'/notificaties/api/v1/abonnement/abc';
@@ -66,7 +88,7 @@ it('fails fast when the connection is unreachable', function () {
 
 it('completes and stamps the connection when the abonnement is healthy', function () {
     $aboUrl = healthyAbonnement($this->connection->municipality_id, $this->name);
-    Http::fake([
+    Http::fake(array_merge(fakeApiReads(), [
         $aboUrl => Http::response([
             'url' => $aboUrl,
             'kanalen' => collect(AbonnementRegistrar::KANALEN)->map(fn (string $n): array => ['naam' => $n])->all(),
@@ -75,11 +97,12 @@ it('completes and stamps the connection when the abonnement is healthy', functio
             ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
             200,
         ),
-    ]);
+    ]));
 
     livewire(ConnectionVerifier::class, ['connection' => $this->connection])
         ->call('start')
         ->assertSet('steps.connection.status', 'success')
+        ->assertSet('steps.apis.status', 'success')
         ->assertSet('steps.abonnement.status', 'success')
         ->assertSet('finished', true)
         ->assertSet('success', true);
@@ -87,11 +110,38 @@ it('completes and stamps the connection when the abonnement is healthy', functio
     expect($this->connection->refresh()->last_verified_at)->not->toBeNull();
 });
 
+it('reports which API is unreadable and stops before the abonnement step', function (string $failing, string $label) {
+    // The base check only reads the catalogi API, so a wrong or omitted base URL
+    // for another component used to stay invisible until a zaak page came up
+    // empty. An omitted URL inherits the main connection's, where a query about
+    // this instance's zaak answers 200 with no results.
+    Http::fake(array_merge(fakeApiReads(failing: $failing), [
+        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
+            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
+            200,
+        ),
+    ]));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('steps.connection.status', 'success')
+        ->assertSet('steps.apis.status', 'fail')
+        ->assertSee($label)
+        ->assertSet('steps.abonnement.status', 'skipped')
+        ->assertSet('success', false);
+
+    expect($this->connection->refresh()->last_verified_at)->toBeNull();
+})->with([
+    'zaken' => ['zaken', 'Zaken'],
+    'documenten' => ['documenten', 'Documenten'],
+    'besluiten' => ['besluiten', 'Besluiten'],
+]);
+
 it('offers a register button and registers the abonnement', function () {
     $base = GEM.'/notificaties/api/v1/';
     $aboUrl = $base.'abonnement/abc';
 
-    Http::fake([
+    Http::fake(array_merge(fakeApiReads(), [
         GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
             ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
             200,
@@ -110,7 +160,7 @@ it('offers a register button and registers the abonnement', function () {
             'url' => $aboUrl,
             'kanalen' => collect(AbonnementRegistrar::KANALEN)->map(fn (string $n): array => ['naam' => $n])->all(),
         ], 200),
-    ]);
+    ]));
 
     livewire(ConnectionVerifier::class, ['connection' => $this->connection])
         ->call('start')

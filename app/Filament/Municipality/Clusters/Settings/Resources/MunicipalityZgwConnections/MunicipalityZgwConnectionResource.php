@@ -72,11 +72,11 @@ class MunicipalityZgwConnectionResource extends Resource
                     ->description(__('municipality/resources/zgw_connection.sections.endpoints.description'))
                     ->columns(1)
                     ->schema([
-                        TextInput::make('zaken_url')->label(__('municipality/resources/zgw_connection.fields.zaken_url.label'))->url()->maxLength(255),
-                        TextInput::make('catalogi_url')->label(__('municipality/resources/zgw_connection.fields.catalogi_url.label'))->url()->maxLength(255),
-                        TextInput::make('documenten_url')->label(__('municipality/resources/zgw_connection.fields.documenten_url.label'))->url()->maxLength(255),
-                        TextInput::make('besluiten_url')->label(__('municipality/resources/zgw_connection.fields.besluiten_url.label'))->url()->maxLength(255),
-                        TextInput::make('notificaties_url')->label(__('municipality/resources/zgw_connection.fields.notificaties_url.label'))->url()->maxLength(255),
+                        TextInput::make('zaken_url')->label(__('municipality/resources/zgw_connection.fields.zaken_url.label'))->url()->maxLength(255)->helperText(self::inheritedUrlHelper('zaken')),
+                        TextInput::make('catalogi_url')->label(__('municipality/resources/zgw_connection.fields.catalogi_url.label'))->url()->maxLength(255)->helperText(self::inheritedUrlHelper('catalogi')),
+                        TextInput::make('documenten_url')->label(__('municipality/resources/zgw_connection.fields.documenten_url.label'))->url()->maxLength(255)->helperText(self::inheritedUrlHelper('documenten')),
+                        TextInput::make('besluiten_url')->label(__('municipality/resources/zgw_connection.fields.besluiten_url.label'))->url()->maxLength(255)->helperText(self::inheritedUrlHelper('besluiten')),
+                        TextInput::make('notificaties_url')->label(__('municipality/resources/zgw_connection.fields.notificaties_url.label'))->url()->maxLength(255)->helperText(self::inheritedUrlHelper('notificaties')),
                     ]),
 
                 Section::make(__('municipality/resources/zgw_connection.sections.authentication.heading'))
@@ -277,6 +277,22 @@ class MunicipalityZgwConnectionResource extends Resource
         }
 
         return $options;
+    }
+
+    /**
+     * Helper text spelling out which URL a component falls back to when the field
+     * is left empty. An omitted URL is inherited from the main connection, so a
+     * blank field does not disable the component: it points it at another
+     * instance, where a query about this instance's zaak answers HTTP 200 with no
+     * results and the tab simply looks empty.
+     */
+    private static function inheritedUrlHelper(string $component): string
+    {
+        $inherited = config("zgw.connections.main.urls.{$component}");
+
+        return is_string($inherited) && $inherited !== ''
+            ? __('municipality/resources/zgw_connection.fields.url_inheritance.with_url', ['url' => $inherited])
+            : __('municipality/resources/zgw_connection.fields.url_inheritance.without_url');
     }
 
     /**
