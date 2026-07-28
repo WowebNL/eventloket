@@ -13,6 +13,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
@@ -166,4 +167,46 @@ test('a platform admin sees "Nieuwe versie" on every document including the aanv
     livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
         ->assertTableActionVisible('new-version', 'own-doc-uuid')
         ->assertTableActionVisible('new-version', 'aanvraagformulier-uuid');
+});
+
+test('an empty table says the files are still coming when ZGW holds none', function () {
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $this->actingAs($reviewer);
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->assertSee('Een ogenblik geduld');
+});
+
+test('an empty table explains itself when every document is filtered out', function () {
+    // "Hold on, the files are coming" sends the reader waiting for something that
+    // is never going to appear: the documents are there, they are just not
+    // visible with these rights or this status.
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $this->actingAs($reviewer);
+
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $docUrl = ZgwHttpFake::fakeSingleDocument('1', [
+        'status' => 'in_bewerking',
+        'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk,
+    ]);
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(
+            ZgwHttpFake::envelope([[
+                'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1',
+                'zaak' => $zaakUrl,
+                'informatieobject' => $docUrl,
+            ]]),
+            200,
+        ),
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'organisation_id' => $this->organisation->id,
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zaakUrl,
+    ]);
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
+        ->assertSee('Geen bestanden om te tonen')
+        ->assertDontSee('Een ogenblik geduld');
 });
