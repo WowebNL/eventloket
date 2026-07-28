@@ -25,6 +25,7 @@ use App\Enums\Role;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\SubmitEventForm;
+use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Municipality;
 use App\Models\Organisation;
@@ -33,6 +34,7 @@ use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Notification;
@@ -197,6 +199,35 @@ test('na een mislukte submit kan de organisator opnieuw proberen', function () {
     $page->submit();
 
     expect($fake->aantalAanroepen)->toBe(2);
+});
+
+test('een gemeente die niet bij de locatie hoort levert een melding op die naar de locatiestap verwijst', function () {
+    // De generieke "probeer het opnieuw" is hier misleidend: opnieuw indienen
+    // geeft gegarandeerd dezelfde fout. De organisator moet terug naar de
+    // locatiestap, en dat moet de melding ook zeggen.
+    $fake = new FakeSubmitEventForm(
+        gooitException: new GemeenteLocatieMismatchException('GM0917', ['GM0935']),
+    );
+    app()->instance(SubmitEventForm::class, $fake);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    setupValidSubmit($page, $this->user, $this->organisation);
+
+    $page->submit();
+
+    $component->assertNotified(
+        FilamentNotification::make()
+            ->danger()
+            ->title('Aanvraag niet ingediend')
+            ->body('De gemeente in uw aanvraag hoort niet bij de locatie die u heeft opgegeven. Ga terug naar de stap "Locatie", controleer het adres en bepaal de gemeente opnieuw.')
+            ->persistent()
+    );
+
+    // De vlag moet gereset zijn: de organisator kan na het corrigeren van de
+    // locatie opnieuw indienen zonder de pagina te herladen.
+    expect($page->submitting)->toBeFalse();
 });
 
 test('submit() op leeg formulier gooit validatiefouten en roept SubmitEventForm niet aan', function () {
