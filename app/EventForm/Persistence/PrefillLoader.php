@@ -187,12 +187,36 @@ class PrefillLoader
 
         foreach ($addresses as $index => $row) {
             if (is_array($row)) {
-                unset($addresses[$index]['brkGemeente']);
+                $addresses[$index] = $this->withoutBrkGemeente($row);
             }
         }
 
         $values['adresVanDeGebouwEn'] = $addresses;
 
         return $values;
+    }
+
+    /**
+     * Removes every `brkGemeente` entry from a copied address row, at whatever
+     * depth it sits. The value does not live on the row itself but under the
+     * AddressNL fieldset prefix (currently
+     * `adresVanHetGebouwWaarUwEvenementPlaatsvindt1.brkGemeente`), so clearing
+     * the row's own keys would miss it entirely. Walking the row instead of
+     * hardcoding that prefix keeps this working when the schema key changes.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function withoutBrkGemeente(array $row): array
+    {
+        unset($row['brkGemeente']);
+
+        foreach ($row as $key => $value) {
+            if (is_array($value)) {
+                $row[$key] = $this->withoutBrkGemeente($value);
+            }
+        }
+
+        return $row;
     }
 }
