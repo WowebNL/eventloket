@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Enums\OpenNotificationType;
+use App\Jobs\Zaak\BesluitNotificationReceived;
 use App\Jobs\Zaak\ClearZaakCache;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,6 +27,9 @@ class ProcessOpenNotification implements ShouldQueue
             // (zaaktype update + child-resource creates, all sharing the same
             // hoofdObject) collapses into the one unique job.
             OpenNotificationType::ZaaktypeChanged => ZaaktypeNotificationReceived::dispatch($this->notification)->delay(now()->addSeconds(30)),
+            // Delayed for the same reason as documents: the besluit and its
+            // informatieobject links are created in quick succession.
+            OpenNotificationType::BesluitChanged => BesluitNotificationReceived::dispatch($this->notification)->delay(now()->addSeconds(10)),
             default => null,
         };
     }
