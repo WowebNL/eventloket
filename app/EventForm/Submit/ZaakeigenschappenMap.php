@@ -118,6 +118,10 @@ final class ZaakeigenschappenMap
     }
 
     /**
+     * The natuurlijk_persoon_adres entry is assembled from the flat fields of
+     * the "Adresgegevens" fieldset (only shown to aanvragers without a KvK
+     * number), so a private aanvrager's verblijfsadres reaches the ZGW rol.
+     *
      * @return array<string, mixed>
      */
     public function buildInitiator(FormState $state): array
@@ -129,7 +133,15 @@ final class ZaakeigenschappenMap
         return array_filter([
             'kvk' => $this->stringOrNull($state->get('watIsHetKamerVanKoophandelNummerVanUwOrganisatie')),
             'organisatie_naam' => $this->stringOrNull($state->get('watIsDeNaamVanUwOrganisatie')),
-            'organisatie_adres' => $state->get('watIsHetAdresVanUwOrganisatie'),
+            'natuurlijk_persoon_adres' => array_filter([
+                'postcode' => $this->stringOrNull($state->get('postcode')),
+                'huisnummer' => $this->stringOrNull($state->get('huisnummer')),
+                'huisletter' => $this->stringOrNull($state->get('huisletter')),
+                'huisnummertoevoeging' => $this->stringOrNull($state->get('huisnummertoevoeging')),
+                'straatnaam' => $this->stringOrNull($state->get('straatnaam')),
+                'plaatsnaam' => $this->stringOrNull($state->get('plaatsnaam')),
+                'land' => $this->stringOrNull($state->get('land')),
+            ]),
             'contactpersoon' => array_filter([
                 'naam' => $naam !== '' ? $naam : null,
                 'emailadres' => $this->stringOrNull($state->get('watIsUwEMailadres')),
