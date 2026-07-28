@@ -13,6 +13,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
@@ -188,8 +189,8 @@ test('an empty table explains itself when every document is filtered out', funct
         'status' => 'in_bewerking',
         'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk,
     ]);
-    Illuminate\Support\Facades\Http::fake([
-        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Illuminate\Support\Facades\Http::response(
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(
             ZgwHttpFake::envelope([[
                 'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1',
                 'zaak' => $zaakUrl,
