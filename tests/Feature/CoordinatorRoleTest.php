@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
+use App\Models\Event;
 use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
@@ -497,5 +498,37 @@ describe('coordinator assignable as reviewer', function () {
             ->assertHasActionErrors(['reviewer_user_id']);
 
         expect($zaak->refresh()->reviewer_user_id)->toBeNull();
+    });
+});
+
+// --- ZaakEventScope ---
+
+describe('ZaakEventScope for coordinator', function () {
+    beforeEach(function () {
+        $this->organiserUser = User::factory()->create(['role' => Role::Organiser]);
+
+        $this->event = Zaak::factory()->create([
+            'zaaktype_id' => $this->zaaktype->id,
+            'organisation_id' => $this->organisation->id,
+            'organiser_user_id' => $this->organiserUser->id,
+        ]);
+    });
+
+    it('selects the full column set for a coordinator, just like a reviewer', function () {
+        $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+        $coordinator->municipalities()->attach($this->municipality);
+
+        $this->actingAs($coordinator);
+        $asCoordinator = Event::find($this->event->id);
+
+        $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+        $reviewer->municipalities()->attach($this->municipality);
+
+        $this->actingAs($reviewer);
+        $asReviewer = Event::find($this->event->id);
+
+        expect(array_keys($asCoordinator->getAttributes()))
+            ->toEqualCanonicalizing(array_keys($asReviewer->getAttributes()))
+            ->and($asCoordinator->organiser_user_id)->toBe($this->organiserUser->id);
     });
 });
