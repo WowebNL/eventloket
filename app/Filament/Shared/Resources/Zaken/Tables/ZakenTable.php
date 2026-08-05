@@ -77,7 +77,7 @@ class ZakenTable
                     ->toggleable()
                     ->searchable()
                     ->forceSearchCaseInsensitive()
-                    ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Reviewer, Role::Admin])),
+                    ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Admin])),
                 TextColumn::make('reference_data.status_name')
                     ->label(__('resources/zaak.columns.status.label'))
                     ->sortable()
