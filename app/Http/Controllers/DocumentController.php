@@ -14,7 +14,12 @@ class DocumentController extends Controller
 {
     public function __invoke(DocumentRequest $request, Zaak $zaak, string $documentuuid, ?string $type = 'view')
     {
-        $document = $zaak->documenten->where('uuid', $documentuuid)->firstOrFail();
+        // documenten is already filtered to what the current role may see, so a
+        // miss means either "no such document" or "not for this user". Both get a
+        // 404: a 403 would confirm the document exists on this zaak.
+        $document = $zaak->documenten->firstWhere('uuid', $documentuuid);
+
+        abort_if($document === null, 404);
 
         $validated = $request->validated();
         if (isset($validated['version']) && $validated['version'] != $document->versie) {
