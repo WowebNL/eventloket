@@ -28,7 +28,7 @@ final class WaarvoorWiltUHetEventloketGebruikenStep
                 Radio::make('waarvoorWiltUEventloketGebruiken')
                     ->label('Waarvoor wilt u Eventloket gebruiken?')
                     ->options([
-                        'evenement' => 'U wilt voor uw evementen een aanvraag indienen',
+                        'evenement' => 'U wilt voor uw evenement een aanvraag indienen',
                         'vooraankondiging' => 'U wilt voor uw evenement een vooraankondiging doen en dient later de volledige aanvraag in',
                     ])
                     ->required()
