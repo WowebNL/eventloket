@@ -353,10 +353,13 @@ class ViewZaak extends ViewRecord
                                             }
                                             $besluittype = new BesluitType(...(new Openzaak)->get($get('besluit_type'))->toArray());
 
-                                            // dd($record->documenten);
-                                            return $record->documenten->filter(function ($document) use ($besluittype) {
-                                                return in_array($document->informatieobjecttype, $besluittype->informatieobjecttypen);
-                                            })->pluck('titel', 'url')->toArray();
+                                            // A besluitdocument always goes to the organiser, so only
+                                            // documents the organiser may see can be selected here.
+                                            return $record->documenten
+                                                ->whereIn('vertrouwelijkheidaanduiding', DocumentVertrouwelijkheden::fromUserRole(Role::Organiser))
+                                                ->filter(function ($document) use ($besluittype) {
+                                                    return in_array($document->informatieobjecttype, $besluittype->informatieobjecttypen);
+                                                })->pluck('titel', 'url')->toArray();
 
                                         }
                                     )
