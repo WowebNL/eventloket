@@ -238,11 +238,20 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
-                return $this->getBesluiten()->each(function (Besluit $besluit) {
-                    $besluit = new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                        'besluitDocumenten' => $besluit->besluitDocumenten?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))),
-                    ]));
-                });
+                if (app()->runningInConsole()) {
+                    // Queue and console have no authenticated user; the role filter
+                    // is applied before the job is queued, mirroring documenten().
+                    return $this->getBesluiten();
+                }
+
+                // map(), not each(): each() returns the collection unchanged and the
+                // rebuilt Besluit would be thrown away, leaving every role with all
+                // besluitdocumenten. map() also leaves the cached collection alone.
+                return $this->getBesluiten()->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                    'besluitDocumenten' => $besluit->besluitDocumenten?->filter(
+                        fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))
+                    )->values(),
+                ])));
             },
         );
     }
