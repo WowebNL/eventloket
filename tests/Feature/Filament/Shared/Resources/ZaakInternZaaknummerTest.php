@@ -77,6 +77,26 @@ test('admin sees intern zaaknummer column in zaken table', function () {
         ->assertSee(__('resources/zaak.columns.intern_zaaknummer.label'));
 });
 
+test('coordinator sees intern zaaknummer column in zaken table', function () {
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    ZgwHttpFake::wildcardFake();
+
+    Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'reference_data' => referenceDataWithInternZaaknummer('INT-001'),
+    ]);
+
+    $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+    $coordinator->municipalities()->attach($this->municipality);
+
+    $this->actingAs($coordinator);
+    Filament::setTenant($this->municipality);
+
+    livewire(ListZaken::class)
+        ->assertOk()
+        ->assertSee(__('resources/zaak.columns.intern_zaaknummer.label'));
+});
+
 test('organiser does not see intern zaaknummer column in zaken table', function () {
     Filament::setCurrentPanel(Filament::getPanel('organiser'));
     ZgwHttpFake::wildcardFake();
