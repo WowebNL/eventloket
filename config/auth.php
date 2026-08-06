@@ -128,28 +128,45 @@ return [
     | 15-minute lockout after 5 failed attempts (OWASP recommendation for
     | government-facing applications).
     |
+    | Every value is cast to an integer and clamped to a safe floor. An env
+    | value always arrives as a string, and an unset or non-numeric value casts
+    | to 0. A decay of 0 would disable the limiter silently, and a maximum of 0
+    | would lock everyone out, so both are clamped towards the strict side.
+    |
     */
 
     'throttle' => [
+        // Strict: per account and IP. This is the limit the OWASP note above describes.
         'login' => [
-            'max_attempts' => env('LOGIN_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('LOGIN_DECAY_SECONDS', 900),
+            'max_attempts' => max(1, (int) env('LOGIN_MAX_ATTEMPTS', 5)),
+            'decay_seconds' => max(60, (int) env('LOGIN_DECAY_SECONDS', 900)),
+        ],
+        // Looser: per account across all IPs, to catch distributed spraying on one
+        // account without making it cheap to lock a known account out from anywhere.
+        'login_account' => [
+            'max_attempts' => max(1, (int) env('LOGIN_ACCOUNT_MAX_ATTEMPTS', 20)),
+            'decay_seconds' => max(60, (int) env('LOGIN_ACCOUNT_DECAY_SECONDS', 3600)),
+        ],
+        // Backstop: per IP, wide enough for a shared office outbound address.
+        'login_ip' => [
+            'max_attempts' => max(1, (int) env('LOGIN_IP_MAX_ATTEMPTS', 50)),
+            'decay_seconds' => max(60, (int) env('LOGIN_IP_DECAY_SECONDS', 900)),
         ],
         'mfa' => [
-            'max_attempts' => env('MFA_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('MFA_DECAY_SECONDS', 900),
+            'max_attempts' => max(1, (int) env('MFA_MAX_ATTEMPTS', 5)),
+            'decay_seconds' => max(60, (int) env('MFA_DECAY_SECONDS', 900)),
         ],
         'password_reset_request' => [
-            'max_attempts' => env('PASSWORD_RESET_REQUEST_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('PASSWORD_RESET_REQUEST_DECAY_SECONDS', 900),
+            'max_attempts' => max(1, (int) env('PASSWORD_RESET_REQUEST_MAX_ATTEMPTS', 5)),
+            'decay_seconds' => max(60, (int) env('PASSWORD_RESET_REQUEST_DECAY_SECONDS', 900)),
         ],
         'password_reset' => [
-            'max_attempts' => env('PASSWORD_RESET_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('PASSWORD_RESET_DECAY_SECONDS', 900),
+            'max_attempts' => max(1, (int) env('PASSWORD_RESET_MAX_ATTEMPTS', 5)),
+            'decay_seconds' => max(60, (int) env('PASSWORD_RESET_DECAY_SECONDS', 900)),
         ],
         'registration' => [
-            'max_attempts' => env('REGISTRATION_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('REGISTRATION_DECAY_SECONDS', 900),
+            'max_attempts' => max(1, (int) env('REGISTRATION_MAX_ATTEMPTS', 5)),
+            'decay_seconds' => max(60, (int) env('REGISTRATION_DECAY_SECONDS', 900)),
         ],
     ],
 
