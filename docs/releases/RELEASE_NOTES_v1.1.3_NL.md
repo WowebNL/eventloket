@@ -30,8 +30,8 @@ Voor gewone zaakdocumenten bepaalt de rol van de gebruiker al welke documenten z
 
 Wat er is verbeterd:
 
-* Bij een besluit ziet iedere gebruiker voortaan alleen de bijbehorende documenten die bij zijn of haar rol horen. Voor behandelaars, coördinatoren, gemeentelijk beheerders en beheerders verandert er niets: zij zagen en zien alle besluitdocumenten. Adviseurs zien geen documenten meer met het niveau "confidentieel", precies zoals dat bij gewone zaakdocumenten al het geval was. De organisator ziet de documenten die voor de organisator bedoeld zijn.
-* Bij het afronden van een aanvraag worden alleen nog documenten aangeboden die voor de organisator zichtbaar zijn. Een besluitdocument is per definitie bedoeld voor de organisator, dus een vertrouwelijk of confidentieel document kan daar niet meer per ongeluk voor worden gekozen.
+* Bij een besluit ziet iedere gebruiker voortaan alleen de bijbehorende documenten die bij zijn of haar rol horen. Voor behandelaars, coördinatoren, gemeentelijk beheerders en beheerders verandert er niets: zij zagen en zien alle besluitdocumenten. Adviseurs zien geen documenten meer met het niveau waar ze geen recht toe hebben, precies zoals dat bij gewone zaakdocumenten al het geval was. De organisator ziet de documenten die voor de organisator bedoeld zijn.
+* Bij het afronden van een aanvraag worden alleen nog documenten aangeboden die voor de organisator zichtbaar zijn. Een besluitdocument is per definitie bedoeld voor de organisator, dus een document met verkeerde vertrouwelijkheid kan daar niet meer per ongeluk voor worden gekozen.
 * Wordt een document opgevraagd dat bij de eigen rol niet hoort, dan volgt nu een nette "niet gevonden" melding in plaats van een foutmelding.
 
 **Let op voor beheerders:** in combinatie met de vorige verbetering betekent dit dat documenten die een coördinator eerder als "vertrouwelijk" heeft geüpload, niet bij de besluitdocumenten van de organisator verschijnen. Ook hier geldt: opnieuw uploaden met de juiste instelling als het document wel zichtbaar moet zijn.
