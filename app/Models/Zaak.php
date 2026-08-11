@@ -493,14 +493,26 @@ class Zaak extends Model implements Eventable
         return Attribute::make(
             get: function ($value, $attributes) {
                 // Only show a besluit once its send date has been reached. See
-                // besluitIsPubliceerbaar(). The besluitdocumenten are filtered to
-                // what the current role may see: map(), not each(), because the
-                // value object is readonly and a rebuilt besluit has to replace
-                // the original one.
+                // besluitIsPubliceerbaar(). This is a publication rule, not a role
+                // rule, so it also applies in console context.
+                $besluiten = $this->getBesluiten()
+                    ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
+                    ->values();
+
+                if (app()->runningInConsole()) {
+                    // Queue and console have no authenticated user; the role filter
+                    // is applied before the job is queued, mirroring documenten().
+                    return $besluiten;
+                }
+
+                // The besluitdocumenten are filtered to what the current role may
+                // see on this connection: map(), not each(), because the value
+                // object is readonly and a rebuilt besluit has to replace the
+                // original one. each() returns the collection unchanged, which
+                // would leave every role with all besluitdocumenten.
                 $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role);
 
-                return $this->getBesluiten()
-                    ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
+                return $besluiten
                     ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
                         'besluitDocumenten' => $besluit->besluitDocumenten
                             ?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, $allowed))

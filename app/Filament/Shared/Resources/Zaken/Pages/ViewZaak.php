@@ -361,10 +361,13 @@ class ViewZaak extends ViewRecord
                                             }
                                             $besluittype = BesluitTypeData::from(ZgwResource::byUrl($record->zgwConnectionName(), $get('besluit_type')));
 
-                                            // dd($record->documenten);
-                                            return $record->documenten->filter(function ($document) use ($besluittype) {
-                                                return in_array($document->informatieobjecttype, $besluittype->informatieobjecttypen);
-                                            })->pluck('titel', 'url')->toArray();
+                                            // A besluitdocument always goes to the organiser, so only
+                                            // documents the organiser may see can be selected here.
+                                            return $record->documenten
+                                                ->whereIn('vertrouwelijkheidaanduiding', ZgwConnectionConfig::documentVisibilityForRole($record->zgwConnectionName(), Role::Organiser))
+                                                ->filter(function ($document) use ($besluittype) {
+                                                    return in_array($document->informatieobjecttype, $besluittype->informatieobjecttypen);
+                                                })->pluck('titel', 'url')->toArray();
 
                                         }
                                     )

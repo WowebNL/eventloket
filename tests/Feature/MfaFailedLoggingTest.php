@@ -59,7 +59,9 @@ test('credential lockout is logged after exceeding max attempts', function () {
         'role' => Role::Admin,
     ]);
 
-    $rateLimitKey = 'livewire-rate-limiter:'.sha1(Login::class.'|authenticate|127.0.0.1');
+    // The strict limiter: per account and IP. The wide IP backstop is covered
+    // by its own test in RateLimitLoggingTest.
+    $rateLimitKey = 'login-credentials:'.sha1('admin@example.com|127.0.0.1');
     $maxAttempts = config('auth.throttle.login.max_attempts', 5);
 
     for ($i = 0; $i < $maxAttempts; $i++) {
