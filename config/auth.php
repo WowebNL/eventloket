@@ -2,6 +2,27 @@
 
 use App\Models\User;
 
+/**
+ * Read a throttle value from the environment, validated.
+ *
+ * An env value always arrives as a string, and (int) turns anything unusable
+ * into 0. A maximum of 0 would lock the whole application out and a decay of 0
+ * would disable the limiter silently, so a value that is not a number falls
+ * back to the documented default rather than being clamped to the floor:
+ * clamping a typo in LOGIN_MAX_ATTEMPTS down to 1 would lock every user out
+ * after a single mistyped password. A numeric value below the floor is still
+ * clamped, because that is a deliberate setting worth honouring as far as it
+ * is safe to.
+ *
+ * Kept in sync with Login::throttleValue(), which repeats this on the call site
+ * because Config::set() and a cached config artefact both bypass this file.
+ */
+$throttle = function (string $key, int $default, int $floor): int {
+    $value = env($key, $default);
+
+    return is_numeric($value) ? max($floor, (int) $value) : $default;
+};
+
 return [
 
     /*
@@ -128,28 +149,54 @@ return [
     | 15-minute lockout after 5 failed attempts (OWASP recommendation for
     | government-facing applications).
     |
+    | Every value is validated by the $throttle helper above: a value that is
+    | not a number falls back to the default, and a numeric value below the
+    | floor is clamped. That way neither an empty nor a mistyped env value can
+    | disable the limiter or turn it into an application-wide lockout.
+    |
+    | The login limiters key on request()->ip(), and that is the real client
+    | address because nothing proxies production: TrustProxies is deliberately
+    | not configured, so a client cannot forge X-Forwarded-For to escape the
+    | counters. Putting a CDN, WAF or load balancer in front of the application
+    | changes that assumption: every request would then arrive from one address,
+    | which turns the login_ip backstop into an application-wide lockout and
+    | strips the IP component out of the strict login limiter. Configure
+    | TrustProxies first if that ever happens, and revisit these numbers.
+    |
     */
 
     'throttle' => [
+        // Strict: per account and IP. This is the limit the OWASP note above describes.
         'login' => [
-            'max_attempts' => env('LOGIN_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('LOGIN_DECAY_SECONDS', 900),
+            'max_attempts' => $throttle('LOGIN_MAX_ATTEMPTS', 5, 1),
+            'decay_seconds' => $throttle('LOGIN_DECAY_SECONDS', 900, 60),
+        ],
+        // Looser: per account across all IPs, to catch distributed spraying on one
+        // account without making it cheap to lock a known account out from anywhere.
+        'login_account' => [
+            'max_attempts' => $throttle('LOGIN_ACCOUNT_MAX_ATTEMPTS', 20, 1),
+            'decay_seconds' => $throttle('LOGIN_ACCOUNT_DECAY_SECONDS', 3600, 60),
+        ],
+        // Backstop: per IP, wide enough for a shared office outbound address.
+        'login_ip' => [
+            'max_attempts' => $throttle('LOGIN_IP_MAX_ATTEMPTS', 50, 1),
+            'decay_seconds' => $throttle('LOGIN_IP_DECAY_SECONDS', 900, 60),
         ],
         'mfa' => [
-            'max_attempts' => env('MFA_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('MFA_DECAY_SECONDS', 900),
+            'max_attempts' => $throttle('MFA_MAX_ATTEMPTS', 5, 1),
+            'decay_seconds' => $throttle('MFA_DECAY_SECONDS', 900, 60),
         ],
         'password_reset_request' => [
-            'max_attempts' => env('PASSWORD_RESET_REQUEST_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('PASSWORD_RESET_REQUEST_DECAY_SECONDS', 900),
+            'max_attempts' => $throttle('PASSWORD_RESET_REQUEST_MAX_ATTEMPTS', 5, 1),
+            'decay_seconds' => $throttle('PASSWORD_RESET_REQUEST_DECAY_SECONDS', 900, 60),
         ],
         'password_reset' => [
-            'max_attempts' => env('PASSWORD_RESET_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('PASSWORD_RESET_DECAY_SECONDS', 900),
+            'max_attempts' => $throttle('PASSWORD_RESET_MAX_ATTEMPTS', 5, 1),
+            'decay_seconds' => $throttle('PASSWORD_RESET_DECAY_SECONDS', 900, 60),
         ],
         'registration' => [
-            'max_attempts' => env('REGISTRATION_MAX_ATTEMPTS', 5),
-            'decay_seconds' => env('REGISTRATION_DECAY_SECONDS', 900),
+            'max_attempts' => $throttle('REGISTRATION_MAX_ATTEMPTS', 5, 1),
+            'decay_seconds' => $throttle('REGISTRATION_DECAY_SECONDS', 900, 60),
         ],
     ],
 
