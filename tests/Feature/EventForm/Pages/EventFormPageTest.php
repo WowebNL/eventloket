@@ -232,64 +232,93 @@ test('mount valt terug op stap 1 bij onbekende current_step_key', function () {
     expect($reflection->invoke($page))->toBe(1);
 });
 
-test('route die start+eindigt in dezelfde gemeente maar door ≥2 gemeenten gaat → eerdere gemeente-keuze wordt geleegd', function () {
-    // Bug-rapport-equivalent uit OF: de organisator had al een
-    // gemeente gekozen (Heerlen), tekent dan een route die start+eindigt
-    // in Heerlen maar door Maastricht ook loopt. Heerlen-keuze hoort
-    // dan opnieuw bevestigd te worden — anders blijft 't gebaseerd op
-    // een outdated route-state. Migreert OF-rule
-    // be547255-4a1b-4f37-96e8-919d5351e7a5.
+/**
+ * Zet een `inGemeentenResponse` in de state met de gegeven gemeenten. Bevat
+ * zowel `all.items` (voor de tellingen) als `all.object` (de map waarop
+ * `gemeenten` — en daarmee de staleness-check — draait).
+ *
+ * @param  list<array{0: string, 1: string}>  $gemeenten  [brk_identification, naam]
+ * @param  array<string, mixed>  $extra  Losse response-takken, bv. `line`.
+ */
+function seedInGemeentenResponse(EventFormPage $page, array $gemeenten, array $extra = []): void
+{
+    $items = [];
+    $object = [];
+    foreach ($gemeenten as [$brk, $naam]) {
+        $items[] = ['brk_identification' => $brk, 'name' => $naam];
+        $object[$brk] = ['brk_identification' => $brk, 'name' => $naam];
+    }
+
+    $page->state()->setVariable('inGemeentenResponse', array_merge([
+        'all' => ['items' => $items, 'object' => $object],
+    ], $extra));
+}
+
+test('route verlegd waardoor de gekozen gemeente wegvalt → keuze wordt geleegd', function () {
+    // De organisator had Heerlen gekozen en verlegt daarna z'n route zo dat
+    // Heerlen er niet meer bij zit. De keuze wijst dan naar een gemeente die
+    // niet meer in de radio-opties staat en moet opnieuw gemaakt worden;
+    // zonder reset levert `evenementInGemeente` null op en blokkeert de gate
+    // met de misleidende melding "Gemeente niet bepaald".
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
 
-    // Seed inGemeentenResponse via setVariable (state-level — niet door
-    // Filament's form gerouteerd). userSelectGemeente moet in `$data`
-    // staan want updated() doet absorbFields($data) als eerste actie.
-    $page->state()->setVariable('inGemeentenResponse', [
-        'all' => ['items' => [
-            ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
-            ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-        ]],
-        'line' => ['start_end_equal' => true],
+    // Seed via setVariable (state-level — niet door Filament's form
+    // gerouteerd). userSelectGemeente moet in `$data` staan want updated()
+    // doet absorbFields($data) als eerste actie.
+    seedInGemeentenResponse($page, [
+        ['GM0935', 'Maastricht'],
+        ['GM1883', 'Eijsden-Margraten'],
     ]);
-    $page->data['userSelectGemeente'] = 'GM0917';
+    $page->data['userSelectGemeente'] = 'GM0917'; // Heerlen, niet meer geraakt
 
-    $page->updated('data.locatieSOpKaart');
+    $page->updated('data.routesOpKaart');
 
     expect($page->state()->get('userSelectGemeente'))->toBe('')
         ->and($page->data['userSelectGemeente'])->toBe('');
 });
 
-test('zonder ≥2 gemeenten of zonder eerdere keuze → geen reset', function () {
-    // Conditie 1: maar 1 gemeente in de response → niets te resetten
+test('keuze die nog tussen de gevonden gemeenten zit blijft staan, ook bij een rondroute', function () {
+    // Rondroute: start en eind in Heerlen, onderweg door Maastricht. Precies
+    // de vorm waarop de gemigreerde OF-rule be547255 de keuze wiste bij élke
+    // gate-pass, wat een oneindige lus opleverde met "Kies een gemeente".
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     /** @var EventFormPage $page */
     $page = $component->instance();
 
-    $page->state()->setVariable('inGemeentenResponse', [
-        'all' => ['items' => [['brk_identification' => 'GM0917', 'name' => 'Heerlen']]],
-        'line' => ['start_end_equal' => true],
-    ]);
+    seedInGemeentenResponse($page, [
+        ['GM0917', 'Heerlen'],
+        ['GM0935', 'Maastricht'],
+    ], ['line' => ['start_end_equal' => true]]);
     $page->data['userSelectGemeente'] = 'GM0917';
 
-    $page->updated('data.locatieSOpKaart');
+    $page->updated('data.routesOpKaart');
 
     expect($page->state()->get('userSelectGemeente'))->toBe('GM0917');
 
-    // Conditie 2: ≥2 gemeenten maar route start≠eind → keuze blijft
-    $page->state()->setVariable('inGemeentenResponse', [
-        'all' => ['items' => [
-            ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
-            ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
-        ]],
-        'line' => ['start_end_equal' => false],
-    ]);
+    // Idempotent: nog een ronde verandert er niets aan. Een niet-idempotente
+    // reset is precies wat de lus veroorzaakte.
+    $page->updated('data.routesOpKaart');
+
+    expect($page->state()->get('userSelectGemeente'))->toBe('GM0917')
+        ->and($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0917');
+});
+
+test('nog geen location-check gedaan → keuze blijft ongemoeid', function () {
+    // Zonder `gemeenten`-map is er niets om de keuze tegen af te zetten;
+    // hem dan wissen zou een uit een concept geladen keuze weggooien voordat
+    // de eerste check gedraaid heeft.
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
     $page->data['userSelectGemeente'] = 'GM0917';
 
-    $page->updated('data.locatieSOpKaart');
+    $page->updated('data.routesOpKaart');
 
     expect($page->state()->get('userSelectGemeente'))->toBe('GM0917');
 });
@@ -457,6 +486,64 @@ test('gate: een getekend vlak bepaalt de gemeente autoritatief (kaart blijft wer
     locatieGateCallback()($page);
 
     expect($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0999');
+});
+
+test('gate: rondroute door 2 gemeenten laat een gemaakte keuze staan (geen "Kies een gemeente"-lus)', function () {
+    // Bug-rapport: een route die in gemeente A start, door B loopt en weer in
+    // A eindigt. De organisator koos een gemeente, klikte Volgende, kreeg
+    // "Kies een gemeente" en zag z'n keuze leeg — elke ronde opnieuw. De gate
+    // riep een niet-idempotente reset aan die de keuze bij iedere pass wiste.
+    Municipality::factory()->create([
+        'brk_identification' => 'GM_A',
+        'name' => 'Gemeente A',
+        'geometry' => '{"type":"MultiPolygon","coordinates":[[[[-1,-1],[0,-1],[0,1],[-1,1],[-1,-1]]]]}',
+    ]);
+    Municipality::factory()->create([
+        'brk_identification' => 'GM_B',
+        'name' => 'Gemeente B',
+        'geometry' => '{"type":"MultiPolygon","coordinates":[[[[0.01,-1],[2,-1],[2,1],[0.01,1],[0.01,-1]]]]}',
+    ]);
+
+    /** @var EventFormPage $page */
+    $page = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id])->instance();
+    $page->data['routesOpKaart'] = [
+        'row-1' => [
+            'routeVanHetEvenement' => [
+                'lat' => 0.0, 'lng' => 0.0,
+                'geojson' => [
+                    'type' => 'FeatureCollection',
+                    'features' => [[
+                        'type' => 'Feature',
+                        'properties' => new stdClass,
+                        'geometry' => [
+                            'type' => 'LineString',
+                            // Start (-0.5, 0) en eind (-0.4, 0.1) liggen beide
+                            // in A, de knik op (1, 0) ligt in B.
+                            'coordinates' => [[-0.5, 0.0], [1.0, 0.0], [-0.4, 0.1]],
+                        ],
+                    ]],
+                ],
+            ],
+        ],
+    ];
+
+    // Nog geen keuze bij 2 gemeenten → terecht blokkeren.
+    expect(fn () => locatieGateCallback()($page))->toThrow(Halt::class);
+    expect($page->state()->get('inGemeentenResponse.line.start_end_equal'))->toBeTrue()
+        ->and($page->state()->get('inGemeentenResponse.all.items'))->toHaveCount(2);
+
+    // Keuze gemaakt → de gate hoort door te laten en de keuze te bewaren.
+    $page->data['userSelectGemeente'] = 'GM_A';
+    locatieGateCallback()($page);
+
+    expect($page->data['userSelectGemeente'])->toBe('GM_A')
+        ->and($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM_A');
+
+    // Nog een pass (de organisator klikt Vorige en weer Volgende) mag de
+    // keuze evenmin wissen.
+    locatieGateCallback()($page);
+
+    expect($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM_A');
 });
 
 test('mount clears the "Mijn omgeving" placeholder left in an old draft of a personal organisation', function () {

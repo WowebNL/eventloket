@@ -574,32 +574,52 @@ class EventFormPage extends Page implements HasForms
 
     /**
      * Cleart `userSelectGemeente` wanneer de zojuist berekende gemeente-
-     * intersectie de eerdere keuze van de organisator twijfelachtig
-     * maakt: route start+eindigt in dezelfde gemeente, terwijl 'ie wel
-     * door ≥2 gemeenten gaat. In zo'n geval moet de keuze opnieuw
-     * gemaakt worden — anders blijft een stale brk_identification de
-     * `evenementInGemeente`-derivation aansturen.
+     * intersectie de eerdere keuze van de organisator ongeldig maakt: de
+     * gekozen gemeente zit niet langer tussen de gevonden gemeenten. Dat
+     * gebeurt wanneer de organisator z'n route of locatie zo verlegt dat
+     * die gemeente er niet meer bij is. Zonder deze reset zou een stale
+     * brk_identification de `evenementInGemeente`-derivation blijven
+     * aansturen; die levert dan `null` op en de gate blokkeert met de
+     * misleidende melding "Gemeente niet bepaald" i.p.v. om een nieuwe
+     * keuze te vragen.
      *
-     * Migreert OF-rule `be547255-4a1b-4f37-96e8-919d5351e7a5`
-     * (AlsIsGelijkAanTrueEnReductieVanEvenemen). OF gebruikte
-     * `userSelectGemeente11` als trigger-marker (interne duplicate-key-
-     * suffix); wij hebben alleen één veld, dus checken we dat direct.
+     * Bewust idempotent: een keuze die nog in de gevonden set zit blijft
+     * staan, hoe vaak deze check ook draait. De gate (`runLocationGate()`)
+     * roept 'm aan bij élke Volgende-klik, dus een niet-idempotente reset
+     * betekent een oneindige lus tussen "keuze gewist" en "kies een
+     * gemeente".
+     *
+     * Wijkt bewust af van OF-rule `be547255-4a1b-4f37-96e8-919d5351e7a5`
+     * (AlsIsGelijkAanTrueEnReductieVanEvenemen), die wiste zodra een route
+     * in dezelfde gemeente start en eindigt terwijl 'ie door ≥2 gemeenten
+     * gaat. Die regel heeft in OF nooit gevuurd: z'n trigger vergeleek
+     * `inGemeentenResponse.line.start_end_equal` (bool) met de string
+     * `"True"` en eiste daarnaast `userSelectGemeente11`, een veld dat in
+     * de hele OF-export niet als component of variabele bestaat. Letterlijk
+     * overnemen maakte er live logica van die precies de meest voorkomende
+     * routevorm (rondje dat net over een gemeentegrens komt) onindienbaar
+     * maakte.
      */
     private function resetStaleGemeenteKeuze(): void
     {
-        $startEndEqual = $this->state->get('inGemeentenResponse.line.start_end_equal');
-        if ($startEndEqual !== true) {
-            return;
-        }
-
-        $namen = $this->state->get('evenementInGemeentenNamen');
-        if (! is_array($namen) || count($namen) < 2) {
-            return;
-        }
-
         $pick = $this->state->get('userSelectGemeente');
         if (! is_string($pick) || $pick === '') {
             return;
+        }
+
+        // `gemeenten` is `inGemeentenResponse.all.object`: de gevonden
+        // gemeenten gekeyed op brk_identification, exact de optie-keys van
+        // de keuze-radio.
+        $gemeenten = $this->state->get('gemeenten');
+        if (! is_array($gemeenten) || $gemeenten === []) {
+            // Nog geen (geslaagde) location-check, dus niets om de keuze
+            // tegen af te zetten. Laten staan; de gate blokkeert alsnog
+            // wanneer er geen gemeente bepaald kan worden.
+            return;
+        }
+
+        if (array_key_exists($pick, $gemeenten)) {
+            return; // keuze is nog steeds geldig
         }
 
         $this->state->setVariable('userSelectGemeente', '');
