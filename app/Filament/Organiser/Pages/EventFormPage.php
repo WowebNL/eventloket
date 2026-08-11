@@ -575,17 +575,32 @@ class EventFormPage extends Page implements HasForms
 
     /**
      * Cleart `userSelectGemeente` wanneer de zojuist berekende gemeente-
-     * intersectie de eerdere keuze van de organisator ongeldig of
-     * twijfelachtig maakt. Twee gevallen:
+     * intersectie de eerdere keuze van de organisator ongeldig maakt: de
+     * gekozen gemeente zit niet langer tussen de gevonden gemeenten. Dat
+     * gebeurt wanneer de organisator z'n route of locatie zo verlegt dat
+     * die gemeente er niet meer bij is, en bij "Nieuwe aanvraag met deze
+     * gegevens" waarbij de keuze van de bron-aanvraag nog in de state stond.
+     * Zonder deze reset zou een stale brk_identification de
+     * `evenementInGemeente`-derivation blijven aansturen; die levert dan
+     * `null` op en de gate blokkeert met de misleidende melding "Gemeente
+     * niet bepaald" i.p.v. om een nieuwe keuze te vragen.
      *
-     *   1. De keuze komt niet meer voor in de gevonden gemeenten. Dat gebeurt
-     *      wanneer de locatie is gewijzigd, en bij "Nieuwe aanvraag met deze
-     *      gegevens" waarbij de keuze van de bron-aanvraag nog in de state
-     *      stond. Zonder wissen blijft de radio zichtbaar op een gemeente die
-     *      niets met de huidige locatie te maken heeft.
-     *   2. Route start+eindigt in dezelfde gemeente, terwijl 'ie wel door ≥2
-     *      gemeenten gaat. Dan moet de keuze opnieuw gemaakt worden.
-     *      (Migreert OF-rule `be547255-4a1b-4f37-96e8-919d5351e7a5`.)
+     * Bewust idempotent: een keuze die nog in de gevonden set zit blijft
+     * staan, hoe vaak deze check ook draait. De gate (`runLocationGate()`)
+     * roept 'm aan bij élke Volgende-klik, dus een niet-idempotente reset
+     * betekent een oneindige lus tussen "keuze gewist" en "kies een
+     * gemeente".
+     *
+     * Wijkt bewust af van OF-rule `be547255-4a1b-4f37-96e8-919d5351e7a5`
+     * (AlsIsGelijkAanTrueEnReductieVanEvenemen), die wiste zodra een route
+     * in dezelfde gemeente start en eindigt terwijl 'ie door ≥2 gemeenten
+     * gaat. Die regel heeft in OF nooit gevuurd: z'n trigger vergeleek
+     * `inGemeentenResponse.line.start_end_equal` (bool) met de string
+     * `"True"` en eiste daarnaast `userSelectGemeente11`, een veld dat in
+     * de hele OF-export niet als component of variabele bestaat. Letterlijk
+     * overnemen maakte er live logica van die precies de meest voorkomende
+     * routevorm (rondje dat net over een gemeentegrens komt) onindienbaar
+     * maakte.
      */
     private function resetStaleGemeenteKeuze(): void
     {
@@ -594,38 +609,25 @@ class EventFormPage extends Page implements HasForms
             return;
         }
 
-        if (! $this->gemeenteKeuzeIsGeldig($pick) || $this->routeStartEnEindigtInDezelfdeGemeente()) {
-            $this->state->setVariable('userSelectGemeente', '');
-            if (is_array($this->data)) {
-                $this->data['userSelectGemeente'] = '';
-            }
-        }
-    }
-
-    /**
-     * Of de gekozen brk_identification voorkomt in de gemeenten die voor de
-     * huidige locatie zijn gevonden. Zonder gemeenten-map (nog geen
-     * locatie-check gedraaid) blijft de keuze staan.
-     */
-    private function gemeenteKeuzeIsGeldig(string $pick): bool
-    {
-        $gemeenten = $this->state->get('inGemeentenResponse.all.object');
+        // `gemeenten` is `inGemeentenResponse.all.object`: de gevonden
+        // gemeenten gekeyed op brk_identification, exact de optie-keys van
+        // de keuze-radio.
+        $gemeenten = $this->state->get('gemeenten');
         if (! is_array($gemeenten) || $gemeenten === []) {
-            return true;
+            // Nog geen (geslaagde) location-check, dus niets om de keuze
+            // tegen af te zetten. Laten staan; de gate blokkeert alsnog
+            // wanneer er geen gemeente bepaald kan worden.
+            return;
         }
 
-        return array_key_exists($pick, $gemeenten);
-    }
-
-    private function routeStartEnEindigtInDezelfdeGemeente(): bool
-    {
-        if ($this->state->get('inGemeentenResponse.line.start_end_equal') !== true) {
-            return false;
+        if (array_key_exists($pick, $gemeenten)) {
+            return; // keuze is nog steeds geldig
         }
 
-        $namen = $this->state->get('evenementInGemeentenNamen');
-
-        return is_array($namen) && count($namen) >= 2;
+        $this->state->setVariable('userSelectGemeente', '');
+        if (is_array($this->data)) {
+            $this->data['userSelectGemeente'] = '';
+        }
     }
 
     /**

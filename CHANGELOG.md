@@ -6,6 +6,7 @@
 
 #### 🐛 Bug Fixes
 
+* Stop besluitdocumenten from leaking metadata to the organiser (#472) @Michel-Verhoeven
 * fix: correct typo in Type aanvraag radio option label (#471) @Michel-Verhoeven
 * Let coordinators choose who may view an uploaded document (#470) @Michel-Verhoeven
 
