@@ -133,6 +133,15 @@ return [
     | to 0. A decay of 0 would disable the limiter silently, and a maximum of 0
     | would lock everyone out, so both are clamped towards the strict side.
     |
+    | The login limiters key on request()->ip(), and that is the real client
+    | address because nothing proxies production: TrustProxies is deliberately
+    | not configured, so a client cannot forge X-Forwarded-For to escape the
+    | counters. Putting a CDN, WAF or load balancer in front of the application
+    | changes that assumption: every request would then arrive from one address,
+    | which turns the login_ip backstop into an application-wide lockout and
+    | strips the IP component out of the strict login limiter. Configure
+    | TrustProxies first if that ever happens, and revisit these numbers.
+    |
     */
 
     'throttle' => [
