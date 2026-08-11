@@ -374,8 +374,45 @@ test('a successful login clears the account counters but not the IP backstop', f
 });
 
 test('a reused multi-factor step still counts towards the limiters', function () {
-    //
-})->skip('Handmatig uit te werken, zie plan sectie 9 test 7');
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    $secret = app(Google2FA::class)->generateSecretKey(16);
+
+    $attacker = User::factory()->create([
+        'email' => 'attacker@example.com',
+        'password' => 'password',
+        'role' => Role::Admin,
+        'app_authentication_secret' => $secret,
+    ]);
+
+    // Step one with their own valid credentials leaves the multi-factor flag set
+    // on the component. A Livewire snapshot is a plain HMAC over the state with
+    // no nonce or expiry, so that snapshot can be replayed indefinitely.
+    $component = livewire(Login::class)
+        ->fillForm(['email' => $attacker->email, 'password' => 'password', 'remember' => false])
+        ->call('authenticate');
+
+    expect(Filament::auth()->check())->toBeFalse()
+        ->and($component->instance()->userUndertakingMultiFactorAuthentication)->not->toBeNull();
+
+    // Same component state, now guessing somebody else's password. Holding on to
+    // the component instance is what a replayed snapshot amounts to.
+    $component
+        ->set('data', [
+            'email' => 'victim@example.com',
+            'password' => 'wrong-password',
+            'remember' => false,
+        ])
+        ->call('authenticate');
+
+    // The credential check fails before the multi-factor branch is ever reached,
+    // so this must cost budget on all three counters. Skipping them here would
+    // hand out an unlimited password oracle.
+    expect(Filament::auth()->check())->toBeFalse()
+        ->and(RateLimiter::attempts('login-credentials:'.sha1('victim@example.com|127.0.0.1')))->toBe(1)
+        ->and(RateLimiter::attempts('login-account:'.sha1('victim@example.com')))->toBe(1)
+        ->and(RateLimiter::attempts('livewire-rate-limiter:'.sha1(Login::class.'|authenticate|127.0.0.1')))->toBe(1);
+});
 
 test('the IP backstop fires across many different accounts', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
@@ -403,8 +440,37 @@ test('the IP backstop fires across many different accounts', function () {
 });
 
 test('the account counter fires across multiple IP addresses', function () {
-    //
-})->skip('Handmatig uit te werken, zie plan sectie 9 test 9');
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    Config::set('auth.throttle.login_account.max_attempts', 3);
+
+    $email = 'admin@example.com';
+    $strictKey = 'login-credentials:'.sha1($email.'|127.0.0.1');
+    $accountKey = 'login-account:'.sha1($email);
+
+    // The account key deliberately carries no IP component, so failures from
+    // other addresses land in this same bucket. The Livewire test harness builds
+    // a fresh request per call and pins REMOTE_ADDR to 127.0.0.1, so those other
+    // addresses are seeded here instead of driven through the component.
+    for ($i = 0; $i < 3; $i++) {
+        RateLimiter::hit($accountKey);
+    }
+
+    livewire(Login::class)
+        ->fillForm(['email' => $email, 'password' => 'wrong-password', 'remember' => false])
+        ->call('authenticate');
+
+    $activity = Activity::where('log_name', 'auth')
+        ->where('event', 'lockout')
+        ->first();
+
+    // This IP has not failed once, so only the account counter can be the reason.
+    expect(RateLimiter::attempts($strictKey))->toBe(0)
+        ->and($activity)->not->toBeNull()
+        ->and($activity->properties->get('type'))->toBe('credentials_account')
+        ->and($activity->properties->get('email'))->toBe($email)
+        ->and($activity->properties->get('available_in_seconds'))->toBeGreaterThan(0);
+});
 
 test('nonsensical throttle configuration does not disable the login limiter', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
