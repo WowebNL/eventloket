@@ -143,6 +143,13 @@ test('a besluit without any send or publication date is hidden', function () {
 test('besluitdocumenten are filtered to what the role may see', function () {
     // The filter used to build a new value object and throw it away, so nothing
     // was actually filtered.
+
+    // besluiten() skips the role filter in console context (queue and console
+    // have no authenticated user), and the test suite runs through the CLI.
+    // Flip the memoized flag so this test exercises the web-request path it is
+    // about, the same way BesluitDocumentVisibilityTest does.
+    (new ReflectionProperty($this->app, 'isRunningInConsole'))->setValue($this->app, false);
+
     $zaakUrl = ZgwHttpFake::fakeSingleZaak();
     $besluitUrl = ZgwHttpFake::$baseUrl.'/besluiten/api/v1/besluiten/1';
     $besluittypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/besluittypen/1';
