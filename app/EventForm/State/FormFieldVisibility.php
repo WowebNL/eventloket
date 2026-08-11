@@ -465,9 +465,18 @@ final class FormFieldVisibility
      * `evenementInGemeente` is óf `null` óf een array, beide nooit gelijk
      * aan een lege string. Daardoor stond de tekst er altijd, óók zonder
      * bekende gemeente — met een lege gemeentenaam erachter.
+     *
+     * Wijkt bij een route door meerdere gemeenten voor de uitgebreidere
+     * `contentRouteDoorkuistMeerdereGemeenteInfo`, die dezelfde gemeente
+     * noemt plus vertelt dat de overige gemeenten geïnformeerd worden.
+     * Beide tonen zou hetzelfde twee keer zeggen.
      */
     public function content200(): ?bool
     {
+        if ($this->contentRouteDoorkuistMeerdereGemeenteInfo() === false) {
+            return null; // door-fall: de route-variant neemt 't over
+        }
+
         $gemeente = $this->state->get('evenementInGemeente');
         if (is_array($gemeente) && ! empty($gemeente['brk_identification'])) {
             return false; // show
@@ -552,13 +561,31 @@ final class FormFieldVisibility
     }
 
     /**
-     * `contentRouteDoorkuistMeerdereGemeenteInfo`-veld zichtbaarheid.
-     *  - OF-rule 3247522b-8603-4c7c-ae8d-b92a75fb35d6 → show wanneer: JsTruthy::of($s->get('routeDoorGemeentenNamen')) && ((is_array($s->get('routeDoorGemeentenNamen')) ? count($s->get('routeDoorGemeentenNamen')) : 0) >= 2) && JsTruthy::of($s->get('userSelectGemeente11'))
+     * `contentRouteDoorkuistMeerdereGemeenteInfo`-veld zichtbaarheid — "de
+     * route doorkruist gemeente X en Y, u vult dit formulier in voor
+     * gemeente X, de overige gemeenten worden automatisch geïnformeerd".
+     *
+     * Wijkt bewust af van OF-rule 3247522b-8603-4c7c-ae8d-b92a75fb35d6, die
+     * naast ≥2 doorkruiste gemeenten ook `userSelectGemeente11` truthy
+     * eiste. Dat veld bestaat in de hele OF-export niet als component of
+     * variabele, waardoor de trigger nooit waar werd en deze tekst in OF
+     * permanent onzichtbaar was. Bij de migratie is die conditie 1-op-1
+     * meegekomen, met hetzelfde resultaat.
+     *
+     * De bedoelde conditie is: er is een route door ≥2 gemeenten én er is
+     * een gemeente bepaald (de tekst noemt die gemeente bij naam, dus
+     * zonder is 'ie zinloos).
      */
     public function contentRouteDoorkuistMeerdereGemeenteInfo(): ?bool
     {
         $s = $this->state;
-        if ((JsTruthy::of($s->get('routeDoorGemeentenNamen')) && ((is_array($s->get('routeDoorGemeentenNamen')) ? count($s->get('routeDoorGemeentenNamen')) : 0) >= 2) && JsTruthy::of($s->get('userSelectGemeente11')))) {
+        $namen = $s->get('routeDoorGemeentenNamen');
+        if (! is_array($namen) || count($namen) < 2) {
+            return null; // door-fall: default visibility uit step-file
+        }
+
+        $gemeente = $s->get('evenementInGemeente');
+        if (is_array($gemeente) && ! empty($gemeente['brk_identification'])) {
             return false; // show
         }
 
