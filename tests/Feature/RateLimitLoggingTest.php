@@ -476,9 +476,9 @@ test('nonsensical throttle configuration does not disable the login limiter', fu
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
     // A string decay value used to blow up inside Carbon, and a value casting to
-    // zero would silently switch the limiter off. Both are clamped on the call
-    // site, because Config::set() bypasses the clamp in config/auth.php exactly
-    // like a cached config artefact would.
+    // zero would silently switch the limiter off. Both are handled on the call
+    // site, because Config::set() bypasses the validation in config/auth.php
+    // exactly like a cached config artefact would.
     foreach (['900', '', 'abc'] as $index => $decaySeconds) {
         Config::set('auth.throttle.login.decay_seconds', $decaySeconds);
 
@@ -499,6 +499,39 @@ test('nonsensical throttle configuration does not disable the login limiter', fu
         expect($activity)->not->toBeNull()
             ->and($activity->properties->get('available_in_seconds'))->toBeGreaterThan(0);
     }
+});
+
+test('a non numeric throttle maximum falls back to the default instead of the floor', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    // (int) '' is 0. Clamping that to the floor of 1 would lock every user in
+    // the application out after a single mistyped password, so an unusable
+    // value has to fall back to the documented default of 5 instead.
+    Config::set('auth.throttle.login.max_attempts', '');
+
+    $email = 'admin@example.com';
+
+    for ($i = 0; $i < 5; $i++) {
+        livewire(Login::class)
+            ->fillForm(['email' => $email, 'password' => 'wrong-password', 'remember' => false])
+            ->call('authenticate');
+    }
+
+    expect(Activity::where('log_name', 'auth')->where('event', 'lockout')->exists())->toBeFalse();
+
+    // The default still has to be a working limit, not an absent one.
+    livewire(Login::class)
+        ->fillForm(['email' => $email, 'password' => 'wrong-password', 'remember' => false])
+        ->call('authenticate');
+
+    $activity = Activity::where('log_name', 'auth')
+        ->where('event', 'lockout')
+        ->where('properties->type', 'credentials')
+        ->first();
+
+    expect($activity)->not->toBeNull()
+        ->and($activity->properties->get('email'))->toBe($email)
+        ->and($activity->properties->get('available_in_seconds'))->toBeGreaterThan(0);
 });
 
 test('normal password reset request does not create a lockout log', function () {

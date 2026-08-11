@@ -191,15 +191,24 @@ class Login extends \Filament\Auth\Pages\Login
     }
 
     /**
-     * Read a throttle value, cast and clamped.
+     * Read a throttle value, validated.
      *
      * config/auth.php already does this, but Config::set() and a cached config
      * artefact both bypass that computation. A string decay value blows up deep
      * inside Carbon, and a zero decay silently disables the limiter altogether.
+     *
+     * A value that is not a number falls back to the default instead of being
+     * clamped to the floor. Clamping is the right move for a decay that is set
+     * too low, but for a maximum it fails the wrong way: (int) '' is 0, and
+     * clamping that to 1 would lock every user in the application out after a
+     * single mistyped password. Kept in sync with the $throttle helper in
+     * config/auth.php.
      */
     protected function throttleValue(string $key, int $default, int $floor): int
     {
-        return max($floor, (int) config($key, $default));
+        $value = config($key, $default);
+
+        return is_numeric($value) ? max($floor, (int) $value) : $default;
     }
 
     protected function isMultiFactorChallengeRateLimited(Authenticatable $user): bool
