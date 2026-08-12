@@ -4,8 +4,10 @@ use App\Enums\ZaaktypeRole;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
+use App\Models\Organisation;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -323,6 +325,42 @@ test('skips the initiator when the form has no aanvrager data', function () {
     expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
     Http::assertNotSent(fn ($request) => $request->method() === 'POST'
         && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen'));
+});
+
+test('takes the organisator from the aanvraag, not from the (empty) ZGW rol of the hoofdzaak', function () {
+    // The hoofdzaak read returns no rollen at all, which is what an instance
+    // that does not expose betrokkeneIdentificatie (OneGround/RX Mission) comes
+    // down to. The deelzaak must still show the organisator of the aanvraag.
+    fakeDoorkomstZgw();
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    $referenceData = $scenario['hoofdzaak']->reference_data;
+    $scenario['hoofdzaak']->update([
+        'reference_data' => new ZaakReferenceData(
+            ...array_merge($referenceData->toArray(), ['organisator' => 'Stichting Zomerfeest'])
+        ),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+    expect($deel->reference_data->organisator)->toBe('Stichting Zomerfeest');
+});
+
+test('falls back to the organisation of the hoofdzaak when its reference data has no organisator', function () {
+    fakeDoorkomstZgw();
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    // The factory leaves organisator empty (older zaken predate the field).
+    $organisation = Organisation::factory()->create(['name' => 'Woweb']);
+    $scenario['hoofdzaak']->update(['organisation_id' => $organisation->id]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+    expect($deel->reference_data->organisator)->toBe('Woweb');
 });
 
 test('does not create a doorkomst zaak when the passing gemeente has no doorkomst zaaktype', function () {

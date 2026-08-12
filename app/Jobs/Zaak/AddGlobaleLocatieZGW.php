@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Jobs\Zaak;
 
+use App\EventForm\State\FormState;
+use App\EventForm\Submit\EventAddressFormatter;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionConfig;
@@ -13,9 +15,14 @@ use Illuminate\Foundation\Queue\Queueable;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
- * Registers the event's location names as a zaakobject of type "overige" with
- * objectTypeOverige "GlobaleLocatie". The value is the composed location-names
- * string already present on the zaak's reference data (locaties_evenement).
+ * Registers the event's location as a zaakobject of type "overige" with
+ * objectTypeOverige "GlobaleLocatie".
+ *
+ * The value is the BAG address of the event when the aanvraag has one, because
+ * an address tells a behandelaar more than a self-chosen location name; every
+ * address of the aanvraag is included, comma separated. Only when there is no
+ * BAG address (an outdoor event or a route) does it fall back to the composed
+ * location names on the zaak's reference data (locaties_evenement).
  *
  * This applies to every connection, including our own OpenZaak (main).
  */
@@ -31,8 +38,8 @@ class AddGlobaleLocatieZGW implements ShouldQueue
             return;
         }
 
-        $locaties = $this->zaak->reference_data->locaties_evenement;
-        if (! is_string($locaties) || $locaties === '') {
+        $locaties = $this->globaleLocatie();
+        if ($locaties === null) {
             return;
         }
 
@@ -57,5 +64,22 @@ class AddGlobaleLocatieZGW implements ShouldQueue
                     : ['naam' => $locaties],
             ],
         ]);
+    }
+
+    /**
+     * The BAG address(es) from the submitted form, with the composed location
+     * names as fallback. Null when the aanvraag carries neither.
+     */
+    private function globaleLocatie(): ?string
+    {
+        $state = FormState::fromSnapshot($this->zaak->form_state_snapshot ?? []);
+        $adressen = EventAddressFormatter::fromState($state);
+        if ($adressen !== null) {
+            return $adressen;
+        }
+
+        $namen = $this->zaak->reference_data->locaties_evenement;
+
+        return is_string($namen) && $namen !== '' ? $namen : null;
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Zgw;
 
 use App\EventForm\State\FormState;
+use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use Illuminate\Support\Arr;
@@ -41,8 +42,28 @@ final class InitiatorRolBuilder
         }
 
         return isset($initiator['kvk']) && $initiator['kvk']
-            ? self::nietNatuurlijkPersoon($zaakUrl, $roltype, $initiator)
+            ? self::nietNatuurlijkPersoon($zaakUrl, $roltype, $initiator, self::kvkNummer($initiator['kvk']))
             : self::natuurlijkPersoon($zaakUrl, $roltype, $state, $initiator, $anpIdentificatie);
+    }
+
+    /**
+     * The KvK number as it may be sent to ZGW, or null when the snapshot no
+     * longer holds the plain value.
+     *
+     * The submit chain hashes the KvK number only after the doorkomst zaken are
+     * created, so in that run the number is still readable. A rerun of a single
+     * job (a retry, or `zaak:create-doorkomst-zaken` on an existing zaak) reads
+     * the already-hashed snapshot, and writing that hash to ZGW as if it were a
+     * KvK number would put a bogus company number on the zaak. The rol is then
+     * registered on the statutaireNaam alone.
+     */
+    private static function kvkNummer(mixed $kvk): ?string
+    {
+        if (! is_string($kvk) || str_starts_with($kvk, HashIdentifyingAttributes::HASH_PREFIX)) {
+            return null;
+        }
+
+        return $kvk;
     }
 
     /**
@@ -60,7 +81,7 @@ final class InitiatorRolBuilder
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>
      */
-    private static function nietNatuurlijkPersoon(string $zaakUrl, string $roltype, array $initiator): array
+    private static function nietNatuurlijkPersoon(string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer): array
     {
         return [
             'zaak' => $zaakUrl,
@@ -74,7 +95,7 @@ final class InitiatorRolBuilder
             // the canonical identifier.
             'betrokkeneIdentificatie' => array_filter([
                 'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
-                'kvkNummer' => $initiator['kvk'],
+                'kvkNummer' => $kvkNummer,
             ]),
         ];
     }
