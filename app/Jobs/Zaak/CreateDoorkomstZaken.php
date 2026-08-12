@@ -210,7 +210,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             $newZaakUrl.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen'
         ));
 
-        $organisator = $this->resolveOrganisatorLabel($hoofdZaak);
+        $organisator = $this->resolveOrganisatorLabel();
 
         Zaak::updateOrCreate(
             ['zgw_zaak_url' => $newZaakUrl],
@@ -241,27 +241,29 @@ class CreateDoorkomstZaken implements ShouldQueue
         );
     }
 
-    private function resolveOrganisatorLabel(ZaakReadModel $ozZaak): string
+    /**
+     * The organisator label for the deelzaak, taken from the submitted aanvraag
+     * by way of the local hoofdzaak. It is deliberately not derived from the
+     * hoofdzaak ZGW rol: that rol's betrokkeneIdentificatie comes back empty on
+     * instances that do not expose it (OneGround/RX Mission), which left the
+     * organisator column and the export empty on every doorkomst zaak.
+     *
+     * The fallback mirrors MapFormStateToReferenceData::organisator() for
+     * hoofdzaken whose reference_data predates that field.
+     */
+    private function resolveOrganisatorLabel(): string
     {
-        $initiator = $ozZaak->initiator;
-        if (! $initiator) {
-            return '';
+        $organisator = $this->zaak->reference_data->organisator;
+        if (is_string($organisator) && $organisator !== '') {
+            return $organisator;
         }
 
-        $type = $initiator['betrokkeneType'] ?? null;
-        $id = $initiator['betrokkeneIdentificatie'] ?? [];
-
-        if ($type === 'natuurlijk_persoon') {
-            return trim(($id['voornamen'] ?? '').' '.($id['geslachtsnaam'] ?? ''));
+        $organisation = $this->zaak->organisation;
+        if ($organisation && ! $organisation->isPersonal()) {
+            return (string) $organisation->name;
         }
 
-        if ($type === 'niet_natuurlijk_persoon') {
-            $contactNaam = $initiator['contactpersoonRol']['naam'] ?? '';
-
-            return trim(($id['statutaireNaam'] ?? '').' - '.$contactNaam);
-        }
-
-        return '';
+        return (string) ($this->zaak->organiserUser?->name);
     }
 
     private function copyZaakeigenschappen(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void

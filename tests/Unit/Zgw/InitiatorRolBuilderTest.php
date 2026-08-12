@@ -21,6 +21,22 @@ test('builds a niet_natuurlijk_persoon rol from a KvK initiator', function () {
         ->and($rol['contactpersoonRol'])->toBe(['naam' => 'Organisator Test']);
 });
 
+test('omits an already hashed KvK number and keeps the organisation rol', function () {
+    // A rerun on a snapshot whose KvK was hashed (a job retry, or
+    // zaak:create-doorkomst-zaken on an existing zaak) must not send the hash to
+    // ZGW as if it were a KvK number.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => 'hash:9f3c1d2e',
+        'organisatie_naam' => 'Woweb',
+    ]);
+
+    expect($rol['betrokkeneType'])->toBe('niet_natuurlijk_persoon')
+        ->and($rol['betrokkeneIdentificatie']['statutaireNaam'])->toBe('Woweb')
+        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('kvkNummer');
+});
+
 test('builds a natuurlijk_persoon rol with anpIdentificatie, display name and verblijfsadres', function () {
     $state = FormState::fromSnapshot(['values' => [
         'watIsUwVoornaam' => 'Jan',
