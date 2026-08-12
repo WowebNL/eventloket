@@ -19,6 +19,21 @@ use App\Models\User;
  */
 class ServiceFetcher
 {
+    /**
+     * De state-variabelen die deze fetcher schrijft. Ze horen bij de server:
+     * ze worden berekend uit de ingevulde velden en mogen nooit vanuit de
+     * Livewire-`$data` terug de state in komen. `EventFormPage` filtert ze
+     * er in `withoutServerOwnedState()` op basis van deze lijst uit.
+     *
+     * @var list<string>
+     */
+    public const FETCHED_VARIABLES = [
+        'eventloketSession',
+        'gemeenteVariabelen',
+        'evenementenInDeGemeente',
+        'inGemeentenResponse',
+    ];
+
     public function __construct(
         private readonly LocationServerCheckService $locationService,
         private readonly MunicipalityVariablesService $municipalityService,
