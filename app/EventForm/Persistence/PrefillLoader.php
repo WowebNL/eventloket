@@ -125,6 +125,27 @@ class PrefillLoader
     }
 
     /**
+     * Location-dependent state from the source zaak. These are fetch results and
+     * a choice made for the source event's location, not answers the organiser
+     * gave: carrying them over would let the copy be routed to the original
+     * municipality even after the location is changed. They are rebuilt from the
+     * new location by the location gate.
+     *
+     * `evenementInGemeente` is derived, never written by the current form, but is
+     * stripped defensively: a materialised value in the values bag would win
+     * whenever the derivation yields null.
+     *
+     * @var list<string>
+     */
+    private const LOCATION_DEPENDENT_KEYS = [
+        'userSelectGemeente',
+        'inGemeentenResponse',
+        'gemeenteVariabelen',
+        'evenementenInDeGemeente',
+        'evenementInGemeente',
+    ];
+
+    /**
      * Knip afgeleide state eruit zodat de prefill een "leeg-met-invullen"
      * gevoel geeft, niet een "volgende submit"-gevoel.
      */
@@ -136,6 +157,66 @@ class PrefillLoader
         $clean['field_hidden'] = [];
         $clean['step_applicable'] = [];
 
+        if (isset($clean['values']) && is_array($clean['values'])) {
+            foreach (self::LOCATION_DEPENDENT_KEYS as $key) {
+                unset($clean['values'][$key]);
+            }
+
+            $clean['values'] = $this->stripAddressBrkGemeente($clean['values']);
+        }
+
         return FormState::fromSnapshot($clean);
+    }
+
+    /**
+     * Drops the hidden `brkGemeente` the PDOK auto-fill stored on each copied
+     * address row. It identifies the municipality of the *source* address, and
+     * the location check trusts it verbatim, so a copied row whose auto-fill
+     * does not re-fire would keep routing the aanvraag to the old municipality.
+     * Clearing it forces a fresh postcode + house number lookup.
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    private function stripAddressBrkGemeente(array $values): array
+    {
+        $addresses = $values['adresVanDeGebouwEn'] ?? null;
+        if (! is_array($addresses)) {
+            return $values;
+        }
+
+        foreach ($addresses as $index => $row) {
+            if (is_array($row)) {
+                $addresses[$index] = $this->withoutBrkGemeente($row);
+            }
+        }
+
+        $values['adresVanDeGebouwEn'] = $addresses;
+
+        return $values;
+    }
+
+    /**
+     * Removes every `brkGemeente` entry from a copied address row, at whatever
+     * depth it sits. The value does not live on the row itself but under the
+     * AddressNL fieldset prefix (currently
+     * `adresVanHetGebouwWaarUwEvenementPlaatsvindt1.brkGemeente`), so clearing
+     * the row's own keys would miss it entirely. Walking the row instead of
+     * hardcoding that prefix keeps this working when the schema key changes.
+     *
+     * @param  array<string, mixed>  $row
+     * @return array<string, mixed>
+     */
+    private function withoutBrkGemeente(array $row): array
+    {
+        unset($row['brkGemeente']);
+
+        foreach ($row as $key => $value) {
+            if (is_array($value)) {
+                $row[$key] = $this->withoutBrkGemeente($value);
+            }
+        }
+
+        return $row;
     }
 }

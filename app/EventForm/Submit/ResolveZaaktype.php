@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Submit;
 
 use App\EventForm\State\FormState;
+use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Models\Municipality;
 use App\Models\Zaaktype;
 use RuntimeException;
@@ -57,6 +58,8 @@ final class ResolveZaaktype
     {
         $brk = $state->get('evenementInGemeente.brk_identification');
         if (is_string($brk) && $brk !== '') {
+            $this->assertMunicipalityMatchesLocation($state, $brk);
+
             $muni = Municipality::where('brk_identification', $brk)->first();
             if ($muni) {
                 return $muni;
@@ -74,5 +77,35 @@ final class ResolveZaaktype
             DetermineAanvraagType::VOORAANKONDIGING => 'Vooraankondiging',
             default => throw new RuntimeException(sprintf('Onbekende aard "%s".', $aard)),
         };
+    }
+
+    /**
+     * Guards the invariant that the municipality a zaak is created for is one of
+     * the municipalities the current location actually falls in. The location
+     * check result is authoritative here: it is recomputed on the location gate
+     * from the submitted addresses, areas and routes.
+     *
+     * Without this a stale gemeente in the state (a copied aanvraag, an edited
+     * location) would silently create the zaak for the previous municipality,
+     * and with it on the previous municipality's ZGW instance. Failing the
+     * submit is the lesser harm. A state without a location check result (older
+     * drafts) is left alone.
+     *
+     * @throws GemeenteLocatieMismatchException so the submit handler can tell
+     *                                          the organiser to revisit the
+     *                                          location step, instead of the
+     *                                          generic "try again" that a plain
+     *                                          failure produces.
+     */
+    private function assertMunicipalityMatchesLocation(FormState $state, string $brk): void
+    {
+        $gemeenten = $state->get('inGemeentenResponse.all.object');
+        if (! is_array($gemeenten) || $gemeenten === []) {
+            return;
+        }
+
+        if (! array_key_exists($brk, $gemeenten)) {
+            throw new GemeenteLocatieMismatchException($brk, array_map(strval(...), array_keys($gemeenten)));
+        }
     }
 }

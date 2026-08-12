@@ -100,6 +100,39 @@ test('evenementInGemeente — userSelectGemeente wint bij ≥2 gevonden', functi
     ]))->toBe(['brk_identification' => 'GM0917', 'name' => 'Heerlen']);
 });
 
+test('evenementInGemeente — stale keuze buiten de gevonden gemeenten valt terug op de auto-pick', function () {
+    // Komt voor bij "Nieuwe aanvraag met deze gegevens" met een gewijzigde
+    // locatie: de keuze van de bron-aanvraag mag de nieuwe gemeente niet
+    // overrulen.
+    expect(derive('evenementInGemeente', [
+        'userSelectGemeente' => 'GM0917',
+        'inGemeentenResponse' => ['all' => [
+            'items' => [
+                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+            ],
+            'object' => [
+                'GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+            ],
+        ]],
+    ]))->toBe(['brk_identification' => 'GM0935', 'name' => 'Maastricht']);
+});
+
+test('evenementInGemeente — stale keuze bij meerdere gevonden gemeenten → null (keuze opnieuw maken)', function () {
+    expect(derive('evenementInGemeente', [
+        'userSelectGemeente' => 'GM0917',
+        'inGemeentenResponse' => ['all' => [
+            'items' => [
+                ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                ['brk_identification' => 'GM0882', 'name' => 'Sittard-Geleen'],
+            ],
+            'object' => [
+                'GM0935' => ['brk_identification' => 'GM0935', 'name' => 'Maastricht'],
+                'GM0882' => ['brk_identification' => 'GM0882', 'name' => 'Sittard-Geleen'],
+            ],
+        ]],
+    ]))->toBeNull();
+});
+
 test('evenementInGemeente — niets gevonden, niets gekozen → null', function () {
     expect(derive('evenementInGemeente', [
         'inGemeentenResponse' => ['all' => ['items' => []]],
