@@ -9,7 +9,9 @@ use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Services\ServiceFetcher;
+use App\EventForm\State\FormDerivedState;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\ResolveZaaktype;
 use App\EventForm\Submit\SubmitEventForm;
 use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
@@ -153,7 +155,7 @@ class EventFormPage extends Page implements HasForms
         $this->refreshFetchesFromExistingState();
 
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
-        $this->form->fill($this->state->fields());
+        $this->form->fill($this->withoutServerOwnedState($this->state->fields()));
 
         // Filament's $form->fill() filtert complex value-objects soms weg
         // wanneer een veld z'n schema niet rendert (bv. de Locatie-stap is
@@ -323,6 +325,50 @@ class EventFormPage extends Page implements HasForms
     }
 
     /**
+     * Merge formulier-data terug in de state, zonder de state-keys die de
+     * server bezit. Elke absorb-aanroep gaat hier doorheen.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function absorbFormData(array $data): void
+    {
+        $this->state->absorbFields($this->withoutServerOwnedState($data));
+    }
+
+    /**
+     * Haalt de door de server berekende state-keys uit een array die van (of
+     * via) de client komt: de service-responses van {@see ServiceFetcher} en
+     * de afgeleide variabelen van {@see FormDerivedState}.
+     *
+     * Beide groepen worden berekend uit de ingevulde velden, maar leven in
+     * dezelfde values-bag als die velden. Daardoor belandden ze via
+     * `$form->fill()` ook in Livewire's `$data`, waar niets ze nog bijwerkt:
+     * `$data` houdt de waarde van het moment dat de pagina werd geopend. Een
+     * absorb van `$data` (of van `getStateSnapshot()`, dat `$data` teruggeeft)
+     * zette de verse locatiecheck daarmee terug naar de oude — bij indienen
+     * kwam de aanvraag dan in de gemeente van die oude check terecht, ongeacht
+     * de keuze van de organisator. Zichtbaar bij een gekopieerde aanvraag (die
+     * begint met de check van de bron-aanvraag) en bij een hervat concept
+     * waarvan de locatie daarna wijzigt.
+     *
+     * Meteen ook een integriteitsgrens: `$data` komt van de client, dus zonder
+     * deze filter kan een aangepaste `inGemeentenResponse` de aanvraag naar een
+     * willekeurige gemeente sturen — inclusief langs de controle in
+     * {@see ResolveZaaktype}, die tegen diezelfde response vergelijkt.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withoutServerOwnedState(array $data): array
+    {
+        return array_diff_key(
+            $data,
+            array_flip(ServiceFetcher::FETCHED_VARIABLES),
+            FormDerivedState::COMPUTED_KEYS,
+        );
+    }
+
+    /**
      * Verwijder niet-serialiseerbare waarden (Eloquent-modellen) uit de
      * snapshot die via de wire gaat.
      *
@@ -379,7 +425,7 @@ class EventFormPage extends Page implements HasForms
             return;
         }
 
-        $this->state->absorbFields($this->data ?? []);
+        $this->absorbFormData($this->data ?? []);
 
         // Service-fetches die voorheen door fetch-rules in de RulesEngine
         // werden afgevuurd, staan nu hier direct. Per veld dat verandert
@@ -411,7 +457,7 @@ class EventFormPage extends Page implements HasForms
      */
     public function saveDraftNow(): void
     {
-        $this->state->absorbFields($this->data ?? []);
+        $this->absorbFormData($this->data ?? []);
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
         $this->persistDraft();
         $this->lastDraftSaveAt = time();
@@ -562,7 +608,7 @@ class EventFormPage extends Page implements HasForms
      */
     public function runLocationGate(): void
     {
-        $this->state->absorbFields($this->data ?? []);
+        $this->absorbFormData($this->data ?? []);
 
         $fetcher = app(ServiceFetcher::class);
         $fetcher->fetch('inGemeentenResponse', $this->state);
@@ -684,7 +730,7 @@ class EventFormPage extends Page implements HasForms
         // de correcte paden.
         $dehydrationState = [];
         $this->form->callBeforeStateDehydrated($dehydrationState);
-        $this->state->absorbFields($this->form->getStateSnapshot());
+        $this->absorbFormData($this->form->getStateSnapshot());
 
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
