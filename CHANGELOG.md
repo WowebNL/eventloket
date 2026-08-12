@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.1.4 - 2026-08-12
+
+### What's Changed
+
+#### 🐛 Bug Fixes
+
+* Create a copied aanvraag in the municipality the organiser picked (#479) @Michel-Verhoeven
+* Count failed logins per account instead of per IP address (#477) @Michel-Verhoeven
+* Fix the "Kies een gemeente" loop on routes crossing several gemeenten (#478) @Michel-Verhoeven
+* Bump league/commonmark from 2.8.2 to 2.9.2 (#476) @Michel-Verhoeven
+
+#### 📝 Documentation
+
+* Add user-facing release notes for v1.1.3 (#474) @Michel-Verhoeven
+
+#### Other changes
+
+* Soften confidentiality wording in v1.1.3 release notes (#475) @Michel-Verhoeven
+* Add #472 to the v1.1.3 changelog entry (#473) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v1.1.3...v1.1.4
+
 ## v1.1.3 - 2026-08-05
 
 ### What's Changed
@@ -104,6 +126,7 @@ Run the following when upgrading from v1.0.x.
    
    
    
+   
    ```
    This adds the `table_states` table (#374), the `status_resultaat_colors` table with a default color set (#378), the `reviewer_user_id` column on `zaken` (#389), and seeds the indieningstermijn municipality variables (#407).
    
@@ -117,6 +140,7 @@ Run the following when upgrading from v1.0.x.
    
    
    
+   
    ```
    This adds the `intern_zaaknummer` eigenschap to every active, synced zaaktype in OpenZaak. Run it after the zaaktypen have been synced (`app:sync-zaaktypen`). Without this, internal case numbers cannot be written to OpenZaak.
    
@@ -124,6 +148,7 @@ Run the following when upgrading from v1.0.x.
    
    ```bash
    npm install && npm run build
+   
    
    
    
@@ -244,6 +269,7 @@ npm ci && npm run build
 
 
 
+
 ```
 This is a major framework bump (Laravel 13, Filament 5). The private VCS map
 repositories were removed, so a clean `composer install` is recommended over an
@@ -275,6 +301,7 @@ the local field map tooling, not needed in production).
 
 ```
 php artisan migrate --force
+
 
 
 
@@ -331,6 +358,7 @@ php artisan eventform:backfill-snapshots-from-objects
 
 
 
+
 ```
 The command is idempotent (only touches cases without a snapshot), repeatable,
 and performs one external Objects API call per case. It is intentionally a
@@ -344,6 +372,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan filament:optimize
+
 
 
 
@@ -603,6 +632,7 @@ php artisan filament:optimize
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
