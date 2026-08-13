@@ -25,6 +25,7 @@ use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
+use App\EventForm\Schema\Steps\RisicoscanStep;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
@@ -189,6 +190,55 @@ test('Type-aanvraag-stap: meldingspad → Melding zonder aanvullende ontheffinge
     $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
 
     expect($sections[0]['entries'][0]['value'])->toBe('Melding');
+});
+
+test('Type-aanvraag-stap: nieuw ReportQuestion-pad (alle Ja) → Melding, niet Evenementenvergunning', function () {
+    // Gemeenten op het nieuwe ReportQuestion-systeem (zoals Heerlen) hebben
+    // geen wegafsluiting-antwoord; het type volgt uit de reportQuestion-
+    // antwoorden. Alle 'Ja' betekent een melding. De legacy-only kopie van
+    // deze logica toonde hier ten onrechte "Evenementenvergunning".
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => ['vraag 1', 'vraag 2'],
+        ],
+        'reportQuestion_1' => 'Ja',
+        'reportQuestion_2' => 'Ja',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TypeAanvraagStep::make()]);
+
+    expect($sections[0]['entries'][0]['value'])->toBe('Melding');
+});
+
+test('Risicoscan: het seizoen-veld wordt bij een melding weggelaten uit samenvatting/PDF', function () {
+    // Het seizoen-veld wordt automatisch afgeleid uit de startdatum, ook
+    // wanneer de risicoscan-stap (bij een melding) nooit getoond wordt.
+    // Het hoort dan niet in de samenvatting/PDF te verschijnen.
+    $state = new FormState(values: [
+        // Meldingspad (legacy): wegen niet afgesloten → Melding.
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+        'inWelkSeizoenVindtHetEvenementPlaats' => '0.5',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [RisicoscanStep::make()]);
+
+    $waarden = collect($sections)->flatMap(fn ($s) => collect($s['entries'])->pluck('value'))->all();
+    expect($waarden)->not->toContain('Zomer of winter');
+});
+
+test('Risicoscan: het seizoen-veld blijft bij een vergunning wel zichtbaar', function () {
+    $state = new FormState(values: [
+        // Vergunningpad (legacy): wegen afgesloten → Vergunning.
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+        'inWelkSeizoenVindtHetEvenementPlaats' => '0.5',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [RisicoscanStep::make()]);
+
+    $waarden = collect($sections)->flatMap(fn ($s) => collect($s['entries'])->pluck('value'))->all();
+    expect($waarden)->toContain('Zomer of winter');
 });
 
 test('Bijlagen-stap: FileUpload-velden krijgen een `files`-array per bestandsvraag', function () {

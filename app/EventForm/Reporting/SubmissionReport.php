@@ -7,6 +7,7 @@ namespace App\EventForm\Reporting;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\DetermineAanvraagType;
 use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
@@ -44,6 +45,16 @@ use ReflectionObject;
  */
 final class SubmissionReport
 {
+    /**
+     * Fields that are present in the state (usually derived automatically) but
+     * do not belong in the summary or PDF of a melding.
+     *
+     * @var list<string>
+     */
+    private const HIDDEN_FOR_MELDING = [
+        'inWelkSeizoenVindtHetEvenementPlaats',
+    ];
+
     /**
      * @param  list<Step>  $steps
      * @return list<array{title: string, entries: list<array{label: string, value: string}>}>
@@ -264,6 +275,16 @@ final class SubmissionReport
     }
 
     /**
+     * Whether this submission is a melding (and therefore not a permit
+     * application or a vooraankondiging), using the same determination as the
+     * zaaktype routing.
+     */
+    private function isMelding(FormState $state): bool
+    {
+        return app(DetermineAanvraagType::class)->forState($state) === DetermineAanvraagType::MELDING;
+    }
+
+    /**
      * @return array{label: string, value: string, svg?: string}|null
      */
     private function buildEntry(Field $component, FormState $state, string $key, object $stubLivewire): ?array
@@ -272,6 +293,13 @@ final class SubmissionReport
         // resolved BRK gemeente) that is never meant for the human-facing
         // summary or PDF. Skip them regardless of value.
         if ($component instanceof Hidden) {
+            return null;
+        }
+
+        // A melding never fills in the risicoscan step, but the season field is
+        // derived automatically from the start date and would otherwise still
+        // show up in the summary and the PDF.
+        if (in_array($key, self::HIDDEN_FOR_MELDING, true) && $this->isMelding($state)) {
             return null;
         }
 
