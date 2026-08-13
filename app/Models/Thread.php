@@ -62,9 +62,21 @@ class Thread extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Messages in the order they were written. The ordering is part of the
+     * relation on purpose: without an ORDER BY, PostgreSQL is free to return
+     * rows in physical heap order, which changes as soon as a row is updated
+     * (attaching documents to a message, for example). That put replies above
+     * the question they answered in the thread view.
+     *
+     * `created_at` is a `timestamp(0)` column, so two messages written within
+     * the same second would tie; `id` breaks that tie by insertion order.
+     */
     public function messages(): HasMany
     {
-        return $this->hasMany(Message::class, 'thread_id');
+        return $this->hasMany(Message::class, 'thread_id')
+            ->orderBy('created_at')
+            ->orderBy('id');
     }
 
     public function unreadMessages()
