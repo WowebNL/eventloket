@@ -114,6 +114,40 @@ test('Tijden-stap: alle drie de blokken ingevuld → tabel met 3 rijen in volgor
     ]);
 });
 
+test('Tijden-stap: meerdaags evenement → een tabelrij per dag met alleen kloktijden', function () {
+    // Issue #24. De datum staat al in het rij-label, dus de kolommen Start en
+    // Eind tonen alleen de tijd. Loopt een dag door tot na middernacht, dan
+    // maakt de eindkolom zichtbaar op welke dag die eindigt.
+    $state = new FormState(values: [
+        'EvenementStart' => '2026-07-04T16:00',
+        'EvenementEind' => '2026-07-06T23:00',
+        'EvenementDagen' => [
+            '2026-07-04' => ['datum' => '2026-07-04', 'startTijd' => '16:00', 'eindTijd' => '02:00'],
+            '2026-07-05' => ['datum' => '2026-07-05', 'startTijd' => '16:00', 'eindTijd' => '02:00'],
+            '2026-07-06' => ['datum' => '2026-07-06', 'startTijd' => '16:00', 'eindTijd' => '23:00'],
+        ],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [TijdenStep::make()]);
+    $tabelEntry = collect($sections[0]['entries'])->first(fn ($e) => ! empty($e['table']));
+
+    expect($tabelEntry['table']['rows'])->toBe([
+        ['Publiek — zaterdag 4 juli 2026', '16:00', '02:00 (5 juli)'],
+        ['Publiek — zondag 5 juli 2026', '16:00', '02:00 (6 juli)'],
+        ['Publiek — maandag 6 juli 2026', '16:00', '23:00'],
+    ]);
+
+    // De dagregels mogen niet óók nog als losse repeater-rijen ("— rij 1")
+    // in de PDF verschijnen. Dat stond niet alleen dubbel, de rijen bevatten
+    // kale kloktijden die als de datum van vandaag gerenderd werden.
+    $labels = collect($sections[0]['entries'])->pluck('label')->all();
+    expect(collect($labels)->filter(fn (string $label) => str_contains($label, 'per dag')))
+        ->toBeEmpty();
+    $subLabels = collect($sections[0]['entries'])->pluck('sub')->filter()->flatten(1)->pluck('label')->all();
+    expect($subLabels)->not->toContain('Starttijd')
+        ->and($subLabels)->not->toContain('Eindtijd');
+});
+
 test('Tijden-stap: geen enkele datetime ingevuld → geen tabel-entry', function () {
     // Andere velden in TijdenStep (de Radio-vragen) kunnen wel ingevuld
     // zijn; de tabel zelf moet bij ontbrekende datums niet als een

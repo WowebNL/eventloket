@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\EventDagenRepeater;
 use App\EventForm\Components\EventDateTimePicker;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
@@ -11,6 +12,7 @@ use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\SafeDateTime;
+use App\EventForm\Support\TijdenOverzicht;
 use App\EventForm\Template\LabelRenderer;
 use App\Filament\Organiser\Pages\Calendar;
 use App\Models\Organisation;
@@ -69,7 +71,9 @@ final class TijdenStep
                                 'after_or_equal' => 'De startdatum van het evenement moet vandaag of later zijn.',
                             ])
                             ->required()
-                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                            ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
+                                EventDagenRepeater::sync($get, $set, 'EvenementDagen', 'EvenementStart', 'EvenementEind');
+
                                 $parsed = SafeDateTime::parse($state);
                                 if (! $parsed) {
                                     return;
@@ -91,11 +95,20 @@ final class TijdenStep
                                 'after_or_equal' => 'De einddatum van het evenement moet op of na de startdatum liggen.',
                             ])
                             ->required()
+                            ->afterStateUpdated(function (Get $get, Set $set): void {
+                                EventDagenRepeater::sync($get, $set, 'EvenementDagen', 'EvenementStart', 'EvenementEind');
+                            })
                             ->belowContent([
                                 Icon::make(Heroicon::InformationCircle),
                                 'Dit is het eindmoment wanneer u bezoekers of deelnemers verwacht.',
                             ])
                             ->live(),
+                        EventDagenRepeater::make(
+                            'EvenementDagen',
+                            'EvenementStart',
+                            'EvenementEind',
+                            'Op welke tijden vindt uw evenement plaats per dag?',
+                        ),
                     ]),
                 InfoText::info('evenmentenInDeBuurtContent', function (FormState $state): string {
                     $html = app(LabelRenderer::class)->renderHtml(
@@ -138,6 +151,9 @@ final class TijdenStep
                                 'before_or_equal' => 'De starttijd van de opbouw moet op of voor de eindtijd opbouw liggen.',
                             ])
                             ->required()
+                            ->afterStateUpdated(function (Get $get, Set $set): void {
+                                EventDagenRepeater::sync($get, $set, 'OpbouwDagen', 'OpbouwStart', 'OpbouwEind');
+                            })
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('OpbouwStart');
                                 if ($rule !== null) {
@@ -157,6 +173,9 @@ final class TijdenStep
                                 'before_or_equal' => 'De eindtijd van de opbouw moet op of voor de startdatum van het evenement liggen.',
                             ])
                             ->required()
+                            ->afterStateUpdated(function (Get $get, Set $set): void {
+                                EventDagenRepeater::sync($get, $set, 'OpbouwDagen', 'OpbouwStart', 'OpbouwEind');
+                            })
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('OpbouwEind');
                                 if ($rule !== null) {
@@ -166,6 +185,20 @@ final class TijdenStep
                                 return ! ($get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja');
                             })
                             ->live(),
+                        EventDagenRepeater::make(
+                            'OpbouwDagen',
+                            'OpbouwStart',
+                            'OpbouwEind',
+                            'Op welke tijden vindt de opbouw plaats per dag?',
+                        )
+                            ->hidden(function (Get $get, $livewire): bool {
+                                $rule = $livewire->state()->isFieldHidden('OpbouwStart');
+                                if ($rule !== null) {
+                                    return $rule;
+                                }
+
+                                return ! ($get('zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten') === 'Ja');
+                            }),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXOpbouwactiviteiten')
                     ->label(Label::render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} opbouwactiviteiten?'))
@@ -188,6 +221,9 @@ final class TijdenStep
                                 'after_or_equal' => 'De starttijd van de afbouw moet op of na de einddatum van het evenement liggen.',
                             ])
                             ->required()
+                            ->afterStateUpdated(function (Get $get, Set $set): void {
+                                EventDagenRepeater::sync($get, $set, 'AfbouwDagen', 'AfbouwStart', 'AfbouwEind');
+                            })
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('AfbouwStart');
                                 if ($rule !== null) {
@@ -206,6 +242,9 @@ final class TijdenStep
                                 'after_or_equal' => 'De eindtijd van de afbouw moet op of na de starttijd van de afbouw liggen.',
                             ])
                             ->required()
+                            ->afterStateUpdated(function (Get $get, Set $set): void {
+                                EventDagenRepeater::sync($get, $set, 'AfbouwDagen', 'AfbouwStart', 'AfbouwEind');
+                            })
                             ->hidden(function (Get $get, $livewire): bool {
                                 $rule = $livewire->state()->isFieldHidden('AfbouwEind');
                                 if ($rule !== null) {
@@ -215,6 +254,20 @@ final class TijdenStep
                                 return ! ($get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja');
                             })
                             ->live(),
+                        EventDagenRepeater::make(
+                            'AfbouwDagen',
+                            'AfbouwStart',
+                            'AfbouwEind',
+                            'Op welke tijden vindt de afbouw plaats per dag?',
+                        )
+                            ->hidden(function (Get $get, $livewire): bool {
+                                $rule = $livewire->state()->isFieldHidden('AfbouwStart');
+                                if ($rule !== null) {
+                                    return $rule;
+                                }
+
+                                return ! ($get('zijnErAansluitendAanHetEvenementAfbouwactiviteiten') === 'Ja');
+                            }),
                     ]),
                 Radio::make('zijnErTijdensHetEvenementXAfbouwactiviteiten3')
                     ->label(Label::render('Zijn er tijdens het evenement {{ watIsDeNaamVanHetEvenementVergunning }} afbouwactiviteiten?'))
@@ -222,12 +275,38 @@ final class TijdenStep
                     ->required(),
                 TextEntry::make('overzichtTijden')
                     ->hiddenLabel()
-                    // `renderHtml()` ipv `render()` — de output wordt rauw
-                    // in de DOM gezet via `HtmlString`. DateTimePicker-
-                    // waarden zijn ISO-strings (geen user-text-input),
-                    // dus self-XSS is in de praktijk niet mogelijk, maar
-                    // safe-by-default is het beleid.
-                    ->state(fn ($livewire) => new HtmlString(app(LabelRenderer::class)->renderHtml('<h2>Overzicht ingevulde tijden</h2><figure class="table"><table><thead><tr><th><strong>Activiteit</strong></th><th>&nbsp;</th><th><strong>Start</strong></th><th>&nbsp;</th><th><strong>Eind</strong></th></tr></thead><tbody><tr><th><strong>Opbouw</strong></th><td>&nbsp;</td><td>{{ OpbouwStart }}</td><td>&nbsp;</td><td>{{ OpbouwEind }}</td></tr><tr><th><strong>Publiek</strong></th><td>&nbsp;</td><td>{{ EvenementStart }}</td><td>&nbsp;</td><td>{{ EvenementEind }}</td></tr><tr><th><strong>Afbouw</strong></th><td>&nbsp;</td><td>{{ AfbouwStart }}</td><td>&nbsp;</td><td>{{ AfbouwEind }}</td></tr></tbody></table></figure><p><br>Wijzig de velden boven dit overzicht indien de tijden niet correct zijn.</p>', $livewire->state()))),
+                    // The table goes into the DOM raw through `HtmlString`, so
+                    // every cell is escaped. The values come from date and time
+                    // fields rather than free text, but safe-by-default is the
+                    // policy.
+                    ->state(fn ($livewire) => new HtmlString(self::overzichtHtml($livewire->state()))),
             ]);
+    }
+
+    /**
+     * The read-back table at the bottom of the step. Multi-day periods list a
+     * row per day; single-day periods keep the one-row-per-activity shape.
+     */
+    private static function overzichtHtml(FormState $state): string
+    {
+        $rijen = TijdenOverzicht::uitFormState($state);
+
+        if ($rijen === []) {
+            return '';
+        }
+
+        $body = '';
+        foreach ($rijen as [$activiteit, $start, $eind]) {
+            $body .= '<tr><th><strong>'.e($activiteit).'</strong></th><td>&nbsp;</td><td>'
+                .e($start).'</td><td>&nbsp;</td><td>'.e($eind).'</td></tr>';
+        }
+
+        return '<h2>Overzicht ingevulde tijden</h2>'
+            .'<figure class="table"><table><thead><tr>'
+            .'<th><strong>Activiteit</strong></th><th>&nbsp;</th>'
+            .'<th><strong>Start</strong></th><th>&nbsp;</th>'
+            .'<th><strong>Eind</strong></th></tr></thead>'
+            .'<tbody>'.$body.'</tbody></table></figure>'
+            .'<p><br>Wijzig de velden boven dit overzicht indien de tijden niet correct zijn.</p>';
     }
 }
