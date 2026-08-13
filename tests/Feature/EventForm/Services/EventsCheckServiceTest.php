@@ -96,9 +96,10 @@ test('ignores events that end before or start after the date range', function ()
     expect($this->service->check('2026-05-01', '2026-05-10', 'GM0882')['event_count'])->toBe(0);
 });
 
-test('een zaak met een niet-ISO datum laat de query niet klappen', function () {
-    // Oudere zaken kunnen een Nederlandse datumnotatie bevatten. Die mag geen
-    // databasefout opleveren; de zaak valt simpelweg buiten de vergelijking.
+test('een zaak met een niet-ISO datum valt buiten de vergelijking', function () {
+    // Oudere zaken kunnen een Nederlandse datumnotatie bevatten. Die sorteert
+    // niet mee met de ISO-waarden en valt daardoor buiten het venster, zonder
+    // de query te verstoren.
     Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'reference_data' => new ZaakReferenceData(

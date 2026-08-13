@@ -15,6 +15,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\Models\Zaak;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
+use Carbon\CarbonImmutable;
 
 function meerdaagseState(): FormState
 {
@@ -38,13 +39,13 @@ test('de dagtijden van een meerdaags evenement landen in de reference_data', fun
     expect($reference->dagen_evenement[0]['datum'])->toBe('2026-07-04');
 
     // The 02:00 end time belongs to the night after the first day.
-    expect(Carbon\CarbonImmutable::parse($reference->dagen_evenement[0]['eind'])->toDateTimeString())
+    expect(CarbonImmutable::parse($reference->dagen_evenement[0]['eind'])->toDateTimeString())
         ->toBe('2026-07-05 02:00:00');
 
     // The envelope stays the head and tail of the whole period.
-    expect(Carbon\CarbonImmutable::parse($reference->start_evenement)->toDateTimeString())
+    expect(CarbonImmutable::parse($reference->start_evenement)->toDateTimeString())
         ->toBe('2026-07-04 16:00:00');
-    expect(Carbon\CarbonImmutable::parse($reference->eind_evenement)->toDateTimeString())
+    expect(CarbonImmutable::parse($reference->eind_evenement)->toDateTimeString())
         ->toBe('2026-07-07 02:00:00');
 });
 

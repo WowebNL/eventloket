@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventForm\Validation;
 
+use App\EventForm\Components\EventDagenRepeater;
+
 /**
  * Cross-field date constraints on the Tijden step. No logic of our own — we
  * lean on Filament's `->after()/->before()/->afterOrEqual()/->beforeOrEqual()`,
@@ -24,7 +26,7 @@ namespace App\EventForm\Validation;
  * These constraints bound the whole period. The rules for the per-day rows
  * inside such a period live on the repeater itself.
  *
- * @see \App\EventForm\Components\EventDagenRepeater
+ * @see EventDagenRepeater
  */
 final class TijdenFieldRules
 {

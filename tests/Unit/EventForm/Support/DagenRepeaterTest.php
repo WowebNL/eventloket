@@ -8,6 +8,7 @@ declare(strict_types=1);
  */
 
 use App\EventForm\Support\DagenRepeater;
+use Carbon\CarbonImmutable;
 
 test('een eendaagse periode levert geen dagregels op', function () {
     expect(DagenRepeater::sync('2026-07-04 10:00', '2026-07-04 18:00'))->toBe([]);
@@ -64,9 +65,9 @@ test('dagregels worden omgezet naar dagblokken met doorrollende eindtijden', fun
 
     expect($blokken)->toHaveCount(2);
     expect($blokken[0]['datum'])->toBe('2026-07-04');
-    expect(Carbon\CarbonImmutable::parse($blokken[0]['eind'])->toDateTimeString())
+    expect(CarbonImmutable::parse($blokken[0]['eind'])->toDateTimeString())
         ->toBe('2026-07-05 02:00:00');
-    expect(Carbon\CarbonImmutable::parse($blokken[1]['eind'])->toDateTimeString())
+    expect(CarbonImmutable::parse($blokken[1]['eind'])->toDateTimeString())
         ->toBe('2026-07-05 23:00:00');
 });
 
