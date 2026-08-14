@@ -35,6 +35,15 @@ return [
         'eind_evenement' => [
             'label' => 'Eind evenement',
         ],
+        'dagen_evenement' => [
+            'label' => 'Evenement per dag',
+        ],
+        'dagen_opbouw' => [
+            'label' => 'Opbouw per dag',
+        ],
+        'dagen_afbouw' => [
+            'label' => 'Afbouw per dag',
+        ],
         'telefoon' => [
             'label' => 'Telefoonnummer organisatie',
         ],

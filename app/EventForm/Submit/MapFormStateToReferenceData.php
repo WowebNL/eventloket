@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Submit;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Support\DagenRepeater;
 use App\Models\Organisation;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Carbon\Carbon;
@@ -41,7 +42,29 @@ final class MapFormStateToReferenceData
             start_afbouw: $this->iso8601OrNull($state->get('AfbouwStart')),
             eind_afbouw: $this->iso8601OrNull($state->get('AfbouwEind')),
             locaties_evenement: $this->locatiesEvenement($state),
+            dagen_evenement: $this->dagen($state, 'EvenementDagen'),
+            dagen_opbouw: $this->dagen($state, 'OpbouwDagen'),
+            dagen_afbouw: $this->dagen($state, 'AfbouwDagen'),
         );
+    }
+
+    /**
+     * Per-day start and end times, filled in only when the period runs over
+     * several calendar days. Null keeps the envelope the whole story.
+     *
+     * @return list<array{datum: string, start: string, eind: string}>|null
+     */
+    private function dagen(FormState $state, string $key): ?array
+    {
+        $rijen = $state->get($key);
+
+        if (! is_array($rijen)) {
+            return null;
+        }
+
+        $blokken = DagenRepeater::naarReferenceData($rijen);
+
+        return $blokken !== [] ? $blokken : null;
     }
 
     private function iso8601(mixed $value): string
