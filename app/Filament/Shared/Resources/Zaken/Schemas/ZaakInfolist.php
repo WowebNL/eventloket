@@ -53,6 +53,25 @@ class ZaakInfolist
                 ->label(__('resources/zaak.columns.public_id.label')),
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
+            // Issue #10: show the vooraankondiging link in both directions.
+            // On the definitive aanvraag: which vooraankondiging it replaces;
+            // on the vooraankondiging: which aanvraag replaced it. Rendered
+            // in every panel that uses this schema (municipality, advisor,
+            // admin and, via the organiser infolist, the organiser).
+            TextEntry::make('vervangt_vooraankondiging')
+                ->label(__('resources/zaak.columns.vervangt_vooraankondiging.label'))
+                ->state(fn (Zaak $record): ?string => $record->vervangtVooraankondiging->first()?->public_id)
+                ->url(fn (Zaak $record): ?string => self::zaakViewUrl($record->vervangtVooraankondiging->first()))
+                ->color('primary')
+                ->icon('heroicon-o-link')
+                ->visible(fn (Zaak $record): bool => $record->vervangtVooraankondiging->isNotEmpty()),
+            TextEntry::make('opgevolgd_door')
+                ->label(__('resources/zaak.columns.opgevolgd_door.label'))
+                ->state(fn (Zaak $record): ?string => $record->opgevolgdDoor->first()?->public_id)
+                ->url(fn (Zaak $record): ?string => self::zaakViewUrl($record->opgevolgdDoor->first()))
+                ->color('primary')
+                ->icon('heroicon-o-link')
+                ->visible(fn (Zaak $record): bool => $record->opgevolgdDoor->isNotEmpty()),
             TextEntry::make('reference_data.risico_classificatie')
                 ->label(__('resources/zaak.columns.risico_classificatie.label'))
                 ->visible(fn ($state) => ! empty($state)),
@@ -572,5 +591,19 @@ class ZaakInfolist
 
                     ]),
             ]));
+    }
+
+    /**
+     * View URL for a related zaak, resolved via the current panel so the
+     * link stays inside the panel of the viewer (municipality, advisor,
+     * admin or organiser).
+     */
+    private static function zaakViewUrl(?Zaak $zaak): ?string
+    {
+        if (! $zaak instanceof Zaak) {
+            return null;
+        }
+
+        return Filament::getResourceUrl($zaak, 'view');
     }
 }
