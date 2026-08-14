@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventForm\State;
 
+use App\EventForm\Support\ExtraQuestions;
+
 /**
  * Pure-functions-class voor stap-zichtbaarheid. Oorspronkelijk
  * gegenereerd uit 144 transpiled rule-files via
@@ -31,9 +33,11 @@ final class FormStepApplicability
 
     // === GEGENEREERD via dev-scripts/generate-step-applicability.php ===
     // Aantal stappen met applicability-rules: 10
+    // + 1 hand-toegevoegde stap zonder OF-herkomst: AanvullendeVragenStep.
 
     /** @var array<string, true> */
     public const COMPUTED_STEPS = [
+        '50af8cc6-425b-46b5-9751-f5337d611b91' => true,
         '5f986f16-6a3a-4066-9383-d71f09877f47' => true,
         '661aabb7-e927-4a75-8d95-0a665c5d83fe' => true,
         '6e285ace-f891-4324-b54e-639c1cfff9fa' => true,
@@ -51,6 +55,13 @@ final class FormStepApplicability
         $s = $this->state;
 
         return match ($stepUuid) {
+            // AanvullendeVragenStep — geen OF-rules, maar de per-gemeente
+            // ingestelde vragenlijst. Geen enkele vraag die op het huidige
+            // aanvraagpad geldt betekent: stap niet van toepassing, dus ook
+            // geen validatie bij het indienen. De wizard laat de stap in dat
+            // geval al helemaal weg (`EventFormSchema::steps()`); dit is de
+            // vangnet-helft voor contexten die wél de volledige lijst bouwen.
+            '50af8cc6-425b-46b5-9751-f5337d611b91' => ExtraQuestions::hasAny($s),
             '5f986f16-6a3a-4066-9383-d71f09877f47' => (function () use ($s): ?bool {
                 // OF-rules:
                 //   - 87482f34-1e1f-4853-b2da-312c9b2cebf0 → NOT applicable wanneer: ($s->get('isHetAantalAanwezigenBijUwEvenementMinderDanSdf') === 'Nee') || ($s->get('vindenDeActiviteitenVanUwEvenementPl

@@ -6,6 +6,7 @@ namespace App\EventForm\Persistence;
 
 use App\EventForm\State\FormState;
 use App\EventForm\Support\DagenRepeater;
+use App\EventForm\Support\ExtraQuestions;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -175,6 +176,17 @@ class PrefillLoader
         if (isset($clean['values']) && is_array($clean['values'])) {
             foreach (self::LOCATION_DEPENDENT_KEYS as $key) {
                 unset($clean['values'][$key]);
+            }
+
+            // Answers to the municipality's own extra questions belong to that
+            // municipality's question list, which is dropped along with
+            // `gemeenteVariabelen` above. A copy can end up at a different
+            // municipality with entirely different questions, so the answers
+            // must not travel with it.
+            foreach (array_keys($clean['values']) as $key) {
+                if (is_string($key) && str_starts_with($key, ExtraQuestions::FIELD_PREFIX)) {
+                    unset($clean['values'][$key]);
+                }
             }
 
             $clean['values'] = $this->stripAddressBrkGemeente($clean['values']);
