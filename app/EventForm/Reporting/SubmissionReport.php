@@ -6,10 +6,10 @@ namespace App\EventForm\Reporting;
 
 use App\Enums\MunicipalityFormQuestionType;
 use App\EventForm\Schema\Steps\AanvullendeVragenStep;
+use App\EventForm\Schema\Steps\RisicoscanStep;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
-use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Support\ExtraQuestions;
 use Carbon\Carbon;
 use Closure;
@@ -49,12 +49,12 @@ use ReflectionObject;
 final class SubmissionReport
 {
     /**
-     * Fields that are present in the state (usually derived automatically) but
-     * do not belong in the summary or PDF of a melding.
+     * Fields of the risicoscan step that are present in the state (derived
+     * automatically) even when the organiser never gets to see that step.
      *
      * @var list<string>
      */
-    private const HIDDEN_FOR_MELDING = [
+    private const RISICOSCAN_DERIVED_KEYS = [
         'inWelkSeizoenVindtHetEvenementPlaats',
     ];
 
@@ -355,13 +355,13 @@ final class SubmissionReport
     }
 
     /**
-     * Whether this submission is a melding (and therefore not a permit
-     * application or a vooraankondiging), using the same determination as the
-     * zaaktype routing.
+     * Whether the organiser actually walked through the risicoscan step. Both
+     * a melding and a vooraankondiging skip it, so anything derived there is
+     * an artefact rather than an answer.
      */
-    private function isMelding(FormState $state): bool
+    private function heeftRisicoscanDoorlopen(FormState $state): bool
     {
-        return app(DetermineAanvraagType::class)->forState($state) === DetermineAanvraagType::MELDING;
+        return $state->isStepApplicable(RisicoscanStep::UUID);
     }
 
     /**
@@ -376,10 +376,10 @@ final class SubmissionReport
             return null;
         }
 
-        // A melding never fills in the risicoscan step, but the season field is
-        // derived automatically from the start date and would otherwise still
-        // show up in the summary and the PDF.
-        if (in_array($key, self::HIDDEN_FOR_MELDING, true) && $this->isMelding($state)) {
+        // A melding and a vooraankondiging both skip the risicoscan step, but
+        // the season field is derived automatically from the start date and
+        // would otherwise still show up in the summary and the PDF.
+        if (in_array($key, self::RISICOSCAN_DERIVED_KEYS, true) && ! $this->heeftRisicoscanDoorlopen($state)) {
             return null;
         }
 
