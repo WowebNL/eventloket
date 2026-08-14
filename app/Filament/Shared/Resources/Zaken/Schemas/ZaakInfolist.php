@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\Zaken\Schemas;
 
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
+use App\EventForm\Support\DagenRepeater;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
@@ -78,6 +79,7 @@ class ZaakInfolist
             TextEntry::make('reference_data.eind_evenement_datetime')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_evenement.label')),
+            self::dagenEntry('dagen_evenement', __('resources/zaak.columns.dagen_evenement.label')),
             TextEntry::make('reference_data.start_opbouw')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.start_opbouw.label'))
@@ -86,6 +88,7 @@ class ZaakInfolist
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_opbouw.label'))
                 ->visible(fn ($state) => ! empty($state)),
+            self::dagenEntry('dagen_opbouw', __('resources/zaak.columns.dagen_opbouw.label')),
             TextEntry::make('reference_data.start_afbouw')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.start_afbouw.label'))
@@ -94,6 +97,7 @@ class ZaakInfolist
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_afbouw.label'))
                 ->visible(fn ($state) => ! empty($state)),
+            self::dagenEntry('dagen_afbouw', __('resources/zaak.columns.dagen_afbouw.label')),
             TextEntry::make('reference_data.locaties_evenement')
                 ->label(__('resources/zaak.columns.locaties_evenement.label'))
                 ->visible(fn ($state) => ! empty($state)),
@@ -133,6 +137,25 @@ class ZaakInfolist
                     return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Advisor, Role::Admin]);
                 }),
         ];
+    }
+
+    /**
+     * Per-day start and end times of a multi-day period. Only shown when the
+     * organiser actually supplied them; a single-day event keeps telling its
+     * story through the start and end entries above.
+     */
+    private static function dagenEntry(string $key, string $label): TextEntry
+    {
+        return TextEntry::make("reference_data.{$key}")
+            ->label($label)
+            ->listWithLineBreaks()
+            ->state(function (Zaak $record) use ($key): array {
+                return array_map(
+                    fn (array $rij): string => sprintf('%s · %s – %s', $rij['datum'], $rij['start'], $rij['eind']),
+                    DagenRepeater::alsTabelRijen($record->reference_data->{$key}),
+                );
+            })
+            ->visible(fn ($state): bool => is_array($state) && $state !== []);
     }
 
     public static function resultaatSection(): Section
