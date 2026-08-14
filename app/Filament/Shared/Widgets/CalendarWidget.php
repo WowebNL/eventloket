@@ -359,6 +359,8 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         $this->viewActionFooterAction(),
                     ]),
             ])
+            // Clicking anywhere in a row opens the same view modal as the row action.
+            ->recordAction('view')
             ->filtersLayout(FiltersLayout::AboveContent)
             ->filtersFormColumns(2)
             ->deferFilters(false)

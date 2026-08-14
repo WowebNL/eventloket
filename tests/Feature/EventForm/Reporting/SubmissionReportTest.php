@@ -262,6 +262,20 @@ test('Risicoscan: het seizoen-veld wordt bij een melding weggelaten uit samenvat
     expect($waarden)->not->toContain('Zomer of winter');
 });
 
+test('Risicoscan: het seizoen-veld wordt ook bij een vooraankondiging weggelaten', function () {
+    // Een vooraankondiging slaat de risicoscan-stap net zo goed over als een
+    // melding, dus het afgeleide seizoen-veld hoort daar evenmin te staan.
+    $state = new FormState(values: [
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'inWelkSeizoenVindtHetEvenementPlaats' => '0.5',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [RisicoscanStep::make()]);
+
+    $waarden = collect($sections)->flatMap(fn ($s) => collect($s['entries'])->pluck('value'))->all();
+    expect($waarden)->not->toContain('Zomer of winter');
+});
+
 test('Risicoscan: het seizoen-veld blijft bij een vergunning wel zichtbaar', function () {
     $state = new FormState(values: [
         // Vergunningpad (legacy): wegen afgesloten → Vergunning.
