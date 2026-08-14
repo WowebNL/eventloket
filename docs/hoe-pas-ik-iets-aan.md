@@ -18,6 +18,7 @@ Voor het mentale model + architectuur-context, zie
 | Externe HTTP-call (BAG, gemeente-data, etc.) | `ServiceFetcher::fetch<X>` + trigger in `EventFormPage::triggerFetchesFor()` |
 | Validatie-regel (cross-field datums, required, etc.) | `app/EventForm/Validation/<X>FieldRules.php` of inline `->rule(...)` op het veld |
 | Stap-volgorde / nieuwe stap toevoegen | `app/EventForm/Schema/EventFormSchema.php` |
+| Per-gemeente eigen vragen (stap "Aanvullende vragen") | `app/Models/MunicipalityFormQuestion.php` + `app/EventForm/Support/ExtraQuestions.php` + `AanvullendeVragenStep` |
 | PDF-rapport inhoud / styling | `resources/views/pdf/submission-report.blade.php` (HTML) + `app/EventForm/Reporting/SubmissionReport.php` (data) |
 | Async werk na submit (ZGW-jobs, mail, hash) | `app/Jobs/Submit/*` + `SubmitEventForm::dispatchAsyncChain()` |
 
@@ -429,6 +430,7 @@ Per veld-soort wat extra werk er nodig is:
 | Nieuwe HTTP-fetch | 2-3 (ServiceFetcher + EventFormPage + optioneel een Service-class) |
 | Stap overslaan | 1 (FormStepApplicability) |
 | Nieuwe stap | 2-3 (nieuwe Step-class + EventFormSchema + eventueel SubmissionReport) |
+| Per-gemeente eigen vragen | 0 (functioneel beheer, geen code: gemeentepaneel → Instellingen → Aanvullende vragen) |
 | PDF-aanpassing | 1-2 (Blade-template + optioneel SubmissionReport) |
 
 Hoe meer afgeleid → hoe minder velden je hoeft aan te raken om

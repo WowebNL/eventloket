@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\EventForm\Reporting;
 
+use App\Enums\MunicipalityFormQuestionType;
+use App\EventForm\Schema\Steps\AanvullendeVragenStep;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
+use App\EventForm\Support\ExtraQuestions;
 use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
@@ -112,6 +115,15 @@ final class SubmissionReport
         $isTijdenStep = $stepKey === TijdenStep::UUID;
         $isTypeAanvraagStep = $stepKey === TypeAanvraagStep::UUID;
 
+        // De stap "Aanvullende vragen" bouwt z'n schema uit een Closure, en
+        // `descendIntoChildren()` leest de rauwe `childComponents`: dat is
+        // daar geen array, dus de walk levert niets op. Deze tak is dus geen
+        // optimalisatie maar de enige manier om die antwoorden in de
+        // samenvatting en de PDF te krijgen.
+        if ($stepKey === AanvullendeVragenStep::UUID) {
+            return $this->buildAanvullendeVragenEntries($state);
+        }
+
         if ($isTijdenStep) {
             $tabel = $this->buildTijdenTable($state);
             if ($tabel !== null) {
@@ -192,6 +204,74 @@ final class SubmissionReport
         $walk($step, null);
 
         return $entries;
+    }
+
+    /**
+     * De antwoorden op de per-gemeente ingestelde aanvullende vragen.
+     *
+     * De vragenlijst komt uit `gemeenteVariabelen.extra_questions`; bij een
+     * ingediende zaak is dat de bevroren lijst uit de snapshot, dus een later
+     * gewijzigde of verwijderde vraag verandert deze PDF niet meer.
+     *
+     * Het padfilter wordt hier opnieuw toegepast (via `ExtraQuestions`).
+     * Nodig, want deze walk kijkt niet naar `hidden`: bladert een organisator
+     * terug en verandert het aanvraagpad, dan blijft het oude antwoord in de
+     * state staan en zou het zonder filter alsnog in de PDF belanden.
+     *
+     * @return list<array{label: string, value: string}>
+     */
+    private function buildAanvullendeVragenEntries(FormState $state): array
+    {
+        $entries = [];
+
+        foreach (ExtraQuestions::forState($state) as $question) {
+            $label = trim((string) ($question['label'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+
+            $value = $this->renderExtraQuestionValue(
+                $state->get(ExtraQuestions::fieldKey($question)),
+                (string) ($question['type'] ?? ''),
+            );
+            if ($value === '') {
+                continue;
+            }
+
+            $entries[] = [
+                'label' => $label,
+                'value' => $value,
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Antwoorden zijn strings (tekstblok, radio) of een lijst strings
+     * (checkboxes). De optiewaarde is gelijk aan de optietekst, dus er valt
+     * niets te vertalen — zie `AanvullendeVragenStep::optionsFor()`.
+     *
+     * Een meerkeuzevraag accepteert alleen een lijst. Zou z'n veldwaarde ooit
+     * een boolean zijn (Livewire bindt een checkbox-groep zo zodra de state
+     * geen array is), dan is er geen antwoord te tonen: `(string) true` zou
+     * anders als "1" in de samenvatting en de PDF belanden.
+     */
+    private function renderExtraQuestionValue(mixed $value, string $type): string
+    {
+        if (is_array($value)) {
+            return collect($value)
+                ->filter(fn ($item): bool => is_scalar($item) && ! is_bool($item))
+                ->map(fn ($item): string => trim((string) $item))
+                ->filter()
+                ->implode(', ');
+        }
+
+        if ($type === MunicipalityFormQuestionType::Checkboxes->value || is_bool($value)) {
+            return '';
+        }
+
+        return is_scalar($value) ? trim((string) $value) : '';
     }
 
     /**
