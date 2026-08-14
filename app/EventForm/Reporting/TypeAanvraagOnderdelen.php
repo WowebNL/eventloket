@@ -26,22 +26,21 @@ final class TypeAanvraagOnderdelen
      */
     public static function buildList(FormState $state): array
     {
-        // Zonder een keuze bij `waarvoorWiltUEventloketGebruiken` valt er nog
-        // niets te zeggen over het type aanvraag; dan tonen we geen (lege)
-        // sectie.
+        // Without a choice for `waarvoorWiltUEventloketGebruiken` there is
+        // nothing to say about the type of application yet, so we show no
+        // (empty) section.
         if (((string) ($state->get('waarvoorWiltUEventloketGebruiken') ?? '')) === '') {
             return [];
         }
 
-        // Leid het hoofdonderdeel af uit dezelfde canonieke bepaling die ook
-        // het zaaktype kiest (`ResolveZaaktype`) en de samenvatting/PDF stuurt
-        // (`SubmissionReport::isMelding`). Voorheen had deze methode een eigen,
-        // legacy-only kopie van die logica (alleen de wegafsluiting-vraag),
-        // waardoor gemeenten op het nieuwe ReportQuestion-systeem (zoals
-        // Heerlen) ten onrechte "Evenementenvergunning" zagen bij een melding.
+        // Derive the main item from the same canonical determination that picks
+        // the zaaktype (`ResolveZaaktype`). This method used to hold its own
+        // legacy-only copy of that logic (the road-closure question alone),
+        // which made municipalities on the new ReportQuestion system (such as
+        // Heerlen) see "Evenementenvergunning" for a melding.
         $role = app(DetermineAanvraagType::class)->forState($state);
 
-        // De label-tekst is gelijk aan de zaaktype-naamprefix per rol
+        // The label text matches the zaaktype name prefix per role
         // (Vergunning => "Evenementenvergunning", Melding => "Melding",
         // Vooraankondiging => "Vooraankondiging").
         return [$role->namePrefix()];

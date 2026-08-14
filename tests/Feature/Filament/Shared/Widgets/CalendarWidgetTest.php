@@ -448,3 +448,39 @@ test('calendar widget shows cases without resultaat even when zaaktype has hidde
         ->assertSet('viewMode', 'table')
         ->assertCanSeeTableRecords([$zaakWithoutResultaat]);
 });
+
+test('calendar widget table view opens the view modal when a row is clicked', function () {
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+
+    $this->municipality->users()->attach($user);
+
+    // A local zaak keeps the modal from calling out to Open Zaak.
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => null,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$zaak]);
+
+    // A row click mounts the table record action, so it has to resolve to the view action.
+    expect($component->instance()->getTable()->getRecordAction($zaak))->toBe('view');
+
+    // And that action must open a modal rather than navigate away.
+    $viewAction = $component->instance()->getTable()->getAction('view')->record($zaak);
+    expect($viewAction->getUrl())->toBeNull();
+
+    $component->mountTableAction('view', $zaak)->assertOk();
+
+    expect($component->instance()->getMountedAction()?->getName())->toBe('view');
+});
