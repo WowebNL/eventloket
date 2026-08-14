@@ -24,7 +24,9 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
 use App\EventForm\Persistence\Draft;
+use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\SubmitEventForm;
 use App\Jobs\Submit\GenerateSubmissionPdf;
@@ -41,6 +43,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
+use App\Models\ZaakRelatie;
 use App\Models\Zaaktype;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -261,7 +264,7 @@ test('een gekoppelde vooraankondiging krijgt bij submit de vervangt-relatie (iss
     fakeOpenzaakZaakCreate();
 
     $vooraankondiging = Zaak::factory()->create([
-        'zaaktype_id' => \App\Models\Zaaktype::factory()->create([
+        'zaaktype_id' => Zaaktype::factory()->create([
             'name' => 'Vooraankondiging gemeente Heerlen',
             'municipality_id' => $sc['heerlen']->id,
             'is_active' => true,
@@ -269,16 +272,16 @@ test('een gekoppelde vooraankondiging krijgt bij submit de vervangt-relatie (iss
         'organisation_id' => $sc['organisation']->id,
     ]);
 
-    $sc['state']->setField(\App\EventForm\Schema\Steps\Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD, 'Ja');
-    $sc['state']->setField(\App\EventForm\Schema\Steps\Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD, $vooraankondiging->id);
+    $sc['state']->setField(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD, 'Ja');
+    $sc['state']->setField(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD, $vooraankondiging->id);
 
     Bus::fake();
 
     $zaak = app(SubmitEventForm::class)->execute($sc['state'], $sc['user'], $sc['organisation']);
 
-    $relatie = \App\Models\ZaakRelatie::sole();
+    $relatie = ZaakRelatie::sole();
     expect($relatie->zaak_id)->toBe($zaak->id)
         ->and($relatie->gerelateerde_zaak_id)->toBe($vooraankondiging->id)
-        ->and($relatie->type)->toBe(\App\Enums\ZaakRelatieType::VervangtVooraankondiging)
+        ->and($relatie->type)->toBe(ZaakRelatieType::VervangtVooraankondiging)
         ->and($zaak->vervangtVooraankondiging()->pluck('zaken.id')->all())->toBe([$vooraankondiging->id]);
 });

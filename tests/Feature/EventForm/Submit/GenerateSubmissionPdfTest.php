@@ -19,12 +19,15 @@
 
 use App\Enums\OrganisationType;
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
 use App\EventForm\State\FormState;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\SendSubmissionConfirmationEmail;
+use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
+use App\Models\ZaakRelatie;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Support\Facades\Queue;
@@ -233,7 +236,7 @@ test('toont de organisatienaam als organisator bij een zakelijke aanvraag', func
 });
 
 test('toont de vervangen vooraankondiging in de header onder het zaaknummer (issue #10)', function () {
-    $municipality = \App\Models\Municipality::factory()->create();
+    $municipality = Municipality::factory()->create();
     $organisation = Organisation::factory()->create(['type' => OrganisationType::Business, 'name' => 'Media Tuin']);
 
     $vooraankondiging = Zaak::factory()->create([
@@ -257,10 +260,10 @@ test('toont de vervangen vooraankondiging in de header onder het zaaknummer (iss
         ]))->toSnapshot(),
     ]);
 
-    \App\Models\ZaakRelatie::create([
+    ZaakRelatie::create([
         'zaak_id' => $zaak->id,
         'gerelateerde_zaak_id' => $vooraankondiging->id,
-        'type' => \App\Enums\ZaakRelatieType::VervangtVooraankondiging,
+        'type' => ZaakRelatieType::VervangtVooraankondiging,
     ]);
 
     Queue::fake();

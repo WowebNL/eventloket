@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
 use App\Filament\Admin\Pages\Calendar as AdminCalendarPage;
 use App\Filament\Admin\Widgets\AdminCalendarWidget;
 use App\Filament\Advisor\Pages\Calendar as AdvisorCalendarPage;
@@ -9,7 +10,7 @@ use App\Filament\Municipality\Pages\Calendar as MunicipalityCalendarPage;
 use App\Filament\Municipality\Widgets\MunicipalityCalendarWidget;
 use App\Filament\Organiser\Pages\Calendar as OrganiserCalendarPage;
 use App\Filament\Organiser\Widgets\OrganiserCalendarWidget;
-use App\Enums\ZaakRelatieType;
+use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
@@ -569,7 +570,7 @@ test('the zaken list still shows a vooraankondiging that was replaced', function
 
     actAsMunicipalityAdminOnCalendar($this);
 
-    livewire(\App\Filament\Shared\Resources\Zaken\Pages\ListZaken::class)
+    livewire(ListZaken::class)
         ->filterTable('workingstock', 'all')
         ->assertCanSeeTableRecords([$vooraankondiging, $aanvraag]);
 });

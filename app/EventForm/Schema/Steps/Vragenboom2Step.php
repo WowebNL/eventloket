@@ -19,6 +19,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * @openforms-step-uuid ae44ab5b-c068-4ceb-b121-6e6907f78ef9
@@ -374,12 +375,12 @@ final class Vragenboom2Step
         return $matches->count() === 1 ? $matches->first() : null;
     }
 
-    /** @return \Illuminate\Database\Eloquent\Collection<int, Zaak> */
-    private static function vooraankondigingenForTenant(): \Illuminate\Database\Eloquent\Collection
+    /** @return Collection<int, Zaak> */
+    private static function vooraankondigingenForTenant(): Collection
     {
         $tenant = Filament::getTenant();
         if (! $tenant instanceof Organisation) {
-            return new \Illuminate\Database\Eloquent\Collection;
+            return new Collection;
         }
 
         return Zaak::query()

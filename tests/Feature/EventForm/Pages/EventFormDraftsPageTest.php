@@ -7,6 +7,7 @@ use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\TijdenStep;
+use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormDraftsPage;
 use App\Filament\Organiser\Pages\EventFormPage;
@@ -222,9 +223,9 @@ test('prefill vanaf een vooraankondiging zet de omzettings-presets in het concep
         // the organiser would file a second vooraankondiging instead of
         // the definitive aanvraag.
         ->and($state->get('waarvoorWiltUEventloketGebruiken'))->toBe('evenement')
-        ->and($state->get(\App\EventForm\Schema\Steps\Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBe('Ja')
-        ->and($state->get(\App\EventForm\Schema\Steps\Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBe($vooraankondiging->id)
-        ->and($state->get(\App\EventForm\Schema\Steps\Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD))->toBe($vooraankondiging->public_id);
+        ->and($state->get(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBe('Ja')
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBe($vooraankondiging->id)
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD))->toBe($vooraankondiging->public_id);
 });
 
 test('prefill vanaf een gewone zaak zet geen omzettings-presets', function () {
@@ -238,6 +239,6 @@ test('prefill vanaf een gewone zaak zet geen omzettings-presets', function () {
 
     $state = FormState::fromSnapshot(Draft::ownedBy($this->user, $this->organisation)->sole()->state);
 
-    expect($state->get(\App\EventForm\Schema\Steps\Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBeNull()
-        ->and($state->get(\App\EventForm\Schema\Steps\Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBeNull();
+    expect($state->get(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBeNull()
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBeNull();
 });

@@ -20,6 +20,7 @@ use App\Models\Organisation;
 use App\Models\Zaak;
 use App\Models\ZaakRelatie;
 use App\Models\Zaaktype;
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -93,7 +94,7 @@ test('koppelt ook wanneer de vooraankondiging al is afgesloten', function () {
     $sc = koppelScenario();
     $referenceData = $sc['bron']->reference_data->toArray();
     $referenceData['resultaat'] = 'Afgehandeld';
-    $sc['bron']->update(['reference_data' => new App\ValueObjects\ModelAttributes\ZaakReferenceData(...$referenceData)]);
+    $sc['bron']->update(['reference_data' => new ZaakReferenceData(...$referenceData)]);
 
     app(KoppelVooraankondiging::class)->execute(
         vergunningStateMetKoppeling($sc['bron']->id),
