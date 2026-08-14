@@ -71,12 +71,32 @@ test('met concepten toont het overzicht alleen eigen concepten binnen de organis
 test('de voortgangskolom toont de stap-positie van het concept', function () {
     $draft = maakConcept($this->user, $this->organisation, ['watIsDeNaamVanHetEvenementVergunning' => 'Feest'], TijdenStep::UUID);
 
-    $position = array_search(TijdenStep::UUID, EventFormSchema::stepUuidsInOrder(), true) + 1;
-    $total = count(EventFormSchema::stepUuidsInOrder());
+    // Dit concept heeft geen aanvullende vragen, dus de wizard telt de stap
+    // "Aanvullende vragen" niet mee.
+    $uuids = EventFormSchema::stepUuidsInOrder(withAanvullendeVragen: false);
+    $position = array_search(TijdenStep::UUID, $uuids, true) + 1;
 
     Livewire::test(EventFormDraftsPage::class)
         ->assertCanSeeTableRecords([$draft])
-        ->assertSee("Stap {$position} van {$total}");
+        ->assertSee('Stap '.$position.' van '.count($uuids));
+});
+
+test('de voortgangskolom telt de stap Aanvullende vragen mee zodra de gemeente er heeft', function () {
+    $draft = maakConcept($this->user, $this->organisation, [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Feest',
+        'gemeenteVariabelen' => [
+            'extra_questions' => [
+                ['id' => 1, 'type' => 'text', 'label' => 'Nog iets?', 'options' => []],
+            ],
+        ],
+    ], TijdenStep::UUID);
+
+    $uuids = EventFormSchema::stepUuidsInOrder(withAanvullendeVragen: true);
+    $position = array_search(TijdenStep::UUID, $uuids, true) + 1;
+
+    Livewire::test(EventFormDraftsPage::class)
+        ->assertCanSeeTableRecords([$draft])
+        ->assertSee('Stap '.$position.' van '.count($uuids));
 });
 
 test('de formulier-route bevat het draft-id als pad-segment', function () {

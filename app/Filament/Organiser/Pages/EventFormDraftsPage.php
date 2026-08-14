@@ -11,6 +11,7 @@ use App\EventForm\Persistence\PrefillLoader;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
+use App\EventForm\Support\ExtraQuestions;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -106,8 +107,6 @@ class EventFormDraftsPage extends Page implements HasTable
 
     public function table(Table $table): Table
     {
-        $totalSteps = count(EventFormSchema::stepUuidsInOrder());
-
         return $table
             ->query(Draft::query()->ownedBy($this->authUser(), $this->tenant()))
             ->defaultSort('updated_at', 'desc')
@@ -117,11 +116,18 @@ class EventFormDraftsPage extends Page implements HasTable
                     ->weight('semibold'),
                 TextColumn::make('current_step_key')
                     ->label('Voortgang')
-                    ->formatStateUsing(fn (?string $state): string => sprintf(
-                        'Stap %d van %d',
-                        $this->stepPosition($state),
-                        $totalSteps,
-                    ))
+                    // Per concept, want de stap "Aanvullende vragen" telt
+                    // alleen mee wanneer de gemeente van dat concept er
+                    // vragen voor heeft ingesteld.
+                    ->formatStateUsing(function (?string $state, Draft $record): string {
+                        $uuids = EventFormSchema::stepUuidsInOrder($this->draftHasAanvullendeVragen($record));
+
+                        return sprintf(
+                            'Stap %d van %d',
+                            $this->stepPosition($state, $uuids),
+                            count($uuids),
+                        );
+                    })
                     // Zonder default rendert Filament een lege cel bij
                     // null-state en wordt formatStateUsing overgeslagen.
                     ->default(''),
@@ -208,16 +214,36 @@ class EventFormDraftsPage extends Page implements HasTable
         $prefill->setVariable(Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD, $vooraankondiging->public_id);
     }
 
-    /** 1-based positie van een step-UUID in de wizard; onbekend/leeg = stap 1. */
-    private function stepPosition(?string $stepKey): int
+    /**
+     * 1-based positie van een step-UUID in de wizard; onbekend/leeg = stap 1.
+     *
+     * @param  list<string>  $uuids
+     */
+    private function stepPosition(?string $stepKey, array $uuids): int
     {
         if ($stepKey === null || $stepKey === '') {
             return 1;
         }
 
-        $index = array_search($stepKey, EventFormSchema::stepUuidsInOrder(), true);
+        $index = array_search($stepKey, $uuids, true);
 
         return $index === false ? 1 : $index + 1;
+    }
+
+    /**
+     * Of de wizard voor dit concept de stap "Aanvullende vragen" bevat.
+     * Zelfde bepaling als `EventFormPage::hasAanvullendeVragen()`, maar op
+     * de opgeslagen state van het concept.
+     */
+    private function draftHasAanvullendeVragen(Draft $draft): bool
+    {
+        $snapshot = $draft->state;
+
+        if (! is_array($snapshot)) {
+            return false;
+        }
+
+        return ExtraQuestions::hasAny(FormState::fromSnapshot($snapshot));
     }
 
     private function notifyLimitReached(): void
