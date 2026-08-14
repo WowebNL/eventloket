@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Persistence;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Support\DagenRepeater;
 use App\EventForm\Support\ExtraQuestions;
 use App\Models\Organisation;
 use App\Models\User;
@@ -119,6 +120,20 @@ class PrefillLoader
         foreach ($pairs as $key => $value) {
             if ($value !== null && $value !== '') {
                 $state->setField($key, $value);
+            }
+        }
+
+        // Per-day times of a multi-day period.
+        $dagen = [
+            'EvenementDagen' => $ref->dagen_evenement,
+            'OpbouwDagen' => $ref->dagen_opbouw,
+            'AfbouwDagen' => $ref->dagen_afbouw,
+        ];
+
+        foreach ($dagen as $key => $blokken) {
+            $rijen = DagenRepeater::uitReferenceData($blokken);
+            if ($rijen !== []) {
+                $state->setField($key, $rijen);
             }
         }
 

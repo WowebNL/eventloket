@@ -9,8 +9,10 @@ use App\EventForm\Schema\Steps\AanvullendeVragenStep;
 use App\EventForm\Schema\Steps\RisicoscanStep;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
+use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\ExtraQuestions;
+use App\EventForm\Support\TijdenOverzicht;
 use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
@@ -82,13 +84,24 @@ final class SubmissionReport
     }
 
     /**
+     * Display-only fields that duplicate another entry in the report.
+     * The locked zaaknummer field mirrors the vooraankondiging select
+     * right above it, so the report keeps only the select entry.
+     *
+     * @var list<string>
+     */
+    private const DISPLAY_ONLY_KEYS = [
+        Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD,
+    ];
+
+    /**
      * Velden die voor de TijdenStep al in de overzichts-tabel
      * verwerkt worden — laten we niet ook nog als losse rijen tonen.
      */
     private const TIJDEN_TABEL_KEYS = [
-        'OpbouwStart', 'OpbouwEind',
-        'EvenementStart', 'EvenementEind',
-        'AfbouwStart', 'AfbouwEind',
+        'OpbouwStart', 'OpbouwEind', 'OpbouwDagen',
+        'EvenementStart', 'EvenementEind', 'EvenementDagen',
+        'AfbouwStart', 'AfbouwEind', 'AfbouwDagen',
     ];
 
     /**
@@ -149,6 +162,11 @@ final class SubmissionReport
                 if ($key === '') {
                     return;
                 }
+                if ($isTijdenStep && in_array($key, self::TIJDEN_TABEL_KEYS, true)) {
+                    // Already covered by the tijden table; the rows themselves
+                    // hold bare clock times, which would render as today's date.
+                    return;
+                }
                 $fullKey = $keyPrefix === null ? $key : "{$keyPrefix}.{$key}";
                 $rows = is_array($state->get($fullKey)) ? $state->get($fullKey) : [];
                 if ($rows === []) {
@@ -187,7 +205,10 @@ final class SubmissionReport
                 $key = $component->getName();
                 if ($key !== '') {
                     if ($isTijdenStep && in_array($key, self::TIJDEN_TABEL_KEYS, true)) {
-                        // Al in de tijden-tabel verwerkt; sla over.
+                        // Already covered by the tijden table; skip.
+                        return;
+                    }
+                    if (in_array($key, self::DISPLAY_ONLY_KEYS, true)) {
                         return;
                     }
                     $fullKey = $keyPrefix === null ? $key : "{$keyPrefix}.{$key}";
@@ -275,25 +296,16 @@ final class SubmissionReport
     }
 
     /**
-     * Bouw een 3×2-overzichts-tabel (Opbouw / Publiek / Afbouw × Start / Eind)
-     * voor de Tijden-stap. Lege rijen (geen opbouw of geen afbouw) laten we
-     * weg. Zijn alle rijen leeg, dan retourneren we null zodat de tabel
-     * helemaal niet in de PDF verschijnt.
+     * Build the summary table (Opbouw / Publiek / Afbouw × Start / Eind) for
+     * the Tijden step. A multi-day period gets a row per day. Empty rows (no
+     * build-up or no tear-down) are dropped, and when every row is empty we
+     * return null so the table does not appear in the PDF at all.
      *
      * @return array{label: string, value: string, table: array{header: list<string>, rows: list<list<string>>}}|null
      */
     private function buildTijdenTable(FormState $state): ?array
     {
-        $rijen = [
-            ['Opbouw', $this->humanDateTime($state->get('OpbouwStart')), $this->humanDateTime($state->get('OpbouwEind'))],
-            ['Publiek', $this->humanDateTime($state->get('EvenementStart')), $this->humanDateTime($state->get('EvenementEind'))],
-            ['Afbouw', $this->humanDateTime($state->get('AfbouwStart')), $this->humanDateTime($state->get('AfbouwEind'))],
-        ];
-
-        $rijenMetData = array_values(array_filter(
-            $rijen,
-            fn (array $rij) => $rij[1] !== '' || $rij[2] !== '',
-        ));
+        $rijenMetData = TijdenOverzicht::uitFormState($state);
 
         if ($rijenMetData === []) {
             return null;

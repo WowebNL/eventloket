@@ -9,10 +9,12 @@ use App\EventForm\Persistence\DraftLimitReached;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\Persistence\PrefillLoader;
 use App\EventForm\Schema\EventFormSchema;
+use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\ExtraQuestions;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Zaak;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -53,15 +55,31 @@ class EventFormDraftsPage extends Page implements HasTable
         $tenant = $this->tenant();
         $store = app(DraftStore::class);
 
+        $sourceZaakId = request()->query('prefill_from_zaak');
+
         $prefill = app(PrefillLoader::class)->load(
-            request()->query('prefill_from_zaak'),
+            $sourceZaakId,
             $user,
             $tenant,
         );
 
         if ($prefill instanceof FormState) {
+            // Same ownership guard as PrefillLoader: never trust the raw
+            // query param beyond the organisation of the current tenant.
+            $sourceZaak = Zaak::query()
+                ->where('id', $sourceZaakId)
+                ->where('organisation_id', $tenant->id)
+                ->first();
+
+            // No conversion presets for a vooraankondiging that already
+            // has a definitive aanvraag (the convert action is hidden
+            // then, but the URL can be crafted); plain prefill still works.
+            if ($sourceZaak?->isVooraankondiging() && $sourceZaak->opgevolgdDoor()->doesntExist()) {
+                $this->applyVooraankondigingConversion($prefill, $sourceZaak);
+            }
+
             try {
-                $draft = $store->create($user, $tenant, $prefill);
+                $draft = $store->create($user, $tenant, $prefill, sourceZaakId: $sourceZaak?->id);
             } catch (DraftLimitReached) {
                 $this->notifyLimitReachedForHergebruik();
 
@@ -178,6 +196,22 @@ class EventFormDraftsPage extends Page implements HasTable
     public static function getNavigationGroup(): ?string
     {
         return null;
+    }
+
+    /**
+     * "Definitieve aanvraag indienen" on a vooraankondiging: the copied
+     * snapshot still says the organiser wants a vooraankondiging, which
+     * would route the new aanvraag straight into the vooraankondiging
+     * path again. Flip that choice to a regular aanvraag and preset the
+     * link fields in Vragenboom2Step so the vooraankondiging is coupled
+     * and its zaaknummer shows up locked in the form.
+     */
+    private function applyVooraankondigingConversion(FormState $prefill, Zaak $vooraankondiging): void
+    {
+        $prefill->setVariable('waarvoorWiltUEventloketGebruiken', 'evenement');
+        $prefill->setVariable(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD, 'Ja');
+        $prefill->setVariable(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD, $vooraankondiging->id);
+        $prefill->setVariable(Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD, $vooraankondiging->public_id);
     }
 
     /**

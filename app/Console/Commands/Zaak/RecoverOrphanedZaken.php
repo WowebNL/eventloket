@@ -118,6 +118,11 @@ class RecoverOrphanedZaken extends Command
             return true;
         }
 
+        // Per-day times of a multi-day event live only locally, not as a
+        // zaakeigenschap in OpenZaak. If a local case already exists, recovery
+        // must not overwrite those with nothing.
+        $bestaand = Zaak::withTrashed()->firstWhere('zgw_zaak_url', $ozZaak->url);
+
         $zaak = Zaak::updateOrCreate(
             ['zgw_zaak_url' => $ozZaak->url],
             [
@@ -134,6 +139,9 @@ class RecoverOrphanedZaken extends Command
                             'status_name' => $ozZaak->status_name ?? '',
                             'statustype_url' => $ozZaak->statustype_url ?? '',
                             'organisator' => $organisator,
+                            'dagen_evenement' => $bestaand?->reference_data->dagen_evenement,
+                            'dagen_opbouw' => $bestaand?->reference_data->dagen_opbouw,
+                            'dagen_afbouw' => $bestaand?->reference_data->dagen_afbouw,
                         ]
                     )
                 ),

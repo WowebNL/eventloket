@@ -7,6 +7,7 @@ use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\TijdenStep;
+use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormDraftsPage;
 use App\Filament\Organiser\Pages\EventFormPage;
@@ -189,4 +190,75 @@ test('prefill_from_zaak blokkeert met een melding wanneer het maximum is bereikt
         ->assertNotified('Hergebruik niet mogelijk');
 
     expect(Draft::ownedBy($this->user, $this->organisation)->count())->toBe(DraftStore::MAX_DRAFTS);
+});
+
+/**
+ * Issue #10: "Definitieve aanvraag indienen" on a vooraankondiging. The
+ * prefill flow detects that the source zaak is a vooraankondiging, flips
+ * the form to the regular aanvraag flow, presets the link fields and
+ * records the origin on the concept.
+ */
+function vooraankondigingMetSnapshotVoor(User $user, Organisation $organisation, array $values): Zaak
+{
+    $municipality = Municipality::factory()->create();
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'name' => 'Vooraankondiging gemeente Test',
+        'is_active' => true,
+    ]);
+
+    return Zaak::factory()->create([
+        'zaaktype_id' => $zaaktype->id,
+        'organisation_id' => $organisation->id,
+        'organiser_user_id' => $user->id,
+        'form_state_snapshot' => ['values' => $values, 'system' => []],
+    ]);
+}
+
+test('prefill_from_zaak legt de bron-zaak vast op het nieuwe concept', function () {
+    $zaak = zaakMetSnapshotVoor($this->user, $this->organisation, [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest 2027',
+    ]);
+
+    Livewire::withQueryParams(['prefill_from_zaak' => $zaak->id])
+        ->test(EventFormDraftsPage::class);
+
+    expect(Draft::ownedBy($this->user, $this->organisation)->sole()->source_zaak_id)->toBe($zaak->id);
+});
+
+test('prefill vanaf een vooraankondiging zet de omzettings-presets in het concept', function () {
+    $vooraankondiging = vooraankondigingMetSnapshotVoor($this->user, $this->organisation, [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Kermis 2027',
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+    ]);
+
+    Livewire::withQueryParams(['prefill_from_zaak' => $vooraankondiging->id])
+        ->test(EventFormDraftsPage::class);
+
+    $draft = Draft::ownedBy($this->user, $this->organisation)->sole();
+    $state = FormState::fromSnapshot($draft->state);
+
+    expect($draft->source_zaak_id)->toBe($vooraankondiging->id)
+        // The copied snapshot said "vooraankondiging"; without this flip
+        // the organiser would file a second vooraankondiging instead of
+        // the definitive aanvraag.
+        ->and($state->get('waarvoorWiltUEventloketGebruiken'))->toBe('evenement')
+        ->and($state->get(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBe('Ja')
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBe($vooraankondiging->id)
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD))->toBe($vooraankondiging->public_id);
+});
+
+test('prefill vanaf een gewone zaak zet geen omzettings-presets', function () {
+    $zaak = zaakMetSnapshotVoor($this->user, $this->organisation, [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest 2027',
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+    ]);
+
+    Livewire::withQueryParams(['prefill_from_zaak' => $zaak->id])
+        ->test(EventFormDraftsPage::class);
+
+    $state = FormState::fromSnapshot(Draft::ownedBy($this->user, $this->organisation)->sole()->state);
+
+    expect($state->get(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBeNull()
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBeNull();
 });

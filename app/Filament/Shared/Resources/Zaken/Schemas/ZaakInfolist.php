@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\Zaken\Schemas;
 
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
+use App\EventForm\Support\DagenRepeater;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
 use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\AdviceThreadRelationManager;
@@ -52,6 +53,25 @@ class ZaakInfolist
                 ->label(__('resources/zaak.columns.public_id.label')),
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
+            // Issue #10: show the vooraankondiging link in both directions.
+            // On the definitive aanvraag: which vooraankondiging it replaces;
+            // on the vooraankondiging: which aanvraag replaced it. Rendered
+            // in every panel that uses this schema (municipality, advisor,
+            // admin and, via the organiser infolist, the organiser).
+            TextEntry::make('vervangt_vooraankondiging')
+                ->label(__('resources/zaak.columns.vervangt_vooraankondiging.label'))
+                ->state(fn (Zaak $record): ?string => $record->vervangtVooraankondiging->first()?->public_id)
+                ->url(fn (Zaak $record): ?string => self::zaakViewUrl($record->vervangtVooraankondiging->first()))
+                ->color('primary')
+                ->icon('heroicon-o-link')
+                ->visible(fn (Zaak $record): bool => $record->vervangtVooraankondiging->isNotEmpty()),
+            TextEntry::make('opgevolgd_door')
+                ->label(__('resources/zaak.columns.opgevolgd_door.label'))
+                ->state(fn (Zaak $record): ?string => $record->opgevolgdDoor->first()?->public_id)
+                ->url(fn (Zaak $record): ?string => self::zaakViewUrl($record->opgevolgdDoor->first()))
+                ->color('primary')
+                ->icon('heroicon-o-link')
+                ->visible(fn (Zaak $record): bool => $record->opgevolgdDoor->isNotEmpty()),
             TextEntry::make('reference_data.risico_classificatie')
                 ->label(__('resources/zaak.columns.risico_classificatie.label'))
                 ->visible(fn ($state) => ! empty($state)),
@@ -78,6 +98,7 @@ class ZaakInfolist
             TextEntry::make('reference_data.eind_evenement_datetime')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_evenement.label')),
+            self::dagenEntry('dagen_evenement', __('resources/zaak.columns.dagen_evenement.label')),
             TextEntry::make('reference_data.start_opbouw')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.start_opbouw.label'))
@@ -86,6 +107,7 @@ class ZaakInfolist
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_opbouw.label'))
                 ->visible(fn ($state) => ! empty($state)),
+            self::dagenEntry('dagen_opbouw', __('resources/zaak.columns.dagen_opbouw.label')),
             TextEntry::make('reference_data.start_afbouw')
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.start_afbouw.label'))
@@ -94,6 +116,7 @@ class ZaakInfolist
                 ->dateTime(config('app.datetime_format'))
                 ->label(__('resources/zaak.columns.eind_afbouw.label'))
                 ->visible(fn ($state) => ! empty($state)),
+            self::dagenEntry('dagen_afbouw', __('resources/zaak.columns.dagen_afbouw.label')),
             TextEntry::make('reference_data.locaties_evenement')
                 ->label(__('resources/zaak.columns.locaties_evenement.label'))
                 ->visible(fn ($state) => ! empty($state)),
@@ -133,6 +156,25 @@ class ZaakInfolist
                     return in_array($user->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Advisor, Role::Admin]);
                 }),
         ];
+    }
+
+    /**
+     * Per-day start and end times of a multi-day period. Only shown when the
+     * organiser actually supplied them; a single-day event keeps telling its
+     * story through the start and end entries above.
+     */
+    private static function dagenEntry(string $key, string $label): TextEntry
+    {
+        return TextEntry::make("reference_data.{$key}")
+            ->label($label)
+            ->listWithLineBreaks()
+            ->state(function (Zaak $record) use ($key): array {
+                return array_map(
+                    fn (array $rij): string => sprintf('%s · %s – %s', $rij['datum'], $rij['start'], $rij['eind']),
+                    DagenRepeater::alsTabelRijen($record->reference_data->{$key}),
+                );
+            })
+            ->visible(fn ($state): bool => is_array($state) && $state !== []);
     }
 
     public static function resultaatSection(): Section
@@ -549,5 +591,19 @@ class ZaakInfolist
 
                     ]),
             ]));
+    }
+
+    /**
+     * View URL for a related zaak, resolved via the current panel so the
+     * link stays inside the panel of the viewer (municipality, advisor,
+     * admin or organiser).
+     */
+    private static function zaakViewUrl(?Zaak $zaak): ?string
+    {
+        if (! $zaak instanceof Zaak) {
+            return null;
+        }
+
+        return Filament::getResourceUrl($zaak, 'view');
     }
 }

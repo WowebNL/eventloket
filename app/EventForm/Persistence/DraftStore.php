@@ -68,18 +68,23 @@ class DraftStore
     }
 
     /**
-     * Maak een nieuw concept aan. Een bestaand concept zonder ingevulde
-     * velden wordt hergebruikt zodat herhaald "Start nieuwe aanvraag"
-     * geen lege junk-rijen stapelt — behalve wanneer de nieuwe state
-     * zelf al gevuld is (prefill), dan is een eigen rij gewenst.
+     * Create a new concept. An existing concept without filled fields is
+     * reused so repeated "Start nieuwe aanvraag" clicks do not stack empty
+     * junk rows — except when the new state itself is already filled
+     * (prefill), in which case a dedicated row is wanted.
      *
-     * @throws DraftLimitReached wanneer MAX_DRAFTS is bereikt
+     * `$sourceZaakId` records which zaak the concept was prefilled from;
+     * callers must only pass an id whose ownership has been verified
+     * (PrefillLoader enforces the organisation guard).
+     *
+     * @throws DraftLimitReached when MAX_DRAFTS has been reached
      */
     public function create(
         User $user,
         Organisation $organisation,
         FormState $state,
         ?string $currentStepKey = null,
+        ?string $sourceZaakId = null,
     ): Draft {
         if ($state->fields() === []) {
             // In PHP filteren i.p.v. een JSON-query: een lege values-bag
@@ -103,6 +108,7 @@ class DraftStore
         return Draft::create([
             'user_id' => $user->id,
             'organisation_id' => $organisation->id,
+            'source_zaak_id' => $sourceZaakId,
             'state' => $state->toSnapshot(),
             'name' => $this->deriveName($state),
             'current_step_key' => $currentStepKey,
