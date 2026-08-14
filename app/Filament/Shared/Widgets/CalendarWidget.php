@@ -3,6 +3,7 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
 use App\Enums\ZaaktypeRole;
 use App\Filament\Shared\Exports\AdvisorEventExporter;
 use App\Filament\Shared\Exports\BaseEventExporter;
@@ -433,7 +434,34 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
         $this->applyHiddenResultaatTypesFilter($query);
 
+        $this->applyOmgezetteVooraankondigingenFilter($query);
+
         return $query;
+    }
+
+    /**
+     * Hide vooraankondigingen that have been replaced by a definitive
+     * aanvraag (issue #10): the aanvraag takes their place on the
+     * calendar. Deliberately a hard exclusion here and not a user filter
+     * in $this->filters — "Filters resetten" must never bring them back.
+     *
+     * The join re-checks `deleted_at` of the successor because `Zaak`
+     * soft-deletes: the FK cascade only fires on hard deletes, so without
+     * this check a soft-deleted aanvraag would keep its vooraankondiging
+     * hidden behind a zaak that no longer exists. The status or resultaat
+     * of either zaak is irrelevant on purpose: a closed vooraankondiging
+     * is the normal case, only the existence of the relation counts.
+     */
+    protected function applyOmgezetteVooraankondigingenFilter(Builder $query): void
+    {
+        $query->whereNotExists(function ($subQuery) {
+            $subQuery->select(DB::raw(1))
+                ->from('zaak_relaties')
+                ->join('zaken as opvolgers', 'opvolgers.id', '=', 'zaak_relaties.zaak_id')
+                ->whereColumn('zaak_relaties.gerelateerde_zaak_id', 'zaken.id')
+                ->where('zaak_relaties.type', ZaakRelatieType::VervangtVooraankondiging->value)
+                ->whereNull('opvolgers.deleted_at');
+        });
     }
 
     protected function applyHiddenResultaatTypesFilter(Builder $query)

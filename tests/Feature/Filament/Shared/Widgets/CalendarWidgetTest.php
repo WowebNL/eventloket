@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
 use App\Enums\ZaaktypeRole;
 use App\Filament\Admin\Pages\Calendar as AdminCalendarPage;
 use App\Filament\Admin\Widgets\AdminCalendarWidget;
@@ -10,10 +11,12 @@ use App\Filament\Municipality\Pages\Calendar as MunicipalityCalendarPage;
 use App\Filament\Municipality\Widgets\MunicipalityCalendarWidget;
 use App\Filament\Organiser\Pages\Calendar as OrganiserCalendarPage;
 use App\Filament\Organiser\Widgets\OrganiserCalendarWidget;
+use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
+use App\Models\ZaakRelatie;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
@@ -483,4 +486,97 @@ test('calendar widget table view opens the view modal when a row is clicked', fu
     $component->mountTableAction('view', $zaak)->assertOk();
 
     expect($component->instance()->getMountedAction()?->getName())->toBe('view');
+});
+
+/**
+ * Issue #10: a vooraankondiging that has been replaced by a definitive
+ * aanvraag disappears from the calendar; the aanvraag takes its place.
+ * The zaken list itself is untouched by this filter.
+ */
+function omgezetteVooraankondigingScenario(object $context): array
+{
+    $vooraankondigingZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $context->municipality->id,
+        'name' => 'Vooraankondiging gemeente Test',
+        'is_active' => true,
+    ]);
+
+    // Answer 6: the vooraankondiging is typically already closed when the
+    // definitive aanvraag arrives — the filter must ignore its status.
+    $vooraankondiging = Zaak::factory()->create([
+        'zaaktype_id' => $vooraankondigingZaaktype->id,
+        'organisation_id' => $context->organisation->id,
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: now()->toString(),
+            eind_evenement: now()->addDay()->toString(),
+            registratiedatum: now()->toString(),
+            status_name: 'Afgehandeld',
+            statustype_url: 'https://example.com/statustype/1',
+            resultaat: 'Afgehandeld',
+            naam_evenement: 'Omgezette vooraankondiging',
+        ),
+    ]);
+
+    $aanvraag = Zaak::factory()->create([
+        'zaaktype_id' => $context->zaaktype->id,
+        'organisation_id' => $context->organisation->id,
+    ]);
+
+    ZaakRelatie::create([
+        'zaak_id' => $aanvraag->id,
+        'gerelateerde_zaak_id' => $vooraankondiging->id,
+        'type' => ZaakRelatieType::VervangtVooraankondiging,
+    ]);
+
+    return [$vooraankondiging, $aanvraag];
+}
+
+function actAsMunicipalityAdminOnCalendar(object $context): void
+{
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+    $context->municipality->users()->attach($user);
+
+    test()->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($context->municipality);
+}
+
+test('calendar hides a vooraankondiging that was replaced by a definitive aanvraag', function () {
+    [$vooraankondiging, $aanvraag] = omgezetteVooraankondigingScenario($this);
+
+    actAsMunicipalityAdminOnCalendar($this);
+
+    livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$aanvraag])
+        ->assertCanNotSeeTableRecords([$vooraankondiging]);
+});
+
+test('calendar shows the vooraankondiging again when its successor is soft-deleted', function () {
+    [$vooraankondiging, $aanvraag] = omgezetteVooraankondigingScenario($this);
+
+    // Soft delete: the FK cascade does not fire, so the relation row stays
+    // behind — the filter itself must check the successor's deleted_at.
+    $aanvraag->delete();
+
+    actAsMunicipalityAdminOnCalendar($this);
+
+    livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$vooraankondiging]);
+});
+
+test('the zaken list still shows a vooraankondiging that was replaced', function () {
+    [$vooraankondiging, $aanvraag] = omgezetteVooraankondigingScenario($this);
+
+    actAsMunicipalityAdminOnCalendar($this);
+
+    livewire(ListZaken::class)
+        ->filterTable('workingstock', 'all')
+        ->assertCanSeeTableRecords([$vooraankondiging, $aanvraag]);
 });

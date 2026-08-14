@@ -35,6 +35,9 @@
     <h1>Aanvraagformulier {{ $naamEvenement }}</h1>
     <div class="meta">
         <div><strong>Zaaknummer:</strong> {{ $zaak->public_id }}</div>
+        @if (! empty($vervangtVooraankondiging))
+            <div><strong>Vervangt vooraankondiging:</strong> {{ $vervangtVooraankondiging }}</div>
+        @endif
         @if (! empty($risicoClassificatie))
             <div><strong>Risicoclassificatie:</strong> {{ $risicoClassificatie }}</div>
         @endif
