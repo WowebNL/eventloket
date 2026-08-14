@@ -231,3 +231,53 @@ test('toont de organisatienaam als organisator bij een zakelijke aanvraag', func
     expect($tekst)->toContain('Organisator:')
         ->and($tekst)->toContain('Media Tuin');
 });
+
+test('toont de vervangen vooraankondiging in de header onder het zaaknummer (issue #10)', function () {
+    $municipality = \App\Models\Municipality::factory()->create();
+    $organisation = Organisation::factory()->create(['type' => OrganisationType::Business, 'name' => 'Media Tuin']);
+
+    $vooraankondiging = Zaak::factory()->create([
+        'public_id' => 'ZAAK-VA-1',
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'name' => 'Vooraankondiging gemeente Test',
+            'municipality_id' => $municipality->id,
+        ])->id,
+        'organisation_id' => $organisation->id,
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'public_id' => 'ZAAK-DEF-1',
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'name' => 'Evenementenvergunning gemeente Test',
+            'municipality_id' => $municipality->id,
+        ])->id,
+        'organisation_id' => $organisation->id,
+        'form_state_snapshot' => (new FormState(values: [
+            'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest Testlaan',
+        ]))->toSnapshot(),
+    ]);
+
+    \App\Models\ZaakRelatie::create([
+        'zaak_id' => $zaak->id,
+        'gerelateerde_zaak_id' => $vooraankondiging->id,
+        'type' => \App\Enums\ZaakRelatieType::VervangtVooraankondiging,
+    ]);
+
+    Queue::fake();
+
+    (new GenerateSubmissionPdf($zaak))->handle();
+
+    $tekst = tekstUitPdf(Storage::disk('local')->get("zaken/{$zaak->id}/aanvraagformulier.pdf"));
+
+    expect($tekst)->toContain('Vervangt vooraankondiging:')
+        ->and($tekst)->toContain('ZAAK-VA-1');
+});
+
+test('laat de vooraankondiging-regel weg zonder gekoppelde vooraankondiging', function () {
+    $tekst = pdfVoorOrganisatie([
+        'type' => OrganisationType::Business,
+        'name' => 'Media Tuin',
+    ], 'Noah', 'Vermeulen');
+
+    expect($tekst)->not->toContain('Vervangt vooraankondiging:');
+});

@@ -89,6 +89,12 @@ return [
         'eind_afbouw' => [
             'label' => 'Eind afbouw',
         ],
+        'vervangt_vooraankondiging' => [
+            'label' => 'Vervangt vooraankondiging',
+        ],
+        'opgevolgd_door' => [
+            'label' => 'Opgevolgd door',
+        ],
     ],
     'filters' => [
         'workingstock' => [

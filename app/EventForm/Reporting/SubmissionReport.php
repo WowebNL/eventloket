@@ -7,6 +7,7 @@ namespace App\EventForm\Reporting;
 use App\EventForm\Schema\Steps\RisicoscanStep;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Schema\Steps\TypeAanvraagStep;
+use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use Carbon\Carbon;
 use Closure;
@@ -77,6 +78,17 @@ final class SubmissionReport
 
         return $sections;
     }
+
+    /**
+     * Display-only fields that duplicate another entry in the report.
+     * The locked zaaknummer field mirrors the vooraankondiging select
+     * right above it, so the report keeps only the select entry.
+     *
+     * @var list<string>
+     */
+    private const DISPLAY_ONLY_KEYS = [
+        Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD,
+    ];
 
     /**
      * Velden die voor de TijdenStep al in de overzichts-tabel
@@ -176,6 +188,9 @@ final class SubmissionReport
                 if ($key !== '') {
                     if ($isTijdenStep && in_array($key, self::TIJDEN_TABEL_KEYS, true)) {
                         // Al in de tijden-tabel verwerkt; sla over.
+                        return;
+                    }
+                    if (in_array($key, self::DISPLAY_ONLY_KEYS, true)) {
                         return;
                     }
                     $fullKey = $keyPrefix === null ? $key : "{$keyPrefix}.{$key}";

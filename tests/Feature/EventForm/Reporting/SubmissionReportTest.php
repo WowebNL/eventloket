@@ -579,3 +579,38 @@ test('the internal brkGemeente of an address does not leak into the report', fun
         ->and($flat)->not->toContain('GM0882')
         ->and($flat)->not->toContain('brkGemeente');
 });
+
+test('vooraankondiging-koppeling: alleen de select-regel, met opgelost label, zonder zaaknummer-duplicaat', function () {
+    $municipality = \App\Models\Municipality::factory()->create();
+    $vooraankondiging = \App\Models\Zaak::factory()->create([
+        'public_id' => 'ZAAK-VA-9',
+        'zaaktype_id' => \App\Models\Zaaktype::factory()->create([
+            'name' => 'Vooraankondiging gemeente Test',
+            'municipality_id' => $municipality->id,
+        ])->id,
+        'organisation_id' => \App\Models\Organisation::factory()->create()->id,
+    ]);
+
+    $state = new FormState(values: [
+        \App\EventForm\Schema\Steps\Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD => 'Ja',
+        \App\EventForm\Schema\Steps\Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD => $vooraankondiging->id,
+        \App\EventForm\Schema\Steps\Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD => 'ZAAK-VA-9',
+    ]);
+
+    // No Filament panel/tenant here — exactly the context of the PDF
+    // render in the queue, where the options closure must fall back to
+    // the selected zaak itself.
+    $sections = app(SubmissionReport::class)->build($state, [\App\EventForm\Schema\Steps\Vragenboom2Step::make()]);
+
+    expect($sections)->toHaveCount(1);
+
+    $labels = array_column($sections[0]['entries'], 'label');
+    $values = array_column($sections[0]['entries'], 'value');
+
+    // The locked zaaknummer field duplicates the select entry and stays
+    // out of the report; the select entry shows the resolved label, not
+    // the raw UUID.
+    expect($labels)->not->toContain('Zaaknummer van de vooraankondiging')
+        ->and(implode(' ', $values))->toContain('ZAAK-VA-9')
+        ->and(implode(' ', $values))->not->toContain($vooraankondiging->id);
+});

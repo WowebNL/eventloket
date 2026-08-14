@@ -255,3 +255,30 @@ test('OpenZaak faalt → DB-transactie gerold, geen lokale Zaak', function () {
 
     expect(Zaak::count())->toBe(0);
 });
+
+test('een gekoppelde vooraankondiging krijgt bij submit de vervangt-relatie (issue #10)', function () {
+    $sc = scenarioBuurtfeestInHeerlen();
+    fakeOpenzaakZaakCreate();
+
+    $vooraankondiging = Zaak::factory()->create([
+        'zaaktype_id' => \App\Models\Zaaktype::factory()->create([
+            'name' => 'Vooraankondiging gemeente Heerlen',
+            'municipality_id' => $sc['heerlen']->id,
+            'is_active' => true,
+        ])->id,
+        'organisation_id' => $sc['organisation']->id,
+    ]);
+
+    $sc['state']->setField(\App\EventForm\Schema\Steps\Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD, 'Ja');
+    $sc['state']->setField(\App\EventForm\Schema\Steps\Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD, $vooraankondiging->id);
+
+    Bus::fake();
+
+    $zaak = app(SubmitEventForm::class)->execute($sc['state'], $sc['user'], $sc['organisation']);
+
+    $relatie = \App\Models\ZaakRelatie::sole();
+    expect($relatie->zaak_id)->toBe($zaak->id)
+        ->and($relatie->gerelateerde_zaak_id)->toBe($vooraankondiging->id)
+        ->and($relatie->type)->toBe(\App\Enums\ZaakRelatieType::VervangtVooraankondiging)
+        ->and($zaak->vervangtVooraankondiging()->pluck('zaken.id')->all())->toBe([$vooraankondiging->id]);
+});

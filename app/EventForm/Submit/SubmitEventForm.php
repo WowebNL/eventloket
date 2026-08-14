@@ -9,6 +9,7 @@ use App\EventForm\Persistence\DraftStore;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\Steps\CreateLocalZaak;
 use App\EventForm\Submit\Steps\CreateZaakInZGW;
+use App\EventForm\Submit\Steps\KoppelVooraankondiging;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
@@ -56,6 +57,7 @@ final class SubmitEventForm
         private readonly ResolveZaaktype $resolveZaaktype,
         private readonly CreateZaakInZGW $createZaakInZGW,
         private readonly CreateLocalZaak $createLocalZaak,
+        private readonly KoppelVooraankondiging $koppelVooraankondiging,
         private readonly DraftStore $draftStore,
     ) {}
 
@@ -80,6 +82,11 @@ final class SubmitEventForm
                 organisation: $organisation,
             );
         });
+
+        // 3b. Vooraankondiging linked in the form? Write the typed
+        //     zaak-relation (issue #10), with server-side re-checks on
+        //     ownership and aard inside the step itself.
+        $this->koppelVooraankondiging->execute($state, $zaak, $organisation);
 
         // 4. Het ingediende concept verwijderen; andere concepten van de
         //    gebruiker (parallelle aanvragen) blijven staan.
