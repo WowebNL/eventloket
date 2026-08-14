@@ -3,7 +3,7 @@
 namespace App\Filament\Shared\Resources\MunicipalityFormQuestions\Schemas;
 
 use App\Enums\MunicipalityFormQuestionType;
-use App\EventForm\Submit\DetermineAanvraagType;
+use App\Enums\ZaaktypeRole;
 use App\Models\MunicipalityFormQuestion;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
@@ -72,16 +72,16 @@ class MunicipalityFormQuestionForm
 
     /**
      * The three aanvraag paths a question can be limited to, keyed by the
-     * values `DetermineAanvraagType` produces.
+     * values `DetermineAanvraagType` produces (`ZaaktypeRole` backing values).
      *
      * @return array<string, string>
      */
     public static function aanvraagTypeOptions(): array
     {
         return [
-            DetermineAanvraagType::VERGUNNING => __('resources/municipality_form_question.aanvraag_types.vergunning'),
-            DetermineAanvraagType::MELDING => __('resources/municipality_form_question.aanvraag_types.melding'),
-            DetermineAanvraagType::VOORAANKONDIGING => __('resources/municipality_form_question.aanvraag_types.vooraankondiging'),
+            ZaaktypeRole::Vergunning->value => __('resources/municipality_form_question.aanvraag_types.vergunning'),
+            ZaaktypeRole::Melding->value => __('resources/municipality_form_question.aanvraag_types.melding'),
+            ZaaktypeRole::Vooraankondiging->value => __('resources/municipality_form_question.aanvraag_types.vooraankondiging'),
         ];
     }
 

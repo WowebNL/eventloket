@@ -9,10 +9,10 @@ declare(strict_types=1);
  * samenvatting noch in de PDF terechtkomen.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Reporting\SubmissionReport;
 use App\EventForm\Schema\Steps\AanvullendeVragenStep;
 use App\EventForm\State\FormState;
-use App\EventForm\Submit\DetermineAanvraagType;
 
 /**
  * @param  list<array<string, mixed>>  $questions
@@ -101,7 +101,7 @@ test('een antwoord op een uitgefilterde vraag belandt niet in het rapport', func
                 'type' => 'text',
                 'label' => 'Alleen bij een melding',
                 'options' => [],
-                'show_for_aanvraag_types' => [DetermineAanvraagType::MELDING],
+                'show_for_aanvraag_types' => [ZaaktypeRole::Melding->value],
             ],
         ],
         ['extraVraag_1' => 'Oud antwoord'],

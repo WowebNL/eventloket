@@ -5,13 +5,13 @@ declare(strict_types=1);
 use App\Enums\MunicipalityVariableType;
 use App\Enums\OrganisationType;
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\State\FormState;
-use App\EventForm\Submit\DetermineAanvraagType;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Municipality;
 use App\Models\MunicipalityFormQuestion;
@@ -334,7 +334,7 @@ test('een meerkeuzevraag die pas door een padwijziging verschijnt krijgt ook een
     $municipality = Municipality::factory()->create(['brk_identification' => 'GM9999']);
     $vraag = MunicipalityFormQuestion::factory()
         ->checkboxes(['A', 'B', 'C'])
-        ->forAanvraagTypes([DetermineAanvraagType::VOORAANKONDIGING])
+        ->forAanvraagTypes([ZaaktypeRole::Vooraankondiging->value])
         ->create(['municipality_id' => $municipality->id]);
 
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);

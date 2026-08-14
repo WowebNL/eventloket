@@ -8,6 +8,7 @@ declare(strict_types=1);
  * een fout hier lekt een antwoord op een niet meer geldende vraag de PDF in.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Support\ExtraQuestions;
@@ -61,8 +62,8 @@ test('een vraag alleen voor meldingen valt weg bij een vergunningaanvraag', func
     // Zonder ReportQuestion-antwoorden is `vergunning` de veilige default
     // van DetermineAanvraagType.
     $state = fixtureStateWithExtraQuestions([
-        fixtureExtraQuestion(['id' => 1, 'show_for_aanvraag_types' => [DetermineAanvraagType::MELDING]]),
-        fixtureExtraQuestion(['id' => 2, 'show_for_aanvraag_types' => [DetermineAanvraagType::VERGUNNING]]),
+        fixtureExtraQuestion(['id' => 1, 'show_for_aanvraag_types' => [ZaaktypeRole::Melding->value]]),
+        fixtureExtraQuestion(['id' => 2, 'show_for_aanvraag_types' => [ZaaktypeRole::Vergunning->value]]),
     ]);
 
     $questions = ExtraQuestions::forState($state);
@@ -72,7 +73,7 @@ test('een vraag alleen voor meldingen valt weg bij een vergunningaanvraag', func
 });
 
 test('een vraag voor vooraankondiging verschijnt alleen op dat pad', function () {
-    $question = fixtureExtraQuestion(['show_for_aanvraag_types' => [DetermineAanvraagType::VOORAANKONDIGING]]);
+    $question = fixtureExtraQuestion(['show_for_aanvraag_types' => [ZaaktypeRole::Vooraankondiging->value]]);
 
     $vergunning = fixtureStateWithExtraQuestions([$question]);
     $vooraankondiging = fixtureStateWithExtraQuestions([$question], [
@@ -85,7 +86,7 @@ test('een vraag voor vooraankondiging verschijnt alleen op dat pad', function ()
 
 test('een vraag voor twee paden verschijnt op allebei', function () {
     $question = fixtureExtraQuestion([
-        'show_for_aanvraag_types' => [DetermineAanvraagType::VERGUNNING, DetermineAanvraagType::VOORAANKONDIGING],
+        'show_for_aanvraag_types' => [ZaaktypeRole::Vergunning->value, ZaaktypeRole::Vooraankondiging->value],
     ]);
 
     $vergunning = fixtureStateWithExtraQuestions([$question]);

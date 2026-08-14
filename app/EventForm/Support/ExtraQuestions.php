@@ -116,6 +116,10 @@ final class ExtraQuestions
      */
     private static function currentAanvraagType(FormState $state): string
     {
-        return app(DetermineAanvraagType::class)->forState($state);
+        // On this branch DetermineAanvraagType returns a ZaaktypeRole enum;
+        // its backing values equal the old string constants that
+        // `show_for_aanvraag_types` stores, so the string value keeps the
+        // stored data compatible.
+        return app(DetermineAanvraagType::class)->forState($state)->value;
     }
 }
