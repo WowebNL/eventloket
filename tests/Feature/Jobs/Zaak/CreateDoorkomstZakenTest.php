@@ -286,6 +286,7 @@ test('registers the initiator on the deelzaak from the form aanvrager data, not 
         && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen')
         && $request->data()['betrokkeneType'] === 'niet_natuurlijk_persoon'
         && $request->data()['roltype'] === ZgwHttpFake::$baseUrl.'/catalogi/api/v1/roltypen/init'
+        && ($request->data()['betrokkeneIdentificatie']['annIdentificatie'] ?? null) === '12345678'
         && ($request->data()['betrokkeneIdentificatie']['kvkNummer'] ?? null) === '12345678'
         && ($request->data()['betrokkeneIdentificatie']['statutaireNaam'] ?? null) === 'Woweb');
 });
@@ -310,7 +311,8 @@ test('registers a natuurlijk_persoon initiator from the form name when there is 
         && $request->data()['betrokkeneType'] === 'natuurlijk_persoon'
         && ($request->data()['betrokkeneIdentificatie']['geslachtsnaam'] ?? null) === 'Jansen'
         && ($request->data()['betrokkeneIdentificatie']['voornamen'] ?? null) === 'Jan'
-        && ! array_key_exists('kvkNummer', $request->data()['betrokkeneIdentificatie']));
+        && ! array_key_exists('kvkNummer', $request->data()['betrokkeneIdentificatie'])
+        && ! array_key_exists('annIdentificatie', $request->data()['betrokkeneIdentificatie']));
 });
 
 test('skips the initiator when the form has no aanvrager data', function () {
