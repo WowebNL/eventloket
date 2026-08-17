@@ -2,10 +2,10 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Actions;
 
-use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Jobs\Zaak\UploadDocumentsJob;
 use App\Models\Zaak;
+use App\Services\Zgw\DocumentAudience;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
@@ -148,24 +148,9 @@ class UploadDocumentAction
                 ));
             });
 
-        $userRole = auth()->user()->role;
-        if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin])) {
-            $fields[] = Select::make('vertrouwelijkheidaanduiding')
-                ->label(__('Wie mag dit document inzien?'))
-                ->options(function () use ($zaak) {
-                    $vertrouwelijkheden = ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), auth()->user()->role);
-                    $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
-                    $options = [];
-                    foreach ($rolesByVertrouwelijkheid as $key => $roles) {
-                        if (in_array($key, $vertrouwelijkheden)) {
-                            $options[$key] = collect($roles)->map(fn (Role $role) => $role->getLabel())->join(', ');
-                        }
-                    }
-
-                    return $options;
-                })
-                ->visible(fn (Get $get): bool => ! empty($get('document_metadata')))
-                ->required();
+        if ($vertrouwelijkheid = self::vertrouwelijkheidSelect($zaak)) {
+            $fields[] = $vertrouwelijkheid
+                ->visible(fn (Get $get): bool => ! empty($get('document_metadata')));
         }
 
         $fields[] = Repeater::make('document_metadata')
@@ -201,23 +186,8 @@ class UploadDocumentAction
                 ->required(),
         ];
 
-        $userRole = auth()->user()->role;
-        if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin])) {
-            $fields[] = Select::make('vertrouwelijkheidaanduiding')
-                ->label(__('Wie mag dit document inzien?'))
-                ->options(function () use ($zaak) {
-                    $vertrouwelijkheden = ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), auth()->user()->role);
-                    $rolesByVertrouwelijkheid = DocumentVertrouwelijkheden::listUserRoles();
-                    $options = [];
-                    foreach ($rolesByVertrouwelijkheid as $key => $roles) {
-                        if (in_array($key, $vertrouwelijkheden)) {
-                            $options[$key] = collect($roles)->map(fn (Role $role) => $role->getLabel())->join(', ');
-                        }
-                    }
-
-                    return $options;
-                })
-                ->required();
+        if ($vertrouwelijkheid = self::vertrouwelijkheidSelect($zaak)) {
+            $fields[] = $vertrouwelijkheid;
         }
 
         $fields[] = FileUpload::make('file')
@@ -248,6 +218,39 @@ class UploadDocumentAction
             ->maxLength(255);
 
         return $fields;
+    }
+
+    /**
+     * The "who may see this document" select, or null when it should not be
+     * shown at all.
+     *
+     * The options and their labels come from the vertrouwelijkheid map of the
+     * connection this zaak runs on, so each level is labelled with the role
+     * groups that will actually see it. The select is left out entirely when the
+     * current user may not choose (an organiser never does), and when the levels
+     * on offer reach exactly the same audience: a choice that changes nothing is
+     * a promise the filtering does not keep. In both cases the connection's
+     * upload default applies, which the action already falls back to when no
+     * value is submitted.
+     */
+    private static function vertrouwelijkheidSelect(Zaak $zaak): ?Select
+    {
+        $userRole = auth()->user()->role;
+
+        if (! in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin], true)) {
+            return null;
+        }
+
+        $options = DocumentAudience::uploadOptions($zaak->zgwConnectionName(), $userRole);
+
+        if ($options === []) {
+            return null;
+        }
+
+        return Select::make('vertrouwelijkheidaanduiding')
+            ->label(__('Wie mag dit document inzien?'))
+            ->options($options)
+            ->required();
     }
 
     /**
