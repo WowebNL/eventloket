@@ -4,10 +4,12 @@
  * UpdateInitiatorZGW sets the initiator rol on the ZGW zaak from the initiator
  * block in the FormState snapshot.
  *
- * Main behaviour covered here: for an organisation with a KvK number we send
- * only `kvkNummer` as the company identifier, for every connection (OpenZaak
- * included); `annIdentificatie` is deliberately omitted because not every ZGW
- * instance accepts it. For a private aanvrager (no KvK) the rol carries a
+ * Main behaviour covered here: for an organisation with a KvK number the rol
+ * carries the company number in `annIdentificatie` as well as in `kvkNummer`,
+ * for every connection. The Zaken API standard defines no `kvkNummer` on
+ * RolNietNatuurlijkPersoon in any release from 1.0 up to and including 1.7, so
+ * a conformant backend drops that property and only `annIdentificatie` keeps
+ * the number on the zaak. For a private aanvrager (no KvK) the rol carries a
  * stable `anpIdentificatie` and the verblijfsadres from the form's address
  * fieldset, so backends such as OneGround materialise a visible betrokkene.
  */
@@ -67,7 +69,7 @@ function fakeZaakRoltypenEnRollen(): void
     ]);
 }
 
-test('stuurt voor een organisatie alleen kvkNummer als bedrijfsidentificatie', function () {
+test('stuurt voor een organisatie annIdentificatie naast kvkNummer mee', function () {
     $zaak = zaakMetInitiator([
         'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
         'watIsDeNaamVanUwOrganisatie' => 'Acme BV',
@@ -85,8 +87,8 @@ test('stuurt voor een organisatie alleen kvkNummer als bedrijfsidentificatie', f
         $identificatie = $request->data()['betrokkeneIdentificatie'] ?? [];
 
         return $request->data()['betrokkeneType'] === 'niet_natuurlijk_persoon'
+            && ($identificatie['annIdentificatie'] ?? null) === '12345678'
             && ($identificatie['kvkNummer'] ?? null) === '12345678'
-            && ! array_key_exists('annIdentificatie', $identificatie)
             && ($identificatie['statutaireNaam'] ?? null) === 'Acme BV';
     });
 });
