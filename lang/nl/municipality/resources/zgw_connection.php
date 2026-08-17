@@ -107,6 +107,9 @@ return [
 
     'vertrouwelijkheid_groups' => [
         'gemeente' => 'Gemeente (behandelaars en beheerders)',
+        // Short form, used where the group is named as an audience ("wie mag dit
+        // document inzien?") instead of as a form heading.
+        'gemeente_audience' => 'Gemeente',
     ],
 
     'vertrouwelijkheid_levels' => [
