@@ -238,6 +238,8 @@ Hier bepaal je per rolgroep welke vertrouwelijkheidsniveaus zichtbaar zijn en we
 
 Laat een veld leeg om de standaardwaarden van Eventloket aan te houden. De rol-gebaseerde filtering blijft altijd actief, ongeacht deze instellingen. Als alle drie de document-tabbladen zijn uitgeschakeld, verdwijnen de per-rol velden vanzelf, omdat er dan toch niet geüpload kan worden. De standaard voor systeemdocumenten blijft dan wel relevant.
 
+**Wat een behandelaar hiervan ziet bij het uploaden.** In het uploadvenster staat de keuze "Wie mag dit document inzien?". De niveaus in die keuze en de rolgroepen die erbij staan, komen uit de zichtbare niveaus die je hier instelt. Kies je bijvoorbeeld dat de organisator ook vertrouwelijke stukken mag zien, dan staat de organisator vanaf dat moment bij dat niveau vermeld. Maken de aangeboden niveaus voor geen enkele rolgroep verschil, bijvoorbeeld omdat alleen de gemeenterollen ze mogen zien, dan verdwijnt de keuze en krijgt het document het niveau uit "Standaard bij uploaden". Een keuze die niets verandert wordt dus niet voorgelegd.
+
 Twee vaste gedragsregels gelden altijd, los van deze instellingen:
 
 - Een organisator ziet de documenten die hij zelf heeft ingediend altijd terug, ook als het vertrouwelijkheidsniveau van die documenten buiten de zichtbare niveaus van de organisator valt.

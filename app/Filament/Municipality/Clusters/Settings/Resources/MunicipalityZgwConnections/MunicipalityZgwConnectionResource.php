@@ -10,6 +10,7 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnect
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\ListMunicipalityZgwConnections;
 use App\Livewire\ConnectionVerifier;
 use App\Models\MunicipalityZgwConnection;
+use App\Services\Zgw\DocumentAudience;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -224,29 +225,17 @@ class MunicipalityZgwConnectionResource extends Resource
      * binds to; the others inherit its value on save. Roles outside these groups
      * (platform admin, koppeling beheerder) always fall back to the defaults.
      *
-     * @return array<int, array{label: string, roles: array<int, Role>}>
+     * The groups are defined once in {@see DocumentAudience::groups()}, which
+     * also labels the upload choice with them, so the form and that choice can
+     * never describe different groups. They are listed there from the broadest
+     * to the narrowest audience and reversed here, so the form keeps showing
+     * them as organisator, adviseur, gemeente.
+     *
+     * @return array<int, array{label: string, audience: string, roles: array<int, Role>}>
      */
     protected static function vertrouwelijkheidGroups(): array
     {
-        return [
-            [
-                'label' => Role::Organiser->getLabel(),
-                'roles' => [Role::Organiser],
-            ],
-            [
-                'label' => Role::Advisor->getLabel(),
-                'roles' => [Role::Advisor],
-            ],
-            [
-                'label' => __('municipality/resources/zgw_connection.vertrouwelijkheid_groups.gemeente'),
-                'roles' => [
-                    Role::Reviewer,
-                    Role::Coordinator,
-                    Role::MunicipalityAdmin,
-                    Role::ReviewerMunicipalityAdmin,
-                ],
-            ],
-        ];
+        return array_reverse(DocumentAudience::groups());
     }
 
     /**
