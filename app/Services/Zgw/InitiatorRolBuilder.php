@@ -19,7 +19,8 @@ use Illuminate\Support\Str;
  * copied ZGW rol whose betrokkeneIdentificatie is empty across instances.
  *
  * Two variants, matching the aanvrager:
- * - has a KvK number → niet_natuurlijk_persoon (statutaireNaam, kvkNummer)
+ * - has a KvK number → niet_natuurlijk_persoon (statutaireNaam,
+ *   annIdentificatie, and kvkNummer only towards the default connection)
  * - otherwise        → natuurlijk_persoon (voornamen, geslachtsnaam,
  *   anpIdentificatie, verblijfsadres)
  *
@@ -27,22 +28,24 @@ use Illuminate\Support\Str;
  * materialise a betrokkene (OneGround/RX Mission shows nothing for a rol whose
  * betrokkeneIdentificatie only carries name parts). We have no BSN, so a stable
  * application-issued anpIdentificatie derived from the organiser user id is
- * sent, mirroring kvkNummer on the organisation variant.
+ * sent, mirroring annIdentificatie on the organisation variant.
  */
 final class InitiatorRolBuilder
 {
     /**
+     * @param  string  $connectionName  the connection the rol is posted to, which decides
+     *                                  whether the non-standard kvkNummer is sent along
      * @param  array<string, mixed>  $initiator  output of ZaakeigenschappenMap::buildInitiator()
      * @return array<string, mixed>|null rol payload, or null when there is no initiator data
      */
-    public static function build(string $zaakUrl, string $roltype, FormState $state, array $initiator, ?string $anpIdentificatie = null): ?array
+    public static function build(string $connectionName, string $zaakUrl, string $roltype, FormState $state, array $initiator, ?string $anpIdentificatie = null): ?array
     {
         if ($initiator === []) {
             return null;
         }
 
         return isset($initiator['kvk']) && $initiator['kvk']
-            ? self::nietNatuurlijkPersoon($zaakUrl, $roltype, $initiator, self::kvkNummer($initiator['kvk']))
+            ? self::nietNatuurlijkPersoon($connectionName, $zaakUrl, $roltype, $initiator, self::kvkNummer($initiator['kvk']))
             : self::natuurlijkPersoon($zaakUrl, $roltype, $state, $initiator, $anpIdentificatie);
     }
 
@@ -55,7 +58,8 @@ final class InitiatorRolBuilder
      * job (a retry, or `zaak:create-doorkomst-zaken` on an existing zaak) reads
      * the already-hashed snapshot, and writing that hash to ZGW as if it were a
      * KvK number would put a bogus company number on the zaak. The rol is then
-     * registered on the statutaireNaam alone.
+     * registered on the statutaireNaam alone, so this guard covers both
+     * annIdentificatie and kvkNummer.
      */
     private static function kvkNummer(mixed $kvk): ?string
     {
@@ -81,7 +85,7 @@ final class InitiatorRolBuilder
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>
      */
-    private static function nietNatuurlijkPersoon(string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer): array
+    private static function nietNatuurlijkPersoon(string $connectionName, string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer): array
     {
         return [
             'zaak' => $zaakUrl,
@@ -89,13 +93,27 @@ final class InitiatorRolBuilder
             'roltype' => $roltype,
             'roltoelichting' => 'inzender formulier',
             'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
-            // We send only kvkNummer as the company identifier, for every
-            // connection (OpenZaak included). annIdentificatie is deliberately
-            // omitted: not every ZGW instance accepts it and the KvK number is
-            // the canonical identifier.
+            // annIdentificatie is the standard-conformant carrier for the
+            // company number. RolNietNatuurlijkPersoon has no kvkNummer
+            // property in any Zaken API release from 1.0 up to and including
+            // 1.7 (kvkNummer only exists on RolVestiging, added in 1.3.0),
+            // while annIdentificatie has been defined here since 1.0. Sending
+            // only kvkNummer therefore leaves the rol with a statutaireNaam and
+            // no identifying attribute at all, which is what happened on a real
+            // instance on 28-07-2026: the create response came back without an
+            // error and without the property, innNnpId and annIdentificatie
+            // both empty. innNnpId is not used for the number either, because
+            // that field holds the chamber-issued RSIN and a conformant backend
+            // validates it as such, which an eight-digit KvK number fails.
+            //
+            // kvkNummer is a non-standard extra and only goes to our own
+            // default connection (OpenZaak), which read it before this builder
+            // existed. Every other connection belongs to a municipality running
+            // its own instance, and those get the standard payload only.
             'betrokkeneIdentificatie' => array_filter([
                 'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
-                'kvkNummer' => $kvkNummer,
+                'annIdentificatie' => $kvkNummer,
+                'kvkNummer' => ZgwConnectionConfig::isDefaultConnection($connectionName) ? $kvkNummer : null,
             ]),
         ];
     }
