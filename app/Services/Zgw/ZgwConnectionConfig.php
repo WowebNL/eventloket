@@ -134,6 +134,21 @@ class ZgwConnectionConfig
     }
 
     /**
+     * Whether this is the global "main" connection from config/zgw.php: our own
+     * OpenZaak instance, the one every zaak used before municipalities could
+     * bring their own. Any other name belongs to a municipality-owned instance.
+     *
+     * Deliberately not expressed as "not OneGround": a future OpenZaak
+     * connection of a municipality is still someone else's instance, and
+     * behaviour we only kept for backwards compatibility with our own history
+     * should not leak into it.
+     */
+    public static function isDefaultConnection(string $connectionName): bool
+    {
+        return $connectionName === ZgwConnectionResolver::DEFAULT_CONNECTION;
+    }
+
+    /**
      * Whether this connection talks to a OneGround (RX Mission) backend, which
      * deviates from the ZGW standard on a few points (bare-string overigeData,
      * eager archiving on eind-status). Defaults to false so the global "main"

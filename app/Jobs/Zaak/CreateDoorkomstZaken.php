@@ -201,7 +201,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
 
         $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
-        $this->createInitiator($deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
+        $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
         $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
         $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
 
@@ -303,7 +303,7 @@ class CreateDoorkomstZaken implements ShouldQueue
      *
      * @param  array<string, mixed>  $initiator  output of ZaakeigenschappenMap::buildInitiator()
      */
-    private function createInitiator(ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype, FormState $state, array $initiator): void
+    private function createInitiator(string $deelConnectionName, ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype, FormState $state, array $initiator): void
     {
         if ($initiator === []) {
             return;
@@ -319,6 +319,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
 
         $rolData = InitiatorRolBuilder::build(
+            $deelConnectionName,
             $newZaakUrl,
             $roltype['url'],
             $state,
