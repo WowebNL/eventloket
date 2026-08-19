@@ -2,8 +2,6 @@
 
 namespace App\Enums;
 
-use App\Services\Zgw\DocumentAudience;
-
 /**
  * We only use Zaakvertrouwelijk, Vertrouwelijk and Confidentieel in the app.
  */
@@ -43,24 +41,30 @@ enum DocumentVertrouwelijkheden: string
         };
     }
 
-    /**
-     * The levels a municipal user is offered when uploading a document, ordered
-     * from least to most confidential. The application deliberately uses only
-     * these three of the eight ZGW levels.
-     *
-     * Which of them are actually offered, and which roles each of them reaches,
-     * follows the vertrouwelijkheid map of the connection the zaak runs on; see
-     * {@see DocumentAudience}. This list must therefore never be used to label
-     * the choice: it says nothing about who sees what.
-     *
-     * @return array<int, string>
-     */
-    public static function uploadChoices(): array
+    public static function listUserRoles(): array
     {
         return [
-            self::Zaakvertrouwelijk->value,
-            self::Vertrouwelijk->value,
-            self::Confidentieel->value,
+            self::Zaakvertrouwelijk->value => [
+                // Role::Admin,
+                // Role::MunicipalityAdmin,
+                // Role::ReviewerMunicipalityAdmin,
+                Role::Reviewer,
+                Role::Advisor,
+                Role::Organiser,
+            ],
+            self::Vertrouwelijk->value => [
+                // Role::Admin,
+                // Role::MunicipalityAdmin,
+                // Role::ReviewerMunicipalityAdmin,
+                Role::Reviewer,
+                Role::Advisor,
+            ],
+            self::Confidentieel->value => [
+                // Role::Admin,
+                // Role::MunicipalityAdmin,
+                // Role::ReviewerMunicipalityAdmin,
+                Role::Reviewer,
+            ],
         ];
     }
 }
