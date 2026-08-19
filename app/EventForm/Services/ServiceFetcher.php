@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Services;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Support\LocationKinds;
 use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
@@ -111,11 +112,14 @@ class ServiceFetcher
             // Polygonen en lijnen zitten via hun gefilterde geometrieën nog
             // steeds in de hash, dus de gemeentebepaling voor kaart-items
             // triggert ongewijzigd.
-            'inGemeentenResponse' => sha1((string) json_encode([
-                'p' => $this->collectPolygonsFromEditgrid($state->get('locatieSOpKaart')),
-                'l' => $this->collectLinesFromEditgrid($state->get('routesOpKaart')),
-                'a' => $this->collectAddressesFromEditgrid($state->get('adresVanDeGebouwEn'), $authoritativeAddresses),
-            ])),
+            //
+            // The tick boxes of `waarVindtHetEvenementPlaats` reach the hash
+            // through `locationCheckInput()`: unticking a kind drops its
+            // value here as well, so it busts the cache instead of returning
+            // the response that still counted it.
+            'inGemeentenResponse' => sha1((string) json_encode(
+                $this->locationCheckInput($state, $authoritativeAddresses)
+            )),
             default => null,
         };
     }
@@ -172,19 +176,50 @@ class ServiceFetcher
 
     private function fetchInGemeentenResponse(FormState $state, bool $authoritativeAddresses): void
     {
-        $input = new LocationServerCheckInput(
-            polygons: $this->collectPolygonsFromEditgrid($state->get('locatieSOpKaart')),
-            line: null,
-            lines: $this->collectLinesFromEditgrid($state->get('routesOpKaart')),
-            addresses: $this->collectAddressesFromEditgrid($state->get('adresVanDeGebouwEn'), $authoritativeAddresses),
-            address: null,
-        );
+        $input = $this->locationCheckInput($state, $authoritativeAddresses);
 
         if (! $input->hasAnyInput()) {
+            // Everything the check would weigh sits in a kind the organiser
+            // dropped, so an earlier response — the copied event's, or the one
+            // from before the kind was unticked — is about a location that is
+            // no longer asked for. Leaving it standing keeps its municipality
+            // in the choice list, where it can still be submitted.
+            //
+            // A reactive run leaves out addresses whose municipality is not
+            // known yet, so its empty input alone does not prove there is no
+            // location: an address being typed is simply waiting for the gate.
+            // Weigh it the authoritative way before wiping anything.
+            $remaining = $authoritativeAddresses ? $input : $this->locationCheckInput($state, true);
+
+            if (! $remaining->hasAnyInput() && LocationKinds::hasDroppedAnswers($state)) {
+                $state->setVariable('inGemeentenResponse', null);
+            }
+
             return;
         }
 
         $state->setVariable('inGemeentenResponse', $this->locationService->execute($input));
+    }
+
+    /**
+     * The location check's input: the drawn areas, the drawn routes and the
+     * complete addresses, each one taken only when its kind is still ticked
+     * in `waarVindtHetEvenementPlaats`.
+     *
+     * Unticking a kind hides its field but leaves its raw value in the state
+     * (see `LocationKinds`), so reading the fields directly counts locations
+     * the organiser dropped. Both the fetch and its cache hash go through
+     * here, so they can never disagree about what the input is.
+     */
+    private function locationCheckInput(FormState $state, bool $authoritativeAddresses): LocationServerCheckInput
+    {
+        return new LocationServerCheckInput(
+            polygons: $this->collectPolygonsFromEditgrid(LocationKinds::valueFor($state, LocationKinds::BUITEN)),
+            line: null,
+            lines: $this->collectLinesFromEditgrid(LocationKinds::valueFor($state, LocationKinds::ROUTE)),
+            addresses: $this->collectAddressesFromEditgrid(LocationKinds::valueFor($state, LocationKinds::GEBOUW), $authoritativeAddresses),
+            address: null,
+        );
     }
 
     /**
