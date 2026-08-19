@@ -170,6 +170,12 @@ return [
                                 'label' => 'Intern zaaknummer',
                             ],
                         ],
+                        'notifications' => [
+                            'saved_locally' => [
+                                'title' => 'Intern zaaknummer is opgeslagen in Eventloket',
+                                'body' => 'Het zaaksysteem kent geen eigenschap voor het interne zaaknummer, dus daar is niets weggeschreven.',
+                            ],
+                        ],
                     ],
                     'delete_intern_zaaknummer' => [
                         'label' => 'Verwijderen',
