@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\Sentry\BreadcrumbScrubber;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
@@ -56,12 +57,19 @@ return [
     'send_default_pii' => env('SENTRY_SEND_DEFAULT_PII', false),
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_exceptions
-    'ignore_exceptions' => [
+    'ignore_exceptions' => array_values(array_filter([
         AuthenticationException::class,
         ValidationException::class,
         NotFoundHttpException::class,
         MethodNotAllowedHttpException::class,
-    ],
+        // Opt-in per environment: some environments run Redis on hardware that is
+        // too light for the workload and produce connection blips that are noise
+        // rather than defects. Setting SENTRY_IGNORE_REDIS_EXCEPTIONS=true there
+        // silences them; dropping the variable again restores reporting without a
+        // code change. Never enable this in production, where a Redis failure is
+        // a real incident.
+        env('SENTRY_IGNORE_REDIS_EXCEPTIONS', false) ? RedisException::class : null,
+    ])),
 
     // @see: https://docs.sentry.io/platforms/php/guides/laravel/configuration/options/#ignore_transactions
     'ignore_transactions' => [
@@ -98,6 +106,15 @@ return [
         // Capture send notifications as breadcrumbs
         'notifications' => env('SENTRY_BREADCRUMBS_NOTIFICATIONS_ENABLED', true),
     ],
+
+    // The SDK's HTTP client integration strips the query string from the breadcrumb
+    // URL, but adds it back as a separate `http.query` metadata field. Our address
+    // lookups against PDOK carry a postcode and house number in that query string,
+    // so every breadcrumb for such a request would ship personal data to Sentry.
+    // Drop the field from all breadcrumbs. This is data hygiene, so it applies to
+    // every environment and is deliberately not configurable. An array callable
+    // rather than a closure, so `php artisan config:cache` keeps working.
+    'before_breadcrumb' => [BreadcrumbScrubber::class, 'scrub'],
 
     // Performance monitoring specific configuration
     'tracing' => [
