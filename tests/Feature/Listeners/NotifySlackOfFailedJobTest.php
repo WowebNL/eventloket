@@ -3,6 +3,7 @@
 use App\Listeners\NotifySlackOfFailedJob;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -14,6 +15,9 @@ function makeFailedJobEvent(string $jobName = 'App\\Jobs\\TestJob', string $queu
     $job = Mockery::mock(Job::class);
     $job->shouldReceive('resolveName')->andReturn($jobName);
     $job->shouldReceive('getQueue')->andReturn($queue);
+    // Horizon's ForgetJobTimer also listens to JobFailed, so a real dispatch
+    // through the event dispatcher reaches this method as well.
+    $job->shouldReceive('getJobId')->andReturn('test-job-id');
 
     return new JobFailed('redis', $job, new RuntimeException($message));
 }
@@ -78,6 +82,24 @@ test('stack trace is truncated to 2900 characters', function () {
     (new NotifySlackOfFailedJob)->handle(makeFailedJobEvent());
 
     Http::assertSent(fn ($request) => strlen($request->data()['attachments'][0]['text']) <= 2900);
+});
+
+test('a dispatched job failed event sends exactly one slack notification', function () {
+    config(['services.slack.horizon_webhook_url' => $this->webhookUrl]);
+    Http::fake([$this->webhookUrl => Http::response('ok', 200)]);
+
+    event(makeFailedJobEvent());
+
+    Http::assertSentCount(1);
+});
+
+test('the listener is registered exactly once for the job failed event', function () {
+    $registrations = array_filter(
+        Event::getRawListeners()[JobFailed::class] ?? [],
+        fn ($listener) => is_string($listener) && str_starts_with($listener, NotifySlackOfFailedJob::class)
+    );
+
+    expect($registrations)->toHaveCount(1);
 });
 
 test('does not send slack notification when webhook url is not configured', function () {
