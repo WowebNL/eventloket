@@ -120,3 +120,54 @@ test('buildZip returns a token and stores zip in cache', function () {
         ->and(Cache::get("document_zip.{$token}")['zaak_id'])->toBe($zaak->id)
         ->and(Cache::get("document_zip.{$token}")['user_id'])->toBe($this->user->id);
 });
+
+test('buildZip strips path segments from a crafted bestandsnaam (zip slip)', function () {
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+    ]);
+
+    $documentUuid = 'slip-doc-uuid';
+    $doc = new Informatieobject(
+        url: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/'.$documentUuid,
+        uuid: $documentUuid,
+        identificatie: 'DOC-SLIP',
+        bronorganisatie: '123',
+        creatiedatum: now()->format('Y-m-d'),
+        titel: 'Slip document',
+        vertrouwelijkheidaanduiding: 'zaakvertrouwelijk',
+        auteur: 'Tester',
+        status: null,
+        taal: 'dut',
+        bestandsnaam: '../../../etc/evil.pdf',
+        bestandsomvang: 100,
+        formaat: 'application/pdf',
+        inhoud: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/'.$documentUuid.'/download',
+        link: null,
+        beschrijving: '',
+        versie: 1,
+        indicatieGebruiksrecht: false,
+        locked: false,
+        informatieobjecttype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
+    );
+
+    Cache::put("zaak.{$zaak->id}.documenten", collect([$doc]));
+
+    Http::fake([
+        $doc->inhoud.'*' => Http::response('%PDF-1.4 slip content', 200),
+    ]);
+
+    $token = CreateDocumentsZipJob::buildZip($zaak, [$documentUuid], $this->user->id);
+
+    $zip = new ZipArchive;
+    $zip->open(storage_path("app/private/zips/{$token}.zip"));
+    $entry = $zip->getNameIndex(0);
+    $zip->close();
+
+    // Only the basename survives; no directory traversal segments in the archive.
+    expect($entry)->toBe('evil.pdf')
+        ->and($entry)->not->toContain('..')
+        ->and($entry)->not->toContain('/');
+});

@@ -355,8 +355,7 @@ class EventFormPage extends Page implements HasForms
      * Meteen ook een integriteitsgrens: `$data` komt van de client, dus zonder
      * deze filter kan een aangepaste `inGemeentenResponse` de aanvraag naar een
      * willekeurige gemeente sturen — inclusief langs de controle in
-     * {@see ResolveZaaktype}, die tegen diezelfde
-     * response vergelijkt.
+     * {@see ResolveZaaktype}, die tegen diezelfde response vergelijkt.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -632,11 +631,12 @@ class EventFormPage extends Page implements HasForms
      * intersectie de eerdere keuze van de organisator ongeldig maakt: de
      * gekozen gemeente zit niet langer tussen de gevonden gemeenten. Dat
      * gebeurt wanneer de organisator z'n route of locatie zo verlegt dat
-     * die gemeente er niet meer bij is. Zonder deze reset zou een stale
-     * brk_identification de `evenementInGemeente`-derivation blijven
-     * aansturen; die levert dan `null` op en de gate blokkeert met de
-     * misleidende melding "Gemeente niet bepaald" i.p.v. om een nieuwe
-     * keuze te vragen.
+     * die gemeente er niet meer bij is, en bij "Nieuwe aanvraag met deze
+     * gegevens" waarbij de keuze van de bron-aanvraag nog in de state stond.
+     * Zonder deze reset zou een stale brk_identification de
+     * `evenementInGemeente`-derivation blijven aansturen; die levert dan
+     * `null` op en de gate blokkeert met de misleidende melding "Gemeente
+     * niet bepaald" i.p.v. om een nieuwe keuze te vragen.
      *
      * Bewust idempotent: een keuze die nog in de gevonden set zit blijft
      * staan, hoe vaak deze check ook draait. De gate (`runLocationGate()`)

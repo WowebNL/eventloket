@@ -11,13 +11,14 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserT
 use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\DeelzakenTable;
 use App\Livewire\Zaken\ZaakDocumentsTable;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
+use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
-use App\ValueObjects\ZGW\StatusType;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
@@ -38,10 +39,25 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
+use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
+use Woweb\Zgw\Facades\Zgw;
 
 class ZaakInfolist
 {
+    /**
+     * The ZGW eigenschap naam for the internal zaaknummer on this zaak. Without
+     * a koppeling that translates the name this is the logical key itself, so
+     * the shared hoofdkoppeling keeps working exactly as before.
+     */
+    private static function internZaaknummerEigenschapNaam(Zaak $record): string
+    {
+        return ZaaktypeBlueprint::eigenschapNaam(
+            MunicipalityZaaktypeMapping::forZaaktype($record->zaaktype),
+            'intern_zaaknummer',
+        );
+    }
+
     public static function informationschema(): array
     {
         return [
@@ -200,8 +216,10 @@ class ZaakInfolist
                                         return null;
                                     })
                                     ->afterLabel(Schema::end([
-                                        Icon::make('heroicon-o-pencil-square'),
+                                        Icon::make('heroicon-o-pencil-square')
+                                            ->visible(fn (Zaak $record): bool => $record->behandelaarCanEditRisicoClassificatie()),
                                         Action::make('editRisicoClassificatie')
+                                            ->visible(fn (Zaak $record): bool => $record->behandelaarCanEditRisicoClassificatie())
                                             ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.label'))
                                             ->fillForm(function (Zaak $record): array {
                                                 /** @var ZaakReferenceData $referenceData */
@@ -228,7 +246,7 @@ class ZaakInfolist
                                                     ->required(),
                                             ])
                                             ->action(function ($data, $record) {
-                                                $openzaak = new Openzaak;
+                                                $openzaak = Zgw::connection($record->zgwConnectionName());
                                                 $success = true;
                                                 $eigenschappen = ['risico_classificatie' => null, 'risico_toelichting' => null];
 
@@ -248,7 +266,7 @@ class ZaakInfolist
                                                 // Load catalogi eigenschappen if needed
                                                 $catalogiEigenschappen = null;
                                                 if (! $eigenschappen['risico_classificatie'] || ! $eigenschappen['risico_toelichting']) {
-                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
+                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])->collect()->map(fn ($eigenschap) => EigenschapData::from($eigenschap));
                                                 }
 
                                                 // Handle risico_classificatie
@@ -263,7 +281,7 @@ class ZaakInfolist
                                                     if ($catalogiEigenschap) {
                                                         $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
                                                             'zaak' => $record->openzaak->url,
-                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                            'eigenschap' => (string) $catalogiEigenschap->url,
                                                             'waarde' => $data['risico_classificatie'],
                                                         ]);
                                                     } else {
@@ -283,7 +301,7 @@ class ZaakInfolist
                                                     if ($catalogiEigenschap) {
                                                         $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
                                                             'zaak' => $record->openzaak->url,
-                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                            'eigenschap' => (string) $catalogiEigenschap->url,
                                                             'waarde' => $data['risico_toelichting'],
                                                         ]);
                                                     } else {
@@ -330,41 +348,54 @@ class ZaakInfolist
                                                     ->required(),
                                             ])
                                             ->action(function (array $data, Zaak $record) {
-                                                $openzaak = new Openzaak;
-                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
+                                                $openzaak = Zgw::connection($record->zgwConnectionName());
+                                                $eigenschapNaam = self::internZaaknummerEigenschapNaam($record);
+                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === $eigenschapNaam);
+                                                $writtenToZgw = true;
 
                                                 if ($eigenschap) {
                                                     $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschap->uuid, [
                                                         'waarde' => $data['intern_zaaknummer'],
                                                     ]);
                                                 } else {
-                                                    $catalogiEigenschap = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])
-                                                        ->map(fn ($item) => new CatalogiEigenschap(...$item))
-                                                        ->firstWhere('naam', 'intern_zaaknummer');
+                                                    $catalogiEigenschap = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])
+                                                        ->collect()
+                                                        ->map(fn ($item) => EigenschapData::from($item))
+                                                        ->firstWhere('naam', $eigenschapNaam);
 
-                                                    if (! $catalogiEigenschap) {
-                                                        Notification::make()
-                                                            ->danger()
-                                                            ->title(__('Er is iets misgegaan bij het wijzigen van het interne zaaknummer'))
-                                                            ->send();
-
-                                                        return;
+                                                    if ($catalogiEigenschap) {
+                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
+                                                            'zaak' => $record->openzaak->url,
+                                                            'eigenschap' => (string) $catalogiEigenschap->url,
+                                                            'waarde' => $data['intern_zaaknummer'],
+                                                        ]);
+                                                    } else {
+                                                        // The zaaktype does not know the eigenschap. Every
+                                                        // eigenschap is optional, so keep the internal
+                                                        // zaaknummer in Eventloket instead of failing the
+                                                        // action. It is written to the zaaksysteem on the
+                                                        // next edit if the eigenschap is added later.
+                                                        $writtenToZgw = false;
                                                     }
-
-                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
-                                                        'zaak' => $record->openzaak->url,
-                                                        'eigenschap' => $catalogiEigenschap->url,
-                                                        'waarde' => $data['intern_zaaknummer'],
-                                                    ]);
                                                 }
 
                                                 $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => $data['intern_zaaknummer']]));
                                                 $record->save();
                                                 $record->clearZgwCache();
 
+                                                if ($writtenToZgw) {
+                                                    Notification::make()
+                                                        ->success()
+                                                        ->title(__('Intern zaaknummer is gewijzigd'))
+                                                        ->send();
+
+                                                    return;
+                                                }
+
                                                 Notification::make()
                                                     ->success()
-                                                    ->title(__('Intern zaaknummer is gewijzigd'))
+                                                    ->title(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.notifications.saved_locally.title'))
+                                                    ->body(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.notifications.saved_locally.body'))
                                                     ->send();
                                             }),
                                         Action::make('deleteInternZaaknummer')
@@ -375,10 +406,11 @@ class ZaakInfolist
                                             ->requiresConfirmation()
                                             ->visible(fn (Zaak $record) => ! empty($record->reference_data->intern_zaaknummer))
                                             ->action(function (Zaak $record) {
-                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
+                                                $eigenschapNaam = self::internZaaknummerEigenschapNaam($record);
+                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === $eigenschapNaam);
 
                                                 if ($eigenschap) {
-                                                    (new Openzaak)->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->delete($eigenschap->uuid);
+                                                    Zgw::connection($record->zgwConnectionName())->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->delete($eigenschap->uuid);
                                                 }
 
                                                 $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => null]));
@@ -399,21 +431,21 @@ class ZaakInfolist
                                             ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_status.label'))
                                             ->fillForm(function (Zaak $record): array {
                                                 return [
-                                                    'status' => $record->openzaak->status['statustype'],
+                                                    'status' => $record->openzaak->statustype_url,
                                                 ];
                                             })
                                             ->schema([
                                                 Select::make('status')
                                                     ->label(__('resources/zaak.columns.status.label'))
                                                     ->options(function () use ($zaak) {
-                                                        return (new Openzaak)->catalogi()->statustypen()->getAll(['zaaktype' => $zaak->openzaak->zaaktype])->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
+                                                        return Zgw::connection($zaak->zgwConnectionName())->catalogi()->statustypen()->index(['zaaktype' => $zaak->openzaak->zaaktype])->collect()->where('isEindstatus', false)->pluck('omschrijving', 'url')->toArray();
                                                     })->required(),
                                             ])
                                             ->action(function (array $data, Zaak $record) {
-                                                if ($data['status'] != $record->openzaak->status['statustype']) {
+                                                if ($data['status'] != $record->openzaak->statustype_url) {
                                                     $oldStatus = $record->reference_data->status_name;
-                                                    $openzaak = new Openzaak;
-                                                    $statusType = new StatusType(...$openzaak->get($data['status'])->toArray());
+                                                    $openzaak = Zgw::connection($record->zgwConnectionName());
+                                                    $statusType = StatusTypeData::from(ZgwResource::byUrl($record->zgwConnectionName(), $data['status']));
 
                                                     $openzaak->zaken()->statussen()->store([
                                                         'zaak' => $record->openzaak->url,
@@ -479,7 +511,7 @@ class ZaakInfolist
                                 // })
                             ])
                             ->columnSpan(4)
-                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Admin])),
+                            ->hidden(fn (Zaak $record) => $record->is_imported || $record->reference_data->resultaat || ! $record->behandelaarCanChangeStatus() || ! in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Admin])),
                         self::resultaatSection(),
                         Tabs::make('Tabs')
                             ->persistTabInQueryString()
@@ -491,17 +523,18 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(BesluitenInfolist::class, ['zaak' => $schema->model])->key('besluiten-table-'.($schema->model->id ?? 'new')),
                                     ])
-                                    ->visible(fn (Zaak $record) => $record->besluiten->count() > 0),
+                                    ->visible(fn (Zaak $record) => $record->showsTab('besluiten') && $record->besluiten->count() > 0),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->icon('heroicon-o-document')
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
-                                    ]),
+                                    ])
+                                    ->visible(fn (Zaak $record) => $record->showsTab('bestanden')),
                                 Tab::make('Organisatievragen')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
-                                    ->visible(fn (Zaak $record) => Filament::getCurrentPanel()->getId() === 'municipality' || Filament::getCurrentPanel()->getId() === 'admin')
+                                    ->visible(fn (Zaak $record) => $record->showsTab('organisatievragen') && (Filament::getCurrentPanel()->getId() === 'municipality' || Filament::getCurrentPanel()->getId() === 'admin'))
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()
@@ -516,6 +549,7 @@ class ZaakInfolist
                                 Tab::make('advice_requests')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.advice_requests.label'))
                                     ->icon('heroicon-o-question-mark-circle')
+                                    ->visible(fn (Zaak $record) => $record->showsTab('adviesvragen'))
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()

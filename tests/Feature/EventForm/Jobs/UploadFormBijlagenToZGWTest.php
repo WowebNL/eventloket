@@ -16,8 +16,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
-use App\ValueObjects\OzZaak;
-use App\ValueObjects\ZGW\InformatieobjectType;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
@@ -25,6 +24,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 
 uses(RefreshDatabase::class);
 
@@ -97,27 +97,29 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
     // Skip de OpenZaak-GETs door de twee caches te seeden die de job
     // achter de schermen consumeert: zaak.openzaak (voor bronorganisatie)
     // en zaaktype_x_document_types (voor het informatieobjecttype).
-    Cache::put("zaak.{$zaak->id}.openzaak", new OzZaak(
-        uuid: 'abc-123',
-        url: $zaak->zgw_zaak_url,
-        identificatie: $zaak->public_id,
-        zaaktype: 'https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1',
-        omschrijving: 'Test',
-        startdatum: '2026-05-01',
-        registratiedatum: '2026-05-01',
-        einddatum: null,
-        einddatumGepland: null,
-        uiterlijkeEinddatumAfdoening: null,
-        bronorganisatie: '820151130',
-        zaakgeometrie: null,
-    ));
-    Cache::put("zaaktype_{$zaaktype->id}_document_types", collect([
-        new InformatieobjectType(
-            uuid: 'iot-1',
-            url: 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',
-            omschrijving: 'Bijlage',
-            vertrouwelijkheidaanduiding: 'zaakvertrouwelijk',
-        ),
+    Cache::put("zaak.{$zaak->id}.openzaak.v2", ZaakReadModel::fromArray([
+        'uuid' => 'abc-123',
+        'url' => $zaak->zgw_zaak_url,
+        'identificatie' => $zaak->public_id,
+        'zaaktype' => 'https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1',
+        'omschrijving' => 'Test',
+        'startdatum' => '2026-05-01',
+        'registratiedatum' => '2026-05-01',
+        'einddatum' => null,
+        'einddatumGepland' => null,
+        'uiterlijkeEinddatumAfdoening' => null,
+        'bronorganisatie' => '820151130',
+        'zaakgeometrie' => null,
+    ]));
+    // Document types are cached per (connection, zaaktype version url). The job reads
+    // them via the zaak's version snapshot, which falls back to the OzZaak zaaktype.
+    Cache::put('zaaktype_document_types_v2_'.md5('main|https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1'), collect([
+        InformatieObjectTypeData::from([
+            'uuid' => 'iot-1',
+            'url' => 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',
+            'omschrijving' => 'Bijlage',
+            'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+        ]),
     ]));
 
     // Pre-seed de documenten-cache zodat we straks kunnen bewijzen dat
@@ -153,7 +155,9 @@ test('happy path: bijlage op disk → 2 ZGW-POSTs + cache wordt geinvalideerd', 
         && $request->data()['titel'] === 'buurtfeest-veiligheidsplan.pdf'
         && $request->data()['inhoud'] === base64_encode('fake pdf content')
         && $request->data()['informatieobjecttype'] === 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1'
-        && $request->data()['bronorganisatie'] === '820151130');
+        && $request->data()['bronorganisatie'] === '820151130'
+        // Every document we push is sent with the finalised 'definitief' status.
+        && $request->data()['status'] === 'definitief');
 
     Http::assertSent(fn ($request) => str_contains($request->url(), '/zaken/api/v1/zaakinformatieobjecten')
         && $request->method() === 'POST'

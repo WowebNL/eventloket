@@ -6,26 +6,33 @@ namespace App\Jobs\Zaak;
 
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\InitiatorRolBuilder;
+use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZaaktypeBlueprint;
+use App\Services\Zgw\ZgwResource;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Connection\ZgwConnection;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
- * Zet de initiator-rol op de ZGW-zaak op basis van het initiator-blok
- * in de FormState-snapshot. Twee varianten — matcht OF:
+ * Sets the initiator rol on the ZGW zaak from the initiator block in the
+ * FormState snapshot. The variant matches the aanvrager and the connection
+ * ({@see InitiatorRolBuilder}):
  *
- * - Heeft de aanvrager een KvK-nummer? → `niet_natuurlijk_persoon`
- *   (statutaireNaam, kvkNummer, contactpersoon)
- * - Anders → `natuurlijk_persoon` (voornamen, geslachtsnaam, adres)
+ * - has a KvK number, own default connection → `niet_natuurlijk_persoon`
+ *   (statutaireNaam, annIdentificatie, kvkNummer, contactpersoon)
+ * - has a KvK number, any other connection → `vestiging` (kvkNummer,
+ *   handelsnaam, contactpersoon)
+ * - otherwise → `natuurlijk_persoon` (voornamen, geslachtsnaam,
+ *   anpIdentificatie, verblijfsadres)
  *
- * In de oude flow bestond er al een initiator-rol (door OF aangemaakt)
- * en deed deze job een PUT. In de nieuwe flow maken wij de zaak zelf
- * aan zonder initiator, dus moet hier een POST (nieuw rol) gebeuren.
- * Het initiator-roltype wordt opgezocht in de catalogi.
+ * In the legacy flow an initiator rol already existed (created by Open Forms)
+ * and this job did a PUT. In the native flow we create the zaak ourselves
+ * without an initiator, so a POST (new rol) happens here. The initiator
+ * roltype is looked up in the catalogi.
  */
 class UpdateInitiatorZGW implements ShouldQueue
 {
@@ -33,7 +40,7 @@ class UpdateInitiatorZGW implements ShouldQueue
 
     public function __construct(public readonly Zaak $zaak) {}
 
-    public function handle(Openzaak $openzaak, ZaakeigenschappenMap $map): void
+    public function handle(ZaakeigenschappenMap $map): void
     {
         if (! $this->zaak->zgw_zaak_url) {
             return;
@@ -45,76 +52,36 @@ class UpdateInitiatorZGW implements ShouldQueue
             return;
         }
 
-        $ozZaak = new OzZaak(...$openzaak->get($this->zaak->zgw_zaak_url.'?expand=rollen')->toArray());
-        $roltype = $this->findInitiatorRoltype($openzaak, $ozZaak->zaaktype);
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
+
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url.'?expand=rollen'));
+        $roltype = $this->findInitiatorRoltype($connection, $ozZaak->zaaktype);
         if (! $roltype) {
             return;
         }
 
-        $rolData = isset($initiator['kvk']) && $initiator['kvk']
-            ? $this->buildNietNatuurlijkPersoonRol($ozZaak->url, $roltype, $initiator)
-            : $this->buildNatuurlijkPersoonRol($ozZaak->url, $roltype, $state, $initiator);
-
-        $openzaak->zaken()->rollen()->store($rolData);
-    }
-
-    private function findInitiatorRoltype(Openzaak $openzaak, string $zaaktypeUrl): ?string
-    {
-        $roltypen = $openzaak->catalogi()->roltypen()->getAll(['zaaktype' => $zaaktypeUrl]);
-        $initiator = collect($roltypen)->first(fn ($r) => ($r['omschrijvingGeneriek'] ?? null) === 'initiator');
-
-        return $initiator['url'] ?? null;
-    }
-
-    /** @param  array<string, mixed>  $initiator */
-    private function buildNietNatuurlijkPersoonRol(string $zaakUrl, string $roltype, array $initiator): array
-    {
-        return [
-            'zaak' => $zaakUrl,
-            'betrokkeneType' => 'niet_natuurlijk_persoon',
-            'roltype' => $roltype,
-            'roltoelichting' => 'inzender formulier',
-            'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
-            'betrokkeneIdentificatie' => array_filter([
-                'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
-                'annIdentificatie' => $initiator['kvk'],
-                'kvkNummer' => $initiator['kvk'],
-            ]),
-        ];
-    }
-
-    /** @param  array<string, mixed>  $initiator */
-    private function buildNatuurlijkPersoonRol(string $zaakUrl, string $roltype, FormState $state, array $initiator): array
-    {
-        $voornaam = (string) $state->get('watIsUwVoornaam');
-        $achternaam = (string) $state->get('watIsUwAchternaam');
-        $adres = $state->get('natuurlijkPersoonAdres');
-
-        $rolData = [
-            'zaak' => $zaakUrl,
-            'betrokkeneType' => 'natuurlijk_persoon',
-            'roltype' => $roltype,
-            'roltoelichting' => 'inzender formulier',
-            'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
-            'betrokkeneIdentificatie' => array_filter([
-                'geslachtsnaam' => $achternaam !== '' ? $achternaam : null,
-                'voornamen' => $voornaam !== '' ? $voornaam : null,
-            ]),
-        ];
-
-        if (is_array($adres) && Arr::has($adres, ['postcode', 'plaatsnaam', 'huisnummer'])
-            && (empty($adres['land']) || strtolower((string) $adres['land']) === 'nederland')) {
-            $rolData['betrokkeneIdentificatie']['verblijfsadres'] = [
-                'aoaIdentificatie' => config('app.name').'-persoonsadres-'.Str::uuid(),
-                'wplWoonplaatsNaam' => $adres['plaatsnaam'] ?? null,
-                'gorOpenbareRuimteNaam' => 'adres',
-                'aoaPostcode' => $adres['postcode'] ?? null,
-                'aoaHuisnummer' => $adres['huisnummer'] ?? null,
-                'aoaHuisletter' => $adres['huisletter'] ?? null,
-                'aoaHuisnummertoevoeging' => $adres['huisnummertoevoeging'] ?? null,
-            ];
+        $rolData = InitiatorRolBuilder::build(
+            $connectionName,
+            $ozZaak->url,
+            $roltype,
+            $state,
+            $initiator,
+            InitiatorRolBuilder::anpIdentificatieForUser($this->zaak->organiser_user_id),
+        );
+        if ($rolData === null) {
+            return;
         }
 
-        return $rolData;
+        $connection->zaken()->rollen()->store($rolData);
+    }
+
+    private function findInitiatorRoltype(ZgwConnection $connection, string $zaaktypeUrl): ?string
+    {
+        $roltypen = $connection->catalogi()->roltypen()->index(['zaaktype' => $zaaktypeUrl]);
+        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $initiator = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
+
+        return $initiator['url'] ?? null;
     }
 }

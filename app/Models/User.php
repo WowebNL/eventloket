@@ -7,6 +7,7 @@ use App\Models\Traits\HasUuid;
 use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
 use App\Models\Users\CoordinatorUser;
+use App\Models\Users\KoppelingBeheerderUser;
 use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
@@ -163,6 +164,7 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
             Role::Reviewer => ReviewerUser::class,
             Role::Advisor => AdvisorUser::class,
             Role::Organiser => OrganiserUser::class,
+            Role::KoppelingBeheerder => KoppelingBeheerderUser::class,
         };
     }
 

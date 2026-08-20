@@ -6,6 +6,7 @@ namespace App\Jobs\Zaak;
 
 use App\Models\User;
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,7 +14,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 final class UploadDocumentsJob implements ShouldQueue
 {
@@ -32,7 +33,7 @@ final class UploadDocumentsJob implements ShouldQueue
     public function handle(): void
     {
         $user = User::find($this->userId);
-        $oz = new Openzaak;
+        $connection = Zgw::connection($this->zaak->zgwConnectionName());
         $count = count($this->files);
         $uploaded = [];
 
@@ -51,7 +52,7 @@ final class UploadDocumentsJob implements ShouldQueue
             $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($file['original_name'] ?? '', $formaat);
             $titel = ($file['titel'] ?? '') !== '' ? $file['titel'] : pathinfo($bestandsnaam, PATHINFO_FILENAME);
 
-            $informatieobject = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+            $informatieobject = new Informatieobject(...ZgwResource::ensureUuid($connection->documenten()->enkelvoudiginformatieobjecten()->store([
                 'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
                 'creatiedatum' => now()->format('Y-m-d'),
                 'vertrouwelijkheidaanduiding' => $this->vertrouwelijkheidaanduiding,
@@ -64,9 +65,10 @@ final class UploadDocumentsJob implements ShouldQueue
                 'inhoud' => base64_encode((string) Storage::get($path)),
                 'informatieobjecttype' => $file['informatieobjecttype'],
                 'indicatieGebruiksrecht' => false,
-            ]));
+                'status' => Informatieobject::STATUS_DEFINITIEF,
+            ])));
 
-            $oz->zaken()->zaakinformatieobjecten()->store([
+            $connection->zaken()->zaakinformatieobjecten()->store([
                 'zaak' => $this->zaak->openzaak->url,
                 'informatieobject' => $informatieobject->url,
             ]);

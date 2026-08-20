@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Municipality\Pages\Calendar as MunicipalityCalendarPage;
 use App\Filament\Municipality\Widgets\MunicipalityCalendarWidget;
 use App\Models\Municipality;
@@ -86,7 +87,7 @@ test('municipality calendar widget filters are preserved when toggling between v
 
     $initialFilters = [
         'municipalities' => [$this->municipality->id],
-        'zaaktypes' => [$zaaktype->id],
+        'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
     ];
 
     livewire(MunicipalityCalendarWidget::class)
@@ -121,8 +122,14 @@ test('municipality calendar page renders and contains the widget', function () {
 });
 
 test('municipality calendar widget applies zaaktype filter in table view', function () {
-    $zaaktype = Zaaktype::factory()->create(['municipality_id' => $this->municipality->id]);
-    $otherZaaktype = Zaaktype::factory()->create(['municipality_id' => $this->municipality->id]);
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+    ]);
+    $otherZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Melding,
+    ]);
 
     $filteredZaak = Zaak::factory()->create([
         'zaaktype_id' => $zaaktype->id,
@@ -137,7 +144,7 @@ test('municipality calendar widget applies zaaktype filter in table view', funct
         ->callAction('toggleView')
         ->assertSet('viewMode', 'table')
         ->callAction('filter', data: [
-            'zaaktypes' => [$zaaktype->id],
+            'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
         ])
         ->assertCanSeeTableRecords([$filteredZaak])
         ->assertCanNotSeeTableRecords([$otherZaak]);

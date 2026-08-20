@@ -32,16 +32,18 @@ function fakeZaakWithExtensionlessDocument(string $bestandsnaam, string $formaat
 {
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/no-ext';
-    $contentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/no-ext/download';
+    // The client's download() targets the canonical /enkelvoudiginformatieobjecten/{uuid}/download
+    // endpoint (plural), not the resource's inhoud URL.
+    $downloadUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/no-ext/download';
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([
             [
                 'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1',
                 'zaak' => $zgwZaakUrl,
                 'informatieobject' => $documentUrl,
             ],
-        ], 200),
+        ]), 200),
         $documentUrl => Http::response([
             'url' => $documentUrl,
             'uuid' => 'no-ext',
@@ -52,13 +54,13 @@ function fakeZaakWithExtensionlessDocument(string $bestandsnaam, string $formaat
             'auteur' => 'Test',
             'versie' => 1,
             'bestandsnaam' => $bestandsnaam,
-            'inhoud' => $contentUrl,
+            'inhoud' => $downloadUrl,
             'beschrijving' => '',
             'informatieobjecttype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
             'formaat' => $formaat,
             'locked' => false,
         ], 200),
-        $contentUrl => Http::response('%PDF-1.4 raw pdf bytes', 200),
+        $downloadUrl.'*' => Http::response('%PDF-1.4 raw pdf bytes', 200),
     ]);
 
     return [$zgwZaakUrl, $documentUrl];
@@ -161,6 +163,67 @@ test('a fully non-ascii filename falls back to a neutral document name', functio
         // A bare token without spaces is emitted unquoted by Symfony.
         ->toContain('filename=document')
         ->toContain("filename*=utf-8''%E6%97%A5%E6%9C%AC%E8%AA%9E");
+});
+
+test('requesting an older version fetches and downloads that version by its versie parameter', function () {
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $base = ZgwHttpFake::$baseUrl.'/documenten/api/v1';
+    $documentUrl = $base.'/enkelvoudiginformatieobject/multi';
+
+    $metadata = function (int $versie, string $bestandsnaam) use ($documentUrl): array {
+        return [
+            'url' => $documentUrl,
+            'uuid' => 'multi',
+            'identificatie' => 'DOC-MULTI',
+            'creatiedatum' => now()->format('Y-m-d'),
+            'titel' => 'Versioned document',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'auteur' => 'Test',
+            'versie' => $versie,
+            'bestandsnaam' => $bestandsnaam,
+            'inhoud' => $documentUrl.'/download',
+            'beschrijving' => '',
+            'informatieobjecttype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
+            'formaat' => 'application/pdf',
+            'locked' => false,
+        ];
+    };
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([
+            [
+                'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1',
+                'zaak' => $zgwZaakUrl,
+                'informatieobject' => $documentUrl,
+            ],
+        ]), 200),
+        // Version-specific metadata (show) and binary (download) hit the plural endpoint with ?versie=.
+        $base.'/enkelvoudiginformatieobjecten/multi/download*' => Http::response('%PDF-1.4 version one bytes', 200),
+        $base.'/enkelvoudiginformatieobjecten/multi*' => Http::response($metadata(1, 'Vergunning v1.pdf'), 200),
+        // The current version metadata used to build $zaak->documenten.
+        $documentUrl => Http::response($metadata(2, 'Vergunning v2.pdf'), 200),
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1',
+    ]);
+
+    $this->actingAs($this->organiser);
+
+    $response = $this->get(route('zaak.documents.view', [
+        'zaak' => $zaak->id,
+        'documentuuid' => 'multi',
+        'type' => 'download',
+        'version' => 1,
+    ]));
+
+    $response->assertOk();
+    expect($response->getContent())->toBe('%PDF-1.4 version one bytes');
+    // The download requested version 1, not the current version 2.
+    Http::assertSent(fn ($request) => str_contains($request->url(), '/enkelvoudiginformatieobjecten/multi/download')
+        && str_contains($request->url(), 'versie=1'));
 });
 
 test('an untrusted or empty formaat is served as octet-stream without inventing an extension', function () {
