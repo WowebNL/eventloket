@@ -22,4 +22,10 @@ return [
     'organiser' => [
         'label' => 'Organisator',
     ],
+    'archive_coordinator' => [
+        'label' => 'Archiefcoördinator',
+    ],
+    'archive_reviewer' => [
+        'label' => 'Archiefbeoordelaar',
+    ],
 ];

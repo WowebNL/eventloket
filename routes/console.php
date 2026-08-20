@@ -23,3 +23,5 @@ Schedule::job(new SendAdviceReminders)->dailyAt('12:00');
 Schedule::job(new CleanupExpiredInvites)->daily();
 Schedule::job(new CleanupExports)->daily();
 Schedule::job(new CleanupExpiredEventFormDrafts)->daily();
+
+Schedule::command('archiving:anonymise-inactive-organisers')->monthlyOn(1, '03:00');
