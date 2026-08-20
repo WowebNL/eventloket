@@ -19,10 +19,13 @@ use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Sets the initiator rol on the ZGW zaak from the initiator block in the
- * FormState snapshot. Two variants, matching the aanvrager:
+ * FormState snapshot. The variant matches the aanvrager and the connection
+ * ({@see InitiatorRolBuilder}):
  *
- * - has a KvK number → `niet_natuurlijk_persoon` (statutaireNaam,
- *   annIdentificatie, contactpersoon, plus kvkNummer on the default connection)
+ * - has a KvK number, own default connection → `niet_natuurlijk_persoon`
+ *   (statutaireNaam, annIdentificatie, kvkNummer, contactpersoon)
+ * - has a KvK number, any other connection → `vestiging` (kvkNummer,
+ *   handelsnaam, contactpersoon)
  * - otherwise → `natuurlijk_persoon` (voornamen, geslachtsnaam,
  *   anpIdentificatie, verblijfsadres)
  *

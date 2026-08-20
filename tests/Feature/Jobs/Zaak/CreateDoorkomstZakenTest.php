@@ -272,10 +272,92 @@ function routeSnapshotWithValues(array $values): array
     return ['values' => array_merge(routeSnapshot()['values'], $values)];
 }
 
+/**
+ * Fake a doorkomst whose deelzaak lands on the passing municipality's own
+ * instance (OWN_HOST) while the hoofdzaak lives on main, so the initiator rol is
+ * posted to a non-default connection.
+ */
+function fakeDoorkomstForInitiatorOnOwnInstance(): void
+{
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        OWN_HOST.'/catalogi/api/v1/roltypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => OWN_HOST.'/catalogi/api/v1/roltypen/init', 'omschrijvingGeneriek' => 'initiator'],
+        ]), 200),
+        OWN_HOST.'/zaken/api/v1/rollen*' => Http::response(['url' => OWN_HOST.'/zaken/api/v1/rollen/1'], 201),
+        OWN_HOST.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => OWN_HOST.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(array_merge(deelZaakReadResponse(), [
+                'url' => OWN_HOST.'/zaken/api/v1/zaken/deel-1',
+                'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-m',
+            ]), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+test('registers a vestiging initiator on a deelzaak in the doorkomst gemeente own instance', function () {
+    // Non-default connection: the KvK number goes out as a vestiging rol, the
+    // only betrokkeneType in the Zaken API that defines a kvkNummer property.
+    // annIdentificatie and statutaireNaam belong to niet_natuurlijk_persoon and
+    // are not part of RolVestiging, so neither is sent.
+    fakeDoorkomstForInitiatorOnOwnInstance();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update([
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+        'form_state_snapshot' => routeSnapshotWithValues([
+            'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+            'watIsDeNaamVanUwOrganisatie' => 'Woweb',
+        ]),
+    ]);
+
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $scenario['passing']->id]);
+    Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => "gemeente_{$scenario['passing']->id}",
+        'zgw_zaaktype_url' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(function ($request) {
+        if ($request->method() !== 'POST' || ! str_starts_with($request->url(), OWN_HOST.'/zaken/api/v1/rollen')) {
+            return false;
+        }
+
+        $identificatie = $request->data()['betrokkeneIdentificatie'] ?? [];
+
+        return $request->data()['betrokkeneType'] === 'vestiging'
+            && $request->data()['roltype'] === OWN_HOST.'/catalogi/api/v1/roltypen/init'
+            && $request->data()['roltoelichting'] === 'inzender formulier'
+            && ($identificatie['kvkNummer'] ?? null) === '12345678'
+            && ($identificatie['handelsnaam'] ?? null) === ['Woweb']
+            && ! array_key_exists('annIdentificatie', $identificatie)
+            && ! array_key_exists('statutaireNaam', $identificatie);
+    });
+});
+
 test('registers the initiator on the deelzaak from the form aanvrager data, not the copied ZGW rol', function () {
     // The initiator is rebuilt from the form (KvK + organisation name), matching
     // the hoofdzaak. The hoofdzaak ZGW rol is not copied: its identificatie is
-    // empty and its betrokkene url is not portable across instances.
+    // empty and its betrokkene url is not portable across instances. The
+    // deelzaak lands on our own default connection here, which keeps the
+    // niet_natuurlijk_persoon payload it has always received.
     fakeDoorkomstForInitiator();
 
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
