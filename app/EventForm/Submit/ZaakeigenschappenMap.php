@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Submit;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Support\LocationKinds;
 
 /**
  * Mapping tussen FormState-veldnamen en ZGW-zaakeigenschap-namen.
@@ -77,7 +78,11 @@ final class ZaakeigenschappenMap
     {
         $names = [];
 
-        $gebouwen = $state->get('adresVanDeGebouwEn');
+        // Read every location field through `LocationKinds` so that state left
+        // behind by a kind the organiser unticked (Filament keeps a hidden
+        // field's value; see `LocationKinds`) does not leak a copied-over
+        // source event's location into the zaakeigenschappen.
+        $gebouwen = LocationKinds::valueFor($state, LocationKinds::GEBOUW);
         if (is_array($gebouwen)) {
             foreach ($gebouwen as $entry) {
                 if (is_array($entry) && ! empty($entry['naamVanDeLocatieGebouw'])) {
@@ -86,12 +91,19 @@ final class ZaakeigenschappenMap
             }
         }
 
-        $kaart = $this->stringOrNull($state->get('naamVanDeLocatieKaart'));
+        // The map/route name fields hang on the "buiten" resp. "route" kind:
+        // both are hidden together with their kind's component, so their
+        // leftover value counts only while that kind is ticked.
+        $kaart = LocationKinds::isSelected($state, LocationKinds::BUITEN)
+            ? $this->stringOrNull($state->get('naamVanDeLocatieKaart'))
+            : null;
         if ($kaart !== null) {
             $names[] = $kaart;
         }
 
-        $route = $this->stringOrNull($state->get('naamVanDeRoute'));
+        $route = LocationKinds::isSelected($state, LocationKinds::ROUTE)
+            ? $this->stringOrNull($state->get('naamVanDeRoute'))
+            : null;
         if ($route !== null) {
             $names[] = $route;
         }
@@ -126,9 +138,16 @@ final class ZaakeigenschappenMap
     public function buildEventLocation(FormState $state): array
     {
         return array_filter([
-            'multipolygons' => $state->get('locatieSOpKaart'),
-            'line' => $state->get('routesOpKaart'),
-            'bag_addresses' => $state->get('adresVanDeGebouwEn'),
+            // Geometry and address fields: read through `LocationKinds` so an
+            // unticked kind's leftover polygon/line/address does not travel to
+            // the zaakgeometrie (`AddGeometryZGW`/`CreateDoorkomstZaken`).
+            'multipolygons' => LocationKinds::valueFor($state, LocationKinds::BUITEN),
+            'line' => LocationKinds::valueFor($state, LocationKinds::ROUTE),
+            'bag_addresses' => LocationKinds::valueFor($state, LocationKinds::GEBOUW),
+            // `watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt` is the generic
+            // event-location name migrated from Open Formulieren (see
+            // `BackfillSnapshotsFromObjects`); it is not bound to a single kind
+            // and is not hidden by unticking one, so it stays a direct read.
             'name' => $this->stringOrNull($state->get('watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt')),
         ], fn ($v) => $v !== null && $v !== '' && $v !== []);
     }
