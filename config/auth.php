@@ -155,13 +155,21 @@ return [
     | disable the limiter or turn it into an application-wide lockout.
     |
     | The login limiters key on request()->ip(), and that is the real client
-    | address because nothing proxies production: TrustProxies is deliberately
-    | not configured, so a client cannot forge X-Forwarded-For to escape the
-    | counters. Putting a CDN, WAF or load balancer in front of the application
-    | changes that assumption: every request would then arrive from one address,
-    | which turns the login_ip backstop into an application-wide lockout and
-    | strips the IP component out of the strict login limiter. Configure
-    | TrustProxies first if that ever happens, and revisit these numbers.
+    | address because nothing proxies production: no trusted proxies are
+    | configured there, so a client cannot forge X-Forwarded-For to escape the
+    | counters. Trusting nothing stays the default, and unless TRUSTED_PROXIES
+    | is set in the environment that is exactly what happens.
+    |
+    | Environments that do sit behind a proxy opt in through TRUSTED_PROXIES
+    | (see config/trustedproxy.php), and only when that proxy overwrites
+    | X-Forwarded-For itself, so a client cannot smuggle in a forged address.
+    | Note what the opt-in costs here: every request then arrives from the
+    | proxy as far as these counters are concerned unless the forwarded address
+    | is trustworthy, which turns the login_ip backstop into an
+    | application-wide lockout and strips the IP component out of the strict
+    | login limiter. So putting a CDN, WAF or load balancer in front of
+    | production means setting TRUSTED_PROXIES and revisiting these numbers,
+    | in that order.
     |
     */
 
