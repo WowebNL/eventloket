@@ -57,7 +57,7 @@ function fakeOrphanedZaak(array $overrides = []): array
             'zaakobjecten' => [
                 ['object' => $objectUrl, 'objectType' => 'overige', 'relatieomschrijving' => ''],
             ],
-            'eigenschappen' => [
+            'eigenschappen' => $overrides['eigenschappen'] ?? [
                 eigenschap('start_evenement', '2026-06-01T10:00:00+02:00'),
                 eigenschap('eind_evenement', '2026-06-01T20:00:00+02:00'),
                 eigenschap('naam_evenement', 'Testfeest'),
@@ -127,6 +127,28 @@ it('recreates the local zaak row linked to organisation, user and document url',
     expect($zaak->organiser_user_id)->toBe($fake['user']->id);
     expect($zaak->data_object_url)->toBe('https://objects.test/api/v2/objects/obj-orphan-1');
     expect($zaak->reference_data->organisator)->toBe('Jan Jansen');
+});
+
+it('recovers a zaak whose zaaktype has no evenement eigenschappen, leaving the dates empty', function () {
+    // Nothing is invented for a zaak without those eigenschappen: empty dates
+    // are honest, and the zaak simply falls outside the month calendar.
+    Queue::fake();
+    Zaaktype::factory()->create([
+        'zgw_zaaktype_url' => 'https://zgw.example.com/catalogi/api/v1/zaaktypen/1',
+        'is_active' => true,
+    ]);
+    $fake = fakeOrphanedZaak(['eigenschappen' => []]);
+
+    $this->artisan('zaak:recover-orphaned', ['url' => [$fake['url']]])
+        ->assertSuccessful();
+
+    $zaak = Zaak::where('zgw_zaak_url', $fake['url'])->first();
+
+    expect($zaak)->not->toBeNull()
+        ->and($zaak->reference_data->start_evenement)->toBeNull()
+        ->and($zaak->reference_data->eind_evenement)->toBeNull()
+        ->and($zaak->reference_data->start_evenement_datetime)->toBeNull()
+        ->and($zaak->reference_data->registratiedatum)->toBe('2026-01-01');
 });
 
 it('is idempotent and does not duplicate an already recovered row', function () {

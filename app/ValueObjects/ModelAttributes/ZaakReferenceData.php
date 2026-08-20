@@ -10,9 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 
 final readonly class ZaakReferenceData implements Arrayable, Castable
 {
-    public Carbon $start_evenement_datetime;
+    public ?Carbon $start_evenement_datetime;
 
-    public Carbon $eind_evenement_datetime;
+    public ?Carbon $eind_evenement_datetime;
 
     public Carbon $registratiedatum_datetime;
 
@@ -22,12 +22,21 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
 
     public ?array $types_evenement_array;
 
+    /**
+     * A zaaktype does not have to carry the start_evenement/eind_evenement
+     * eigenschappen, so a zaak built straight from the ZGW eigenschappen (a
+     * doorkomst deelzaak, a recovered zaak) can arrive without them. They are
+     * therefore optional and declared after the always-supplied parameters;
+     * every caller uses named arguments or an associative spread, and
+     * {@see self::toArray()} keeps its original key order, so stored rows keep
+     * their exact shape.
+     */
     public function __construct(
-        public string $start_evenement,
-        public string $eind_evenement,
         public string $registratiedatum,
         public string $status_name,
         public string $statustype_url,
+        public ?string $start_evenement = null,
+        public ?string $eind_evenement = null,
         public ?string $risico_classificatie = null,
         public ?string $naam_locatie_eveneme = null, // due to limit char restriction in OZ
         public ?string $naam_evenement = null,
@@ -45,8 +54,8 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public ?string $intern_zaaknummer = null,
         ...$otherParams
     ) {
-        $this->start_evenement_datetime = $this->parseDateTime($this->start_evenement);
-        $this->eind_evenement_datetime = $this->parseDateTime($this->eind_evenement);
+        $this->start_evenement_datetime = $this->start_evenement === null ? null : $this->parseDateTime($this->start_evenement);
+        $this->eind_evenement_datetime = $this->eind_evenement === null ? null : $this->parseDateTime($this->eind_evenement);
         $this->registratiedatum_datetime = $this->parseDateTime($this->registratiedatum);
         if ($this->naam_locatie_eveneme) {
             $this->naam_locatie_evenement = $this->naam_locatie_eveneme;
