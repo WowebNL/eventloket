@@ -5,7 +5,12 @@ declare(strict_types=1);
 use App\EventForm\State\FormState;
 use App\Services\Zgw\InitiatorRolBuilder;
 
-test('builds a niet_natuurlijk_persoon rol from a KvK initiator', function () {
+test('keeps the default connection on the niet_natuurlijk_persoon payload it already received', function () {
+    // Regression anchor: our own OpenZaak read this exact payload before, so
+    // the whole rol is asserted, not a few keys. RolNietNatuurlijkPersoon has
+    // no kvkNummer property in any Zaken API release from 1.0 up to and
+    // including 1.7, so annIdentificatie carries the number and the
+    // non-standard kvkNummer rides along for our own instance only.
     $state = FormState::fromSnapshot(['values' => []]);
 
     $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
@@ -14,36 +19,50 @@ test('builds a niet_natuurlijk_persoon rol from a KvK initiator', function () {
         'contactpersoon' => ['naam' => 'Organisator Test'],
     ]);
 
-    expect($rol['betrokkeneType'])->toBe('niet_natuurlijk_persoon')
-        ->and($rol['roltype'])->toBe('https://zgw/roltype/1')
-        ->and($rol['betrokkeneIdentificatie']['kvkNummer'])->toBe('12345678')
-        ->and($rol['betrokkeneIdentificatie']['statutaireNaam'])->toBe('Woweb')
-        ->and($rol['contactpersoonRol'])->toBe(['naam' => 'Organisator Test']);
+    expect($rol)->toBe([
+        'zaak' => 'https://zgw/zaken/1',
+        'betrokkeneType' => 'niet_natuurlijk_persoon',
+        'roltype' => 'https://zgw/roltype/1',
+        'roltoelichting' => 'inzender formulier',
+        'contactpersoonRol' => ['naam' => 'Organisator Test'],
+        'betrokkeneIdentificatie' => [
+            'statutaireNaam' => 'Woweb',
+            'annIdentificatie' => '12345678',
+            'kvkNummer' => '12345678',
+        ],
+    ]);
 });
 
-test('carries the KvK number in annIdentificatie, next to kvkNummer on the default connection', function () {
-    // RolNietNatuurlijkPersoon has no kvkNummer property in any Zaken API
-    // release from 1.0 up to and including 1.7 (kvkNummer only exists on
-    // RolVestiging, added in 1.3.0), so a conformant backend drops it and the
-    // organisation ends up on the zaak without a company number at all. The
-    // standard does define annIdentificatie here, so the number has to travel
-    // in that property. kvkNummer is a non-standard extra kept for our own
-    // OpenZaak instance only.
+test('builds a vestiging rol with kvkNummer and handelsnaam on a municipality connection', function () {
+    // RolVestiging is the only betrokkeneType in the Zaken API that defines a
+    // kvkNummer property (since 1.3.0), so this is the one payload in which a
+    // receiving instance can store the number as a company number. No
+    // annIdentificatie and no statutaireNaam: those belong to
+    // niet_natuurlijk_persoon and are not part of RolVestiging.
     $state = FormState::fromSnapshot(['values' => []]);
 
-    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+    $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
         'kvk' => '12345678',
         'organisatie_naam' => 'Woweb',
+        'contactpersoon' => ['naam' => 'Organisator Test'],
     ]);
 
-    expect($rol['betrokkeneIdentificatie']['annIdentificatie'])->toBe('12345678')
-        ->and($rol['betrokkeneIdentificatie']['kvkNummer'])->toBe('12345678');
+    expect($rol)->toBe([
+        'zaak' => 'https://zgw/zaken/1',
+        'betrokkeneType' => 'vestiging',
+        'roltype' => 'https://zgw/roltype/1',
+        'roltoelichting' => 'inzender formulier',
+        'contactpersoonRol' => ['naam' => 'Organisator Test'],
+        'betrokkeneIdentificatie' => [
+            'kvkNummer' => '12345678',
+            'handelsnaam' => ['Woweb'],
+        ],
+    ]);
 });
 
-test('sends only annIdentificatie to a municipality connection', function () {
-    // Any connection other than the default belongs to a municipality running
-    // its own ZGW instance, which gets the standard payload without the
-    // non-standard kvkNummer.
+test('sends no vestigingsNummer or verblijfsadres on a vestiging rol', function () {
+    // The form asks for neither, and the organisation address is not
+    // necessarily the address of the vestiging, so nothing is invented.
     $state = FormState::fromSnapshot(['values' => []]);
 
     $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
@@ -51,13 +70,15 @@ test('sends only annIdentificatie to a municipality connection', function () {
         'organisatie_naam' => 'Woweb',
     ]);
 
-    expect($rol['betrokkeneType'])->toBe('niet_natuurlijk_persoon')
-        ->and($rol['betrokkeneIdentificatie']['annIdentificatie'])->toBe('12345678')
-        ->and($rol['betrokkeneIdentificatie']['statutaireNaam'])->toBe('Woweb')
-        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('kvkNummer');
+    expect($rol['betrokkeneIdentificatie'])->not->toHaveKey('vestigingsNummer')
+        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres');
 });
 
-test('omits an already hashed KvK number on a municipality connection too', function () {
+test('registers a vestiging on handelsnaam alone when the KvK number is already hashed', function () {
+    // A rerun on a snapshot whose KvK was hashed (a job retry, or
+    // zaak:create-doorkomst-zaken on an existing zaak) must not send the hash to
+    // ZGW as if it were a KvK number. RolVestiging requires no field, so the rol
+    // on handelsnaam alone is valid.
     $state = FormState::fromSnapshot(['values' => []]);
 
     $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
@@ -65,15 +86,11 @@ test('omits an already hashed KvK number on a municipality connection too', func
         'organisatie_naam' => 'Woweb',
     ]);
 
-    expect($rol['betrokkeneIdentificatie']['statutaireNaam'])->toBe('Woweb')
-        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('annIdentificatie')
-        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('kvkNummer');
+    expect($rol['betrokkeneType'])->toBe('vestiging')
+        ->and($rol['betrokkeneIdentificatie'])->toBe(['handelsnaam' => ['Woweb']]);
 });
 
 test('omits an already hashed KvK number and keeps the organisation rol', function () {
-    // A rerun on a snapshot whose KvK was hashed (a job retry, or
-    // zaak:create-doorkomst-zaken on an existing zaak) must not send the hash to
-    // ZGW as if it were a KvK number.
     $state = FormState::fromSnapshot(['values' => []]);
 
     $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
@@ -133,6 +150,21 @@ test('builds a natuurlijk_persoon rol without verblijfsadres when no address is 
     expect($rol['betrokkeneType'])->toBe('natuurlijk_persoon')
         ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres')
         ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('anpIdentificatie');
+});
+
+test('builds the same natuurlijk_persoon rol whatever the connection is', function () {
+    // Only the organisation variant branches on the connection; a private
+    // aanvrager gets one payload everywhere.
+    $state = FormState::fromSnapshot(['values' => [
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Jansen',
+    ]]);
+    $initiator = ['contactpersoon' => ['naam' => 'Jan Jansen']];
+
+    $default = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, $initiator, 'EVL42');
+    $municipality = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, $initiator, 'EVL42');
+
+    expect($municipality)->toBe($default);
 });
 
 test('skips the verblijfsadres for a foreign address', function () {
