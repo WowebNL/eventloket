@@ -6,6 +6,8 @@ use App\Enums\Role;
 use App\Models\Traits\HasUuid;
 use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
+use App\Models\Users\ArchiveCoordinatorUser;
+use App\Models\Users\ArchiveReviewerUser;
 use App\Models\Users\CoordinatorUser;
 use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
@@ -163,6 +165,8 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
             Role::Reviewer => ReviewerUser::class,
             Role::Advisor => AdvisorUser::class,
             Role::Organiser => OrganiserUser::class,
+            Role::ArchiveCoordinator => ArchiveCoordinatorUser::class,
+            Role::ArchiveReviewer => ArchiveReviewerUser::class,
         };
     }
 
