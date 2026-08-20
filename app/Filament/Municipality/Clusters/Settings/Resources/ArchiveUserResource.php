@@ -52,6 +52,10 @@ class ArchiveUserResource extends Resource
                     ->options([
                         Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
                         Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
+                        Role::Reviewer->value => Role::Reviewer->getLabel(),
+                        Role::Coordinator->value => Role::Coordinator->getLabel(),
+                        Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->required(),
@@ -71,6 +75,10 @@ class ArchiveUserResource extends Resource
                     ->options([
                         Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
                         Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
+                        Role::Reviewer->value => Role::Reviewer->getLabel(),
+                        Role::Coordinator->value => Role::Coordinator->getLabel(),
+                        Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->afterStateUpdated(function () {
