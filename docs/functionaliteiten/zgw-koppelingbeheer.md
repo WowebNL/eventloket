@@ -1,7 +1,7 @@
 # ZGW-koppelingbeheer
 
-Versie: 1.0
-<br>Datum: 03-07-2026
+Versie: 1.1
+<br>Datum: 20-08-2026
 <br>Door: Michel Verhoeven
 
 Dit document beschrijft hoe een functioneel beheerder een ZGW-koppeling voor een gemeente opzet en onderhoudt in Eventloket. Het legt uit hoe de beheeromgeving werkt en geeft een volledig stappenplan, inclusief wat er aan de externe zaaksysteem-applicatie (bijvoorbeeld Open Zaak of OneGround) klaargezet moet worden.
@@ -61,7 +61,10 @@ Toegang tot het koppelingbeheer is voorbehouden aan twee rollen:
 | Rol | Kan koppelingen beheren | Kan zaken behandelen |
 |-----|-------------------------|----------------------|
 | Gemeentebeheerder (MunicipalityAdmin) | Ja | Ja |
+| Gemeentelijk beheerder (behandelaar) (ReviewerMunicipalityAdmin) | Nee | Ja |
 | Koppelingbeheerder (KoppelingBeheerder) | Ja | Nee (alleen inzien) |
+
+Let op het verschil tussen de twee gemeentelijke beheerdersrollen: alleen de reguliere Gemeentebeheerder heeft toegang tot het koppelingbeheer. De variant "Gemeentelijk beheerder (behandelaar)" kan zaken behandelen en gebruikers beheren, maar ziet de onderdelen ZGW-koppeling en Zaaktype-koppelingen niet.
 
 De rol **Koppelingbeheerder** is speciaal bedoeld voor functioneel of technisch beheer. Iemand met deze rol beheert de ZGW-instellingen en kan zaken inzien, maar kan zaken niet inhoudelijk behandelen. Dit is de aangewezen rol voor een leverancier of applicatiebeheerder die alleen de techniek moet inrichten.
 
@@ -116,11 +119,13 @@ Eventloket praat met vijf tot zes losse ZGW-API-componenten. Zorg dat de volgend
 
 | Component | Voorbeeld base-URL | Verplicht |
 |-----------|--------------------|-----------|
-| Zaken API | `https://zaaksysteem.gemeente.nl/zaken/api/v1/` | Ja |
-| Catalogi API | `https://zaaksysteem.gemeente.nl/catalogi/api/v1/` | Ja |
-| Documenten API | `https://zaaksysteem.gemeente.nl/documenten/api/v1/` | Ja |
-| Besluiten API | `https://zaaksysteem.gemeente.nl/besluiten/api/v1/` | Ja |
-| Notificaties API | `https://notificaties.gemeente.nl/api/v1/` | Aanbevolen (nodig voor statusupdates) |
+| Zaken API | `https://zaken.preprod-rx-services.nl/api/v1/` | Ja |
+| Catalogi API | `https://catalogi.preprod-rx-services.nl/api/v1/` | Ja |
+| Documenten API | `https://documenten.preprod-rx-services.nl/api/v1/` | Ja |
+| Besluiten API | `https://besluiten.preprod-rx-services.nl/api/v1/` | Ja |
+| Notificaties API | `https://notificaties.preprod-rx-services.nl/api/v1/` | Aanbevolen (nodig voor statusupdates) |
+
+De voorbeeld-URL's hierboven zijn die van de preprod-omgeving van Rx.Mission (OneGround); deze zijn voor iedere gemeente hetzelfde. Gebruikt de gemeente een ander zaaksysteem, vraag de base-URL's dan op bij de leverancier.
 
 De Autorisaties API wordt niet apart in Eventloket ingevuld omdat die op dit moment niet gebruikt wordt.
 
@@ -158,11 +163,38 @@ Eventloket verwacht dat er in de catalogi zaaktypen bestaan voor de verschillend
 
 Zorg dat elk zaaktype dat de gemeente wil gebruiken bestaat en gepubliceerd is, en dat het beschikt over:
 
-- De **eigenschappen** die bij een evenement horen (start- en einddatums, naam evenement, soort evenement, aantal aanwezigen, risicoclassificatie, locaties). In de gedeelde hoofdkoppeling heten deze eigenschappen exact zoals de logische sleutels in Eventloket. In een eigen zaaksysteem mogen ze anders heten; die vertaling leg je later vast in de zaaktype-koppeling (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
+- De **eigenschappen** die bij een evenement horen (zie de tabel hieronder). In de gedeelde hoofdkoppeling heten deze eigenschappen exact zoals de logische sleutels in Eventloket. In een eigen zaaksysteem mogen ze anders heten; die vertaling leg je later vast in de zaaktype-koppeling (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
 - De **statustypen** die de zaak doorloopt, met minimaal een begin-status en een eindstatus.
 - Een **roltype** voor de initiator (de organisator/aanvrager).
 - De **resultaattypen**, waaronder een resultaattype voor "Ingetrokken".
 - De **informatieobjecttypen** (documenttypen) voor de aanvraag-PDF en voor bijlagen.
+
+#### Overzicht van de eigenschappen
+
+De onderstaande tabel toont alle eigenschappen die Eventloket bij een zaak kan aanleveren, met de specificatie die het bijbehorende eigenschap in de zaaktypecatalogus moet hebben.
+
+| Logische sleutel | Omschrijving | Formaat | Lengte |
+|------------------|--------------|---------|--------|
+| `start_evenement` | Startdatum en -tijd van het evenement | datum_tijd | 14 |
+| `eind_evenement` | Einddatum en -tijd van het evenement | datum_tijd | 14 |
+| `start_opbouw` | Startdatum en -tijd van de opbouw | datum_tijd | 14 |
+| `eind_opbouw` | Einddatum en -tijd van de opbouw | datum_tijd | 14 |
+| `start_afbouw` | Startdatum en -tijd van de afbouw | datum_tijd | 14 |
+| `eind_afbouw` | Einddatum en -tijd van de afbouw | datum_tijd | 14 |
+| `naam_evenement` | Naam van het evenement | tekst | 255 |
+| `types_evenement` | Soort(en) evenement | tekst | 255 |
+| `aanwezigen` | Aantal verwachte aanwezigen | getal | 9 |
+| `risico_classificatie` | Risicoclassificatie van het evenement | tekst | 255 |
+| `locaties_evenement` | Namen van de locatie(s), kommagescheiden | tekst | 255 |
+| `intern_zaaknummer` | Het interne zaaknummer dat Eventloket aan de zaak toekent | tekst | 255 |
+
+Toelichting bij de formaten:
+
+- **Datums.** Datumvelden krijgen het formaat datum_tijd; de waarde wordt aangeleverd als `jjjjmmdduummss` (lengte 14).
+- **Getal.** Het aantal aanwezigen wordt als geheel getal aangeleverd; een lengte van 9 cijfers is ruim voldoende.
+- **Tekst.** Voor de tekstvelden is een lengte van 255 karakters de veilige keuze; dit is ook de lengte die Eventloket in de eigen hoofdkoppeling gebruikt.
+
+Alle eigenschappen zijn optioneel; ontbreekt een eigenschap in het zaaktype, dan wordt die waarde overgeslagen (zie ook [sectie 7](#7-zaaktype-koppelingen-instellen)). Gebruik voor elke eigenschap een kardinaliteit van 1.
 
 Houd bij het uitbrengen van nieuwe versies van een zaaktype de namen van statustypen, roltypen, resultaattypen, documenttypen en eigenschappen gelijk. Eventloket herkent deze onderdelen op naam. Zolang de namen gelijk blijven, werkt een nieuwe versie automatisch door zonder aanpassing in Eventloket (zie [sectie 9](#9-nieuwe-versies-van-een-zaaktype)).
 
@@ -211,7 +243,7 @@ Vul hier de base-URL's in die je in [sectie 4.1](#41-zorg-dat-de-zgw-apis-beschi
 ### 5.4 Technische parameters
 
 - **Toegestane hosts.** Extra origins (naast de vijf base-URL's) waarvandaan deze koppeling documenten mag ophalen. Meestal leeg te laten.
-- **Bronorganisatie RSIN.** Het RSIN dat als bronorganisatie op elke zaak wordt gezet. Vul het RSIN van de gemeente in als het zaaksysteem dit vereist; laat leeg om de waarde van de hoofdkoppeling te erven (RSIN van de veiligheidsregio).
+- **Bronorganisatie RSIN.** Het RSIN dat als bronorganisatie op elke zaak wordt gezet. Vul het RSIN van de gemeente in als het zaaksysteem dit vereist; laat leeg om de waarde van de hoofdkoppeling te erven (RSIN van de veiligheidsregio). Bij een Rx.Mission (OneGround) koppeling is het RSIN terug te vinden in het client-ID; vul dat RSIN hier in.
 
 Datums in zaakeigenschappen hebben geen instelling nodig. Eventloket leest per eigenschap in de catalogus of het om een datum of een datum met tijd gaat en levert de waarde automatisch in het bijbehorende formaat aan.
 
