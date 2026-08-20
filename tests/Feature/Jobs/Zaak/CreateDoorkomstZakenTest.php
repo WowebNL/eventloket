@@ -51,10 +51,13 @@ function multipolygon(array $ring): string
 }
 
 /**
- * The deelzaak read after creation, carrying the eigenschappen the local
- * ZaakReferenceData requires (start/eind evenement) plus a registratiedatum.
+ * The deelzaak read after creation, carrying the evenement eigenschappen plus a
+ * registratiedatum. Pass an empty list to simulate a doorkomst zaaktype whose
+ * catalogus does not know those eigenschappen at all.
+ *
+ * @param  list<array<string, string>>|null  $eigenschappen
  */
-function deelZaakReadResponse(): array
+function deelZaakReadResponse(?array $eigenschappen = null): array
 {
     return [
         'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1',
@@ -62,7 +65,7 @@ function deelZaakReadResponse(): array
         'identificatie' => 'DEEL-1',
         'registratiedatum' => '2026-06-01',
         '_expand' => [
-            'eigenschappen' => [
+            'eigenschappen' => $eigenschappen ?? [
                 ['naam' => 'start_evenement', 'waarde' => '2026-07-01 10:00'],
                 ['naam' => 'eind_evenement', 'waarde' => '2026-07-01 18:00'],
             ],
@@ -73,8 +76,10 @@ function deelZaakReadResponse(): array
 /**
  * Fake the ZGW reads/writes the job performs. The deelzaak store returns a url so
  * the local Zaak is persisted; catalogi/relations degrade to empty lists.
+ *
+ * @param  list<array<string, string>>|null  $deelZaakEigenschappen  null keeps the default evenement eigenschappen
  */
-function fakeDoorkomstZgw(): void
+function fakeDoorkomstZgw(?array $deelZaakEigenschappen = null): void
 {
     Http::fake([
         // Hoofdzaak read (own instance of the hoofdzaak municipality).
@@ -89,12 +94,12 @@ function fakeDoorkomstZgw(): void
         OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
 
         // Deelzaak store + read on the target connection (main = ZgwHttpFake base).
-        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use ($deelZaakEigenschappen) {
             if ($request->method() === 'POST') {
                 return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
             }
 
-            return Http::response(deelZaakReadResponse(), 200);
+            return Http::response(deelZaakReadResponse($deelZaakEigenschappen), 200);
         },
 
         // Catalogi reads degrade to empty lists everywhere.
@@ -363,6 +368,85 @@ test('falls back to the organisation of the hoofdzaak when its reference data ha
 
     $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
     expect($deel->reference_data->organisator)->toBe('Woweb');
+});
+
+test('creates the deelzaak without any eigenschap, taking the evenement dates from the hoofdzaak', function () {
+    // A doorkomst zaaktype whose catalogus knows none of the evenement
+    // eigenschappen: the deelzaak read comes back empty. The job used to die on
+    // the missing start_evenement/eind_evenement constructor arguments.
+    fakeDoorkomstZgw(deelZaakEigenschappen: []);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+    $hoofd = $scenario['hoofdzaak']->reference_data;
+
+    expect($deel->public_id)->toBe('DEEL-1')
+        ->and($deel->reference_data->start_evenement)->toBe($hoofd->start_evenement)
+        ->and($deel->reference_data->eind_evenement)->toBe($hoofd->eind_evenement)
+        ->and($deel->reference_data->start_evenement_datetime)->not->toBeNull();
+});
+
+test('registers the deelzaak locally when neither the deelzaak nor the hoofdzaak has evenement dates', function () {
+    fakeDoorkomstZgw(deelZaakEigenschappen: []);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    $scenario['hoofdzaak']->update([
+        'reference_data' => new ZaakReferenceData(
+            ...array_merge($scenario['hoofdzaak']->reference_data->toArray(), [
+                'start_evenement' => null,
+                'eind_evenement' => null,
+            ])
+        ),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->start_evenement)->toBeNull()
+        ->and($deel->reference_data->eind_evenement)->toBeNull()
+        ->and($deel->reference_data->start_evenement_datetime)->toBeNull();
+});
+
+test('stores exactly the same reference_data as before when the deelzaak carries its own eigenschappen', function () {
+    // Regression anchor for the fallback: with the eigenschappen present the
+    // fallback must not fire, so the persisted reference_data stays exactly
+    // what it was, values and key order included. (The jsonb column itself does
+    // not preserve key order, so the assertion runs on the emitted array.)
+    fakeDoorkomstZgw();
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->toArray())->toBe([
+        'risico_classificatie' => null,
+        'risico_toelichting' => null,
+        'start_evenement' => '2026-07-01 10:00',
+        'eind_evenement' => '2026-07-01 18:00',
+        'registratiedatum' => '2026-06-01',
+        'status_name' => '',
+        'statustype_url' => '',
+        'naam_evenement' => null,
+        'naam_locatie_evenement' => null,
+        'organisator' => '',
+        'resultaat' => null,
+        'resultaattype_url' => null,
+        'aanwezigen' => null,
+        'types_evenement' => null,
+        'start_opbouw' => null,
+        'eind_opbouw' => null,
+        'start_afbouw' => null,
+        'eind_afbouw' => null,
+        'locaties_evenement' => null,
+        'intern_zaaknummer' => null,
+    ]);
 });
 
 test('does not create a doorkomst zaak when the passing gemeente has no doorkomst zaaktype', function () {

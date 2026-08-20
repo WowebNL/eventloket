@@ -6,6 +6,7 @@ namespace App\Jobs\Zaak;
 
 use App\Actions\Geospatial\CheckIntersects;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
@@ -224,7 +225,7 @@ class CreateDoorkomstZaken implements ShouldQueue
                 'organiser_user_id' => $this->zaak->organiser_user_id,
                 'reference_data' => new ZaakReferenceData(
                     ...array_merge(
-                        $newOzZaak->eigenschappen_key_value,
+                        $this->withEvenementDatesFromHoofdzaak($newOzZaak->eigenschappen_key_value),
                         [
                             'registratiedatum' => $newOzZaak->registratiedatum,
                             'status_name' => $newOzZaak->status_name ?? '',
@@ -239,6 +240,36 @@ class CreateDoorkomstZaken implements ShouldQueue
                 'form_state_snapshot' => $state->toSnapshot(),
             ]
         );
+    }
+
+    /**
+     * Fill in the evenement dates for the deelzaak registration when the
+     * doorkomst zaaktype does not carry the start_evenement/eind_evenement
+     * eigenschappen (or the hoofdzaak had nothing to copy). The hoofdzaak
+     * reference_data always holds them: it is built from the form state
+     * ({@see MapFormStateToReferenceData}), not from ZGW.
+     *
+     * Eigenschappen that the deelzaak does have always win, so a complete
+     * zaaktype produces exactly the same reference_data as before.
+     *
+     * @param  array<string, mixed>  $eigenschappen
+     * @return array<string, mixed>
+     */
+    private function withEvenementDatesFromHoofdzaak(array $eigenschappen): array
+    {
+        foreach (['start_evenement', 'eind_evenement'] as $key) {
+            if (($eigenschappen[$key] ?? '') !== '') {
+                continue;
+            }
+
+            $fallback = $this->zaak->reference_data->{$key};
+
+            if (is_string($fallback) && $fallback !== '') {
+                $eigenschappen[$key] = $fallback;
+            }
+        }
+
+        return $eigenschappen;
     }
 
     /**
