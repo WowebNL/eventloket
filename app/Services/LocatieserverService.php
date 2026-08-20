@@ -3,14 +3,70 @@
 namespace App\Services;
 
 use App\ValueObjects\Pdok\BagObject;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class LocatieserverService
 {
+    private float $connectTimeout;
+
+    private float $timeout;
+
     public function __construct(private array $config = [])
     {
         $this->config = config('services.locatieserver');
+        $this->connectTimeout = (float) $this->config['connect_timeout'];
+        $this->timeout = (float) $this->config['timeout'];
+    }
+
+    /**
+     * A copy of this service that waits longer on PDOK, for callers with no
+     * user on the other end. Interactive callers keep the short budget: they
+     * render a page or a Livewire update and cannot afford to sit out an
+     * outage. Queued callers can, and for them a lookup that gives up too
+     * early silently drops an address from the result instead of delaying it.
+     */
+    public function forBackgroundWork(): self
+    {
+        $clone = clone $this;
+        $clone->connectTimeout = (float) $this->config['background_connect_timeout'];
+        $clone->timeout = (float) $this->config['background_timeout'];
+
+        return $clone;
+    }
+
+    /**
+     * Perform a Locatieserver request, degrading to null when PDOK cannot be
+     * reached within the timeout budget.
+     *
+     * Every public method here already reports "not found" as null and every
+     * caller handles that, so a transport failure must not escalate into an
+     * exception. It used to: `Organisation::bag_address` resolves while a zaak
+     * page is rendered, and a short PDOK outage took the whole page down with
+     * a fatal error instead of showing the page without an address.
+     *
+     * @param  array<string, mixed>  $query
+     */
+    private function request(string $path, array $query): ?Response
+    {
+        try {
+            return Http::connectTimeout($this->connectTimeout)
+                ->timeout($this->timeout)
+                ->get($this->config['base_url'].$path, $query);
+        } catch (ConnectionException $exception) {
+            // Guzzle appends the full request URI to its message and that URI
+            // carries the address being looked up, so keep it out of the log.
+            Log::warning('Locatieserver request failed; continuing without a result.', [
+                'path' => $path,
+                'reason' => Str::before($exception->getMessage(), ' for '),
+            ]);
+
+            return null;
+        }
     }
 
     /**
@@ -18,14 +74,13 @@ class LocatieserverService
      */
     public function getBrkIdentificationByPostcodeHuisnummer(string $postcode, string $huisnummer): ?string
     {
-        $url = $this->config['base_url'].'/search/v3_1/free';
-        $httpResponse = Http::get($url, [
+        $httpResponse = $this->request('/search/v3_1/free', [
             'q' => $postcode.' '.$huisnummer,
             'fq' => 'type:(adres)',
             'fl' => 'gemeentecode gemeentenaam',
         ]);
 
-        if ($httpResponse->successful()) {
+        if ($httpResponse !== null && $httpResponse->successful()) {
             $data = $httpResponse->json();
             if (Arr::has($data, ['response.docs.0.gemeentecode', 'response.docs.0.gemeentenaam'])) {
                 return 'GM'.$data['response']['docs'][0]['gemeentecode'];
@@ -37,15 +92,14 @@ class LocatieserverService
 
     public function reverse(float $lat, float $lon): ?array
     {
-        $url = $this->config['base_url'].'/search/v3_1/reverse';
-        $httpResponse = Http::get($url, [
+        $httpResponse = $this->request('/search/v3_1/reverse', [
             'lat' => $lat,
             'lon' => $lon,
             'fq' => 'type:(adres)',
             'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging',
         ]);
 
-        if ($httpResponse->successful()) {
+        if ($httpResponse !== null && $httpResponse->successful()) {
             $data = $httpResponse->json();
             if (Arr::has($data, ['response.docs.0'])) {
                 return $data['response']['docs'][0];
@@ -57,14 +111,13 @@ class LocatieserverService
 
     public function getBagObjectByPostcodeHuisnummer(string $postcode, string $huisnummer, ?string $huisletter = null, ?string $huisnummertoevoeging = null): ?BagObject
     {
-        $url = $this->config['base_url'].'/search/v3_1/free';
-        $httpResponse = Http::get($url, [
+        $httpResponse = $this->request('/search/v3_1/free', [
             'q' => $postcode.' '.$huisnummer,
             'fq' => 'type:(adres)',
             'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging',
         ]);
 
-        if ($httpResponse->successful()) {
+        if ($httpResponse !== null && $httpResponse->successful()) {
             $data = $httpResponse->json();
             $item = Arr::first($data['response']['docs'] ?? [], function ($item) use ($postcode, $huisnummer, $huisletter, $huisnummertoevoeging) {
                 // PDOK's free-text search is fuzzy: a non-existent house number
@@ -148,13 +201,12 @@ class LocatieserverService
 
     public function getBagObjectById(string $bagId): ?BagObject
     {
-        $url = $this->config['base_url'].'/search/v3_1/lookup';
-        $httpResponse = Http::get($url, [
+        $httpResponse = $this->request('/search/v3_1/lookup', [
             'id' => $bagId,
             'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging',
         ]);
 
-        if ($httpResponse->successful()) {
+        if ($httpResponse !== null && $httpResponse->successful()) {
             $data = $httpResponse->json();
             if (Arr::has($data, ['response.docs.0'])) {
                 return new BagObject(...$data['response']['docs'][0]);
