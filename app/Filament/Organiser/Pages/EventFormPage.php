@@ -13,6 +13,7 @@ use App\EventForm\State\FormDerivedState;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\EventForm\Submit\SubmitEventForm;
+use App\EventForm\Support\LocationKinds;
 use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Models\Municipality;
@@ -572,7 +573,13 @@ class EventFormPage extends Page implements HasForms
             $fetcher->fetch('evenementenInDeGemeente', $this->state);
         }
 
-        if (in_array($field, ['locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'], true)) {
+        // `waarVindtHetEvenementPlaats` belongs in this list even though it
+        // holds no location itself: unticking a kind removes its address,
+        // area or route from the check (see `LocationKinds`), and nothing
+        // else changes at that moment. Without it, the municipality of the
+        // kind just dropped stays in the choice list until the organiser
+        // happens to touch a location field again.
+        if (in_array($field, [LocationKinds::QUESTION, 'locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'], true)) {
             // Reactieve check tijdens het typen/tekenen: adressen tellen alleen
             // mee als hun gemeente al uit de auto-fill bekend is, zodat deze
             // synchrone call nooit een trage PDOK-lookup voor een adres doet.
