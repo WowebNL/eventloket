@@ -11,10 +11,12 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserT
 use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\DeelzakenTable;
 use App\Livewire\Zaken\ZaakDocumentsTable;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Carbon\Carbon;
@@ -43,6 +45,19 @@ use Woweb\Zgw\Facades\Zgw;
 
 class ZaakInfolist
 {
+    /**
+     * The ZGW eigenschap naam for the internal zaaknummer on this zaak. Without
+     * a koppeling that translates the name this is the logical key itself, so
+     * the shared hoofdkoppeling keeps working exactly as before.
+     */
+    private static function internZaaknummerEigenschapNaam(Zaak $record): string
+    {
+        return ZaaktypeBlueprint::eigenschapNaam(
+            MunicipalityZaaktypeMapping::forZaaktype($record->zaaktype),
+            'intern_zaaknummer',
+        );
+    }
+
     public static function informationschema(): array
     {
         return [
@@ -334,7 +349,9 @@ class ZaakInfolist
                                             ])
                                             ->action(function (array $data, Zaak $record) {
                                                 $openzaak = Zgw::connection($record->zgwConnectionName());
-                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
+                                                $eigenschapNaam = self::internZaaknummerEigenschapNaam($record);
+                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === $eigenschapNaam);
+                                                $writtenToZgw = true;
 
                                                 if ($eigenschap) {
                                                     $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschap->uuid, [
@@ -344,31 +361,41 @@ class ZaakInfolist
                                                     $catalogiEigenschap = $openzaak->catalogi()->eigenschappen()->index(['zaaktype' => $record->openzaak->zaaktype])
                                                         ->collect()
                                                         ->map(fn ($item) => EigenschapData::from($item))
-                                                        ->firstWhere('naam', 'intern_zaaknummer');
+                                                        ->firstWhere('naam', $eigenschapNaam);
 
-                                                    if (! $catalogiEigenschap) {
-                                                        Notification::make()
-                                                            ->danger()
-                                                            ->title(__('Er is iets misgegaan bij het wijzigen van het interne zaaknummer'))
-                                                            ->send();
-
-                                                        return;
+                                                    if ($catalogiEigenschap) {
+                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
+                                                            'zaak' => $record->openzaak->url,
+                                                            'eigenschap' => (string) $catalogiEigenschap->url,
+                                                            'waarde' => $data['intern_zaaknummer'],
+                                                        ]);
+                                                    } else {
+                                                        // The zaaktype does not know the eigenschap. Every
+                                                        // eigenschap is optional, so keep the internal
+                                                        // zaaknummer in Eventloket instead of failing the
+                                                        // action. It is written to the zaaksysteem on the
+                                                        // next edit if the eigenschap is added later.
+                                                        $writtenToZgw = false;
                                                     }
-
-                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
-                                                        'zaak' => $record->openzaak->url,
-                                                        'eigenschap' => (string) $catalogiEigenschap->url,
-                                                        'waarde' => $data['intern_zaaknummer'],
-                                                    ]);
                                                 }
 
                                                 $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['intern_zaaknummer' => $data['intern_zaaknummer']]));
                                                 $record->save();
                                                 $record->clearZgwCache();
 
+                                                if ($writtenToZgw) {
+                                                    Notification::make()
+                                                        ->success()
+                                                        ->title(__('Intern zaaknummer is gewijzigd'))
+                                                        ->send();
+
+                                                    return;
+                                                }
+
                                                 Notification::make()
                                                     ->success()
-                                                    ->title(__('Intern zaaknummer is gewijzigd'))
+                                                    ->title(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.notifications.saved_locally.title'))
+                                                    ->body(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.notifications.saved_locally.body'))
                                                     ->send();
                                             }),
                                         Action::make('deleteInternZaaknummer')
@@ -379,7 +406,8 @@ class ZaakInfolist
                                             ->requiresConfirmation()
                                             ->visible(fn (Zaak $record) => ! empty($record->reference_data->intern_zaaknummer))
                                             ->action(function (Zaak $record) {
-                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === 'intern_zaaknummer');
+                                                $eigenschapNaam = self::internZaaknummerEigenschapNaam($record);
+                                                $eigenschap = Arr::first($record->openzaak->eigenschappen, fn ($item) => $item->naam === $eigenschapNaam);
 
                                                 if ($eigenschap) {
                                                     Zgw::connection($record->zgwConnectionName())->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->delete($eigenschap->uuid);

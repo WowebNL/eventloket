@@ -145,6 +145,31 @@ test('a published new version refreshes the own-instance row and clears the vers
     Notification::assertNothingSent();
 });
 
+test('a new version without any eigenschap refreshes without warning the beheerders', function () {
+    // Eigenschappen are optional, so a zaaktype that carries none of them must
+    // not produce the daily koppeling warning.
+    $v1 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v1';
+    $v2 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v2';
+
+    [, $zaaktype] = ownInstanceSetup($v1);
+    User::factory()->create(['role' => Role::Admin]);
+
+    Http::fake(array_merge([
+        $v2 => Http::response(zaaktypeVersionData($v2), 200),
+        ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([zaaktypeVersionData($v2)]), 200),
+    ], healthyCatalogusFakes([
+        ZTN_OWN_BASE.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope([]), 200),
+    ])));
+
+    (new ZaaktypeNotificationReceived(zaaktypeNotification($v2)))->handle(app(ZaaktypeRefresher::class));
+
+    expect($zaaktype->refresh())
+        ->zgw_zaaktype_url->toBe($v2)
+        ->is_active->toBeTrue();
+
+    Notification::assertNothingSent();
+});
+
 test('a mapped zaaktype without a valid version engages the main fallback and warns once', function () {
     $v1 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v1';
 

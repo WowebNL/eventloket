@@ -93,6 +93,25 @@ test('stuurt bevestigingsmail naar de organisator met PDF als bijlage', function
     });
 });
 
+test('rendert de bevestigingsmail zonder datumregels als de zaak geen evenementdatums heeft', function () {
+    // Een zaaktype hoeft de eigenschappen start_evenement/eind_evenement niet
+    // te kennen; de mail moet dan gewoon renderen, zonder de datumregels.
+    $zaak = zaakMetOrganisator();
+    $zaak->reference_data = new ZaakReferenceData(
+        registratiedatum: now()->toIso8601String(),
+        status_name: 'Ingediend',
+        statustype_url: '',
+        naam_evenement: 'Buurtfeest Testlaan',
+    );
+    $zaak->save();
+
+    $html = (new SubmissionConfirmation($zaak->fresh()))->render();
+
+    expect($html)->toContain('Buurtfeest Testlaan')
+        ->and($html)->not->toContain('>Start<')
+        ->and($html)->not->toContain('>Einde<');
+});
+
 test('zaak zonder gekoppelde organiser-user → mail wordt stil overgeslagen', function () {
     Mail::fake();
 
