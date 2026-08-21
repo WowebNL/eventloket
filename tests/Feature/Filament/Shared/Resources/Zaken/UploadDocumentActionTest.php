@@ -36,6 +36,27 @@ beforeEach(function () {
     $this->zaaktype = Zaaktype::factory()->create([
         'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
     ]);
+
+    // An organiser upload resolves its documenttype from the zaaktype's
+    // documenttypen, so the catalogus has to answer. Registered first, so the
+    // per-test document fakes do not shadow it.
+    $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
+            [
+                'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen/1',
+                'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'informatieobjecttype' => $documentTypeUrl,
+            ],
+        ]), 200),
+        $documentTypeUrl => Http::response([
+            'uuid' => '1',
+            'url' => $documentTypeUrl,
+            'omschrijving' => 'Bijlage',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+        ], 200),
+    ]);
 });
 
 test('upload action exists on ZaakDocumentsTable for authorised organiser', function () {
