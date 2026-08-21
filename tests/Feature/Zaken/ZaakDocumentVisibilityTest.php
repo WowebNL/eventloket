@@ -10,6 +10,8 @@ declare(strict_types=1);
  */
 
 use App\Enums\Role;
+use App\Models\Municipality;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -59,19 +61,19 @@ test('an organiser always sees their own submitted documents, even above their v
         documentWith('own-vertrouwelijk', 'vertrouwelijk'),      // the organiser's own → always visible
         documentWith('other-vertrouwelijk', 'vertrouwelijk'),    // same level but not theirs → hidden
         documentWith('case-confidential', 'zaakvertrouwelijk'),  // in the organiser's default visible set
-        documentWith('public', 'openbaar'),                      // openbaar is visible to every role
+        documentWith('public', 'openbaar'),                      // outside the defaults → hidden here
     ]);
 
     $visible = $zaak->filterDocumentenForRole($documents, Role::Organiser)->pluck('uuid');
 
-    expect($visible->all())->toEqualCanonicalizing(['own-vertrouwelijk', 'case-confidential', 'public']);
+    expect($visible->all())->toEqualCanonicalizing(['own-vertrouwelijk', 'case-confidential']);
 });
 
-test('an openbaar document is visible to every role', function (Role $role) {
-    // openbaar is the least confidential level there is, so a role that may see
-    // zaakvertrouwelijk documents may certainly see public ones. Leaving it out
-    // of the defaults meant a backend that labels its documents openbaar
-    // (OneGround does this for system uploads) showed nothing to anyone.
+test('an openbaar document follows the defaults on a connection without a map', function (Role $role) {
+    // Regression anchor. The defaults are a fixed set starting at
+    // zaakvertrouwelijk, not a maximum, so openbaar is outside them. A
+    // connection whose backend labels documents openbaar configures a maximum
+    // instead (see the test below).
     $zaak = Zaak::factory()->create([
         'organisation_id' => Organisation::factory()->create()->id,
         'zaaktype_id' => Zaaktype::factory()->create()->id,
@@ -79,7 +81,7 @@ test('an openbaar document is visible to every role', function (Role $role) {
 
     $visible = $zaak->filterDocumentenForRole(collect([documentWith('public', 'openbaar')]), $role);
 
-    expect($visible->pluck('uuid')->all())->toBe(['public']);
+    expect($visible->pluck('uuid')->all())->toBe([]);
 })->with([
     'organiser' => Role::Organiser,
     'advisor' => Role::Advisor,
@@ -87,6 +89,46 @@ test('an openbaar document is visible to every role', function (Role $role) {
     'municipality admin' => Role::MunicipalityAdmin,
     'coordinator' => Role::Coordinator,
     'admin' => Role::Admin,
+]);
+
+test('an openbaar document is visible to every role on a connection with maxima', function (Role $role) {
+    // openbaar is the least confidential level there is, so it sits at or below
+    // every configured maximum. A backend that labels its own uploads openbaar
+    // therefore reaches all role groups here, which is the point of the model.
+    $municipality = Municipality::factory()->create();
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $municipality->id,
+        'vertrouwelijkheid_map' => [
+            'visibility' => [
+                Role::Organiser->value => 'openbaar',
+                Role::Advisor->value => 'beperkt_openbaar',
+                Role::Reviewer->value => 'intern',
+                Role::Coordinator->value => 'intern',
+                Role::MunicipalityAdmin->value => 'intern',
+                Role::ReviewerMunicipalityAdmin->value => 'intern',
+            ],
+        ],
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'organisation_id' => Organisation::factory()->create()->id,
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'municipality_id' => $municipality->id,
+            'connection' => "gemeente_{$municipality->id}",
+        ])->id,
+    ]);
+
+    $visible = $zaak->filterDocumentenForRole(collect([documentWith('public', 'openbaar')]), $role);
+
+    expect($zaak->zgwConnectionName())->toBe("gemeente_{$municipality->id}")
+        ->and($visible->pluck('uuid')->all())->toBe(['public']);
+})->with([
+    'organiser' => Role::Organiser,
+    'advisor' => Role::Advisor,
+    'reviewer' => Role::Reviewer,
+    'municipality admin' => Role::MunicipalityAdmin,
+    'coordinator' => Role::Coordinator,
 ]);
 
 test('a document above the role its clearance stays hidden', function () {

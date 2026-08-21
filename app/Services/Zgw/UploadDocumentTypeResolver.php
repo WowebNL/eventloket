@@ -34,12 +34,20 @@ final class UploadDocumentTypeResolver
     /**
      * The informatieobjecttype url to apply when the user does not choose one,
      * or null when the zaaktype exposes no documenttypes at all.
+     *
+     * Deliberately reads the documenttypes unfiltered
+     * ({@see Zaak::catalogusDocumentTypes()}): this is the koppeling's choice,
+     * not the uploader's, so it must not depend on the levels that uploader may
+     * see. Reading the per-user collection made the answer depend on where the
+     * code ran, since the queued path has no authenticated user to filter on,
+     * and it returned null whenever the catalogus labels its documenttypes at a
+     * level outside the uploader's visible set.
      */
     public static function defaultFor(Zaak $zaak): ?string
     {
-        $types = $zaak->document_types;
+        $types = $zaak->catalogusDocumentTypes();
 
-        if ($types === null || $types->isEmpty()) {
+        if ($types->isEmpty()) {
             return null;
         }
 
