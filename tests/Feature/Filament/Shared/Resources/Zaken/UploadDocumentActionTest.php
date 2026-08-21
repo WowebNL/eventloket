@@ -169,7 +169,8 @@ test('upload action successfully stores a document via OpenZaak and dispatches r
     ], $zaak);
 
     // Assert the POST to create the informatieobject was made, with the
-    // finalised 'definitief' status.
+    // finalised 'definitief' status. An organiser upload carries no explicit
+    // choice, so it falls back to the connection default.
     Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
         && $request->method() === 'POST'
         && $request->data()['titel'] === 'Testbestand'
@@ -301,7 +302,10 @@ test('organiser uploads set confidentiality to zaakvertrouwelijk automatically',
         'file_name' => 'test-document.pdf',
     ], $zaak);
 
-    // Assert vertrouwelijkheidaanduiding is set to zaakvertrouwelijk for organiser
+    // Regression anchor for the default connection: an organiser never gets the
+    // choice select, and without a configured maximum the visibility falls back
+    // to the legacy sets, which start at zaakvertrouwelijk and do not contain
+    // openbaar. Defaulting to openbaar here would hide the upload from everyone.
     Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
         && $request->method() === 'POST'
         && $request->data()['vertrouwelijkheidaanduiding'] === DocumentVertrouwelijkheden::Zaakvertrouwelijk->value

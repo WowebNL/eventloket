@@ -262,15 +262,21 @@ In deze sectie bepaal je hoe Eventloket zaken van deze koppeling toont en notifi
 
 ### 5.6 Vertrouwelijkheid
 
-Hier bepaal je per rolgroep welke vertrouwelijkheidsniveaus zichtbaar zijn en welk niveau standaard wordt gebruikt bij het uploaden van een document. De rolgroepen zijn Organisator, Adviseur en Gemeente (behandelaars en beheerders).
+Hier bepaal je per rolgroep het maximaal zichtbare vertrouwelijkheidsniveau en welk niveau standaard wordt gebruikt bij het uploaden van een document. De rolgroepen zijn Organisator, Adviseur en Gemeente (behandelaars en beheerders).
 
-- **Zichtbare niveaus.** De vertrouwelijkheidsniveaus die deze rolgroep mag zien.
+- **Maximaal zichtbaar niveau.** Het hoogste vertrouwelijkheidsniveau dat deze rolgroep mag zien.
 - **Standaard bij uploaden.** Het niveau dat vooraf is ingevuld wanneer iemand uit deze rolgroep een document uploadt.
 - **Standaard voor systeemdocumenten.** Het niveau voor automatisch gegenereerde documenten, namelijk de aanvraag-PDF en de formulier-bijlagen.
 
-Laat een veld leeg om de standaardwaarden van Eventloket aan te houden. De rol-gebaseerde filtering blijft altijd actief, ongeacht deze instellingen. Als alle drie de document-tabbladen zijn uitgeschakeld, verdwijnen de per-rol velden vanzelf, omdat er dan toch niet geüpload kan worden. De standaard voor systeemdocumenten blijft dan wel relevant.
+**Een maximum is inclusief.** De ZGW-standaard ordent de acht niveaus van open naar gesloten: openbaar, beperkt openbaar, intern, zaakvertrouwelijk, vertrouwelijk, confidentieel, geheim, zeer geheim. Een maximale vertrouwelijkheidaanduiding betekent in die standaard "dit niveau en alles wat opener is". Zet je de gemeente op "Intern", dan ziet de gemeente dus ook "Beperkt openbaar" en "Openbaar", en niets daarboven. Je hoeft de opener niveaus niet apart aan te vinken.
 
-**Wat een behandelaar hiervan ziet bij het uploaden.** In het uploadvenster staat de keuze "Wie mag dit document inzien?". De niveaus in die keuze en de rolgroepen die erbij staan, komen uit de zichtbare niveaus die je hier instelt. Kies je bijvoorbeeld dat de organisator ook vertrouwelijke stukken mag zien, dan staat de organisator vanaf dat moment bij dat niveau vermeld. Maken de aangeboden niveaus voor geen enkele rolgroep verschil, bijvoorbeeld omdat alleen de gemeenterollen ze mogen zien, dan verdwijnt de keuze en krijgt het document het niveau uit "Standaard bij uploaden". Een keuze die niets verandert wordt dus niet voorgelegd.
+**Houd de maxima oplopend.** Het maximum van de organisator mag niet hoger liggen dan dat van de adviseur, en dat van de adviseur niet hoger dan dat van de gemeente. Zo blijven de doelgroepen genest: organisator binnen adviseur binnen gemeente. Een instelling die daarvan afwijkt wordt bij het opslaan geweigerd met een foutmelding die de betrokken rolgroepen noemt.
+
+Laat een veld leeg om de standaardwaarden van Eventloket aan te houden. Die standaardwaarden zijn de vaste drietrap vanaf zaakvertrouwelijk (organisator zaakvertrouwelijk, adviseur ook vertrouwelijk, gemeente ook confidentieel) en volgen niet het maximum-model. De rol-gebaseerde filtering blijft altijd actief, ongeacht deze instellingen. Als alle drie de document-tabbladen zijn uitgeschakeld, verdwijnen de per-rol velden vanzelf, omdat er dan toch niet geüpload kan worden. De standaard voor systeemdocumenten blijft dan wel relevant.
+
+**Wat een behandelaar hiervan ziet bij het uploaden.** In het uploadvenster staat de keuze "Wie mag dit document inzien?". Elk ingesteld maximum levert één regel in die keuze, met daarbij de rolgroepen die dat niveau mogen zien. Zet je de organisator op "Openbaar", de adviseur op "Beperkt openbaar" en de gemeente op "Intern", dan krijgt de behandelaar drie keuzes: openbaar voor iedereen, beperkt openbaar voor gemeente en adviseur, en intern alleen voor de gemeente. Maken de maxima voor geen enkele rolgroep verschil, dan verdwijnt de keuze en krijgt het document het niveau uit "Standaard bij uploaden". Een keuze die niets verandert wordt dus niet voorgelegd.
+
+**Systeemdocumenten op openbaar.** Omdat "Openbaar" het meest open niveau is, valt het altijd binnen elk ingesteld maximum. Zet een zaaksysteem zijn eigen uploads op openbaar, dan zijn die documenten op een koppeling met ingestelde maxima voor elke rolgroep zichtbaar. Op een koppeling zonder ingestelde maxima gelden de standaardwaarden, en die bevatten openbaar niet.
 
 Twee vaste gedragsregels gelden altijd, los van deze instellingen:
 

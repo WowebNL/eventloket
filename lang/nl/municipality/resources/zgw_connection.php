@@ -20,7 +20,15 @@ return [
         ],
         'vertrouwelijkheid' => [
             'heading' => 'Vertrouwelijkheid',
-            'description' => 'Bepaal per rol welke vertrouwelijkheidsniveaus zichtbaar zijn en welk niveau standaard bij uploaden wordt gebruikt. Laat een rol leeg om de standaardwaarden van Eventloket aan te houden. De rol-gebaseerde filtering blijft altijd actief.',
+            'description' => 'Bepaal per rolgroep het maximaal zichtbare vertrouwelijkheidsniveau en welk niveau standaard bij uploaden wordt gebruikt. Laat een rolgroep leeg om de standaardwaarden van Eventloket aan te houden. De rol-gebaseerde filtering blijft altijd actief.',
+            'explanation' => [
+                'title' => 'Zo werkt de vertrouwelijkheid-instelling',
+                'intro' => 'Per rolgroep kiest u één maximaal zichtbaar niveau. Alle opener niveaus zijn daarbij automatisch inbegrepen: staat de gemeente op "Intern", dan ziet de gemeente ook "Beperkt openbaar" en "Openbaar", maar niets daarboven. Dit volgt de ZGW-standaard, die een maximale vertrouwelijkheidaanduiding inclusief opvat over de schaal openbaar, beperkt openbaar, intern, zaakvertrouwelijk, vertrouwelijk, confidentieel, geheim, zeer geheim.',
+                'nesting' => 'Houd de maxima oplopend: het maximum van de organisator mag niet hoger liggen dan dat van de adviseur, en dat van de adviseur niet hoger dan dat van de gemeente. Zo vormen de rolgroepen geneste doelgroepen (organisator binnen adviseur binnen gemeente). Een instelling die daarvan afwijkt wordt bij het opslaan geweigerd.',
+                'upload' => 'Dezelfde maxima bepalen wat een behandelaar bij het uploaden kan kiezen. Elk ingesteld maximum is één keuze in de lijst "Wie mag dit document inzien?", met daarbij de rolgroepen die dat niveau mogen zien. Maken de maxima geen onderscheid tussen de rolgroepen, dan verdwijnt die keuze.',
+                'default' => '"Standaard bij uploaden" is de terugvaloptie: dit niveau geldt wanneer er geen keuze wordt gemaakt, bijvoorbeeld bij uploads door de organisator of wanneer de maxima geen onderscheid tussen de rolgroepen maken.',
+                'openbaar' => '"Openbaar" is het meest open niveau en valt dus altijd binnen elk ingesteld maximum. Documenten die automatisch op openbaar worden gezet, zoals systeemuploads vanuit het zaaksysteem, zijn op een eigen koppeling met ingestelde maxima daarom voor elke rolgroep zichtbaar.',
+            ],
         ],
         'features' => [
             'heading' => 'Eventloket functies',
@@ -60,12 +68,15 @@ return [
             'helper' => 'RSIN die als bronorganisatie op elke zaak wordt gezet.',
         ],
         'vertrouwelijkheid_visibility' => [
-            'label' => 'Zichtbare niveaus',
-            'helper' => 'De vertrouwelijkheidsniveaus die deze rol mag zien. Leeg laten valt terug op de standaard.',
+            'label' => 'Maximaal zichtbaar niveau',
+            'helper' => 'Het hoogste vertrouwelijkheidsniveau dat deze rolgroep mag zien. Alle opener niveaus zijn automatisch inbegrepen. Leeg laten valt terug op de standaard.',
+            'tooltip' => 'Een maximum is inclusief: kiest u "Intern", dan ziet deze rolgroep ook "Beperkt openbaar" en "Openbaar", maar niets daarboven.',
+            'nesting_error' => 'Het maximum van :broader mag niet lager liggen dan dat van :narrower. Houd de doelgroepen oplopend genest: organisator binnen adviseur binnen gemeente.',
         ],
         'vertrouwelijkheid_upload_default' => [
             'label' => 'Standaard bij uploaden',
-            'helper' => 'Het niveau dat vooraf is ingevuld wanneer deze rol een document uploadt. Leeg laten valt terug op de standaard.',
+            'helper' => 'Het niveau dat vooraf is ingevuld wanneer deze rolgroep een document uploadt. Leeg laten valt terug op de standaard.',
+            'tooltip' => 'Terugvaloptie: dit niveau wordt gebruikt als er geen keuze wordt gemaakt, bijvoorbeeld bij uploads door de organisator of wanneer de ingestelde maxima geen onderscheid tussen de rolgroepen maken.',
         ],
         'vertrouwelijkheid_system_default' => [
             'label' => 'Standaard voor systeemdocumenten',

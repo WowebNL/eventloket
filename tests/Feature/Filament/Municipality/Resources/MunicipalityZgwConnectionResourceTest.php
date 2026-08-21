@@ -140,7 +140,7 @@ it('stores the vertrouwelijkheid map from the form', function () {
 
     livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
         ->fillForm([
-            'vertrouwelijkheid_map.visibility.organiser' => ['zaakvertrouwelijk', 'vertrouwelijk'],
+            'vertrouwelijkheid_map.visibility.organiser' => 'vertrouwelijk',
             'vertrouwelijkheid_map.upload_default.organiser' => 'vertrouwelijk',
             'vertrouwelijkheid_map.upload_default.system' => 'confidentieel',
         ])
@@ -152,7 +152,7 @@ it('stores the vertrouwelijkheid map from the form', function () {
     // toEqual (==), not toBe (===): JSON object key order is not significant and
     // differs by database driver (MySQL reorders the keys of the stored map).
     expect($connection->vertrouwelijkheid_map)->toEqual([
-        'visibility' => ['organiser' => ['zaakvertrouwelijk', 'vertrouwelijk']],
+        'visibility' => ['organiser' => 'vertrouwelijk'],
         'upload_default' => ['organiser' => 'vertrouwelijk', 'system' => 'confidentieel'],
     ]);
 });
@@ -162,7 +162,7 @@ it('fans the gemeente group choice out to every municipal handler role', functio
 
     livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
         ->fillForm([
-            'vertrouwelijkheid_map.visibility.reviewer' => ['zaakvertrouwelijk', 'vertrouwelijk', 'confidentieel'],
+            'vertrouwelijkheid_map.visibility.reviewer' => 'confidentieel',
             'vertrouwelijkheid_map.upload_default.reviewer' => 'confidentieel',
         ])
         ->call('save')
@@ -170,13 +170,11 @@ it('fans the gemeente group choice out to every municipal handler role', functio
 
     $connection->refresh();
 
-    $allLevels = ['zaakvertrouwelijk', 'vertrouwelijk', 'confidentieel'];
-
     expect($connection->vertrouwelijkheid_map['visibility'])->toBe([
-        'reviewer' => $allLevels,
-        'coordinator' => $allLevels,
-        'municipality_admin' => $allLevels,
-        'reviewer_municipality_admin' => $allLevels,
+        'reviewer' => 'confidentieel',
+        'coordinator' => 'confidentieel',
+        'municipality_admin' => 'confidentieel',
+        'reviewer_municipality_admin' => 'confidentieel',
     ])->and($connection->vertrouwelijkheid_map['upload_default'])->toBe([
         'reviewer' => 'confidentieel',
         'coordinator' => 'confidentieel',
@@ -190,8 +188,8 @@ it('prunes empty roles so they fall back to the defaults', function () {
 
     livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
         ->fillForm([
-            'vertrouwelijkheid_map.visibility.organiser' => ['zaakvertrouwelijk'],
-            'vertrouwelijkheid_map.visibility.advisor' => [],
+            'vertrouwelijkheid_map.visibility.organiser' => 'zaakvertrouwelijk',
+            'vertrouwelijkheid_map.visibility.advisor' => null,
             'vertrouwelijkheid_map.upload_default.reviewer' => null,
         ])
         ->call('save')
@@ -200,7 +198,104 @@ it('prunes empty roles so they fall back to the defaults', function () {
     $connection->refresh();
 
     expect($connection->vertrouwelijkheid_map)->toBe([
-        'visibility' => ['organiser' => ['zaakvertrouwelijk']],
+        'visibility' => ['organiser' => 'zaakvertrouwelijk'],
+    ]);
+});
+
+it('blocks a maximum that runs down with a validation error', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    // The organiser is given a maximum (intern) above the advisor's: a broader
+    // audience must always see at least what a narrower one sees.
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm([
+            'vertrouwelijkheid_map.visibility.organiser' => 'intern',
+            'vertrouwelijkheid_map.visibility.advisor' => 'openbaar',
+            'vertrouwelijkheid_map.visibility.reviewer' => 'intern',
+        ])
+        ->call('save')
+        ->assertHasFormErrors(['vertrouwelijkheid_map.visibility.organiser']);
+
+    // Nothing is persisted while the map is invalid.
+    expect($connection->fresh()->vertrouwelijkheid_map)->toBeNull();
+});
+
+it('blocks a gemeente maximum below the advisor maximum', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm([
+            'vertrouwelijkheid_map.visibility.organiser' => 'openbaar',
+            'vertrouwelijkheid_map.visibility.advisor' => 'intern',
+            'vertrouwelijkheid_map.visibility.reviewer' => 'beperkt_openbaar',
+        ])
+        ->call('save')
+        ->assertHasFormErrors(['vertrouwelijkheid_map.visibility.advisor']);
+
+    expect($connection->fresh()->vertrouwelijkheid_map)->toBeNull();
+});
+
+it('accepts maxima that run up', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm([
+            'vertrouwelijkheid_map.visibility.organiser' => 'openbaar',
+            'vertrouwelijkheid_map.visibility.advisor' => 'beperkt_openbaar',
+            'vertrouwelijkheid_map.visibility.reviewer' => 'intern',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($connection->fresh()->vertrouwelijkheid_map['visibility'])->toMatchArray([
+        'organiser' => 'openbaar',
+        'advisor' => 'beperkt_openbaar',
+        'reviewer' => 'intern',
+    ]);
+});
+
+it('clamps a map written outside the form as a safety net', function () {
+    // pruneVertrouwelijkheidMap runs on save (after the form validation above has
+    // already blocked a maximum that runs down), and is the second line for
+    // seeders and direct writes: a broader group is clamped up to the narrower
+    // one instead of being stored below it.
+    $result = MunicipalityZgwConnectionResource::pruneVertrouwelijkheidMap([
+        'vertrouwelijkheid_map' => [
+            'visibility' => [
+                'organiser' => 'intern',
+                'advisor' => 'openbaar',
+                'reviewer' => 'openbaar',
+            ],
+        ],
+    ]);
+
+    expect($result['vertrouwelijkheid_map']['visibility']['organiser'])->toBe('intern')
+        ->and($result['vertrouwelijkheid_map']['visibility']['advisor'])->toBe('intern')
+        ->and($result['vertrouwelijkheid_map']['visibility']['reviewer'])->toBe('intern')
+        // The gemeente choice is still fanned out to the other municipal roles.
+        ->and($result['vertrouwelijkheid_map']['visibility']['coordinator'])->toBe('intern');
+});
+
+it('converts a legacy map of level sets to a maximum on save', function () {
+    // Compatibility with maps stored before the maximum was introduced: each set
+    // is read as its most confidential member.
+    $result = MunicipalityZgwConnectionResource::pruneVertrouwelijkheidMap([
+        'vertrouwelijkheid_map' => [
+            'visibility' => [
+                'organiser' => ['openbaar'],
+                'advisor' => ['openbaar', 'beperkt_openbaar'],
+                'reviewer' => ['openbaar', 'beperkt_openbaar', 'intern'],
+            ],
+        ],
+    ]);
+
+    expect($result['vertrouwelijkheid_map']['visibility'])->toBe([
+        'organiser' => 'openbaar',
+        'advisor' => 'beperkt_openbaar',
+        'reviewer' => 'intern',
+        'coordinator' => 'intern',
+        'municipality_admin' => 'intern',
+        'reviewer_municipality_admin' => 'intern',
     ]);
 });
 

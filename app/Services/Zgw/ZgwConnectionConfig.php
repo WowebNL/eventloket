@@ -63,27 +63,126 @@ class ZgwConnectionConfig
 
     /**
      * The vertrouwelijkheidaanduiding values a given role may see on this
-     * connection. A connection without a configured map falls back to the
-     * hardcoded {@see DocumentVertrouwelijkheden::fromUserRole()} defaults, so
-     * the role-based filtering stays on either way.
+     * connection.
+     *
+     * Two regimes, deliberately kept apart:
+     *
+     * - A connection without a map for this role falls back to the hardcoded
+     *   {@see DocumentVertrouwelijkheden::fromUserRole()} sets. Those are the
+     *   legacy three-step defaults and are used verbatim, so the default
+     *   connection behaves exactly as it always has.
+     * - A connection whose map configures this role stores a single maximum
+     *   vertrouwelijkheidaanduiding, which the standard defines as inclusive
+     *   over the ordered scale. The set is derived from it with
+     *   {@see DocumentVertrouwelijkheden::atMost()}.
+     *
+     * Either way the answer is a set of levels, so every consumer of the
+     * role-based filtering stays unchanged.
      *
      * @return array<int, string>
      */
     public static function documentVisibilityForRole(string $connectionName, Role $role): array
     {
-        $visibility = config("zgw.connections.{$connectionName}.vertrouwelijkheid_map.visibility");
+        $max = self::documentVisibilityMaxForRole($connectionName, $role);
 
-        if (is_array($visibility) && isset($visibility[$role->value]) && is_array($visibility[$role->value])) {
-            return array_values(array_map(strval(...), $visibility[$role->value]));
+        if ($max !== null) {
+            return DocumentVertrouwelijkheden::atMost($max);
         }
 
         return DocumentVertrouwelijkheden::fromUserRole($role);
     }
 
     /**
+     * The maximum vertrouwelijkheidaanduiding this connection's map allows the
+     * given role to see, or null when the role is not configured (and the
+     * hardcoded defaults apply).
+     */
+    public static function documentVisibilityMaxForRole(string $connectionName, Role $role): ?string
+    {
+        $visibility = config("zgw.connections.{$connectionName}.vertrouwelijkheid_map.visibility");
+
+        if (! is_array($visibility) || ! isset($visibility[$role->value])) {
+            return null;
+        }
+
+        return self::readVisibilityMax($visibility[$role->value]);
+    }
+
+    /**
+     * Read a stored visibility entry as a single maximum level.
+     *
+     * The current form stores one level per role group. Maps written before the
+     * maximum was introduced stored the full set of visible levels; such a set is
+     * read as its most confidential member, which is the maximum it expressed.
+     * Anything else (an empty set, an unknown level) reads as "not configured".
+     */
+    public static function readVisibilityMax(mixed $stored): ?string
+    {
+        if (is_string($stored)) {
+            return DocumentVertrouwelijkheden::tryFrom($stored)?->value;
+        }
+
+        if (is_array($stored)) {
+            return DocumentVertrouwelijkheden::mostConfidential($stored);
+        }
+
+        return null;
+    }
+
+    /**
+     * The distinct maximum levels this connection's map configures across its
+     * role groups: the levels that actually separate one role group from the
+     * next, ordered from the least to the most confidential.
+     *
+     * These are the rungs the upload choice can offer. Any level in between is
+     * seen by exactly the same role groups as the maximum just above it, so it
+     * would collapse into that rung anyway.
+     *
+     * Empty when the connection has no visibility map, in which case the caller
+     * falls back to the fixed {@see DocumentVertrouwelijkheden::uploadChoices()}.
+     *
+     * @return array<int, string>
+     */
+    public static function configuredVisibilityMaxLevels(string $connectionName): array
+    {
+        $visibility = config("zgw.connections.{$connectionName}.vertrouwelijkheid_map.visibility");
+
+        if (! is_array($visibility)) {
+            return [];
+        }
+
+        $maxima = [];
+
+        foreach ($visibility as $stored) {
+            $max = self::readVisibilityMax($stored);
+
+            if ($max !== null) {
+                $maxima[$max] = true;
+            }
+        }
+
+        return array_values(array_filter(
+            DocumentVertrouwelijkheden::order(),
+            static fn (string $level): bool => isset($maxima[$level]),
+        ));
+    }
+
+    /**
      * The default vertrouwelijkheidaanduiding applied when a user of the given
      * role uploads a document without choosing one. Falls back to the legacy
-     * behaviour (organiser = zaakvertrouwelijk, everyone else = vertrouwelijk).
+     * behaviour (the organiser gets zaakvertrouwelijk, everyone else
+     * vertrouwelijk).
+     *
+     * One exception, and it is deliberately narrow. An organiser never gets the
+     * choice select, so this default carries all of their uploads. On a
+     * connection that configures a maximum for the organiser, `openbaar` is by
+     * construction at or below every role group's maximum and therefore visible
+     * to all of them, which is what an organiser upload is meant to be, while
+     * `zaakvertrouwelijk` may sit above the maxima and hide the document from
+     * everyone. Without such a maximum the visibility falls back to the legacy
+     * sets, which do not contain `openbaar` at all: defaulting to it there would
+     * produce exactly the invisible upload it is meant to prevent, so the legacy
+     * `zaakvertrouwelijk` stands.
      */
     public static function uploadDefaultForRole(string $connectionName, Role $role): string
     {
@@ -91,6 +190,10 @@ class ZgwConnectionConfig
 
         if (is_array($defaults) && isset($defaults[$role->value]) && is_string($defaults[$role->value]) && $defaults[$role->value] !== '') {
             return $defaults[$role->value];
+        }
+
+        if ($role === Role::Organiser && self::documentVisibilityMaxForRole($connectionName, $role) !== null) {
+            return DocumentVertrouwelijkheden::Openbaar->value;
         }
 
         return match ($role) {
