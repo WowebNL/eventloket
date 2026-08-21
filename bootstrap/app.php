@@ -18,6 +18,19 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
 
+        // Restrict which forwarded headers a trusted proxy may set. The only
+        // reason an environment opts in through TRUSTED_PROXIES
+        // (config/trustedproxy.php) is to let a TLS-terminating proxy report
+        // https via X-Forwarded-Proto, so we trust For, Proto and Port and
+        // nothing else. Leaving the mask at Laravel's default would also honour
+        // X-Forwarded-Host, which lets an attacker forge the host in a
+        // password-reset link (reset poisoning) on any opt-in environment. We
+        // pass only `headers:` here, so the proxy list keeps falling back to
+        // config('trustedproxy.proxies') and this only narrows the mask.
+        $middleware->trustProxies(headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_PROTO
+            | Request::HEADER_X_FORWARDED_PORT);
+
         // Standaard valt Laravel's `AuthenticationException::redirectTo()`
         // terug op `route('login')` — die route bestaat niet, want we
         // gebruiken Filament-panel-logins (`/admin/login`,
