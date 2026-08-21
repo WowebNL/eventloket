@@ -59,6 +59,9 @@ function ownInstanceSetup(string $versionUrl, string $municipalityName = 'Heerle
         'municipality_id' => $municipality->id,
         'role' => ZaaktypeRole::Vergunning,
         'zaaktype_identificatie' => 'OWN-1',
+        // Filled so these tests report only on the slot each one is about; an
+        // empty bijlage-documenttype is a finding of its own.
+        'bijlage_informatieobjecttype' => 'Bijlage',
     ]));
 
     $zaaktype = Zaaktype::factory()->create([
