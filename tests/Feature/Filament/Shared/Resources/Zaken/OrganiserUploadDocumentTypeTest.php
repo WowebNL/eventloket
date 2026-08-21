@@ -14,6 +14,7 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\Services\Zgw\UploadDocumentTypeResolver;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Repeater;
 use Illuminate\Support\Facades\Config;
@@ -25,13 +26,17 @@ use Tests\Fakes\ZgwHttpFake;
 use function Pest\Livewire\livewire;
 
 /**
- * The zaaktype exposes two documenttypes the organiser may see. Their
- * omschrijvingen are chosen so the three possible outcomes are distinguishable:
- * "Aanvraagformulier" is the first type after sorting (the last-resort
- * heuristic), "Bijlage" is what the omschrijving heuristic prefers, and either
- * can be named by the koppeling.
+ * The zaaktype exposes two documenttypes. Their omschrijvingen are chosen so the
+ * three possible outcomes are distinguishable: "Aanvraagformulier" is the first
+ * type after sorting (the last-resort heuristic), "Bijlage" is what the
+ * omschrijving heuristic prefers, and either can be named by the koppeling.
+ *
+ * They default to zaakvertrouwelijk, which every role sees on a connection
+ * without a vertrouwelijkheid map, so the documenttype select is populated and
+ * these tests are about type resolution and nothing else. Pass another level to
+ * put the types outside a role's visible set.
  */
-function fakeTwoDocumentTypes(): array
+function fakeTwoDocumentTypes(string $vertrouwelijkheid = 'zaakvertrouwelijk'): array
 {
     $first = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
     $second = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/2';
@@ -53,14 +58,14 @@ function fakeTwoDocumentTypes(): array
             'uuid' => '1',
             'url' => $first,
             'omschrijving' => 'Aanvraagformulier',
-            'vertrouwelijkheidaanduiding' => 'openbaar',
+            'vertrouwelijkheidaanduiding' => $vertrouwelijkheid,
             'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
         ], 200),
         $second => Http::response([
             'uuid' => '2',
             'url' => $second,
             'omschrijving' => 'Bijlage',
-            'vertrouwelijkheidaanduiding' => 'openbaar',
+            'vertrouwelijkheidaanduiding' => $vertrouwelijkheid,
             'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
         ], 200),
         ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten*' => Http::response([
@@ -253,6 +258,61 @@ test('an organiser upload falls back to the heuristic when the koppeling leaves 
         UploadDocumentsJob::class,
         fn (UploadDocumentsJob $job): bool => $job->files[0]['informatieobjecttype'] === $types['bijlage'],
     );
+});
+
+test('an organiser upload takes the documenttype from the koppeling even when the types sit outside their visible set', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    // A catalogus that labels its documenttypes openbaar, on a connection with no
+    // vertrouwelijkheid map: the defaults start at zaakvertrouwelijk, so no role
+    // sees these types. The koppeling's choice of documenttype is not the
+    // uploader's to make, so it must not depend on that.
+    $types = fakeTwoDocumentTypes('openbaar');
+    mapBijlageDocumentType($this->municipality, 'Aanvraagformulier');
+
+    $path = 'documents/organiser-file.pdf';
+    Storage::put($path, '%PDF-1.4 organiser file');
+
+    $zaak = ($this->makeZaak)();
+
+    $this->actingAs($this->organiser);
+
+    expect($zaak->document_types)->toBeEmpty()
+        ->and($zaak->catalogusDocumentTypes())->toHaveCount(2);
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
+        ->callTableAction('upload', data: [
+            'files' => [$path],
+            'document_metadata' => [
+                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Plattegrond', 'informatieobjecttype' => $types['bijlage']],
+            ],
+        ])
+        ->assertHasNoTableActionErrors();
+
+    Queue::assertPushed(
+        UploadDocumentsJob::class,
+        fn (UploadDocumentsJob $job): bool => $job->files[0]['informatieobjecttype'] === $types['aanvraagformulier'],
+    );
+});
+
+test('the queued and the web upload path resolve the same documenttype', function () {
+    Storage::fake('local');
+
+    // The queued path has no authenticated user and therefore never filtered;
+    // the web path did. Both must answer the same, whatever the uploader sees.
+    $types = fakeTwoDocumentTypes('openbaar');
+    mapBijlageDocumentType($this->municipality, 'Aanvraagformulier');
+
+    $zaak = ($this->makeZaak)();
+
+    $withoutUser = UploadDocumentTypeResolver::defaultFor($zaak);
+
+    $this->actingAs($this->organiser);
+
+    expect(UploadDocumentTypeResolver::defaultFor($zaak))
+        ->toBe($types['aanvraagformulier'])
+        ->and($withoutUser)->toBe($types['aanvraagformulier']);
 });
 
 test('a coordinator upload keeps the chosen documenttype', function () {
