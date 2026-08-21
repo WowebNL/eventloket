@@ -50,5 +50,6 @@ return [
     'finding' => [
         'missing' => ':slot ontbreekt op het zaaktype.',
         'mapped_value_not_found' => ':slot: de gekoppelde waarde ":expected" bestaat niet meer.',
+        'not_configured' => ':slot is niet ingesteld in de koppeling; Eventloket kiest nu zelf een documenttype voor uploads van organisatoren.',
     ],
 ];

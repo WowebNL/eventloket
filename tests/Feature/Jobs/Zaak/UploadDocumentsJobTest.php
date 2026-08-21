@@ -24,6 +24,27 @@ beforeEach(function () {
     $this->zaaktype = Zaaktype::factory()->create([
         'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
     ]);
+
+    // The job resolves the documenttype for an organiser upload from the
+    // zaaktype's documenttypen, so the catalogus has to answer. Registered
+    // first, so the per-test document fakes do not shadow it.
+    $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen*' => Http::response(ZgwHttpFake::envelope([
+            [
+                'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktype-informatieobjecttypen/1',
+                'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'informatieobjecttype' => $documentTypeUrl,
+            ],
+        ]), 200),
+        $documentTypeUrl => Http::response([
+            'uuid' => '1',
+            'url' => $documentTypeUrl,
+            'omschrijving' => 'Bijlage',
+            'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+        ], 200),
+    ]);
 });
 
 test('job uploads each file to OpenZaak and links it to the zaak', function () {
@@ -99,7 +120,10 @@ test('job uploads each file to OpenZaak and links it to the zaak', function () {
 
     $job->handle();
 
-    Http::assertSentCount(5); // 1 openzaak fetch + 2 document stores + 2 zaak links
+    // 1 openzaak fetch + 2 catalogus reads for the organiser documenttype
+    // (relation list + the type itself, cached per zaaktype version)
+    // + 2 document stores + 2 zaak links
+    Http::assertSentCount(7);
 
     Http::assertSent(fn ($request) => str_contains($request->url(), '/documenten/api/v1/enkelvoudiginformatieobjecten')
         && $request->method() === 'POST'
@@ -264,6 +288,7 @@ test('job skips missing files and continues', function () {
 
     $job->handle();
 
-    // Only 1 openzaak fetch + 1 upload + 1 link (the missing file is skipped)
-    Http::assertSentCount(3);
+    // Only 1 openzaak fetch + 2 catalogus reads for the organiser
+    // documenttype + 1 upload + 1 link (the missing file is skipped)
+    Http::assertSentCount(5);
 });
