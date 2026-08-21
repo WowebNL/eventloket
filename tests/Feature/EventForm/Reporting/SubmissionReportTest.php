@@ -22,6 +22,7 @@ declare(strict_types=1);
 
 use App\EventForm\Reporting\SubmissionReport;
 use App\EventForm\Schema\EventFormSchema;
+use App\EventForm\Schema\Patches\LocatiePolygonsPatch;
 use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
@@ -547,6 +548,79 @@ test('Radio met Closure-options resolveert label uit dynamische bron (#2 Michel:
     $waarden = collect($sections[0]['entries'])->pluck('value')->all();
     expect($waarden)->toContain('Beekdaelen')
         ->and($waarden)->not->toContain('GM1954');
+});
+
+// --- Location-state leak (ZGW/PDF counterpart of #493) ---------------------
+//
+// Unticking a location kind hides its field but leaves the value in the state.
+// SubmissionReport walks every field regardless of its `->hidden()` rule, so a
+// copied application would otherwise print the source event's leftover location
+// in the PDF. These tests prove that a field of an unticked kind stays out of
+// the report, while a ticked kind (or an unanswered question) is unchanged.
+
+test('een afgevinkte gebouw-soort lekt zijn adres niet in de PDF (ongepatchte repeaters)', function () {
+    // Alleen "route" aangevinkt; het gebouwadres staat nog in de state.
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['route'],
+        'adresVanDeGebouwEn' => [
+            'row-1' => ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+        ],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [LocatieVanHetEvenement2Step::make()]);
+
+    $flat = (string) json_encode($sections);
+    expect($flat)->not->toContain('Sporthal Noord');
+});
+
+test('regressie-anker: met de gebouw-soort aangevinkt verschijnt het adres wél in de PDF', function () {
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['gebouw'],
+        'adresVanDeGebouwEn' => [
+            'row-1' => ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+        ],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [LocatieVanHetEvenement2Step::make()]);
+
+    $flat = (string) json_encode($sections);
+    expect($flat)->toContain('Sporthal Noord');
+});
+
+test('afgevinkte buiten/route-naamvelden lekken niet in de PDF (gepatchte productie-schema)', function () {
+    // Productie-pad: LocatiePolygonsPatch maakt van locatieSOpKaart/routesOpKaart
+    // Map-velden met losse naam-TextInputs. Alleen "gebouw" aangevinkt; de
+    // naam-velden van buiten en route dragen nog overgekopieerde state.
+    $step = LocatiePolygonsPatch::apply(LocatieVanHetEvenement2Step::make());
+
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['gebouw'],
+        'adresVanDeGebouwEn' => [
+            'row-1' => ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+        ],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [$step]);
+
+    $flat = (string) json_encode($sections);
+    expect($flat)->toContain('Sporthal Noord')
+        ->and($flat)->not->toContain('Stadspark')
+        ->and($flat)->not->toContain('Route Centrum');
+});
+
+test('geen mening: zonder waarVindtHetEvenementPlaats verschijnt de locatie ongewijzigd in de PDF', function () {
+    $state = new FormState(values: [
+        'adresVanDeGebouwEn' => [
+            'row-1' => ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+        ],
+    ]);
+
+    $sections = app(SubmissionReport::class)->build($state, [LocatieVanHetEvenement2Step::make()]);
+
+    $flat = (string) json_encode($sections);
+    expect($flat)->toContain('Sporthal Noord');
 });
 
 test('the internal brkGemeente of an address does not leak into the report', function () {
