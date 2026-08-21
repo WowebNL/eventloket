@@ -528,6 +528,11 @@ test('stores exactly the same reference_data as before when the deelzaak carries
         'eind_afbouw' => null,
         'locaties_evenement' => null,
         'intern_zaaknummer' => null,
+        // Sprint-3 on this branch passes the per-day fields through to the
+        // deelzaak; on a single-day event they are present but empty.
+        'dagen_evenement' => null,
+        'dagen_opbouw' => null,
+        'dagen_afbouw' => null,
     ]);
 });
 
