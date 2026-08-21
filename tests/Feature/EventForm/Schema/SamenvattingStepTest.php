@@ -90,6 +90,17 @@ function samenvattingHtml(FormState $state): string
         {
             return $this->state;
         }
+
+        /**
+         * The summary asks the page for the state as the form is currently
+         * asking for it. These tests hand it a state directly and check how it
+         * is rendered, so here the two are the same thing; which answers are
+         * still being asked is covered where the pruning lives.
+         */
+        public function stateAsAsked(): FormState
+        {
+            return $this->state;
+        }
     };
 
     return (string) $closure($stub);
