@@ -279,7 +279,12 @@ final class TijdenStep
                     // every cell is escaped. The values come from date and time
                     // fields rather than free text, but safe-by-default is the
                     // policy.
-                    ->state(fn ($livewire) => new HtmlString(self::overzichtHtml($livewire->state()))),
+                    //
+                    // The overview reads the state as the form is asking for
+                    // it: a build-up or take-down time that was filled in and
+                    // then answered away is no longer part of the answer, so
+                    // its row has to be empty here too.
+                    ->state(fn ($livewire) => new HtmlString(self::overzichtHtml($livewire->stateAsAsked()))),
             ]);
     }
 

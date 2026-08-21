@@ -12,6 +12,7 @@ use App\EventForm\Schema\Steps\TypeAanvraagStep;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\ExtraQuestions;
+use App\EventForm\Support\LocationKinds;
 use App\EventForm\Support\TijdenOverzicht;
 use Carbon\Carbon;
 use Closure;
@@ -117,6 +118,32 @@ final class SubmissionReport
     ];
 
     /**
+     * The location fields and the `waarVindtHetEvenementPlaats` kind each one
+     * belongs to. Unticking a kind hides its component but leaves the value in
+     * the state (Filament keeps a hidden field's value; see `LocationKinds`),
+     * so a copied application still carries the source event's address, area or
+     * route. Reading such a field into the report would print a location the
+     * organiser is no longer asking for. The three geometry/address fields are
+     * `LocationKinds::FIELD_BY_KIND`; the two name fields hang on the same kind
+     * as their component (`naamVanDeLocatieKaart` on "buiten",
+     * `naamVanDeRoute` on "route") and are hidden together with it.
+     *
+     * The generic Open Formulieren name fields (`naamVanDeLocatie`,
+     * `watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt`) are deliberately not
+     * here: they are not bound to a single kind and are not hidden by unticking
+     * one.
+     *
+     * @var array<string, string>
+     */
+    private const LOCATION_FIELD_KIND = [
+        'adresVanDeGebouwEn' => LocationKinds::GEBOUW,
+        'locatieSOpKaart' => LocationKinds::BUITEN,
+        'naamVanDeLocatieKaart' => LocationKinds::BUITEN,
+        'routesOpKaart' => LocationKinds::ROUTE,
+        'naamVanDeRoute' => LocationKinds::ROUTE,
+    ];
+
+    /**
      * @return list<array{label: string, value: string, sub?: list<array{label: string, value: string}>, table?: array{header: list<string>, rows: list<list<string>>}}>
      */
     private function extractEntries(Step $step, FormState $state): array
@@ -167,6 +194,11 @@ final class SubmissionReport
                     // hold bare clock times, which would render as today's date.
                     return;
                 }
+                // A location repeater of a kind the organiser unticked still
+                // holds copied-over state; keep it out of the report.
+                if ($this->isDeselectedLocationField($key, $state)) {
+                    return;
+                }
                 $fullKey = $keyPrefix === null ? $key : "{$keyPrefix}.{$key}";
                 $rows = is_array($state->get($fullKey)) ? $state->get($fullKey) : [];
                 if ($rows === []) {
@@ -209,6 +241,12 @@ final class SubmissionReport
                         return;
                     }
                     if (in_array($key, self::DISPLAY_ONLY_KEYS, true)) {
+                        return;
+                    }
+                    // A location field (the patched map, or a name field) of a
+                    // kind the organiser unticked still holds copied-over state;
+                    // keep it out of the report.
+                    if ($this->isDeselectedLocationField($key, $state)) {
                         return;
                     }
                     $fullKey = $keyPrefix === null ? $key : "{$keyPrefix}.{$key}";
@@ -374,6 +412,21 @@ final class SubmissionReport
     private function heeftRisicoscanDoorlopen(FormState $state): bool
     {
         return $state->isStepApplicable(RisicoscanStep::UUID);
+    }
+
+    /**
+     * Is this a location field whose kind the organiser unticked? Its value is
+     * then leftover state that must stay out of the report, the same way the
+     * ZGW mapping and the municipality check (see `LocationKinds`) already keep
+     * it out. Any other field, and any location field of a ticked kind (or when
+     * no kind is ticked at all, which counts as "no opinion"), passes through
+     * unchanged.
+     */
+    private function isDeselectedLocationField(string $key, FormState $state): bool
+    {
+        $kind = self::LOCATION_FIELD_KIND[$key] ?? null;
+
+        return $kind !== null && ! LocationKinds::isSelected($state, $kind);
     }
 
     /**
@@ -1092,6 +1145,17 @@ final class SubmissionReport
             public function __construct(private readonly FormState $state) {}
 
             public function state(): FormState
+            {
+                return $this->state;
+            }
+
+            /**
+             * The form page answers this with the state minus the questions it
+             * is no longer asking. There is no schema to ask here, and there is
+             * no need for one: a report is built from a state that has already
+             * been settled.
+             */
+            public function stateAsAsked(): FormState
             {
                 return $this->state;
             }

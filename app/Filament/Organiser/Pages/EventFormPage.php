@@ -15,6 +15,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\EventForm\Submit\SubmitEventForm;
 use App\EventForm\Support\ExtraQuestions;
+use App\EventForm\Support\LocationKinds;
 use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Models\Municipality;
@@ -24,11 +25,13 @@ use App\Models\Users\OrganiserUser;
 use Carbon\CarbonInterface;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Field;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Panel;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Locked;
 
@@ -632,7 +635,13 @@ class EventFormPage extends Page implements HasForms
             $fetcher->fetch('evenementenInDeGemeente', $this->state);
         }
 
-        if (in_array($field, ['locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'], true)) {
+        // `waarVindtHetEvenementPlaats` belongs in this list even though it
+        // holds no location itself: unticking a kind removes its address,
+        // area or route from the check (see `LocationKinds`), and nothing
+        // else changes at that moment. Without it, the municipality of the
+        // kind just dropped stays in the choice list until the organiser
+        // happens to touch a location field again.
+        if (in_array($field, [LocationKinds::QUESTION, 'locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'], true)) {
             // Reactieve check tijdens het typen/tekenen: adressen tellen alleen
             // mee als hun gemeente al uit de auto-fill bekend is, zodat deze
             // synchrone call nooit een trage PDOK-lookup voor een adres doet.
@@ -794,6 +803,7 @@ class EventFormPage extends Page implements HasForms
         $dehydrationState = [];
         $this->form->callBeforeStateDehydrated($dehydrationState);
         $this->absorbFormData($this->form->getStateSnapshot());
+        $this->pruneStateToVisible();
 
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
@@ -873,17 +883,197 @@ class EventFormPage extends Page implements HasForms
         }
 
         foreach ($wizard->getChildSchema()->getComponents() as $step) {
-            // Filament prefixeert de step-key met "form." (de naam van de form-schema-
-            // binding); COMPUTED_STEPS bevat alleen de kale UUID's. Dezelfde strip
-            // staat in vertical-wizard.blade.php.
-            $rawKey = $step->getKey();
-            $stepUuid = str_starts_with($rawKey, 'form.') ? substr($rawKey, 5) : $rawKey;
-
-            if (! $this->state->isStepApplicable($stepUuid)) {
+            if (! $this->state->isStepApplicable(self::stepUuid($step))) {
                 continue;
             }
             $step->getChildSchema()->validate();
         }
+    }
+
+    /**
+     * Bring the state back in line with the answers the form is actually
+     * collecting, so that everything built from it describes the application
+     * the organiser is submitting.
+     *
+     * A field that was filled in and later became hidden keeps its value:
+     * `absorbFields()` merges and never drops a key. The value is invisible in
+     * the interface from that moment on, but it still reaches the outputs, so
+     * an application can carry an answer that was withdrawn or that came along
+     * with a copied application. Filament already leaves a hidden field out of
+     * its own dehydration, so the visible set below is exactly what the
+     * organiser sees; this only stops the merge from putting the stale value
+     * back.
+     *
+     * Step applicability is a second layer, because it is not a Filament
+     * concept: a step the answers make irrelevant is only dimmed in the step
+     * list, its fields stay rendered and would therefore count as visible.
+     *
+     * Two boundaries are respected. Nested values (repeater rows and the like)
+     * are not addressed here: the whole top-level value is replaced on absorb,
+     * so Filament's own pruning of those already survives. And keys the server
+     * owns are never dropped, for the same reason {@see absorbFormData} never
+     * lets the client write them: they are computed, not answered.
+     */
+    private function pruneStateToVisible(): void
+    {
+        $this->state->forgetFields($this->stateKeysNotBeingAsked());
+    }
+
+    /**
+     * The state as the form is currently asking for it: everything that has
+     * been filled in, minus the answers to questions that are no longer being
+     * put to the organiser.
+     *
+     * The components that show back what has been filled in read this instead
+     * of the raw state. Without it they print a value the organiser can no
+     * longer see or correct — the same stale value {@see pruneStateToVisible}
+     * keeps out of the submitted application — so the overview and the
+     * application would disagree about what was asked.
+     *
+     * The state itself is deliberately left untouched. Only submitting settles
+     * what the answers are; until then a question that comes back has to show
+     * what was typed before, and a stored draft keeps its own bag.
+     */
+    public function stateAsAsked(): FormState
+    {
+        $shown = FormState::fromSnapshot($this->state->toSnapshot());
+        $shown->forgetFields($this->stateKeysNotBeingAsked());
+
+        return $shown;
+    }
+
+    /**
+     * The top-level state keys the wizard owns but is not currently asking
+     * for: hidden fields, and fields of a step the answers do not apply to.
+     *
+     * @return list<string>
+     */
+    private function stateKeysNotBeingAsked(): array
+    {
+        $wizard = $this->form->getComponents(withHidden: true)[0] ?? null;
+        if (! $wizard instanceof Component) {
+            return [];
+        }
+
+        $wizardSchema = $wizard->getChildSchema();
+        if ($wizardSchema === null) {
+            return [];
+        }
+
+        /** @var array{owned: list<string>, answerable: list<string>} $keys */
+        $keys = Component::withVisibilityCache(function () use ($wizardSchema): array {
+            $owned = [];
+            $answerable = [];
+
+            foreach ($wizardSchema->getComponents(withHidden: true) as $step) {
+                $stepSchema = $step->getChildSchema();
+                if ($stepSchema === null) {
+                    continue;
+                }
+
+                $owned = [...$owned, ...$this->fieldStateKeys($this->fieldsOf($stepSchema, withHidden: true))];
+
+                if (! $this->state->isStepApplicable(self::stepUuid($step))) {
+                    continue;
+                }
+
+                $answerable = [...$answerable, ...$this->fieldStateKeys($this->fieldsOf($stepSchema, withHidden: false))];
+            }
+
+            return ['owned' => $owned, 'answerable' => $answerable];
+        });
+
+        // A key can be owned by more than one step, so a field is only dropped
+        // when no step offers it to the organiser at all.
+        $forget = array_diff(
+            $keys['owned'],
+            $keys['answerable'],
+            ServiceFetcher::FETCHED_VARIABLES,
+            array_keys(FormDerivedState::COMPUTED_KEYS),
+        );
+
+        return array_values(array_unique($forget));
+    }
+
+    /**
+     * The fields of a schema, optionally including the ones it is currently
+     * hiding.
+     *
+     * Deliberately not `getFlatFields()`: that memoises its result per
+     * visibility flag on the schema, and the schema outlives the moment the
+     * answers change. The overviews ask for the visible set while the page
+     * renders, submitting asks for it again after the last answer is in, and a
+     * memoised set would hand the second caller the first caller's world. This
+     * walk mirrors what Filament does but evaluates the visibility every time
+     * it is asked.
+     *
+     * @return list<Field>
+     */
+    private function fieldsOf(Schema $schema, bool $withHidden): array
+    {
+        $fields = [];
+
+        foreach ($schema->getComponents(withActions: false, withHidden: $withHidden) as $component) {
+            if (! $component instanceof Component) {
+                continue;
+            }
+
+            if ($component instanceof Field) {
+                $fields[] = $component;
+            }
+
+            foreach ($component->getChildSchemas($withHidden) as $childSchema) {
+                $fields = [...$fields, ...$this->fieldsOf($childSchema, $withHidden)];
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * The top-level state keys the given fields write to.
+     *
+     * @param  list<Field>  $fields
+     * @return list<string>
+     */
+    private function fieldStateKeys(array $fields): array
+    {
+        $prefix = $this->form->getStatePath();
+        $prefix = filled($prefix) ? $prefix.'.' : '';
+
+        $keys = [];
+
+        foreach ($fields as $field) {
+            $path = (string) $field->getStatePath();
+
+            if ($prefix !== '') {
+                if (! str_starts_with($path, $prefix)) {
+                    continue;
+                }
+
+                $path = substr($path, strlen($prefix));
+            }
+
+            if ($path === '' || str_contains($path, '.')) {
+                continue;
+            }
+
+            $keys[] = $path;
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Filament prefixes a step key with the name of the schema binding
+     * ("form."); the applicability rules are keyed on the bare UUID. The same
+     * strip lives in vertical-wizard.blade.php.
+     */
+    private static function stepUuid(Component $step): string
+    {
+        $key = (string) $step->getKey();
+
+        return str_starts_with($key, 'form.') ? substr($key, 5) : $key;
     }
 
     public function getTitle(): string

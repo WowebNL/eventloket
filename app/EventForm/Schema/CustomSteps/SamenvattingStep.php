@@ -34,7 +34,12 @@ final class SamenvattingStep
             ->schema([
                 TextEntry::make('samenvattingOverzicht')
                     ->hiddenLabel()
-                    ->state(fn ($livewire) => new HtmlString(self::renderHtml($livewire->state())))
+                    // The summary reads the state as the form is asking for it,
+                    // so it shows the application that will be submitted: an
+                    // answer to a question that is no longer being put to the
+                    // organiser is left out here just as it is left out of the
+                    // application itself.
+                    ->state(fn ($livewire) => new HtmlString(self::renderHtml($livewire->stateAsAsked())))
                     ->columnSpanFull(),
                 Checkbox::make('akkoordVerwerkingGegevens')
                     ->label('Ik ga akkoord dat mijn gegevens verwerkt worden voor de behandeling van deze aanvraag.')
