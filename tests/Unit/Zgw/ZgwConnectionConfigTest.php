@@ -43,33 +43,128 @@ it('uses the connection RSIN for bronorganisatie when set', function () {
 it('falls back to the enum defaults for document visibility', function () {
     Config::set('zgw.connections.main.vertrouwelijkheid_map', null);
 
+    // Regression anchor: without a map the sets are the legacy three-step ones,
+    // spelled out here rather than compared to the enum, so a change to either
+    // side shows up.
     expect(ZgwConnectionConfig::documentVisibilityForRole('main', Role::Organiser))
-        ->toBe(DocumentVertrouwelijkheden::fromUserRole(Role::Organiser))
+        ->toBe(['zaakvertrouwelijk'])
+        ->and(ZgwConnectionConfig::documentVisibilityForRole('main', Role::Advisor))
+        ->toBe(['zaakvertrouwelijk', 'vertrouwelijk'])
         ->and(ZgwConnectionConfig::documentVisibilityForRole('main', Role::Reviewer))
+        ->toBe(['zaakvertrouwelijk', 'vertrouwelijk', 'confidentieel'])
+        // openbaar is deliberately absent: the defaults are not a maximum.
+        ->and(ZgwConnectionConfig::documentVisibilityForRole('main', Role::Reviewer))
+        ->not->toContain(DocumentVertrouwelijkheden::Openbaar->value);
+});
+
+it('derives the visible set from the maximum a connection configures', function () {
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::Organiser->value => 'intern',
+    ]);
+
+    // A maximum is inclusive over the standard's order, so everything below it
+    // comes along.
+    expect(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Organiser))
+        ->toBe(['openbaar', 'beperkt_openbaar', 'intern'])
+        // A role without an entry still falls back to the enum default.
+        ->and(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Advisor))
+        ->toBe(DocumentVertrouwelijkheden::fromUserRole(Role::Advisor))
+        ->and(ZgwConnectionConfig::documentVisibilityMaxForRole('gemeente_9', Role::Organiser))
+        ->toBe('intern')
+        ->and(ZgwConnectionConfig::documentVisibilityMaxForRole('gemeente_9', Role::Advisor))
+        ->toBeNull();
+});
+
+it('reads a legacy set of levels as the maximum it expressed', function () {
+    // Maps stored before the maximum was introduced hold the full set. The most
+    // confidential member is the level the set granted access up to.
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::Organiser->value => ['openbaar', 'beperkt_openbaar'],
+        Role::Advisor->value => ['zaakvertrouwelijk', 'openbaar'],
+        // An entry naming no level of the standard says nothing at all.
+        Role::Reviewer->value => ['nonsense'],
+    ]);
+
+    expect(ZgwConnectionConfig::readVisibilityMax(['openbaar', 'intern', 'beperkt_openbaar']))
+        ->toBe('intern')
+        ->and(ZgwConnectionConfig::readVisibilityMax([]))->toBeNull()
+        ->and(ZgwConnectionConfig::documentVisibilityMaxForRole('gemeente_9', Role::Organiser))
+        ->toBe('beperkt_openbaar')
+        // Order within the stored set does not matter, only confidentiality.
+        ->and(ZgwConnectionConfig::documentVisibilityMaxForRole('gemeente_9', Role::Advisor))
+        ->toBe('zaakvertrouwelijk')
+        ->and(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Advisor))
+        ->toBe(['openbaar', 'beperkt_openbaar', 'intern', 'zaakvertrouwelijk'])
+        ->and(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Reviewer))
         ->toBe(DocumentVertrouwelijkheden::fromUserRole(Role::Reviewer));
 });
 
-it('uses the connection visibility map when configured', function () {
-    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
-        Role::Organiser->value => ['openbaar', 'zaakvertrouwelijk'],
-    ]);
-
-    expect(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Organiser))
-        ->toBe(['openbaar', 'zaakvertrouwelijk'])
-        // A role without an entry still falls back to the enum default.
-        ->and(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Advisor))
-        ->toBe(DocumentVertrouwelijkheden::fromUserRole(Role::Advisor));
-});
-
-it('falls back to the legacy upload defaults per role', function () {
+it('falls back to the legacy upload defaults on a connection without a map', function () {
     Config::set('zgw.connections.main.vertrouwelijkheid_map', null);
 
+    // An organiser never gets the choice select, so this default carries all of
+    // their uploads. Without a configured maximum the visible sets start at
+    // zaakvertrouwelijk, so openbaar would be visible to nobody: the legacy
+    // default stands.
     expect(ZgwConnectionConfig::uploadDefaultForRole('main', Role::Organiser))
         ->toBe(DocumentVertrouwelijkheden::Zaakvertrouwelijk->value)
         ->and(ZgwConnectionConfig::uploadDefaultForRole('main', Role::Advisor))
         ->toBe(DocumentVertrouwelijkheden::Vertrouwelijk->value)
         ->and(ZgwConnectionConfig::uploadDefaultForRole('main', Role::Reviewer))
         ->toBe(DocumentVertrouwelijkheden::Vertrouwelijk->value);
+});
+
+it('defaults an organiser upload to openbaar on a connection with a maximum', function () {
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::Organiser->value => 'openbaar',
+        Role::Advisor->value => 'beperkt_openbaar',
+        Role::Reviewer->value => 'intern',
+    ]);
+
+    // Here openbaar sits at or below every maximum, so an organiser upload is
+    // visible to every role group. The other roles keep the legacy default.
+    expect(ZgwConnectionConfig::uploadDefaultForRole('gemeente_9', Role::Organiser))
+        ->toBe(DocumentVertrouwelijkheden::Openbaar->value)
+        ->and(ZgwConnectionConfig::uploadDefaultForRole('gemeente_9', Role::Advisor))
+        ->toBe(DocumentVertrouwelijkheden::Vertrouwelijk->value);
+});
+
+it('never defaults an organiser upload to a level the connection hides', function () {
+    // The failure this guards against: an organiser gets no choice select, so a
+    // default outside every group's visible set produces a document nobody can
+    // open, the organiser included. Asserted for both regimes.
+    Config::set('zgw.connections.main.vertrouwelijkheid_map', null);
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::Organiser->value => 'openbaar',
+        Role::Advisor->value => 'beperkt_openbaar',
+        Role::Reviewer->value => 'intern',
+    ]);
+
+    foreach (['main', 'gemeente_9'] as $connection) {
+        $default = ZgwConnectionConfig::uploadDefaultForRole($connection, Role::Organiser);
+
+        foreach ([Role::Organiser, Role::Advisor, Role::Reviewer] as $role) {
+            expect(ZgwConnectionConfig::documentVisibilityForRole($connection, $role))
+                ->toContain($default);
+        }
+    }
+});
+
+it('reads the distinct maximum levels a connection map configures', function () {
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::Organiser->value => 'openbaar',
+        Role::Advisor->value => 'beperkt_openbaar',
+        Role::Reviewer->value => 'intern',
+        // The fanned-out municipal roles repeat the gemeente maximum.
+        Role::Coordinator->value => 'intern',
+    ]);
+
+    // Ordered from the least to the most confidential, deduplicated.
+    expect(ZgwConnectionConfig::configuredVisibilityMaxLevels('gemeente_9'))
+        ->toBe(['openbaar', 'beperkt_openbaar', 'intern'])
+        // A connection without a map configures nothing of its own.
+        ->and(ZgwConnectionConfig::configuredVisibilityMaxLevels('main'))
+        ->toBe([]);
 });
 
 it('uses the connection upload default per role when configured', function () {
