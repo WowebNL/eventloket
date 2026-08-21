@@ -235,6 +235,21 @@ function zaakeigenschap(FormState $state, string $naam): mixed
     return null;
 }
 
+/**
+ * Renders one of the overview components of the live wizard and returns its
+ * HTML, by evaluating the component the organiser actually looks at.
+ */
+function overzichtHtml(EventFormPage $page, string $naam): string
+{
+    foreach ($page->getSchema('form')->getFlatComponents(withActions: false, withHidden: true) as $component) {
+        if (method_exists($component, 'getName') && $component->getName() === $naam) {
+            return (string) $component->getState();
+        }
+    }
+
+    throw new RuntimeException("overview component [{$naam}] not found in the form");
+}
+
 test('a location the organiser no longer ticks does not reach the outputs', function () {
     // The copied application took place outdoors; this one is in a building.
     // The outdoor location field is hidden from the moment the tick is gone,
@@ -509,4 +524,84 @@ test('a resumed draft is submitted without the answers it no longer shows', func
 
     expect($state->get('watIsDeAantrekkingskrachtVanHetEvenement'))->toBeNull();
     verwachtNergensIn($state, 'EERDERE-SESSIE-BUITENTERREIN');
+});
+
+/**
+ * The two places the wizard shows back what has been filled in: the times
+ * overview on the times step, and the summary before submitting. Both used to
+ * read the raw state, so a copied application that no longer has build-up
+ * activities still listed the build-up times of the application it came from.
+ * The times were kept out of the submitted application, but the organiser saw
+ * them right up to the moment of submitting.
+ */
+
+/** A copy that brought build-up and take-down times along. */
+function tijdenVanEenKopie(): array
+{
+    return [
+        'OpbouwStart' => '2035-06-30 08:15',
+        'OpbouwEind' => '2035-06-30 09:15',
+        'AfbouwStart' => '2035-07-02 20:15',
+        'AfbouwEind' => '2035-07-02 21:15',
+    ];
+}
+
+test('build-up times the organiser answered away are gone from the times overview', function () {
+    $page = pruneTestPage($this->user, $this->organisation);
+    beantwoord($page, array_merge(geldigeVooraankondiging(), [
+        'zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten' => 'Nee',
+        'zijnErAansluitendAanHetEvenementAfbouwactiviteiten' => 'Nee',
+    ]), tijdenVanEenKopie());
+
+    expect(overzichtHtml($page, 'overzichtTijden'))->not->toContain('2035');
+});
+
+test('build-up times the organiser answered away are gone from the summary', function () {
+    $page = pruneTestPage($this->user, $this->organisation);
+    beantwoord($page, array_merge(geldigeVooraankondiging(), [
+        'zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten' => 'Nee',
+        'zijnErAansluitendAanHetEvenementAfbouwactiviteiten' => 'Nee',
+    ]), tijdenVanEenKopie());
+
+    $samenvatting = overzichtHtml($page, 'samenvattingOverzicht');
+
+    expect($samenvatting)->not->toContain('2035')
+        ->and($samenvatting)->not->toContain('Opbouw')
+        ->and($samenvatting)->not->toContain('Afbouw');
+});
+
+test('the overviews leave the state itself alone', function () {
+    // Only submitting settles what the answers are. Until then the wizard has
+    // to be able to show the times again the moment the question comes back,
+    // and the stored draft keeps its own bag.
+    $page = pruneTestPage($this->user, $this->organisation);
+    beantwoord($page, array_merge(geldigeVooraankondiging(), [
+        'zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten' => 'Nee',
+    ]), tijdenVanEenKopie());
+
+    overzichtHtml($page, 'overzichtTijden');
+    overzichtHtml($page, 'samenvattingOverzicht');
+
+    expect($page->state()->get('OpbouwStart'))->toBe('2035-06-30 08:15')
+        ->and($page->stateAsAsked()->get('OpbouwStart'))->toBeNull();
+});
+
+test('times the organiser is asked for stay in both overviews', function () {
+    // The other direction: as long as the question is being asked, the
+    // overviews show exactly what they showed before.
+    $page = pruneTestPage($this->user, $this->organisation);
+    beantwoord($page, array_merge(geldigeVooraankondiging(), tijdenVanEenKopie(), [
+        'zijnErVoorafgaandAanHetEvenementOpbouwactiviteiten' => 'Ja',
+        'zijnErAansluitendAanHetEvenementAfbouwactiviteiten' => 'Ja',
+    ]));
+
+    expect(overzichtHtml($page, 'overzichtTijden'))->toContain('2035')
+        ->and(overzichtHtml($page, 'samenvattingOverzicht'))->toContain('2035');
+
+    // And nothing else is filtered either: with every answer still being
+    // asked, the summary is byte for byte the one the raw state produces.
+    $gevraagd = app(SubmissionReport::class)->build($page->stateAsAsked(), EventFormSchema::stepsForReport());
+    $rauw = app(SubmissionReport::class)->build($page->state(), EventFormSchema::stepsForReport());
+
+    expect(json_encode($gevraagd, JSON_THROW_ON_ERROR))->toBe(json_encode($rauw, JSON_THROW_ON_ERROR));
 });

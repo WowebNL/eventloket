@@ -1056,6 +1056,17 @@ final class SubmissionReport
             {
                 return $this->state;
             }
+
+            /**
+             * The form page answers this with the state minus the questions it
+             * is no longer asking. There is no schema to ask here, and there is
+             * no need for one: a report is built from a state that has already
+             * been settled.
+             */
+            public function stateAsAsked(): FormState
+            {
+                return $this->state;
+            }
         };
     }
 }

@@ -853,14 +853,48 @@ class EventFormPage extends Page implements HasForms
      */
     private function pruneStateToVisible(): void
     {
+        $this->state->forgetFields($this->stateKeysNotBeingAsked());
+    }
+
+    /**
+     * The state as the form is currently asking for it: everything that has
+     * been filled in, minus the answers to questions that are no longer being
+     * put to the organiser.
+     *
+     * The components that show back what has been filled in read this instead
+     * of the raw state. Without it they print a value the organiser can no
+     * longer see or correct — the same stale value {@see pruneStateToVisible}
+     * keeps out of the submitted application — so the overview and the
+     * application would disagree about what was asked.
+     *
+     * The state itself is deliberately left untouched. Only submitting settles
+     * what the answers are; until then a question that comes back has to show
+     * what was typed before, and a stored draft keeps its own bag.
+     */
+    public function stateAsAsked(): FormState
+    {
+        $shown = FormState::fromSnapshot($this->state->toSnapshot());
+        $shown->forgetFields($this->stateKeysNotBeingAsked());
+
+        return $shown;
+    }
+
+    /**
+     * The top-level state keys the wizard owns but is not currently asking
+     * for: hidden fields, and fields of a step the answers do not apply to.
+     *
+     * @return list<string>
+     */
+    private function stateKeysNotBeingAsked(): array
+    {
         $wizard = $this->form->getComponents(withHidden: true)[0] ?? null;
         if (! $wizard instanceof Component) {
-            return;
+            return [];
         }
 
         $wizardSchema = $wizard->getChildSchema();
         if ($wizardSchema === null) {
-            return;
+            return [];
         }
 
         /** @var array{owned: list<string>, answerable: list<string>} $keys */
@@ -874,13 +908,13 @@ class EventFormPage extends Page implements HasForms
                     continue;
                 }
 
-                $owned = [...$owned, ...$this->fieldStateKeys($stepSchema->getFlatFields(withHidden: true))];
+                $owned = [...$owned, ...$this->fieldStateKeys($this->fieldsOf($stepSchema, withHidden: true))];
 
                 if (! $this->state->isStepApplicable(self::stepUuid($step))) {
                     continue;
                 }
 
-                $answerable = [...$answerable, ...$this->fieldStateKeys($stepSchema->getFlatFields(withHidden: false))];
+                $answerable = [...$answerable, ...$this->fieldStateKeys($this->fieldsOf($stepSchema, withHidden: false))];
             }
 
             return ['owned' => $owned, 'answerable' => $answerable];
@@ -895,13 +929,48 @@ class EventFormPage extends Page implements HasForms
             array_keys(FormDerivedState::COMPUTED_KEYS),
         );
 
-        $this->state->forgetFields(array_values(array_unique($forget)));
+        return array_values(array_unique($forget));
+    }
+
+    /**
+     * The fields of a schema, optionally including the ones it is currently
+     * hiding.
+     *
+     * Deliberately not `getFlatFields()`: that memoises its result per
+     * visibility flag on the schema, and the schema outlives the moment the
+     * answers change. The overviews ask for the visible set while the page
+     * renders, submitting asks for it again after the last answer is in, and a
+     * memoised set would hand the second caller the first caller's world. This
+     * walk mirrors what Filament does but evaluates the visibility every time
+     * it is asked.
+     *
+     * @return list<Field>
+     */
+    private function fieldsOf(Schema $schema, bool $withHidden): array
+    {
+        $fields = [];
+
+        foreach ($schema->getComponents(withActions: false, withHidden: $withHidden) as $component) {
+            if (! $component instanceof Component) {
+                continue;
+            }
+
+            if ($component instanceof Field) {
+                $fields[] = $component;
+            }
+
+            foreach ($component->getChildSchemas($withHidden) as $childSchema) {
+                $fields = [...$fields, ...$this->fieldsOf($childSchema, $withHidden)];
+            }
+        }
+
+        return $fields;
     }
 
     /**
      * The top-level state keys the given fields write to.
      *
-     * @param  array<string, Field>  $fields
+     * @param  list<Field>  $fields
      * @return list<string>
      */
     private function fieldStateKeys(array $fields): array
