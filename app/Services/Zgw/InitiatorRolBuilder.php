@@ -35,6 +35,23 @@ use Illuminate\Support\Str;
 final class InitiatorRolBuilder
 {
     /**
+     * OneGround's Zaken API v1.5 validator caps contactpersoonRol.naam at 40
+     * characters: it kept the Zaken API 1.3/1.4 limit and never raised it. Our
+     * client sends no Api-Version header, so a request to a OneGround backend
+     * lands on that stricter v1.5 contract, and a longer composed name
+     * (voornaam plus achternaam) is rejected with a 400 on the rol POST.
+     */
+    private const CONTACTPERSOON_NAAM_MAX_ONEGROUND = 40;
+
+    /**
+     * Every other backend follows the VNG 1.5 OAS, where ContactPersoonRol.naam
+     * is maxLength 200 (OpenZaak's column matches). So a non-OneGround
+     * connection, including our own OpenZaak, keeps the standard bound and is
+     * not truncated at 40 for a limit that is not its own.
+     */
+    private const CONTACTPERSOON_NAAM_MAX_DEFAULT = 200;
+
+    /**
      * @param  string  $connectionName  the connection the rol is posted to, which decides
      *                                  which organisation variant is built
      * @param  array<string, mixed>  $initiator  output of ZaakeigenschappenMap::buildInitiator()
@@ -46,15 +63,49 @@ final class InitiatorRolBuilder
             return null;
         }
 
+        // OneGround enforces a stricter contactpersoonRol.naam limit than the
+        // VNG standard, so the bound is decided per connection, not globally.
+        $naamMax = ZgwConnectionConfig::isOneGround($connectionName)
+            ? self::CONTACTPERSOON_NAAM_MAX_ONEGROUND
+            : self::CONTACTPERSOON_NAAM_MAX_DEFAULT;
+
         if (! isset($initiator['kvk']) || ! $initiator['kvk']) {
-            return self::natuurlijkPersoon($zaakUrl, $roltype, $state, $initiator, $anpIdentificatie);
+            return self::natuurlijkPersoon($zaakUrl, $roltype, $state, $initiator, $anpIdentificatie, $naamMax);
         }
 
         $kvkNummer = self::kvkNummer($initiator['kvk']);
 
         return ZgwConnectionConfig::isDefaultConnection($connectionName)
-            ? self::nietNatuurlijkPersoon($zaakUrl, $roltype, $initiator, $kvkNummer)
-            : self::vestiging($zaakUrl, $roltype, $initiator, $kvkNummer);
+            ? self::nietNatuurlijkPersoon($zaakUrl, $roltype, $initiator, $kvkNummer, $naamMax)
+            : self::vestiging($zaakUrl, $roltype, $initiator, $kvkNummer, $naamMax);
+    }
+
+    /**
+     * The contactpersoonRol block for the rol, with naam bounded to the limit
+     * that applies to this connection ($naamMax). Shared by every
+     * betrokkeneType variant, since contactpersoonRol travels with all of them,
+     * so an organisation with a KvK number and a long contact name is capped
+     * just like a natuurlijk persoon. The full name survives elsewhere
+     * (afwijkendeNaamBetrokkene, geslachtsnaam plus voornamen), so a plain cut
+     * to the hard limit is enough. A name of $naamMax characters or shorter is
+     * left byte-for-byte as is.
+     *
+     * @param  array<string, mixed>  $initiator
+     * @return array<string, mixed>|null
+     */
+    private static function contactpersoonRol(array $initiator, int $naamMax): ?array
+    {
+        $contactpersoon = $initiator['contactpersoon'] ?? null;
+
+        if (! is_array($contactpersoon)) {
+            return null;
+        }
+
+        if (isset($contactpersoon['naam']) && is_string($contactpersoon['naam'])) {
+            $contactpersoon['naam'] = Str::substr($contactpersoon['naam'], 0, $naamMax);
+        }
+
+        return $contactpersoon;
     }
 
     /**
@@ -103,14 +154,14 @@ final class InitiatorRolBuilder
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>
      */
-    private static function nietNatuurlijkPersoon(string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer): array
+    private static function nietNatuurlijkPersoon(string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer, int $naamMax): array
     {
         return [
             'zaak' => $zaakUrl,
             'betrokkeneType' => 'niet_natuurlijk_persoon',
             'roltype' => $roltype,
             'roltoelichting' => 'inzender formulier',
-            'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
+            'contactpersoonRol' => self::contactpersoonRol($initiator, $naamMax),
             'betrokkeneIdentificatie' => array_filter([
                 'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
                 'annIdentificatie' => $kvkNummer,
@@ -137,7 +188,7 @@ final class InitiatorRolBuilder
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>
      */
-    private static function vestiging(string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer): array
+    private static function vestiging(string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer, int $naamMax): array
     {
         $organisatieNaam = $initiator['organisatie_naam'] ?? null;
 
@@ -146,7 +197,7 @@ final class InitiatorRolBuilder
             'betrokkeneType' => 'vestiging',
             'roltype' => $roltype,
             'roltoelichting' => 'inzender formulier',
-            'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
+            'contactpersoonRol' => self::contactpersoonRol($initiator, $naamMax),
             'betrokkeneIdentificatie' => array_filter([
                 'kvkNummer' => $kvkNummer,
                 // handelsnaam is a list in the schema, and we know one name.
@@ -159,7 +210,7 @@ final class InitiatorRolBuilder
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>
      */
-    private static function natuurlijkPersoon(string $zaakUrl, string $roltype, FormState $state, array $initiator, ?string $anpIdentificatie): array
+    private static function natuurlijkPersoon(string $zaakUrl, string $roltype, FormState $state, array $initiator, ?string $anpIdentificatie, int $naamMax): array
     {
         $voornaam = (string) $state->get('watIsUwVoornaam');
         $achternaam = (string) $state->get('watIsUwAchternaam');
@@ -171,7 +222,7 @@ final class InitiatorRolBuilder
             'betrokkeneType' => 'natuurlijk_persoon',
             'roltype' => $roltype,
             'roltoelichting' => 'inzender formulier',
-            'contactpersoonRol' => $initiator['contactpersoon'] ?? null,
+            'contactpersoonRol' => self::contactpersoonRol($initiator, $naamMax),
             'betrokkeneIdentificatie' => array_filter([
                 'anpIdentificatie' => $anpIdentificatie,
                 'geslachtsnaam' => $achternaam !== '' ? $achternaam : null,
