@@ -254,6 +254,17 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /**
+     * The zaaktype's documenttypes without the per-user visibility filter, for
+     * decisions that belong to the koppeling rather than to the current user.
+     *
+     * @return Collection<int, InformatieObjectTypeData>
+     */
+    public function catalogusDocumentTypes(): Collection
+    {
+        return $this->zaaktype?->catalogusDocumentTypes($this->zgwZaaktypeVersionUrl()) ?? collect();
+    }
+
     /** @return Attribute<array<string, mixed>|null, void> */
     protected function intrekkenResultaatType(): Attribute
     {
