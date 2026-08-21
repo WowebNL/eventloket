@@ -6,6 +6,7 @@ namespace App\Jobs\Zaak;
 
 use App\Models\User;
 use App\Models\Zaak;
+use App\Services\Zgw\UploadDocumentTypeResolver;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
@@ -37,6 +38,12 @@ final class UploadDocumentsJob implements ShouldQueue
         $count = count($this->files);
         $uploaded = [];
 
+        // Roles that do not pick a documenttype get the one the koppeling
+        // configures, whatever the queued payload carries.
+        $defaultInformatieobjecttype = UploadDocumentTypeResolver::isChosenByUser($user?->role)
+            ? null
+            : UploadDocumentTypeResolver::defaultFor($this->zaak);
+
         foreach ($this->files as $file) {
             $path = (string) ($file['path'] ?? '');
             if ($path === '' || ! Storage::exists($path)) {
@@ -63,7 +70,7 @@ final class UploadDocumentsJob implements ShouldQueue
                 'bestandsomvang' => Storage::size($path),
                 'formaat' => $formaat,
                 'inhoud' => base64_encode((string) Storage::get($path)),
-                'informatieobjecttype' => $file['informatieobjecttype'],
+                'informatieobjecttype' => $defaultInformatieobjecttype ?? $file['informatieobjecttype'],
                 'indicatieGebruiksrecht' => false,
                 'status' => Informatieobject::STATUS_DEFINITIEF,
             ])));

@@ -11,4 +11,10 @@ enum BlueprintFindingType: string
 
     /** The koppeling names a value that no longer matches any catalogus resource. */
     case MappedValueNotFound = 'mapped_value_not_found';
+
+    /**
+     * The zaaktype has candidates for this slot but the koppeling leaves it
+     * empty, so a heuristic decides which one is used.
+     */
+    case NotConfigured = 'not_configured';
 }

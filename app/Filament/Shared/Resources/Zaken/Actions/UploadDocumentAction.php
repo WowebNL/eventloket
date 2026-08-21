@@ -6,6 +6,7 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\Role;
 use App\Jobs\Zaak\UploadDocumentsJob;
 use App\Models\Zaak;
+use App\Services\Zgw\UploadDocumentTypeResolver;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
@@ -40,6 +41,12 @@ class UploadDocumentAction
                 $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding']
                     ?? ZgwConnectionConfig::uploadDefaultForRole($zaak->zgwConnectionName(), auth()->user()->role);
 
+                // Roles that do not pick a documenttype get the one the
+                // koppeling configures; the submitted value is ignored so a
+                // hidden field cannot be supplied from the client.
+                $userChoosesType = UploadDocumentTypeResolver::isChosenByUser(auth()->user()->role);
+                $defaultType = $userChoosesType ? null : UploadDocumentTypeResolver::defaultFor($zaak);
+
                 $fileNames = (array) ($data['file_names'] ?? []);
                 $metadata = array_values((array) ($data['document_metadata'] ?? []));
 
@@ -61,7 +68,9 @@ class UploadDocumentAction
                         'path' => $path,
                         'titel' => (string) ($meta['titel'] ?? ''),
                         'original_name' => $fileNames[$path] ?? basename($path),
-                        'informatieobjecttype' => (string) ($meta['informatieobjecttype'] ?? ''),
+                        'informatieobjecttype' => $userChoosesType
+                            ? (string) ($meta['informatieobjecttype'] ?? '')
+                            : (string) ($defaultType ?? ''),
                     ];
                 }
 
@@ -91,6 +100,9 @@ class UploadDocumentAction
     /** @return array<int, mixed> */
     public static function schema(Zaak $zaak): array
     {
+        $userRole = auth()->user()->role;
+        $userChoosesType = UploadDocumentTypeResolver::isChosenByUser($userRole);
+
         $fields = [];
 
         $fields[] = FileUpload::make('files')
@@ -129,26 +141,27 @@ class UploadDocumentAction
                 $set('document_metadata', $entries);
             });
 
-        $fields[] = Select::make('bulk_informatieobjecttype')
-            ->label(__('Documenttype voor alle bestanden instellen'))
-            ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
-            ->placeholder(__('Kies een type om dit voor alle bestanden tegelijk in te stellen'))
-            ->visible(fn (Get $get): bool => ! empty($get('document_metadata')))
-            ->live()
-            ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
-                if ($state === null) {
-                    return;
-                }
-                $set('document_metadata', array_map(
-                    fn (array $entry) => [
-                        ...$entry,
-                        'informatieobjecttype' => $state,
-                    ],
-                    (array) ($get('document_metadata') ?? []),
-                ));
-            });
+        if ($userChoosesType) {
+            $fields[] = Select::make('bulk_informatieobjecttype')
+                ->label(__('Documenttype voor alle bestanden instellen'))
+                ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
+                ->placeholder(__('Kies een type om dit voor alle bestanden tegelijk in te stellen'))
+                ->visible(fn (Get $get): bool => ! empty($get('document_metadata')))
+                ->live()
+                ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
+                    if ($state === null) {
+                        return;
+                    }
+                    $set('document_metadata', array_map(
+                        fn (array $entry) => [
+                            ...$entry,
+                            'informatieobjecttype' => $state,
+                        ],
+                        (array) ($get('document_metadata') ?? []),
+                    ));
+                });
+        }
 
-        $userRole = auth()->user()->role;
         if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin])) {
             $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
@@ -168,25 +181,31 @@ class UploadDocumentAction
                 ->required();
         }
 
+        $metadataFields = [
+            TextInput::make('titel')
+                ->label(__('Titel'))
+                ->required()
+                ->maxLength(255),
+        ];
+
+        if ($userChoosesType) {
+            $metadataFields[] = Select::make('informatieobjecttype')
+                ->label(__('Type document'))
+                ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
+                ->required();
+        }
+
+        $metadataFields[] = Hidden::make('_temp_path');
+        $metadataFields[] = Hidden::make('path');
+
         $fields[] = Repeater::make('document_metadata')
             ->label(__('Documenten'))
-            ->schema([
-                TextInput::make('titel')
-                    ->label(__('Titel'))
-                    ->required()
-                    ->maxLength(255),
-                Select::make('informatieobjecttype')
-                    ->label(__('Type document'))
-                    ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
-                    ->required(),
-                Hidden::make('_temp_path'),
-                Hidden::make('path'),
-            ])
+            ->schema($metadataFields)
             ->visible(fn (Get $get): bool => ! empty($get('document_metadata')))
             ->deletable(false)
             ->addable(false)
             ->reorderable(false)
-            ->columns(2);
+            ->columns($userChoosesType ? 2 : 1);
 
         return $fields;
     }
@@ -194,14 +213,17 @@ class UploadDocumentAction
     /** @return array<int, mixed> */
     public static function singleFileSchema(Zaak $zaak): array
     {
-        $fields = [
-            Select::make('informatieobjecttype')
+        $userRole = auth()->user()->role;
+
+        $fields = [];
+
+        if (UploadDocumentTypeResolver::isChosenByUser($userRole)) {
+            $fields[] = Select::make('informatieobjecttype')
                 ->label(__('Type document'))
                 ->options(fn () => $zaak->document_types->mapWithKeys(fn ($type) => [(string) $type->url => $type->omschrijving])->toArray())
-                ->required(),
-        ];
+                ->required();
+        }
 
-        $userRole = auth()->user()->role;
         if (in_array($userRole, [Role::Reviewer, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin])) {
             $fields[] = Select::make('vertrouwelijkheidaanduiding')
                 ->label(__('Wie mag dit document inzien?'))
@@ -262,6 +284,11 @@ class UploadDocumentAction
         $vertrouwelijkheidaanduiding = $data['vertrouwelijkheidaanduiding']
             ?? ZgwConnectionConfig::uploadDefaultForRole($connectionName, auth()->user()->role);
 
+        $informatieobjecttype = $data['informatieobjecttype'] ?? null;
+        if (! UploadDocumentTypeResolver::isChosenByUser(auth()->user()->role)) {
+            $informatieobjecttype = UploadDocumentTypeResolver::defaultFor($zaak) ?? $informatieobjecttype;
+        }
+
         $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
         $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
 
@@ -276,7 +303,7 @@ class UploadDocumentAction
             'bestandsomvang' => Storage::size($data['file']),
             'formaat' => $formaat,
             'inhoud' => base64_encode(Storage::get($data['file'])),
-            'informatieobjecttype' => $data['informatieobjecttype'],
+            'informatieobjecttype' => $informatieobjecttype,
             'indicatieGebruiksrecht' => false,
             'status' => Informatieobject::STATUS_DEFINITIEF,
         ])));

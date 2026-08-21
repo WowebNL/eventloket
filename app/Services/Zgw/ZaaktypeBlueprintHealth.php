@@ -176,6 +176,15 @@ final class ZaaktypeBlueprintHealth
             $findings[] = new BlueprintFinding('bijlage_informatieobjecttype', BlueprintFindingType::MappedValueNotFound, $mapping->bijlage_informatieobjecttype);
         }
 
+        // The bijlage-documenttype also types the documents an organiser
+        // uploads on the zaak, and those uploads offer no choice. Leaving it
+        // empty still works (the heuristic picks a type), but the beheerder
+        // should know a heuristic is deciding. Only reported for a zaaktype
+        // that has a koppeling row at all; main zaaktypen have none by design.
+        if ($mapping !== null && ! $mapping->bijlage_informatieobjecttype) {
+            $findings[] = new BlueprintFinding('bijlage_informatieobjecttype', BlueprintFindingType::NotConfigured);
+        }
+
         return $findings;
     }
 
