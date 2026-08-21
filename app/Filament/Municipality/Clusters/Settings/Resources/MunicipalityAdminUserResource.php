@@ -54,6 +54,8 @@ class MunicipalityAdminUserResource extends Resource
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
+                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
+                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->required(),
@@ -74,6 +76,8 @@ class MunicipalityAdminUserResource extends Resource
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
+                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->afterStateUpdated(function () {
