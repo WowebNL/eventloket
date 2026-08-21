@@ -15,13 +15,11 @@ use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
 
 /**
- * A catalogus that is complete on every blueprint slot except the
- * eigenschappen, which are supplied per test. Eigenschappen are optional, so
- * an empty list must not produce a finding.
- *
- * @param  list<array<string, string>>  $eigenschappen
+ * The bijlage-documenttype also types the documents an organiser uploads on a
+ * zaak, and those uploads offer no choice. Leaving the slot empty keeps working
+ * (a heuristic picks a type), but the koppelingbeheerder should be told.
  */
-function fakeCatalogusWithEigenschappen(string $base, array $eigenschappen): void
+function fakeCompleteCatalogus(string $base): void
 {
     Http::fake([
         "{$base}/catalogi/api/v1/zaaktypen*" => Http::response(ZgwHttpFake::envelope([
@@ -40,14 +38,14 @@ function fakeCatalogusWithEigenschappen(string $base, array $eigenschappen): voi
         "{$base}/catalogi/api/v1/zaaktype-informatieobjecttypen*" => Http::response(ZgwHttpFake::envelope([
             ['informatieobjecttype' => 'Bijlage'],
         ])),
-        "{$base}/catalogi/api/v1/eigenschappen*" => Http::response(ZgwHttpFake::envelope($eigenschappen)),
+        "{$base}/catalogi/api/v1/eigenschappen*" => Http::response(ZgwHttpFake::envelope([])),
     ]);
 }
 
 /**
  * @return list<BlueprintFinding>
  */
-function eigenschapFindings(Municipality $municipality, ?MunicipalityZaaktypeMapping $mapping = null): array
+function documenttypeFindings(Municipality $municipality, ?MunicipalityZaaktypeMapping $mapping = null): array
 {
     $connectionName = app(ZgwConnectionResolver::class)->forManagement($municipality);
 
@@ -61,48 +59,37 @@ beforeEach(function () {
         'municipality_id' => $this->municipality->id,
         'allow_organiser_withdrawal' => true,
     ]);
+    fakeCompleteCatalogus('https://gemeente.example.com');
 });
 
-test('a zaaktype without any eigenschap produces no findings', function () {
-    fakeCatalogusWithEigenschappen('https://gemeente.example.com', []);
-
-    expect(eigenschapFindings($this->municipality))->toBe([]);
-});
-
-test('a zaaktype without intern_zaaknummer produces no eigenschap finding', function () {
-    fakeCatalogusWithEigenschappen('https://gemeente.example.com', [
-        ['naam' => 'start_evenement'],
-        ['naam' => 'eind_evenement'],
-    ]);
-
-    $slots = array_map(fn (BlueprintFinding $finding): string => $finding->slot, eigenschapFindings($this->municipality));
-
-    expect($slots)->not->toContain('eigenschap:intern_zaaknummer')
-        ->and($slots)->toBe([]);
-});
-
-test('a mapped eigenschap naam that does not exist is still reported', function () {
-    fakeCatalogusWithEigenschappen('https://gemeente.example.com', [
-        ['naam' => 'zaaknummer_intern'],
-    ]);
-
+test('a koppeling without a bijlage-documenttype is reported as not configured', function () {
     $mapping = MunicipalityZaaktypeMapping::create([
         'municipality_id' => $this->municipality->id,
         'role' => ZaaktypeRole::Vergunning,
         'zaaktype_identificatie' => 'EVT-1',
-        // Filled so this test keeps reporting only on eigenschappen; an empty
-        // bijlage-documenttype is a finding of its own.
-        'bijlage_informatieobjecttype' => 'Bijlage',
-        'eigenschap_map' => [
-            'intern_zaaknummer' => 'zaaknummer_intern',
-            'start_evenement' => 'begin_evenement',
-        ],
     ]);
 
-    $findings = eigenschapFindings($this->municipality, $mapping);
+    $findings = documenttypeFindings($this->municipality, $mapping);
 
     expect($findings)->toHaveCount(1)
-        ->and($findings[0]->slot)->toBe('eigenschap:start_evenement')
-        ->and($findings[0]->type)->toBe(BlueprintFindingType::MappedValueNotFound)
-        ->and($findings[0]->expected)->toBe('begin_evenement');
+        ->and($findings[0]->slot)->toBe('bijlage_informatieobjecttype')
+        ->and($findings[0]->type)->toBe(BlueprintFindingType::NotConfigured)
+        ->and($findings[0]->expected)->toBeNull();
+});
+
+test('a koppeling with a bijlage-documenttype produces no finding', function () {
+    $mapping = MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'EVT-1',
+        'bijlage_informatieobjecttype' => 'Bijlage',
+    ]);
+
+    expect(documenttypeFindings($this->municipality, $mapping))->toBe([]);
+});
+
+test('a zaaktype without a koppeling row produces no not-configured finding', function () {
+    // Main zaaktypen are checked without a mapping by design; they must not
+    // raise a warning for a slot they cannot configure.
+    expect(documenttypeFindings($this->municipality))->toBe([]);
 });

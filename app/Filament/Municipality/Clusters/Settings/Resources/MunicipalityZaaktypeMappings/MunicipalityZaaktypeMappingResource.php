@@ -131,7 +131,8 @@ class MunicipalityZaaktypeMappingResource extends Resource
                         self::catalogusSelect('ingetrokken_resultaattype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::resultaattypen($conn, $id))
                             ->visible(fn (): bool => self::organiserWithdrawalAllowed()),
                         self::catalogusSelect('aanvraag_informatieobjecttype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::informatieobjecttypen($conn, $id)),
-                        self::catalogusSelect('bijlage_informatieobjecttype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::informatieobjecttypen($conn, $id)),
+                        self::catalogusSelect('bijlage_informatieobjecttype', fn (string $conn, string $id) => ZaaktypeCatalogusOptions::informatieobjecttypen($conn, $id))
+                            ->helperText(__('municipality/resources/zaaktype_mapping.fields.bijlage_informatieobjecttype.helper_text')),
                     ]),
             ]);
     }

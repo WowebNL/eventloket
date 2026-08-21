@@ -40,7 +40,10 @@ return [
         'initiator_roltype' => ['label' => 'Initiator-roltype'],
         'ingetrokken_resultaattype' => ['label' => 'Ingetrokken-resultaattype'],
         'aanvraag_informatieobjecttype' => ['label' => 'Aanvraag-documenttype'],
-        'bijlage_informatieobjecttype' => ['label' => 'Bijlage-documenttype'],
+        'bijlage_informatieobjecttype' => [
+            'label' => 'Bijlage-documenttype',
+            'helper_text' => 'Geldt voor de bijlagen bij de aanvraag én voor documenten die een organisator later bij de zaak uploadt. Laat je dit leeg, dan kiest Eventloket zelf een documenttype.',
+        ],
     ],
 
     'columns' => [

@@ -115,9 +115,11 @@ class ZaaktypeKoppelingWarning extends BaseNotification
                 ? __('notification/zaaktype-koppeling-warning.slot.eigenschap', ['key' => substr($finding->slot, strlen('eigenschap:'))])
                 : __("notification/zaaktype-koppeling-warning.slot.{$finding->slot}");
 
-            return $finding->type === BlueprintFindingType::Missing
-                ? __('notification/zaaktype-koppeling-warning.finding.missing', ['slot' => $slot])
-                : __('notification/zaaktype-koppeling-warning.finding.mapped_value_not_found', ['slot' => $slot, 'expected' => $finding->expected]);
+            return match ($finding->type) {
+                BlueprintFindingType::Missing => __('notification/zaaktype-koppeling-warning.finding.missing', ['slot' => $slot]),
+                BlueprintFindingType::NotConfigured => __('notification/zaaktype-koppeling-warning.finding.not_configured', ['slot' => $slot]),
+                BlueprintFindingType::MappedValueNotFound => __('notification/zaaktype-koppeling-warning.finding.mapped_value_not_found', ['slot' => $slot, 'expected' => $finding->expected]),
+            };
         }, $this->findings);
     }
 
