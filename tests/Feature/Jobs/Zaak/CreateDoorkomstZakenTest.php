@@ -832,3 +832,220 @@ test('is idempotent: running twice does not create a second doorkomst zaak', fun
         ->where('zaaktype_id', $doorkomstZaaktype->id)
         ->count())->toBe(1);
 });
+
+/**
+ * ---------------------------------------------------------------------------
+ * Several routes on one map
+ * ---------------------------------------------------------------------------
+ *
+ * An event can have more than one route drawn on the map. Every drawn route
+ * has to produce doorkomst deelzaken for the municipalities it crosses. The
+ * result is the union over all routes, minus the start and end municipalities
+ * of all routes together: a municipality where any route begins or ends never
+ * gets a deelzaak, not even when another route merely passes through it.
+ *
+ * These cases extend the fixture of doorkomstScenario() with a second passing
+ * municipality south of it:
+ *
+ *   y  3..4    . . . . . . . Eindgemeente (3..4)
+ *   y  1.5..2.5      Doorkomstgemeente (1.5..2.5)
+ *   y  0..1    Hoofdgemeente (0..1)
+ *   y -2.5..-1.5     Tweede doorkomstgemeente (1.5..2.5)
+ */
+
+/** A bare GeoJSON LineString geometry. */
+function lineGeometry(array $coordinates, string $type = 'LineString'): array
+{
+    return ['type' => $type, 'coordinates' => $coordinates];
+}
+
+/**
+ * Current map state: one Map component holding N drawn features. This is what
+ * the form writes since the Repeater around the route map was dropped.
+ */
+function routeMapSnapshot(array $geometries): array
+{
+    return ['values' => ['routesOpKaart' => [
+        'lat' => 0.5,
+        'lng' => 0.5,
+        'geojson' => [
+            'type' => 'FeatureCollection',
+            'features' => array_map(static fn (array $geometry) => [
+                'type' => 'Feature',
+                'properties' => [],
+                'geometry' => $geometry,
+            ], $geometries),
+        ],
+    ]]];
+}
+
+/** A second passing municipality with its own doorkomst zaaktype on main. */
+function secondPassingMunicipality(): Municipality
+{
+    $municipality = Municipality::factory()->create([
+        'name' => 'Tweede doorkomstgemeente',
+        'geometry' => multipolygon([[1.5, -2.5], [1.5, -1.5], [2.5, -1.5], [2.5, -2.5], [1.5, -2.5]]),
+    ]);
+
+    Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m2',
+        'is_active' => true,
+    ]);
+
+    return $municipality;
+}
+
+/**
+ * Hoofdzaak and deelzaken all on main, with a distinct url per created
+ * deelzaak so several of them can be told apart.
+ */
+function fakeDoorkomstZgwOnMain(): void
+{
+    $created = 0;
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use (&$created) {
+            if ($request->method() === 'POST') {
+                $created++;
+
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-'.$created], 201);
+            }
+
+            // Read back the deelzaak that was actually asked for, so several
+            // deelzaken keep their own url and identificatie.
+            $slug = basename((string) parse_url($request->url(), PHP_URL_PATH));
+
+            return Http::response(array_merge(deelZaakReadResponse(), [
+                'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/'.$slug,
+                'identificatie' => strtoupper($slug),
+            ]), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+/**
+ * A hoofdzaak on main whose form state holds the given route geometries.
+ */
+function multiRouteHoofdZaak(array $geometries): Zaak
+{
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update([
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+        'form_state_snapshot' => routeMapSnapshot($geometries),
+    ]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    return $scenario['hoofdzaak'];
+}
+
+/**
+ * The zaaktype urls the job actually created a deelzaak for, sorted so the
+ * assertion does not depend on the order the municipalities come back in.
+ *
+ * @return list<string>
+ */
+function createdDeelzaakZaaktypen(): array
+{
+    $zaaktypen = collect(Http::recorded())
+        ->filter(fn ($pair) => $pair[0]->method() === 'POST'
+            && parse_url($pair[0]->url(), PHP_URL_PATH) === '/zaken/api/v1/zaken')
+        ->map(fn ($pair) => (string) ($pair[0]->data()['zaaktype'] ?? ''))
+        ->values()
+        ->all();
+
+    sort($zaaktypen);
+
+    return $zaaktypen;
+}
+
+function doorkomstZaaktypeUrl(string $slug): string
+{
+    return ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/'.$slug;
+}
+
+test('creates doorkomst zaken for the crossed municipalities of every drawn route', function () {
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    // Route 1 crosses the first doorkomst municipality, route 2 the second one.
+    // Neither starts or ends in a municipality that the other one crosses.
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+        lineGeometry([[0.5, -2.0], [3.5, -2.0]]),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m2'),
+    ]);
+});
+
+test('never creates a deelzaak for a municipality another route starts in', function () {
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    // Route 2 starts inside the municipality that route 1 passes through, and
+    // runs south into the second doorkomst municipality. Being a start
+    // municipality of the event wins, so only the second one gets a deelzaak.
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+        lineGeometry([[2.0, 2.0], [2.0, -3.5]]),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m2')]);
+});
+
+test('reads a MultiLineString route instead of crashing on it', function () {
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    // One route drawn in several parts: it has no start point of its own, so
+    // the parts have to be walked to find the start and end municipalities.
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([
+            [[0.5, 0.5], [3.5, 3.5]],
+            [[0.5, -2.0], [3.5, -2.0]],
+        ], 'MultiLineString'),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m2'),
+    ]);
+});
+
+test('a single drawn route still yields exactly the municipality it crosses', function () {
+    // Regression anchor: one route in the current map state shape behaves the
+    // same as it always did. The tests above this block cover the same for the
+    // bare-geometry snapshot shape that existing drafts still hold.
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m')]);
+});
