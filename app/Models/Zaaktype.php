@@ -172,7 +172,7 @@ class Zaaktype extends Model
      */
     public function documentTypesForUser(?string $versionUrl = null): Collection
     {
-        $types = $this->getDocumentTypes($versionUrl);
+        $types = $this->catalogusDocumentTypes($versionUrl);
 
         if (auth()->user()) {
             $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role);
@@ -181,7 +181,25 @@ class Zaaktype extends Model
             $types = $types->filter(fn (InformatieObjectTypeData $type) => in_array($type->vertrouwelijkheidaanduiding?->value, $allowed, true));
         }
 
-        return $types->sortBy('omschrijving');
+        return $types;
+    }
+
+    /**
+     * Every documenttype of this zaaktype version as the catalogus defines it,
+     * without the per-user visibility filter.
+     *
+     * Use this wherever the answer belongs to the connection rather than to the
+     * person who happens to trigger it: which documenttype the koppeling
+     * configures for an upload is a property of the koppeling, not of what the
+     * uploader may see. The queued upload path already resolves it this way,
+     * simply because a job has no authenticated user to filter on, so reading it
+     * unfiltered keeps both paths answering the same thing.
+     *
+     * @return Collection<int, InformatieObjectTypeData>
+     */
+    public function catalogusDocumentTypes(?string $versionUrl = null): Collection
+    {
+        return $this->getDocumentTypes($versionUrl)->sortBy('omschrijving');
     }
 
     /** @return Attribute<Collection<array>|null, void> */

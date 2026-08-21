@@ -59,6 +59,9 @@ function ownInstanceSetup(string $versionUrl, string $municipalityName = 'Heerle
         'municipality_id' => $municipality->id,
         'role' => ZaaktypeRole::Vergunning,
         'zaaktype_identificatie' => 'OWN-1',
+        // Filled so these tests report only on the slot each one is about; an
+        // empty bijlage-documenttype is a finding of its own.
+        'bijlage_informatieobjecttype' => 'Bijlage',
     ]));
 
     $zaaktype = Zaaktype::factory()->create([
@@ -141,6 +144,31 @@ test('a published new version refreshes the own-instance row and clears the vers
         ->is_active->toBeTrue()
         ->and(Cache::has("statustypen.v2.gemeente_{$municipality->id}"))->toBeFalse()
         ->and(Cache::has("zaak_status_name_options_{$municipality->id}"))->toBeFalse();
+
+    Notification::assertNothingSent();
+});
+
+test('a new version without any eigenschap refreshes without warning the beheerders', function () {
+    // Eigenschappen are optional, so a zaaktype that carries none of them must
+    // not produce the daily koppeling warning.
+    $v1 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v1';
+    $v2 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v2';
+
+    [, $zaaktype] = ownInstanceSetup($v1);
+    User::factory()->create(['role' => Role::Admin]);
+
+    Http::fake(array_merge([
+        $v2 => Http::response(zaaktypeVersionData($v2), 200),
+        ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([zaaktypeVersionData($v2)]), 200),
+    ], healthyCatalogusFakes([
+        ZTN_OWN_BASE.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope([]), 200),
+    ])));
+
+    (new ZaaktypeNotificationReceived(zaaktypeNotification($v2)))->handle(app(ZaaktypeRefresher::class));
+
+    expect($zaaktype->refresh())
+        ->zgw_zaaktype_url->toBe($v2)
+        ->is_active->toBeTrue();
 
     Notification::assertNothingSent();
 });

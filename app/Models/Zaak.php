@@ -258,6 +258,17 @@ class Zaak extends Model implements Eventable
         );
     }
 
+    /**
+     * The zaaktype's documenttypes without the per-user visibility filter, for
+     * decisions that belong to the koppeling rather than to the current user.
+     *
+     * @return Collection<int, InformatieObjectTypeData>
+     */
+    public function catalogusDocumentTypes(): Collection
+    {
+        return $this->zaaktype?->catalogusDocumentTypes($this->zgwZaaktypeVersionUrl()) ?? collect();
+    }
+
     /** @return Attribute<array<string, mixed>|null, void> */
     protected function intrekkenResultaatType(): Attribute
     {
@@ -748,9 +759,19 @@ class Zaak extends Model implements Eventable
     {
         // Status tekstueel toevoegen
         $event = CalendarEvent::make($this)
-            ->title($this->reference_data->naam_evenement ?? $this->public_id)
-            ->start($this->reference_data->start_evenement)
-            ->end($this->reference_data->eind_evenement);
+            ->title($this->reference_data->naam_evenement ?? $this->public_id);
+
+        // The evenement dates are optional (the zaaktype does not have to carry
+        // those eigenschappen) and CalendarEvent::start()/end() do not accept
+        // null. The month query already filters on start_evenement, so a zaak
+        // without dates simply stays out of the calendar.
+        if ($this->reference_data->start_evenement !== null) {
+            $event->start($this->reference_data->start_evenement);
+        }
+
+        if ($this->reference_data->eind_evenement !== null) {
+            $event->end($this->reference_data->eind_evenement);
+        }
 
         if ($this->status_color) {
             $event->backgroundColor($this->status_color);

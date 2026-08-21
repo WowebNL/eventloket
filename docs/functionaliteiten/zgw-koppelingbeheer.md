@@ -1,7 +1,7 @@
 # ZGW-koppelingbeheer
 
-Versie: 1.0
-<br>Datum: 03-07-2026
+Versie: 1.1
+<br>Datum: 20-08-2026
 <br>Door: Michel Verhoeven
 
 Dit document beschrijft hoe een functioneel beheerder een ZGW-koppeling voor een gemeente opzet en onderhoudt in Eventloket. Het legt uit hoe de beheeromgeving werkt en geeft een volledig stappenplan, inclusief wat er aan de externe zaaksysteem-applicatie (bijvoorbeeld Open Zaak of OneGround) klaargezet moet worden.
@@ -61,7 +61,10 @@ Toegang tot het koppelingbeheer is voorbehouden aan twee rollen:
 | Rol | Kan koppelingen beheren | Kan zaken behandelen |
 |-----|-------------------------|----------------------|
 | Gemeentebeheerder (MunicipalityAdmin) | Ja | Ja |
+| Gemeentelijk beheerder (behandelaar) (ReviewerMunicipalityAdmin) | Nee | Ja |
 | Koppelingbeheerder (KoppelingBeheerder) | Ja | Nee (alleen inzien) |
+
+Let op het verschil tussen de twee gemeentelijke beheerdersrollen: alleen de reguliere Gemeentebeheerder heeft toegang tot het koppelingbeheer. De variant "Gemeentelijk beheerder (behandelaar)" kan zaken behandelen en gebruikers beheren, maar ziet de onderdelen ZGW-koppeling en Zaaktype-koppelingen niet.
 
 De rol **Koppelingbeheerder** is speciaal bedoeld voor functioneel of technisch beheer. Iemand met deze rol beheert de ZGW-instellingen en kan zaken inzien, maar kan zaken niet inhoudelijk behandelen. Dit is de aangewezen rol voor een leverancier of applicatiebeheerder die alleen de techniek moet inrichten.
 
@@ -116,11 +119,13 @@ Eventloket praat met vijf tot zes losse ZGW-API-componenten. Zorg dat de volgend
 
 | Component | Voorbeeld base-URL | Verplicht |
 |-----------|--------------------|-----------|
-| Zaken API | `https://zaaksysteem.gemeente.nl/zaken/api/v1/` | Ja |
-| Catalogi API | `https://zaaksysteem.gemeente.nl/catalogi/api/v1/` | Ja |
-| Documenten API | `https://zaaksysteem.gemeente.nl/documenten/api/v1/` | Ja |
-| Besluiten API | `https://zaaksysteem.gemeente.nl/besluiten/api/v1/` | Ja |
-| Notificaties API | `https://notificaties.gemeente.nl/api/v1/` | Aanbevolen (nodig voor statusupdates) |
+| Zaken API | `https://zaken.preprod-rx-services.nl/api/v1/` | Ja |
+| Catalogi API | `https://catalogi.preprod-rx-services.nl/api/v1/` | Ja |
+| Documenten API | `https://documenten.preprod-rx-services.nl/api/v1/` | Ja |
+| Besluiten API | `https://besluiten.preprod-rx-services.nl/api/v1/` | Ja |
+| Notificaties API | `https://notificaties.preprod-rx-services.nl/api/v1/` | Aanbevolen (nodig voor statusupdates) |
+
+De voorbeeld-URL's hierboven zijn die van de preprod-omgeving van Rx.Mission (OneGround); deze zijn voor iedere gemeente hetzelfde. Gebruikt de gemeente een ander zaaksysteem, vraag de base-URL's dan op bij de leverancier.
 
 De Autorisaties API wordt niet apart in Eventloket ingevuld omdat die op dit moment niet gebruikt wordt.
 
@@ -158,11 +163,38 @@ Eventloket verwacht dat er in de catalogi zaaktypen bestaan voor de verschillend
 
 Zorg dat elk zaaktype dat de gemeente wil gebruiken bestaat en gepubliceerd is, en dat het beschikt over:
 
-- De **eigenschappen** die bij een evenement horen (start- en einddatums, naam evenement, soort evenement, aantal aanwezigen, risicoclassificatie, locaties). In de gedeelde hoofdkoppeling heten deze eigenschappen exact zoals de logische sleutels in Eventloket. In een eigen zaaksysteem mogen ze anders heten; die vertaling leg je later vast in de zaaktype-koppeling (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
+- De **eigenschappen** die bij een evenement horen (zie de tabel hieronder). In de gedeelde hoofdkoppeling heten deze eigenschappen exact zoals de logische sleutels in Eventloket. In een eigen zaaksysteem mogen ze anders heten; die vertaling leg je later vast in de zaaktype-koppeling (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
 - De **statustypen** die de zaak doorloopt, met minimaal een begin-status en een eindstatus.
 - Een **roltype** voor de initiator (de organisator/aanvrager).
 - De **resultaattypen**, waaronder een resultaattype voor "Ingetrokken".
 - De **informatieobjecttypen** (documenttypen) voor de aanvraag-PDF en voor bijlagen.
+
+#### Overzicht van de eigenschappen
+
+De onderstaande tabel toont alle eigenschappen die Eventloket bij een zaak kan aanleveren, met de specificatie die het bijbehorende eigenschap in de zaaktypecatalogus moet hebben.
+
+| Logische sleutel | Omschrijving | Formaat | Lengte |
+|------------------|--------------|---------|--------|
+| `start_evenement` | Startdatum en -tijd van het evenement | datum_tijd | 14 |
+| `eind_evenement` | Einddatum en -tijd van het evenement | datum_tijd | 14 |
+| `start_opbouw` | Startdatum en -tijd van de opbouw | datum_tijd | 14 |
+| `eind_opbouw` | Einddatum en -tijd van de opbouw | datum_tijd | 14 |
+| `start_afbouw` | Startdatum en -tijd van de afbouw | datum_tijd | 14 |
+| `eind_afbouw` | Einddatum en -tijd van de afbouw | datum_tijd | 14 |
+| `naam_evenement` | Naam van het evenement | tekst | 255 |
+| `types_evenement` | Soort(en) evenement | tekst | 255 |
+| `aanwezigen` | Aantal verwachte aanwezigen | getal | 9 |
+| `risico_classificatie` | Risicoclassificatie van het evenement | tekst | 255 |
+| `locaties_evenement` | Namen van de locatie(s), kommagescheiden | tekst | 255 |
+| `intern_zaaknummer` | Het interne zaaknummer dat Eventloket aan de zaak toekent | tekst | 255 |
+
+Toelichting bij de formaten:
+
+- **Datums.** Datumvelden krijgen het formaat datum_tijd; de waarde wordt aangeleverd als `jjjjmmdduummss` (lengte 14).
+- **Getal.** Het aantal aanwezigen wordt als geheel getal aangeleverd; een lengte van 9 cijfers is ruim voldoende.
+- **Tekst.** Voor de tekstvelden is een lengte van 255 karakters de veilige keuze; dit is ook de lengte die Eventloket in de eigen hoofdkoppeling gebruikt.
+
+Alle eigenschappen zijn optioneel; ontbreekt een eigenschap in het zaaktype, dan wordt die waarde overgeslagen (zie ook [sectie 7](#7-zaaktype-koppelingen-instellen)). Gebruik voor elke eigenschap een kardinaliteit van 1.
 
 Houd bij het uitbrengen van nieuwe versies van een zaaktype de namen van statustypen, roltypen, resultaattypen, documenttypen en eigenschappen gelijk. Eventloket herkent deze onderdelen op naam. Zolang de namen gelijk blijven, werkt een nieuwe versie automatisch door zonder aanpassing in Eventloket (zie [sectie 9](#9-nieuwe-versies-van-een-zaaktype)).
 
@@ -211,7 +243,7 @@ Vul hier de base-URL's in die je in [sectie 4.1](#41-zorg-dat-de-zgw-apis-beschi
 ### 5.4 Technische parameters
 
 - **Toegestane hosts.** Extra origins (naast de vijf base-URL's) waarvandaan deze koppeling documenten mag ophalen. Meestal leeg te laten.
-- **Bronorganisatie RSIN.** Het RSIN dat als bronorganisatie op elke zaak wordt gezet. Vul het RSIN van de gemeente in als het zaaksysteem dit vereist; laat leeg om de waarde van de hoofdkoppeling te erven (RSIN van de veiligheidsregio).
+- **Bronorganisatie RSIN.** Het RSIN dat als bronorganisatie op elke zaak wordt gezet. Vul het RSIN van de gemeente in als het zaaksysteem dit vereist; laat leeg om de waarde van de hoofdkoppeling te erven (RSIN van de veiligheidsregio). Bij een Rx.Mission (OneGround) koppeling is het RSIN terug te vinden in het client-ID; vul dat RSIN hier in.
 
 Datums in zaakeigenschappen hebben geen instelling nodig. Eventloket leest per eigenschap in de catalogus of het om een datum of een datum met tijd gaat en levert de waarde automatisch in het bijbehorende formaat aan.
 
@@ -230,13 +262,21 @@ In deze sectie bepaal je hoe Eventloket zaken van deze koppeling toont en notifi
 
 ### 5.6 Vertrouwelijkheid
 
-Hier bepaal je per rolgroep welke vertrouwelijkheidsniveaus zichtbaar zijn en welk niveau standaard wordt gebruikt bij het uploaden van een document. De rolgroepen zijn Organisator, Adviseur en Gemeente (behandelaars en beheerders).
+Hier bepaal je per rolgroep het maximaal zichtbare vertrouwelijkheidsniveau en welk niveau standaard wordt gebruikt bij het uploaden van een document. De rolgroepen zijn Organisator, Adviseur en Gemeente (behandelaars en beheerders).
 
-- **Zichtbare niveaus.** De vertrouwelijkheidsniveaus die deze rolgroep mag zien.
+- **Maximaal zichtbaar niveau.** Het hoogste vertrouwelijkheidsniveau dat deze rolgroep mag zien.
 - **Standaard bij uploaden.** Het niveau dat vooraf is ingevuld wanneer iemand uit deze rolgroep een document uploadt.
 - **Standaard voor systeemdocumenten.** Het niveau voor automatisch gegenereerde documenten, namelijk de aanvraag-PDF en de formulier-bijlagen.
 
-Laat een veld leeg om de standaardwaarden van Eventloket aan te houden. De rol-gebaseerde filtering blijft altijd actief, ongeacht deze instellingen. Als alle drie de document-tabbladen zijn uitgeschakeld, verdwijnen de per-rol velden vanzelf, omdat er dan toch niet geüpload kan worden. De standaard voor systeemdocumenten blijft dan wel relevant.
+**Een maximum is inclusief.** De ZGW-standaard ordent de acht niveaus van open naar gesloten: openbaar, beperkt openbaar, intern, zaakvertrouwelijk, vertrouwelijk, confidentieel, geheim, zeer geheim. Een maximale vertrouwelijkheidaanduiding betekent in die standaard "dit niveau en alles wat opener is". Zet je de gemeente op "Intern", dan ziet de gemeente dus ook "Beperkt openbaar" en "Openbaar", en niets daarboven. Je hoeft de opener niveaus niet apart aan te vinken.
+
+**Houd de maxima oplopend.** Het maximum van de organisator mag niet hoger liggen dan dat van de adviseur, en dat van de adviseur niet hoger dan dat van de gemeente. Zo blijven de doelgroepen genest: organisator binnen adviseur binnen gemeente. Een instelling die daarvan afwijkt wordt bij het opslaan geweigerd met een foutmelding die de betrokken rolgroepen noemt.
+
+Laat een veld leeg om de standaardwaarden van Eventloket aan te houden. Die standaardwaarden zijn de vaste drietrap vanaf zaakvertrouwelijk (organisator zaakvertrouwelijk, adviseur ook vertrouwelijk, gemeente ook confidentieel) en volgen niet het maximum-model. De rol-gebaseerde filtering blijft altijd actief, ongeacht deze instellingen. Als alle drie de document-tabbladen zijn uitgeschakeld, verdwijnen de per-rol velden vanzelf, omdat er dan toch niet geüpload kan worden. De standaard voor systeemdocumenten blijft dan wel relevant.
+
+**Wat een behandelaar hiervan ziet bij het uploaden.** In het uploadvenster staat de keuze "Wie mag dit document inzien?". Elk ingesteld maximum levert één regel in die keuze, met daarbij de rolgroepen die dat niveau mogen zien. Zet je de organisator op "Openbaar", de adviseur op "Beperkt openbaar" en de gemeente op "Intern", dan krijgt de behandelaar drie keuzes: openbaar voor iedereen, beperkt openbaar voor gemeente en adviseur, en intern alleen voor de gemeente. Maken de maxima voor geen enkele rolgroep verschil, dan verdwijnt de keuze en krijgt het document het niveau uit "Standaard bij uploaden". Een keuze die niets verandert wordt dus niet voorgelegd.
+
+**Systeemdocumenten op openbaar.** Omdat "Openbaar" het meest open niveau is, valt het altijd binnen elk ingesteld maximum. Zet een zaaksysteem zijn eigen uploads op openbaar, dan zijn die documenten op een koppeling met ingestelde maxima voor elke rolgroep zichtbaar. Op een koppeling zonder ingestelde maxima gelden de standaardwaarden, en die bevatten openbaar niet.
 
 Twee vaste gedragsregels gelden altijd, los van deze instellingen:
 
@@ -302,7 +342,7 @@ Maak per gebruikte type in Eventloket (Vergunning, vooraankondiging, melding en 
    - **Initiator-roltype.** Het roltype waaronder de aanvrager als initiator wordt vastgelegd.
    - **Ingetrokken-resultaattype.** Het resultaattype dat wordt gezet als een aanvraag wordt ingetrokken.
    - **Aanvraag-documenttype.** Het informatieobjecttype voor de aanvraag-PDF.
-   - **Bijlage-documenttype.** Het informatieobjecttype voor de bijlagen bij de aanvraag.
+   - **Bijlage-documenttype.** Het informatieobjecttype voor de bijlagen bij de aanvraag én voor documenten die een organisator later bij de zaak uploadt. Een organisator kiest zelf geen documenttype meer; die uploads krijgen dit type. Behandelaars en adviseurs kiezen het type nog wel per document.
 
    Laat een veld leeg om terug te vallen op de standaard-heuristiek (Eventloket kiest dan zelf een passend type op basis van naam).
 
@@ -363,7 +403,7 @@ Zaaktypen veranderen: een gemeente publiceert bijvoorbeeld een nieuwe versie met
 
 1. **Het zaaksysteem meldt de wijziging.** Bij het publiceren van een zaaktype stuurt het zaaksysteem een reeks berichten naar Eventloket (het zaaktype zelf plus alle onderliggende status-, rol- en resultaattypen). Eventloket wacht kort en bundelt die berichten tot één bijwerkactie, zodat de wijziging in één keer wordt verwerkt.
 2. **Eventloket schakelt over naar de nieuwe versie.** Eventloket zoekt de nieuwste gepubliceerde versie van het zaaktype op en gebruikt die vanaf dat moment voor alle nieuwe aanvragen. Tijdelijk opgeslagen gegevens die nog op de oude versie waren gebaseerd (zoals lijsten met statustypen) worden ververst.
-3. **Eventloket controleert de nieuwe versie.** Direct daarna controleert Eventloket of de nieuwe versie alles bevat wat nodig is om aanvragen te verwerken: een begin- en eindstatustype, het initiator-roltype, het resultaattype voor intrekken, de documenttypen voor aanvraag en bijlagen, en de eigenschappen die in de zaaktype-koppeling zijn vastgelegd (waaronder het interne zaaknummer). Onderdelen die door instellingen niet nodig zijn, worden overgeslagen; staat intrekken door de organisator bijvoorbeeld uit, dan worden het eindstatustype en het ingetrokken-resultaattype niet gecontroleerd.
+3. **Eventloket controleert de nieuwe versie.** Direct daarna controleert Eventloket of de nieuwe versie alles bevat wat nodig is om aanvragen te verwerken: een begin- en eindstatustype, het initiator-roltype, het resultaattype voor intrekken, de documenttypen voor aanvraag en bijlagen, en de eigenschappen die in de zaaktype-koppeling zijn vastgelegd. Eigenschappen die het zaaktype niet kent, worden overgeslagen en leveren geen waarschuwing op; alleen een in de koppeling ingevulde eigenschapsnaam die niet (meer) bestaat wordt gemeld. Onderdelen die door instellingen niet nodig zijn, worden ook overgeslagen; staat intrekken door de organisator bijvoorbeeld uit, dan worden het eindstatustype en het ingetrokken-resultaattype niet gecontroleerd. Is in de zaaktype-koppeling geen Bijlage-documenttype ingevuld, dan wordt dat gemeld: uploads van organisatoren krijgen dan een documenttype dat Eventloket zelf kiest.
 4. **Bij problemen krijg je een waarschuwing.** Ontbreekt er iets, of verwijst een naam in de zaaktype-koppeling naar iets dat in de nieuwe versie niet meer bestaat, dan ontvangen de gemeentebeheerders en koppelingbeheerders van de gemeente en de platformbeheerders een waarschuwing per e-mail en als melding in Eventloket. De waarschuwing benoemt precies welke onderdelen aandacht nodig hebben. Dezelfde onopgeloste waarschuwing wordt maximaal één keer per 24 uur herhaald; verandert de situatie, dan volgt direct een nieuwe melding.
 
 De controle draait ook wanneer je zelf een zaaktype-koppeling opslaat en wanneer een platformbeheerder een handmatige synchronisatie uitvoert. Zo wordt een probleem ook opgemerkt als een notificatie gemist is.

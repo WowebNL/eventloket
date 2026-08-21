@@ -18,8 +18,9 @@ use Woweb\Zgw\Facades\Zgw;
  * Checks a zaaktype's current definitief version against the blueprint
  * prerequisites Eventloket relies on (zgw-koppelingbeheer.md, section 4.4):
  * begin- and eindstatus, an initiator roltype, an "Ingetrokken" resultaattype,
- * informatieobjecttypen for the aanvraag-PDF and bijlagen, every eigenschap the
- * koppeling maps, and the intern_zaaknummer eigenschap the zaak flow requires.
+ * informatieobjecttypen for the aanvraag-PDF and bijlagen, and every eigenschap
+ * the koppeling maps. Eigenschappen themselves are optional: a zaaktype without
+ * them works, so their absence is not a finding.
  *
  * Child lists are read directly against the version url (not through the
  * cached {@see ZaaktypeCatalogusOptions}, which may still hold pre-publish
@@ -175,6 +176,15 @@ final class ZaaktypeBlueprintHealth
             $findings[] = new BlueprintFinding('bijlage_informatieobjecttype', BlueprintFindingType::MappedValueNotFound, $mapping->bijlage_informatieobjecttype);
         }
 
+        // The bijlage-documenttype also types the documents an organiser
+        // uploads on the zaak, and those uploads offer no choice. Leaving it
+        // empty still works (the heuristic picks a type), but the beheerder
+        // should know a heuristic is deciding. Only reported for a zaaktype
+        // that has a koppeling row at all; main zaaktypen have none by design.
+        if ($mapping !== null && ! $mapping->bijlage_informatieobjecttype) {
+            $findings[] = new BlueprintFinding('bijlage_informatieobjecttype', BlueprintFindingType::NotConfigured);
+        }
+
         return $findings;
     }
 
@@ -192,18 +202,14 @@ final class ZaaktypeBlueprintHealth
         $namen = $eigenschappen->pluck('naam')->filter()->values();
         $findings = [];
 
+        // Every eigenschap is optional: the zaak flow skips the ones the
+        // zaaktype does not know (see AddZaakeigenschappenZGW). Only a name the
+        // koppeling explicitly maps has to exist, otherwise the koppeling
+        // itself points at something that is gone.
         foreach ($mapping->eigenschap_map ?? [] as $logicalKey => $naam) {
             if (is_string($naam) && $naam !== '' && ! $namen->contains($naam)) {
                 $findings[] = new BlueprintFinding("eigenschap:{$logicalKey}", BlueprintFindingType::MappedValueNotFound, $naam);
             }
-        }
-
-        // The zaak flow always writes the internal zaaknummer eigenschap
-        // (see SyncZaaktypeEigenschappen and AddZaakeigenschappenZGW).
-        $internZaaknummer = ZaaktypeBlueprint::eigenschapNaam($mapping, 'intern_zaaknummer');
-
-        if (! $namen->contains($internZaaknummer)) {
-            $findings[] = new BlueprintFinding('eigenschap:intern_zaaknummer', BlueprintFindingType::Missing);
         }
 
         return $findings;

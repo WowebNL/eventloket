@@ -51,10 +51,13 @@ function multipolygon(array $ring): string
 }
 
 /**
- * The deelzaak read after creation, carrying the eigenschappen the local
- * ZaakReferenceData requires (start/eind evenement) plus a registratiedatum.
+ * The deelzaak read after creation, carrying the evenement eigenschappen plus a
+ * registratiedatum. Pass an empty list to simulate a doorkomst zaaktype whose
+ * catalogus does not know those eigenschappen at all.
+ *
+ * @param  list<array<string, string>>|null  $eigenschappen
  */
-function deelZaakReadResponse(): array
+function deelZaakReadResponse(?array $eigenschappen = null): array
 {
     return [
         'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1',
@@ -62,7 +65,7 @@ function deelZaakReadResponse(): array
         'identificatie' => 'DEEL-1',
         'registratiedatum' => '2026-06-01',
         '_expand' => [
-            'eigenschappen' => [
+            'eigenschappen' => $eigenschappen ?? [
                 ['naam' => 'start_evenement', 'waarde' => '2026-07-01 10:00'],
                 ['naam' => 'eind_evenement', 'waarde' => '2026-07-01 18:00'],
             ],
@@ -73,8 +76,10 @@ function deelZaakReadResponse(): array
 /**
  * Fake the ZGW reads/writes the job performs. The deelzaak store returns a url so
  * the local Zaak is persisted; catalogi/relations degrade to empty lists.
+ *
+ * @param  list<array<string, string>>|null  $deelZaakEigenschappen  null keeps the default evenement eigenschappen
  */
-function fakeDoorkomstZgw(): void
+function fakeDoorkomstZgw(?array $deelZaakEigenschappen = null): void
 {
     Http::fake([
         // Hoofdzaak read (own instance of the hoofdzaak municipality).
@@ -89,12 +94,12 @@ function fakeDoorkomstZgw(): void
         OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
 
         // Deelzaak store + read on the target connection (main = ZgwHttpFake base).
-        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use ($deelZaakEigenschappen) {
             if ($request->method() === 'POST') {
                 return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
             }
 
-            return Http::response(deelZaakReadResponse(), 200);
+            return Http::response(deelZaakReadResponse($deelZaakEigenschappen), 200);
         },
 
         // Catalogi reads degrade to empty lists everywhere.
@@ -267,10 +272,92 @@ function routeSnapshotWithValues(array $values): array
     return ['values' => array_merge(routeSnapshot()['values'], $values)];
 }
 
+/**
+ * Fake a doorkomst whose deelzaak lands on the passing municipality's own
+ * instance (OWN_HOST) while the hoofdzaak lives on main, so the initiator rol is
+ * posted to a non-default connection.
+ */
+function fakeDoorkomstForInitiatorOnOwnInstance(): void
+{
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        OWN_HOST.'/catalogi/api/v1/roltypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => OWN_HOST.'/catalogi/api/v1/roltypen/init', 'omschrijvingGeneriek' => 'initiator'],
+        ]), 200),
+        OWN_HOST.'/zaken/api/v1/rollen*' => Http::response(['url' => OWN_HOST.'/zaken/api/v1/rollen/1'], 201),
+        OWN_HOST.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => OWN_HOST.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(array_merge(deelZaakReadResponse(), [
+                'url' => OWN_HOST.'/zaken/api/v1/zaken/deel-1',
+                'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-m',
+            ]), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+test('registers a vestiging initiator on a deelzaak in the doorkomst gemeente own instance', function () {
+    // Non-default connection: the KvK number goes out as a vestiging rol, the
+    // only betrokkeneType in the Zaken API that defines a kvkNummer property.
+    // annIdentificatie and statutaireNaam belong to niet_natuurlijk_persoon and
+    // are not part of RolVestiging, so neither is sent.
+    fakeDoorkomstForInitiatorOnOwnInstance();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update([
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+        'form_state_snapshot' => routeSnapshotWithValues([
+            'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+            'watIsDeNaamVanUwOrganisatie' => 'Woweb',
+        ]),
+    ]);
+
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $scenario['passing']->id]);
+    Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => "gemeente_{$scenario['passing']->id}",
+        'zgw_zaaktype_url' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(function ($request) {
+        if ($request->method() !== 'POST' || ! str_starts_with($request->url(), OWN_HOST.'/zaken/api/v1/rollen')) {
+            return false;
+        }
+
+        $identificatie = $request->data()['betrokkeneIdentificatie'] ?? [];
+
+        return $request->data()['betrokkeneType'] === 'vestiging'
+            && $request->data()['roltype'] === OWN_HOST.'/catalogi/api/v1/roltypen/init'
+            && $request->data()['roltoelichting'] === 'inzender formulier'
+            && ($identificatie['kvkNummer'] ?? null) === '12345678'
+            && ($identificatie['handelsnaam'] ?? null) === ['Woweb']
+            && ! array_key_exists('annIdentificatie', $identificatie)
+            && ! array_key_exists('statutaireNaam', $identificatie);
+    });
+});
+
 test('registers the initiator on the deelzaak from the form aanvrager data, not the copied ZGW rol', function () {
     // The initiator is rebuilt from the form (KvK + organisation name), matching
     // the hoofdzaak. The hoofdzaak ZGW rol is not copied: its identificatie is
-    // empty and its betrokkene url is not portable across instances.
+    // empty and its betrokkene url is not portable across instances. The
+    // deelzaak lands on our own default connection here, which keeps the
+    // niet_natuurlijk_persoon payload it has always received.
     fakeDoorkomstForInitiator();
 
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
@@ -363,6 +450,85 @@ test('falls back to the organisation of the hoofdzaak when its reference data ha
 
     $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
     expect($deel->reference_data->organisator)->toBe('Woweb');
+});
+
+test('creates the deelzaak without any eigenschap, taking the evenement dates from the hoofdzaak', function () {
+    // A doorkomst zaaktype whose catalogus knows none of the evenement
+    // eigenschappen: the deelzaak read comes back empty. The job used to die on
+    // the missing start_evenement/eind_evenement constructor arguments.
+    fakeDoorkomstZgw(deelZaakEigenschappen: []);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+    $hoofd = $scenario['hoofdzaak']->reference_data;
+
+    expect($deel->public_id)->toBe('DEEL-1')
+        ->and($deel->reference_data->start_evenement)->toBe($hoofd->start_evenement)
+        ->and($deel->reference_data->eind_evenement)->toBe($hoofd->eind_evenement)
+        ->and($deel->reference_data->start_evenement_datetime)->not->toBeNull();
+});
+
+test('registers the deelzaak locally when neither the deelzaak nor the hoofdzaak has evenement dates', function () {
+    fakeDoorkomstZgw(deelZaakEigenschappen: []);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    $scenario['hoofdzaak']->update([
+        'reference_data' => new ZaakReferenceData(
+            ...array_merge($scenario['hoofdzaak']->reference_data->toArray(), [
+                'start_evenement' => null,
+                'eind_evenement' => null,
+            ])
+        ),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->start_evenement)->toBeNull()
+        ->and($deel->reference_data->eind_evenement)->toBeNull()
+        ->and($deel->reference_data->start_evenement_datetime)->toBeNull();
+});
+
+test('stores exactly the same reference_data as before when the deelzaak carries its own eigenschappen', function () {
+    // Regression anchor for the fallback: with the eigenschappen present the
+    // fallback must not fire, so the persisted reference_data stays exactly
+    // what it was, values and key order included. (The jsonb column itself does
+    // not preserve key order, so the assertion runs on the emitted array.)
+    fakeDoorkomstZgw();
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->toArray())->toBe([
+        'risico_classificatie' => null,
+        'risico_toelichting' => null,
+        'start_evenement' => '2026-07-01 10:00',
+        'eind_evenement' => '2026-07-01 18:00',
+        'registratiedatum' => '2026-06-01',
+        'status_name' => '',
+        'statustype_url' => '',
+        'naam_evenement' => null,
+        'naam_locatie_evenement' => null,
+        'organisator' => '',
+        'resultaat' => null,
+        'resultaattype_url' => null,
+        'aanwezigen' => null,
+        'types_evenement' => null,
+        'start_opbouw' => null,
+        'eind_opbouw' => null,
+        'start_afbouw' => null,
+        'eind_afbouw' => null,
+        'locaties_evenement' => null,
+        'intern_zaaknummer' => null,
+    ]);
 });
 
 test('does not create a doorkomst zaak when the passing gemeente has no doorkomst zaaktype', function () {
@@ -665,4 +831,221 @@ test('is idempotent: running twice does not create a second doorkomst zaak', fun
     expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)
         ->where('zaaktype_id', $doorkomstZaaktype->id)
         ->count())->toBe(1);
+});
+
+/**
+ * ---------------------------------------------------------------------------
+ * Several routes on one map
+ * ---------------------------------------------------------------------------
+ *
+ * An event can have more than one route drawn on the map. Every drawn route
+ * has to produce doorkomst deelzaken for the municipalities it crosses. The
+ * result is the union over all routes, minus the start and end municipalities
+ * of all routes together: a municipality where any route begins or ends never
+ * gets a deelzaak, not even when another route merely passes through it.
+ *
+ * These cases extend the fixture of doorkomstScenario() with a second passing
+ * municipality south of it:
+ *
+ *   y  3..4    . . . . . . . Eindgemeente (3..4)
+ *   y  1.5..2.5      Doorkomstgemeente (1.5..2.5)
+ *   y  0..1    Hoofdgemeente (0..1)
+ *   y -2.5..-1.5     Tweede doorkomstgemeente (1.5..2.5)
+ */
+
+/** A bare GeoJSON LineString geometry. */
+function lineGeometry(array $coordinates, string $type = 'LineString'): array
+{
+    return ['type' => $type, 'coordinates' => $coordinates];
+}
+
+/**
+ * Current map state: one Map component holding N drawn features. This is what
+ * the form writes since the Repeater around the route map was dropped.
+ */
+function routeMapSnapshot(array $geometries): array
+{
+    return ['values' => ['routesOpKaart' => [
+        'lat' => 0.5,
+        'lng' => 0.5,
+        'geojson' => [
+            'type' => 'FeatureCollection',
+            'features' => array_map(static fn (array $geometry) => [
+                'type' => 'Feature',
+                'properties' => [],
+                'geometry' => $geometry,
+            ], $geometries),
+        ],
+    ]]];
+}
+
+/** A second passing municipality with its own doorkomst zaaktype on main. */
+function secondPassingMunicipality(): Municipality
+{
+    $municipality = Municipality::factory()->create([
+        'name' => 'Tweede doorkomstgemeente',
+        'geometry' => multipolygon([[1.5, -2.5], [1.5, -1.5], [2.5, -1.5], [2.5, -2.5], [1.5, -2.5]]),
+    ]);
+
+    Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m2',
+        'is_active' => true,
+    ]);
+
+    return $municipality;
+}
+
+/**
+ * Hoofdzaak and deelzaken all on main, with a distinct url per created
+ * deelzaak so several of them can be told apart.
+ */
+function fakeDoorkomstZgwOnMain(): void
+{
+    $created = 0;
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use (&$created) {
+            if ($request->method() === 'POST') {
+                $created++;
+
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-'.$created], 201);
+            }
+
+            // Read back the deelzaak that was actually asked for, so several
+            // deelzaken keep their own url and identificatie.
+            $slug = basename((string) parse_url($request->url(), PHP_URL_PATH));
+
+            return Http::response(array_merge(deelZaakReadResponse(), [
+                'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/'.$slug,
+                'identificatie' => strtoupper($slug),
+            ]), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+/**
+ * A hoofdzaak on main whose form state holds the given route geometries.
+ */
+function multiRouteHoofdZaak(array $geometries): Zaak
+{
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update([
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+        'form_state_snapshot' => routeMapSnapshot($geometries),
+    ]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    return $scenario['hoofdzaak'];
+}
+
+/**
+ * The zaaktype urls the job actually created a deelzaak for, sorted so the
+ * assertion does not depend on the order the municipalities come back in.
+ *
+ * @return list<string>
+ */
+function createdDeelzaakZaaktypen(): array
+{
+    $zaaktypen = collect(Http::recorded())
+        ->filter(fn ($pair) => $pair[0]->method() === 'POST'
+            && parse_url($pair[0]->url(), PHP_URL_PATH) === '/zaken/api/v1/zaken')
+        ->map(fn ($pair) => (string) ($pair[0]->data()['zaaktype'] ?? ''))
+        ->values()
+        ->all();
+
+    sort($zaaktypen);
+
+    return $zaaktypen;
+}
+
+function doorkomstZaaktypeUrl(string $slug): string
+{
+    return ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/'.$slug;
+}
+
+test('creates doorkomst zaken for the crossed municipalities of every drawn route', function () {
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    // Route 1 crosses the first doorkomst municipality, route 2 the second one.
+    // Neither starts or ends in a municipality that the other one crosses.
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+        lineGeometry([[0.5, -2.0], [3.5, -2.0]]),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m2'),
+    ]);
+});
+
+test('never creates a deelzaak for a municipality another route starts in', function () {
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    // Route 2 starts inside the municipality that route 1 passes through, and
+    // runs south into the second doorkomst municipality. Being a start
+    // municipality of the event wins, so only the second one gets a deelzaak.
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+        lineGeometry([[2.0, 2.0], [2.0, -3.5]]),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m2')]);
+});
+
+test('reads a MultiLineString route instead of crashing on it', function () {
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    // One route drawn in several parts: it has no start point of its own, so
+    // the parts have to be walked to find the start and end municipalities.
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([
+            [[0.5, 0.5], [3.5, 3.5]],
+            [[0.5, -2.0], [3.5, -2.0]],
+        ], 'MultiLineString'),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m2'),
+    ]);
+});
+
+test('a single drawn route still yields exactly the municipality it crosses', function () {
+    // Regression anchor: one route in the current map state shape behaves the
+    // same as it always did. The tests above this block cover the same for the
+    // bare-geometry snapshot shape that existing drafts still hold.
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m')]);
 });

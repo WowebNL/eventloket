@@ -10,8 +10,12 @@ use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnect
 use App\Filament\Municipality\Clusters\Settings\Resources\MunicipalityZgwConnections\Pages\ListMunicipalityZgwConnections;
 use App\Livewire\ConnectionVerifier;
 use App\Models\MunicipalityZgwConnection;
+use App\Services\Zgw\DocumentAudience;
+use App\Services\Zgw\ZgwConnectionConfig;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
@@ -26,6 +30,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 use Woweb\Zgw\Enums\ZgwVersion;
 
 class MunicipalityZgwConnectionResource extends Resource
@@ -169,6 +174,7 @@ class MunicipalityZgwConnectionResource extends Resource
                     ->description(__('municipality/resources/zgw_connection.sections.vertrouwelijkheid.description'))
                     ->columns(1)
                     ->schema([
+                        self::vertrouwelijkheidExplanation(),
                         ...self::vertrouwelijkheidRoleFields(),
                         Select::make('vertrouwelijkheid_map.upload_default.system')
                             ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_system_default.label'))
@@ -180,42 +186,106 @@ class MunicipalityZgwConnectionResource extends Resource
     }
 
     /**
-     * One fieldset per document-facing role group, each with the visibility
-     * multi select and the upload default. Groups left blank fall back to the
-     * hardcoded {@see DocumentVertrouwelijkheden::fromUserRole()} defaults. The
-     * municipal handler roles share a single "Gemeente" group; the form binds to
-     * the group's canonical role and the choice is fanned out to the other roles
-     * on save by {@see pruneVertrouwelijkheidMap()}.
+     * A short explanation of how the vertrouwelijkheid settings work, shown above
+     * the per-role fieldsets: one maximum per role group with everything below it
+     * included, the maxima must run up, and the upload default is the fallback.
+     */
+    protected static function vertrouwelijkheidExplanation(): Placeholder
+    {
+        return Placeholder::make('vertrouwelijkheid_explanation')
+            ->label(__('municipality/resources/zgw_connection.sections.vertrouwelijkheid.explanation.title'))
+            ->visible(fn (Get $get): bool => self::documentUploadTabsEnabled($get))
+            ->content(new HtmlString(implode('', array_map(
+                static fn (string $paragraph): string => '<p class="mb-2">'.e($paragraph).'</p>',
+                [
+                    __('municipality/resources/zgw_connection.sections.vertrouwelijkheid.explanation.intro'),
+                    __('municipality/resources/zgw_connection.sections.vertrouwelijkheid.explanation.nesting'),
+                    __('municipality/resources/zgw_connection.sections.vertrouwelijkheid.explanation.upload'),
+                    __('municipality/resources/zgw_connection.sections.vertrouwelijkheid.explanation.default'),
+                    __('municipality/resources/zgw_connection.sections.vertrouwelijkheid.explanation.openbaar'),
+                ],
+            ))));
+    }
+
+    /**
+     * One fieldset per document-facing role group, each with the maximum visible
+     * level and the upload default. Groups left blank fall back to the hardcoded
+     * {@see DocumentVertrouwelijkheden::fromUserRole()} defaults. The municipal
+     * handler roles share a single "Gemeente" group; the form binds to the
+     * group's canonical role and the choice is fanned out to the other roles on
+     * save by {@see pruneVertrouwelijkheidMap()}.
+     *
+     * A group's maximum is inclusive: it also covers every less confidential
+     * level, which is what a maximum vertrouwelijkheidaanduiding means in the
+     * standard. The maxima must therefore run up (organisator ≤ adviseur ≤
+     * gemeente), so a broader audience always sees at least what a narrower one
+     * sees. That is enforced here with a blocking validation rule on the narrower
+     * selects, and clamped as a safety net for non-form writes in
+     * {@see pruneVertrouwelijkheidMap()}.
      *
      * @return array<int, Fieldset>
      */
     protected static function vertrouwelijkheidRoleFields(): array
     {
         $levels = self::vertrouwelijkheidLevelOptions();
+        $groups = self::vertrouwelijkheidGroups();
+        $fields = [];
 
-        return array_map(
-            static function (array $group) use ($levels): Fieldset {
-                $canonical = $group['roles'][0]->value;
+        foreach ($groups as $index => $group) {
+            $canonical = $group['roles'][0]->value;
+            // The next group is the immediately broader audience, if any; the
+            // groups run from the narrowest (organisator) to the broadest (gemeente).
+            $broader = $groups[$index + 1] ?? null;
 
-                return Fieldset::make($group['label'])
-                    ->columns(2)
-                    ->visible(fn (Get $get): bool => self::documentUploadTabsEnabled($get))
-                    ->schema([
-                        Select::make("vertrouwelijkheid_map.visibility.{$canonical}")
-                            ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.label'))
-                            ->helperText(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.helper'))
-                            ->multiple()
-                            ->options($levels)
-                            ->native(false),
-                        Select::make("vertrouwelijkheid_map.upload_default.{$canonical}")
-                            ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_upload_default.label'))
-                            ->helperText(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_upload_default.helper'))
-                            ->options($levels)
-                            ->native(false),
-                    ]);
-            },
-            self::vertrouwelijkheidGroups(),
-        );
+            $visibility = Select::make("vertrouwelijkheid_map.visibility.{$canonical}")
+                ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.label'))
+                ->helperText(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.helper'))
+                ->hintIcon('heroicon-o-information-circle')
+                ->hintIconTooltip(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.tooltip'))
+                ->options($levels)
+                ->native(false);
+
+            if ($broader !== null) {
+                $broaderCanonical = $broader['roles'][0]->value;
+                $narrowerLabel = $group['audience'];
+                $broaderLabel = $broader['audience'];
+
+                $visibility->rule(static fn (Get $get): Closure => static function (string $attribute, mixed $value, Closure $fail) use ($get, $broaderCanonical, $narrowerLabel, $broaderLabel): void {
+                    $narrowerRank = is_string($value) ? DocumentVertrouwelijkheden::rank($value) : null;
+                    $broaderValue = $get("vertrouwelijkheid_map.visibility.{$broaderCanonical}");
+                    $broaderRank = is_string($broaderValue) ? DocumentVertrouwelijkheden::rank($broaderValue) : null;
+
+                    // Skip while either side is still blank: an empty select means
+                    // "fall back to the defaults", not "sees nothing".
+                    if ($narrowerRank === null || $broaderRank === null) {
+                        return;
+                    }
+
+                    if ($narrowerRank > $broaderRank) {
+                        $fail(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_visibility.nesting_error', [
+                            'narrower' => $narrowerLabel,
+                            'broader' => $broaderLabel,
+                        ]));
+                    }
+                });
+            }
+
+            $fields[] = Fieldset::make($group['label'])
+                ->columns(2)
+                ->visible(fn (Get $get): bool => self::documentUploadTabsEnabled($get))
+                ->schema([
+                    $visibility,
+                    Select::make("vertrouwelijkheid_map.upload_default.{$canonical}")
+                        ->label(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_upload_default.label'))
+                        ->helperText(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_upload_default.helper'))
+                        ->hintIcon('heroicon-o-information-circle')
+                        ->hintIconTooltip(__('municipality/resources/zgw_connection.fields.vertrouwelijkheid_upload_default.tooltip'))
+                        ->options($levels)
+                        ->native(false),
+                ]);
+        }
+
+        return $fields;
     }
 
     /**
@@ -224,29 +294,17 @@ class MunicipalityZgwConnectionResource extends Resource
      * binds to; the others inherit its value on save. Roles outside these groups
      * (platform admin, koppeling beheerder) always fall back to the defaults.
      *
-     * @return array<int, array{label: string, roles: array<int, Role>}>
+     * The groups are defined once in {@see DocumentAudience::groups()}, which
+     * also labels the upload choice with them, so the form and that choice can
+     * never describe different groups. They are listed there from the broadest
+     * to the narrowest audience and reversed here, so the form keeps showing
+     * them as organisator, adviseur, gemeente.
+     *
+     * @return array<int, array{label: string, audience: string, roles: array<int, Role>}>
      */
     protected static function vertrouwelijkheidGroups(): array
     {
-        return [
-            [
-                'label' => Role::Organiser->getLabel(),
-                'roles' => [Role::Organiser],
-            ],
-            [
-                'label' => Role::Advisor->getLabel(),
-                'roles' => [Role::Advisor],
-            ],
-            [
-                'label' => __('municipality/resources/zgw_connection.vertrouwelijkheid_groups.gemeente'),
-                'roles' => [
-                    Role::Reviewer,
-                    Role::Coordinator,
-                    Role::MunicipalityAdmin,
-                    Role::ReviewerMunicipalityAdmin,
-                ],
-            ],
-        ];
+        return array_reverse(DocumentAudience::groups());
     }
 
     /**
@@ -296,6 +354,62 @@ class MunicipalityZgwConnectionResource extends Resource
     }
 
     /**
+     * Normalise the visibility map to a single maximum level per role group that
+     * never runs down (organisator ≤ adviseur ≤ gemeente), so a broader audience
+     * always sees at least what a narrower one sees. Works on the canonical roles
+     * before they are fanned out, and only touches groups that are explicitly
+     * configured: an empty group falls back to the defaults and is left alone.
+     *
+     * Two normalisations happen here. A group stored as a set of levels (the
+     * shape used before the maximum was introduced) is read as its most
+     * confidential member, and a broader group whose maximum sits below a
+     * narrower one is clamped up to it.
+     *
+     * This is a safety net for maps written outside the settings form (seeders,
+     * imports, direct DB edits). The form already blocks a maximum that runs down
+     * with a validation error before this runs, so it can never mask that error.
+     *
+     * @param  array<string, mixed>  $map
+     * @return array<string, mixed>
+     */
+    protected static function normaliseVertrouwelijkheidNesting(array $map): array
+    {
+        if (! isset($map['visibility']) || ! is_array($map['visibility'])) {
+            return $map;
+        }
+
+        // The groups run from the narrowest (organisator) to the broadest
+        // (gemeente); carry the highest maximum seen so far forward, so a broader
+        // group can never end up below a narrower one.
+        $floor = null;
+        $floorRank = -1;
+
+        foreach (self::vertrouwelijkheidGroups() as $group) {
+            $canonical = $group['roles'][0]->value;
+            $max = ZgwConnectionConfig::readVisibilityMax($map['visibility'][$canonical] ?? null);
+
+            if ($max === null) {
+                unset($map['visibility'][$canonical]);
+
+                continue;
+            }
+
+            $rank = DocumentVertrouwelijkheden::rank($max) ?? -1;
+
+            if ($floor !== null && $rank < $floorRank) {
+                $max = $floor;
+                $rank = $floorRank;
+            }
+
+            $map['visibility'][$canonical] = $max;
+            $floor = $max;
+            $floorRank = $rank;
+        }
+
+        return $map;
+    }
+
+    /**
      * Fan each role group's canonical choice out onto the roles it represents,
      * then drop empty visibility/upload-default entries so an unconfigured role
      * keeps falling back to the hardcoded defaults instead of being stored as an
@@ -311,6 +425,8 @@ class MunicipalityZgwConnectionResource extends Resource
         }
 
         $map = $data['vertrouwelijkheid_map'];
+
+        $map = self::normaliseVertrouwelijkheidNesting($map);
 
         foreach (self::vertrouwelijkheidGroups() as $group) {
             $roles = $group['roles'];
@@ -333,7 +449,7 @@ class MunicipalityZgwConnectionResource extends Resource
         if (isset($map['visibility']) && is_array($map['visibility'])) {
             $map['visibility'] = array_filter(
                 $map['visibility'],
-                static fn ($values): bool => is_array($values) && $values !== [],
+                static fn ($value): bool => is_string($value) && $value !== '',
             );
 
             if ($map['visibility'] === []) {
