@@ -250,11 +250,20 @@ class ZaakInfolist
                                                 $success = true;
                                                 $eigenschappen = ['risico_classificatie' => null, 'risico_toelichting' => null];
 
+                                                // The catalogus may name these eigenschappen differently;
+                                                // the koppeling holds the translation, so resolve both
+                                                // names once and match on them everywhere below.
+                                                $mapping = MunicipalityZaaktypeMapping::forZaaktype($record->zaaktype);
+                                                $naam = [
+                                                    'risico_classificatie' => ZaaktypeBlueprint::eigenschapNaam($mapping, 'risico_classificatie'),
+                                                    'risico_toelichting' => ZaaktypeBlueprint::eigenschapNaam($mapping, 'risico_toelichting'),
+                                                ];
+
                                                 // Find existing eigenschappen
                                                 foreach ($record->openzaak->eigenschappen as $item) {
-                                                    if ($item->naam === 'risico_classificatie') {
+                                                    if ($item->naam === $naam['risico_classificatie']) {
                                                         $eigenschappen['risico_classificatie'] = $item;
-                                                    } elseif ($item->naam === 'risico_toelichting') {
+                                                    } elseif ($item->naam === $naam['risico_toelichting']) {
                                                         $eigenschappen['risico_toelichting'] = $item;
                                                     }
 
@@ -277,7 +286,7 @@ class ZaakInfolist
                                                     ]);
                                                 } else {
                                                     // Eigenschap doesn't exist, create it
-                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_classificatie');
+                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', $naam['risico_classificatie']);
                                                     if ($catalogiEigenschap) {
                                                         $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
                                                             'zaak' => $record->openzaak->url,
@@ -297,7 +306,7 @@ class ZaakInfolist
                                                     ]);
                                                 } else {
                                                     // Eigenschap doesn't exist, create it
-                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_toelichting');
+                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', $naam['risico_toelichting']);
                                                     if ($catalogiEigenschap) {
                                                         $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
                                                             'zaak' => $record->openzaak->url,

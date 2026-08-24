@@ -33,6 +33,55 @@ describe('eigenschapNaam', function () {
     });
 });
 
+describe('logicalEigenschappen', function () {
+    test('keeps every naam when there is no mapping', function () {
+        expect(ZaaktypeBlueprint::logicalEigenschappen(null, ['risico_classificatie' => 'A']))
+            ->toBe(['risico_classificatie' => 'A']);
+    });
+
+    test('translates a mapped naam back to its logical key', function () {
+        expect(ZaaktypeBlueprint::logicalEigenschappen(
+            mapping(['eigenschap_map' => ['risico_classificatie' => '1.risico klasse']]),
+            ['1.risico klasse' => 'C'],
+        ))->toBe(['risico_classificatie' => 'C']);
+    });
+
+    test('leaves a naam the mapping does not mention untouched', function () {
+        expect(ZaaktypeBlueprint::logicalEigenschappen(
+            mapping(['eigenschap_map' => ['risico_classificatie' => '1.risico klasse']]),
+            ['naam_evenement' => 'Feest', '3.onbekend' => 'x'],
+        ))->toBe(['naam_evenement' => 'Feest', '3.onbekend' => 'x']);
+    });
+
+    test('an identity mapping is a no-op', function () {
+        expect(ZaaktypeBlueprint::logicalEigenschappen(
+            mapping(['eigenschap_map' => ['naam_evenement' => 'naam_evenement']]),
+            ['naam_evenement' => 'Feest'],
+        ))->toBe(['naam_evenement' => 'Feest']);
+    });
+
+    test('a translated value wins over one already stored under the logical key', function () {
+        expect(ZaaktypeBlueprint::logicalEigenschappen(
+            mapping(['eigenschap_map' => ['risico_classificatie' => '1.risico klasse']]),
+            ['risico_classificatie' => 'A', '1.risico klasse' => 'C'],
+        ))->toBe(['risico_classificatie' => 'C']);
+    });
+
+    test('a naam mapped by two logical keys resolves to the first one', function () {
+        expect(ZaaktypeBlueprint::logicalEigenschappen(
+            mapping(['eigenschap_map' => ['naam_evenement' => 'Naam', 'organisator' => 'Naam']]),
+            ['Naam' => 'Feest'],
+        ))->toBe(['naam_evenement' => 'Feest']);
+    });
+
+    test('an empty selector does not swallow the naam', function () {
+        expect(ZaaktypeBlueprint::logicalEigenschappen(
+            mapping(['eigenschap_map' => ['risico_classificatie' => '']]),
+            ['risico_classificatie' => 'A'],
+        ))->toBe(['risico_classificatie' => 'A']);
+    });
+});
+
 describe('initialStatustype', function () {
     $statustypen = [
         ['url' => 'st/2', 'omschrijving' => 'In behandeling', 'volgnummer' => 2],

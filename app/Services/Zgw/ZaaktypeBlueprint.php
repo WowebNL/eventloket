@@ -30,6 +30,47 @@ final class ZaaktypeBlueprint
     }
 
     /**
+     * Re-key eigenschappen read back from ZGW onto their logical FormState keys.
+     *
+     * The mirror image of {@see self::eigenschapNaam()}. A ZGW backend may name
+     * its eigenschappen differently per organisation, so a value read back under
+     * a mapped naam has to be translated back before it can be merged into the
+     * application's own reference data; without that step the value is filed
+     * under a name nothing reads and the change is lost.
+     *
+     * Names the blueprint does not mention keep their own name, which is the
+     * identity case for a catalogus that uses the logical keys verbatim.
+     *
+     * @param  array<string, mixed>  $eigenschappen  keyed by ZGW eigenschap naam
+     * @return array<string, mixed> keyed by logical FormState key
+     */
+    public static function logicalEigenschappen(?MunicipalityZaaktypeMapping $mapping, array $eigenschappen): array
+    {
+        $byNaam = [];
+        foreach ($mapping->eigenschap_map ?? [] as $logicalKey => $naam) {
+            // Identity entries add nothing, and the first mapping of a naam wins
+            // so a duplicate selector cannot make the result order-dependent.
+            if (is_string($naam) && $naam !== '' && $naam !== (string) $logicalKey && ! isset($byNaam[$naam])) {
+                $byNaam[$naam] = (string) $logicalKey;
+            }
+        }
+
+        $untranslated = [];
+        $translated = [];
+        foreach ($eigenschappen as $naam => $waarde) {
+            if (isset($byNaam[$naam])) {
+                $translated[$byNaam[$naam]] = $waarde;
+            } else {
+                $untranslated[$naam] = $waarde;
+            }
+        }
+
+        // Translated values are applied last: an explicitly mapped eigenschap
+        // outranks a stray one that happens to carry the logical key as its name.
+        return array_merge($untranslated, $translated);
+    }
+
+    /**
      * The initial statustype. Heuristic: the lowest volgnummer.
      *
      * @param  iterable<array<string, mixed>>  $statustypen
