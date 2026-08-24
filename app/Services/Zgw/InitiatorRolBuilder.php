@@ -35,18 +35,29 @@ use Illuminate\Support\Str;
 final class InitiatorRolBuilder
 {
     /**
-     * ContactPersoonRol.naam is maxLength 40 in the Zaken API schema, unchanged
-     * across every release this application targets, so a backend that
-     * validates against the published schema rejects a longer composed name
-     * (voornaam plus achternaam) with a 400 on the rol POST.
+     * The published Zaken API schemas do not agree on the bound for
+     * ContactPersoonRol.naam, so it cannot be taken from "the standard" as a
+     * single number. Both sources below were read on 2026-08-24:
+     *
+     * - VNG-Realisatie/zaken-api, release tag 1.5.1, src/openapi.yaml: the
+     *   property is declared with maxLength 200.
+     * - VNG-Realisatie/gemma-zaken, docs/standaard/zaken/zrc/1.6.x/1.6.0/openapi.yaml
+     *   and docs/standaard/zaken/zrc/1.7.x/1.7.0/openapi.yaml: the same
+     *   property is declared with maxLength 40.
+     *
+     * A backend that validates against the stricter of the two rejects a longer
+     * composed name (voornaam plus achternaam) with a 400 on the rol POST, so
+     * the 40 bound is applied on connections known to enforce it rather than
+     * assumed to be the one true schema value.
      */
     private const CONTACTPERSOON_NAAM_MAX_ONEGROUND = 40;
 
     /**
      * Our own OpenZaak stores this name in a 200 character column and accepts
-     * up to that, so a connection to it keeps the wider bound instead of losing
-     * name characters for a limit that backend does not apply. Anything longer
-     * than 200 is still cut, because no backend accepts it.
+     * up to that, matching the wider of the two published bounds, so a
+     * connection to it keeps 200 instead of losing name characters for a limit
+     * that backend does not apply. Anything longer than 200 is still cut,
+     * because neither reading of the schema allows it.
      */
     private const CONTACTPERSOON_NAAM_MAX_DEFAULT = 200;
 
@@ -95,8 +106,9 @@ final class InitiatorRolBuilder
             return null;
         }
 
-        // OneGround enforces a stricter contactpersoonRol.naam limit than the
-        // VNG standard, so the bound is decided per connection, not globally.
+        // OneGround enforces the stricter of the two published
+        // contactpersoonRol.naam bounds, so the bound is decided per
+        // connection, not globally. See the two constants for the sources.
         $naamMax = ZgwConnectionConfig::isOneGround($connectionName)
             ? self::CONTACTPERSOON_NAAM_MAX_ONEGROUND
             : self::CONTACTPERSOON_NAAM_MAX_DEFAULT;
