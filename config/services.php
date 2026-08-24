@@ -60,5 +60,22 @@ return [
 
     'locatieserver' => [
         'base_url' => env('LOCATIESERVER_BASE_URL', 'https://api.pdok.nl/bzk/locatieserver'),
+
+        // Most Locatieserver lookups happen while a page or a Livewire update
+        // is being rendered, so the caller is a user waiting on a response.
+        // The framework defaults (10s connect, 30s total) are far too generous
+        // for that: during a PDOK outage they hold the request open long
+        // enough to exhaust PHP-FPM workers. PDOK answers in well under a
+        // second in normal operation, so a 2s connect / 5s total budget leaves
+        // an order of magnitude of headroom and still fails fast.
+        'connect_timeout' => env('LOCATIESERVER_CONNECT_TIMEOUT', 2),
+        'timeout' => env('LOCATIESERVER_TIMEOUT', 5),
+
+        // Queued work has nobody waiting on it and a missed lookup silently
+        // drops an address from the result, so there it is worth waiting out a
+        // slow-but-alive Locatieserver. Opt in per caller with
+        // LocatieserverService::forBackgroundWork().
+        'background_connect_timeout' => env('LOCATIESERVER_BACKGROUND_CONNECT_TIMEOUT', 5),
+        'background_timeout' => env('LOCATIESERVER_BACKGROUND_TIMEOUT', 20),
     ],
 ];
