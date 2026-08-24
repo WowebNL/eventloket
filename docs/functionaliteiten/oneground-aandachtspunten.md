@@ -88,6 +88,7 @@ De volledige uitleg staat in de sectie over doorkomsten in [ZGW-koppelingbeheer]
 ## 8. Overige bijzonderheden
 
 - **null beschrijving op documenten.** OneGround geeft de beschrijving van een document als `null` terug, waar Open Zaak een lege tekst teruggeeft. Eventloket accepteert beide, zodat het inlezen van een document niet vastloopt.
+- **Lengte van de naam van de contactpersoon.** OneGround houdt voor `contactpersoonRol.naam` een maximum van 40 tekens aan, waar de gedeelde Open Zaak 200 tekens accepteert. Staat het vinkje **Dit is een OneGround koppeling** aan, dan kort Eventloket die naam in tot 40 tekens in plaats van 200. Welke velden verder worden ingekort of weggelaten richting het zaaksysteem staat in [Veldbegrenzingen richting het zaaksysteem](veldbegrenzingen-zaaksysteem.md).
 - **Per-koppeling instellingen.** OneGround wijkt genoeg af dat een gemeente vaak een aangepast gedrag wil. Op de ZGW-koppeling staan daarvoor schakelaars: de status niet wijzigbaar maken door de behandelaar (de status wordt dan volledig in het zaaksysteem beheerd), losse tabbladen (besluiten, bestanden, adviesvragen, organisatievragen) verbergen, en alle notificaties onderdrukken op de ontvangstbevestiging na. Standaard staan die zo dat het gedrag gelijk blijft aan de hoofdkoppeling. Stel ze alleen af als de werkwijze van de gemeente daarom vraagt.
 
 ---
