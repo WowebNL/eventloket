@@ -35,21 +35,64 @@ use Illuminate\Support\Str;
 final class InitiatorRolBuilder
 {
     /**
-     * OneGround's Zaken API v1.5 validator caps contactpersoonRol.naam at 40
-     * characters: it kept the Zaken API 1.3/1.4 limit and never raised it. Our
-     * client sends no Api-Version header, so a request to a OneGround backend
-     * lands on that stricter v1.5 contract, and a longer composed name
-     * (voornaam plus achternaam) is rejected with a 400 on the rol POST.
+     * The published Zaken API schemas do not agree on the bound for
+     * ContactPersoonRol.naam, so it cannot be taken from "the standard" as a
+     * single number. Both sources below were read on 2026-08-24:
+     *
+     * - VNG-Realisatie/zaken-api, release tag 1.5.1, src/openapi.yaml: the
+     *   property is declared with maxLength 200.
+     * - VNG-Realisatie/gemma-zaken, docs/standaard/zaken/zrc/1.6.x/1.6.0/openapi.yaml
+     *   and docs/standaard/zaken/zrc/1.7.x/1.7.0/openapi.yaml: the same
+     *   property is declared with maxLength 40.
+     *
+     * A backend that validates against the stricter of the two rejects a longer
+     * composed name (voornaam plus achternaam) with a 400 on the rol POST, so
+     * the 40 bound is applied on connections known to enforce it rather than
+     * assumed to be the one true schema value.
      */
     private const CONTACTPERSOON_NAAM_MAX_ONEGROUND = 40;
 
     /**
-     * Every other backend follows the VNG 1.5 OAS, where ContactPersoonRol.naam
-     * is maxLength 200 (OpenZaak's column matches). So a non-OneGround
-     * connection, including our own OpenZaak, keeps the standard bound and is
-     * not truncated at 40 for a limit that is not its own.
+     * Our own OpenZaak stores this name in a 200 character column and accepts
+     * up to that, matching the wider of the two published bounds, so a
+     * connection to it keeps 200 instead of losing name characters for a limit
+     * that backend does not apply. Anything longer than 200 is still cut,
+     * because neither reading of the schema allows it.
      */
     private const CONTACTPERSOON_NAAM_MAX_DEFAULT = 200;
+
+    // The remaining bounds the Zaken API schema puts on the parts of the rol
+    // payload that carry organiser input. They are the same in every release
+    // this application targets, so they are constants rather than a per-version
+    // lookup. Every one of them is well below what the form accepts, so without
+    // them a long answer reaches the API unbounded.
+    private const EMAILADRES_MAX = 254;
+
+    private const TELEFOONNUMMER_MAX = 20;
+
+    private const GESLACHTSNAAM_MAX = 200;
+
+    private const VOORNAMEN_MAX = 200;
+
+    private const AFWIJKENDE_NAAM_MAX = 625;
+
+    private const HANDELSNAAM_MAX = 625;
+
+    private const STATUTAIRE_NAAM_MAX = 500;
+
+    private const KVK_NUMMER_MAX = 8;
+
+    private const WOONPLAATSNAAM_MAX = 80;
+
+    private const OPENBARE_RUIMTE_NAAM_MAX = 80;
+
+    private const POSTCODE_MAX = 7;
+
+    private const HUISLETTER_MAX = 1;
+
+    private const HUISNUMMERTOEVOEGING_MAX = 4;
+
+    private const HUISNUMMER_MAX = 99999;
 
     /**
      * @param  string  $connectionName  the connection the rol is posted to, which decides
@@ -63,8 +106,9 @@ final class InitiatorRolBuilder
             return null;
         }
 
-        // OneGround enforces a stricter contactpersoonRol.naam limit than the
-        // VNG standard, so the bound is decided per connection, not globally.
+        // OneGround enforces the stricter of the two published
+        // contactpersoonRol.naam bounds, so the bound is decided per
+        // connection, not globally. See the two constants for the sources.
         $naamMax = ZgwConnectionConfig::isOneGround($connectionName)
             ? self::CONTACTPERSOON_NAAM_MAX_ONEGROUND
             : self::CONTACTPERSOON_NAAM_MAX_DEFAULT;
@@ -81,14 +125,42 @@ final class InitiatorRolBuilder
     }
 
     /**
-     * The contactpersoonRol block for the rol, with naam bounded to the limit
-     * that applies to this connection ($naamMax). Shared by every
+     * A free-text value cut to its schema bound, or null when there is nothing
+     * to send. Cutting is the right degradation for a name: the value stays
+     * recognisable, and the alternative is a 400 on the rol POST that aborts
+     * the submit chain and leaves the zaak without an initiator. Values that
+     * only mean something whole are dropped instead of cut; see
+     * {@see self::contactpersoonRol()}, {@see self::kvkNummer()} and
+     * {@see self::verblijfsadres()}. A value at or under its bound is left
+     * byte-for-byte as is.
+     */
+    private static function bounded(mixed $value, int $max): ?string
+    {
+        if (! is_string($value) || $value === '') {
+            return null;
+        }
+
+        return Str::substr($value, 0, $max);
+    }
+
+    /**
+     * The contactpersoonRol block for the rol, with every free-text field
+     * bounded: naam to the limit that applies to this connection ($naamMax),
+     * the contact details to their schema maxima. Shared by every
      * betrokkeneType variant, since contactpersoonRol travels with all of them,
-     * so an organisation with a KvK number and a long contact name is capped
-     * just like a natuurlijk persoon. The full name survives elsewhere
-     * (afwijkendeNaamBetrokkene, geslachtsnaam plus voornamen), so a plain cut
-     * to the hard limit is enough. A name of $naamMax characters or shorter is
-     * left byte-for-byte as is.
+     * so an organisation with a KvK number and a long contact name is bounded
+     * just like a natuurlijk persoon. More of the name survives elsewhere
+     * (afwijkendeNaamBetrokkene, geslachtsnaam plus voornamen), whose bounds
+     * are far wider, so a plain cut to the hard limit is enough there.
+     *
+     * emailadres is the exception and is dropped instead of cut, for the same
+     * reason as kvkNummer and aoaPostcode: the schema types it as a string with
+     * maxLength 254 *and* format email, so a value cut at 254 is either no
+     * longer an address at all (the part after the @ is what gets removed) or,
+     * worse, a valid address belonging to someone else. Both outcomes are worse
+     * than sending no address: the first still returns the 400 this bound is
+     * meant to avoid, the second routes correspondence to a stranger. The field
+     * is optional on the schema, so leaving it out keeps the rol valid.
      *
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>|null
@@ -101,8 +173,22 @@ final class InitiatorRolBuilder
             return null;
         }
 
-        if (isset($contactpersoon['naam']) && is_string($contactpersoon['naam'])) {
-            $contactpersoon['naam'] = Str::substr($contactpersoon['naam'], 0, $naamMax);
+        $maxima = [
+            'naam' => $naamMax,
+            'telefoonnummer' => self::TELEFOONNUMMER_MAX,
+        ];
+
+        foreach ($maxima as $field => $max) {
+            if (isset($contactpersoon[$field]) && is_string($contactpersoon[$field])) {
+                $contactpersoon[$field] = Str::substr($contactpersoon[$field], 0, $max);
+            }
+        }
+
+        if (isset($contactpersoon['emailadres'])
+            && is_string($contactpersoon['emailadres'])
+            && Str::length($contactpersoon['emailadres']) > self::EMAILADRES_MAX
+        ) {
+            unset($contactpersoon['emailadres']);
         }
 
         return $contactpersoon;
@@ -120,6 +206,10 @@ final class InitiatorRolBuilder
      * registered on the organisation name alone (statutaireNaam or handelsnaam,
      * depending on the variant), so this guard covers annIdentificatie and
      * kvkNummer in both.
+     *
+     * A number that does not fit the schema bound is dropped for the same
+     * reason and not cut: half a company number is a different company, so
+     * sending it would be worse than sending none.
      */
     private static function kvkNummer(mixed $kvk): ?string
     {
@@ -127,7 +217,7 @@ final class InitiatorRolBuilder
             return null;
         }
 
-        return $kvk;
+        return Str::length($kvk) > self::KVK_NUMMER_MAX ? null : $kvk;
     }
 
     /**
@@ -163,7 +253,7 @@ final class InitiatorRolBuilder
             'roltoelichting' => 'inzender formulier',
             'contactpersoonRol' => self::contactpersoonRol($initiator, $naamMax),
             'betrokkeneIdentificatie' => array_filter([
-                'statutaireNaam' => $initiator['organisatie_naam'] ?? null,
+                'statutaireNaam' => self::bounded($initiator['organisatie_naam'] ?? null, self::STATUTAIRE_NAAM_MAX),
                 'annIdentificatie' => $kvkNummer,
                 'kvkNummer' => $kvkNummer,
             ]),
@@ -190,7 +280,7 @@ final class InitiatorRolBuilder
      */
     private static function vestiging(string $zaakUrl, string $roltype, array $initiator, ?string $kvkNummer, int $naamMax): array
     {
-        $organisatieNaam = $initiator['organisatie_naam'] ?? null;
+        $handelsnaam = self::bounded($initiator['organisatie_naam'] ?? null, self::HANDELSNAAM_MAX);
 
         return [
             'zaak' => $zaakUrl,
@@ -201,7 +291,7 @@ final class InitiatorRolBuilder
             'betrokkeneIdentificatie' => array_filter([
                 'kvkNummer' => $kvkNummer,
                 // handelsnaam is a list in the schema, and we know one name.
-                'handelsnaam' => is_string($organisatieNaam) && $organisatieNaam !== '' ? [$organisatieNaam] : null,
+                'handelsnaam' => $handelsnaam === null ? null : [$handelsnaam],
             ]),
         ];
     }
@@ -225,13 +315,14 @@ final class InitiatorRolBuilder
             'contactpersoonRol' => self::contactpersoonRol($initiator, $naamMax),
             'betrokkeneIdentificatie' => array_filter([
                 'anpIdentificatie' => $anpIdentificatie,
-                'geslachtsnaam' => $achternaam !== '' ? $achternaam : null,
-                'voornamen' => $voornaam !== '' ? $voornaam : null,
+                'geslachtsnaam' => self::bounded($achternaam, self::GESLACHTSNAAM_MAX),
+                'voornamen' => self::bounded($voornaam, self::VOORNAMEN_MAX),
             ]),
         ];
 
-        if ($naam !== '') {
-            $rolData['afwijkendeNaamBetrokkene'] = $naam;
+        $afwijkendeNaam = self::bounded($naam, self::AFWIJKENDE_NAAM_MAX);
+        if ($afwijkendeNaam !== null) {
+            $rolData['afwijkendeNaamBetrokkene'] = $afwijkendeNaam;
         }
 
         $verblijfsadres = self::verblijfsadres($adres);
@@ -243,11 +334,16 @@ final class InitiatorRolBuilder
     }
 
     /**
-     * A verblijfsadres is only sent for a Dutch address with a plain numeric
-     * huisnummer: the ZGW schema types aoaHuisnummer as an integer, caps
-     * aoaHuisletter at one character and aoaHuisnummertoevoeging at four, so
-     * values outside those bounds are dropped rather than risking a 400 that
-     * would abort the submit chain.
+     * A verblijfsadres is only sent for a Dutch address with a plain huisnummer
+     * inside the schema's integer range: aoaHuisnummer is required on the
+     * address, so an address that cannot supply a valid one is left out
+     * altogether rather than risking a 400 that would abort the submit chain.
+     *
+     * The optional parts follow the same rule on a smaller scale: a huisletter or
+     * huisnummertoevoeging that does not fit its bound is dropped, and so is a
+     * postcode, because a cut postcode points at another place entirely. The
+     * two required names are cut to their bound instead, since leaving them out
+     * would make the address invalid on its own.
      *
      * @param  array<string, mixed>|mixed  $adres
      * @return array<string, mixed>|null
@@ -262,22 +358,23 @@ final class InitiatorRolBuilder
         }
 
         $huisnummer = trim((string) $adres['huisnummer']);
-        if (! ctype_digit($huisnummer)) {
+        if (! ctype_digit($huisnummer) || (int) $huisnummer > self::HUISNUMMER_MAX) {
             return null;
         }
 
         $huisletter = trim((string) ($adres['huisletter'] ?? ''));
         $toevoeging = trim((string) ($adres['huisnummertoevoeging'] ?? ''));
         $straatnaam = trim((string) ($adres['straatnaam'] ?? ''));
+        $postcode = str_replace(' ', '', (string) $adres['postcode']);
 
         return array_filter([
             'aoaIdentificatie' => config('app.name').'-persoonsadres-'.Str::uuid(),
-            'wplWoonplaatsNaam' => $adres['plaatsnaam'],
-            'gorOpenbareRuimteNaam' => $straatnaam !== '' ? $straatnaam : 'adres',
-            'aoaPostcode' => str_replace(' ', '', (string) $adres['postcode']),
+            'wplWoonplaatsNaam' => Str::substr((string) $adres['plaatsnaam'], 0, self::WOONPLAATSNAAM_MAX),
+            'gorOpenbareRuimteNaam' => Str::substr($straatnaam !== '' ? $straatnaam : 'adres', 0, self::OPENBARE_RUIMTE_NAAM_MAX),
+            'aoaPostcode' => Str::length($postcode) <= self::POSTCODE_MAX ? $postcode : null,
             'aoaHuisnummer' => (int) $huisnummer,
-            'aoaHuisletter' => strlen($huisletter) === 1 ? $huisletter : null,
-            'aoaHuisnummertoevoeging' => ($toevoeging !== '' && strlen($toevoeging) <= 4) ? $toevoeging : null,
+            'aoaHuisletter' => strlen($huisletter) === self::HUISLETTER_MAX ? $huisletter : null,
+            'aoaHuisnummertoevoeging' => ($toevoeging !== '' && strlen($toevoeging) <= self::HUISNUMMERTOEVOEGING_MAX) ? $toevoeging : null,
         ], fn ($v) => $v !== null);
     }
 }

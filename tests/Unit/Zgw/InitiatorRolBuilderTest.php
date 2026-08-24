@@ -251,21 +251,21 @@ test('caps contactpersoonRol.naam to 40 on a natuurlijk_persoon rol on a OneGrou
     // The composed name is 42 characters, so afwijkendeNaamBetrokkene (max 625)
     // still carries it in full while contactpersoonRol.naam is bounded to 40.
     $state = FormState::fromSnapshot(['values' => [
-        'watIsUwVoornaam' => 'Rob',
+        'watIsUwVoornaam' => 'Jan',
         'watIsUwAchternaam' => 'van Testeling modelpersoon budget vier',
     ]]);
 
     $rol = InitiatorRolBuilder::build('rxmission', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
-        'contactpersoon' => ['naam' => $longNaam, 'emailadres' => 'rob@example.test'],
+        'contactpersoon' => ['naam' => $longNaam, 'emailadres' => 'jan@example.test'],
     ], 'EVL42');
 
     expect($rol['betrokkeneType'])->toBe('natuurlijk_persoon')
         ->and($rol['contactpersoonRol']['naam'])->toBe($boundedNaam40)
         ->and(mb_strlen($rol['contactpersoonRol']['naam']))->toBe(40)
-        ->and($rol['contactpersoonRol']['emailadres'])->toBe('rob@example.test')
+        ->and($rol['contactpersoonRol']['emailadres'])->toBe('jan@example.test')
         ->and($rol['afwijkendeNaamBetrokkene'])->toBe($longNaam)
         ->and($rol['betrokkeneIdentificatie']['geslachtsnaam'])->toBe('van Testeling modelpersoon budget vier')
-        ->and($rol['betrokkeneIdentificatie']['voornamen'])->toBe('Rob')
+        ->and($rol['betrokkeneIdentificatie']['voornamen'])->toBe('Jan')
         ->and($rol['betrokkeneIdentificatie']['anpIdentificatie'])->toBe('EVL42');
 });
 
@@ -340,7 +340,7 @@ test('keeps a name between 41 and 200 characters in full on a non-OneGround conn
     expect(ZgwConnectionConfig::isOneGround('main'))->toBeFalse();
 
     $state = FormState::fromSnapshot(['values' => [
-        'watIsUwVoornaam' => 'Rob',
+        'watIsUwVoornaam' => 'Jan',
         'watIsUwAchternaam' => 'van Testeling modelpersoon budget vier',
     ]]);
 
@@ -376,4 +376,346 @@ test('caps contactpersoonRol.naam to 200 on a non-OneGround connection and keeps
         ->and(mb_strlen($over['contactpersoonRol']['naam']))->toBe(200)
         ->and($atLimit['contactpersoonRol']['naam'])->toBe($name200)
         ->and(mb_strlen($atLimit['contactpersoonRol']['naam']))->toBe(200);
+});
+
+// Every other field the organiser fills in also has a hard bound in the Zaken
+// API schema, and the form accepts far longer answers than any of them. One
+// oversized field is enough for the API to reject the whole rol, which aborts
+// the submit chain and leaves the zaak without an initiator, so each variant is
+// asserted field by field and then swept as a whole.
+
+/**
+ * The bound the Zaken API schema puts on each string in the rol payload that
+ * carries organiser input, as a dotted path into the payload.
+ *
+ * @return array<string, int>
+ */
+function rolPayloadBounds(): array
+{
+    return [
+        'afwijkendeNaamBetrokkene' => 625,
+        'contactpersoonRol.naam' => 200,
+        'contactpersoonRol.emailadres' => 254,
+        'contactpersoonRol.telefoonnummer' => 20,
+        'betrokkeneIdentificatie.geslachtsnaam' => 200,
+        'betrokkeneIdentificatie.voornamen' => 200,
+        'betrokkeneIdentificatie.statutaireNaam' => 500,
+        'betrokkeneIdentificatie.annIdentificatie' => 17,
+        'betrokkeneIdentificatie.kvkNummer' => 8,
+        'betrokkeneIdentificatie.handelsnaam.0' => 625,
+        'betrokkeneIdentificatie.verblijfsadres.wplWoonplaatsNaam' => 80,
+        'betrokkeneIdentificatie.verblijfsadres.gorOpenbareRuimteNaam' => 80,
+        'betrokkeneIdentificatie.verblijfsadres.aoaPostcode' => 7,
+        'betrokkeneIdentificatie.verblijfsadres.aoaHuisletter' => 1,
+        'betrokkeneIdentificatie.verblijfsadres.aoaHuisnummertoevoeging' => 4,
+    ];
+}
+
+/**
+ * Assert that no string in the payload is longer than its schema bound, and
+ * that an emailadres that did survive is still a usable address. The offending
+ * paths are collected first so a failure names every field at once instead of
+ * stopping at the first.
+ *
+ * The email check is what a plain length check cannot catch: the schema types
+ * contactpersoonRol.emailadres as format email, so an address cut at 254 would
+ * pass the bound while no longer being an address (or being someone else's).
+ * Dropping it leaves the key absent, which passes both checks.
+ *
+ * @param  array<string, mixed>  $rol
+ */
+function expectRolWithinSchemaBounds(array $rol): void
+{
+    $violations = [];
+
+    $emailadres = data_get($rol, 'contactpersoonRol.emailadres');
+    if ($emailadres !== null && filter_var($emailadres, FILTER_VALIDATE_EMAIL) === false) {
+        $violations['contactpersoonRol.emailadres'] = 'not a valid email address';
+    }
+
+    foreach (rolPayloadBounds() as $path => $max) {
+        $value = data_get($rol, $path);
+
+        if ($value === null) {
+            continue;
+        }
+
+        if (! is_string($value)) {
+            $violations[$path] = 'not a string: '.gettype($value);
+
+            continue;
+        }
+
+        if (mb_strlen($value) > $max) {
+            $violations[$path] = mb_strlen($value).' characters, bound is '.$max;
+        }
+    }
+
+    expect($violations)->toBe([]);
+}
+
+/**
+ * An initiator block in which every organiser answer is 1000 characters, the
+ * length the form allows on its longest text fields.
+ *
+ * @return array<string, mixed>
+ */
+function oversizedInitiator(): array
+{
+    $long = str_repeat('a', 1000);
+
+    return [
+        'organisatie_naam' => $long,
+        'natuurlijk_persoon_adres' => [
+            'postcode' => $long,
+            'huisnummer' => '32',
+            'huisletter' => $long,
+            'huisnummertoevoeging' => $long,
+            'straatnaam' => $long,
+            'plaatsnaam' => $long,
+        ],
+        'contactpersoon' => [
+            'naam' => $long,
+            'emailadres' => $long.'@example.test',
+            'telefoonnummer' => $long,
+        ],
+    ];
+}
+
+/** The form state behind {@see oversizedInitiator()}. */
+function oversizedState(): FormState
+{
+    $long = str_repeat('a', 1000);
+
+    return FormState::fromSnapshot(['values' => [
+        'watIsUwVoornaam' => $long,
+        'watIsUwAchternaam' => $long,
+    ]]);
+}
+
+test('keeps every natuurlijk_persoon field inside its schema bound for a maximum length form submission', function () {
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', oversizedState(), oversizedInitiator(), 'EVL42');
+
+    expect($rol['betrokkeneType'])->toBe('natuurlijk_persoon');
+    expectRolWithinSchemaBounds($rol);
+});
+
+test('keeps every vestiging field inside its schema bound for a maximum length form submission', function () {
+    $initiator = oversizedInitiator();
+    $initiator['kvk'] = '12345678';
+
+    $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', oversizedState(), $initiator);
+
+    expect($rol['betrokkeneType'])->toBe('vestiging');
+    expectRolWithinSchemaBounds($rol);
+});
+
+test('keeps every niet_natuurlijk_persoon field inside its schema bound for a maximum length form submission', function () {
+    $initiator = oversizedInitiator();
+    $initiator['kvk'] = '12345678';
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', oversizedState(), $initiator);
+
+    expect($rol['betrokkeneType'])->toBe('niet_natuurlijk_persoon');
+    expectRolWithinSchemaBounds($rol);
+});
+
+test('cuts geslachtsnaam and voornamen to 200 and afwijkendeNaamBetrokkene to 625', function () {
+    $voornaam = str_repeat('v', 300);
+    $achternaam = str_repeat('a', 400);
+
+    $state = FormState::fromSnapshot(['values' => [
+        'watIsUwVoornaam' => $voornaam,
+        'watIsUwAchternaam' => $achternaam,
+    ]]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'contactpersoon' => ['naam' => 'Contact Persoon'],
+    ], 'EVL42');
+
+    expect($rol['betrokkeneIdentificatie']['geslachtsnaam'])->toBe(str_repeat('a', 200))
+        ->and($rol['betrokkeneIdentificatie']['voornamen'])->toBe(str_repeat('v', 200))
+        // The composed name is 701 characters (300 + space + 400).
+        ->and($rol['afwijkendeNaamBetrokkene'])->toBe(mb_substr($voornaam.' '.$achternaam, 0, 625))
+        ->and(mb_strlen($rol['afwijkendeNaamBetrokkene']))->toBe(625);
+});
+
+test('leaves name fields at exactly their bound byte-for-byte unchanged', function () {
+    // Boundary anchor next to the cut above: nothing is touched at the limit.
+    $voornaam = str_repeat('v', 200);
+    $achternaam = str_repeat('a', 200);
+
+    $state = FormState::fromSnapshot(['values' => [
+        'watIsUwVoornaam' => $voornaam,
+        'watIsUwAchternaam' => $achternaam,
+    ]]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'contactpersoon' => ['naam' => 'Contact Persoon'],
+    ], 'EVL42');
+
+    expect($rol['betrokkeneIdentificatie']['geslachtsnaam'])->toBe($achternaam)
+        ->and($rol['betrokkeneIdentificatie']['voornamen'])->toBe($voornaam)
+        // 401 characters, still under the 625 bound.
+        ->and($rol['afwijkendeNaamBetrokkene'])->toBe($voornaam.' '.$achternaam);
+});
+
+test('cuts the verblijfsadres names to 80 and drops a postcode that does not fit', function () {
+    // wplWoonplaatsNaam and gorOpenbareRuimteNaam are required on the address,
+    // so they are cut; aoaPostcode is optional and a cut postcode would point
+    // at another place, so it is dropped instead.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Jansen']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => str_repeat('9', 12),
+            'huisnummer' => '32',
+            'straatnaam' => str_repeat('s', 120),
+            'plaatsnaam' => str_repeat('p', 120),
+        ],
+    ]);
+
+    $adres = $rol['betrokkeneIdentificatie']['verblijfsadres'];
+
+    expect($adres['wplWoonplaatsNaam'])->toBe(str_repeat('p', 80))
+        ->and($adres['gorOpenbareRuimteNaam'])->toBe(str_repeat('s', 80))
+        ->and($adres)->not->toHaveKey('aoaPostcode')
+        ->and($adres['aoaHuisnummer'])->toBe(32);
+});
+
+test('drops the verblijfsadres when the huisnummer is outside the schema range', function () {
+    // aoaHuisnummer is required on the address and the schema caps it at 99999,
+    // so an address that cannot supply a valid one is left out entirely, just
+    // as it is for a non-numeric huisnummer.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Jansen']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => '6411CD',
+            'huisnummer' => '1234567890',
+            'plaatsnaam' => 'Heerlen',
+        ],
+    ]);
+
+    expect($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres');
+});
+
+test('keeps a huisnummer at exactly the schema maximum', function () {
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Jansen']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => '6411CD',
+            'huisnummer' => '99999',
+            'plaatsnaam' => 'Heerlen',
+        ],
+    ]);
+
+    expect($rol['betrokkeneIdentificatie']['verblijfsadres']['aoaHuisnummer'])->toBe(99999);
+});
+
+test('drops an oversized contactpersoonRol emailadres and cuts the other contact details to their schema bounds', function () {
+    // The schema types emailadres as format email as well as maxLength 254, so
+    // cutting a long address at 254 would remove the part after the @ and leave
+    // a value that is not an address (or, on a shorter cut, someone else's).
+    // The field is optional, so it is dropped instead.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'contactpersoon' => [
+            'naam' => 'Contact Persoon',
+            'emailadres' => str_repeat('e', 300).'@example.test',
+            'telefoonnummer' => str_repeat('0', 40),
+        ],
+    ]);
+
+    expect($rol['contactpersoonRol'])->not->toHaveKey('emailadres')
+        ->and($rol['contactpersoonRol']['telefoonnummer'])->toBe(str_repeat('0', 20))
+        ->and($rol['contactpersoonRol']['naam'])->toBe('Contact Persoon');
+});
+
+test('keeps a contactpersoonRol emailadres at or under its bound byte-for-byte unchanged', function () {
+    // Boundary anchor next to the drop above: an address of exactly 254
+    // characters is inside the bound and must be sent as typed.
+    $atLimit = str_repeat('e', 254 - mb_strlen('@example.test')).'@example.test';
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'contactpersoon' => [
+            'naam' => 'Contact Persoon',
+            'emailadres' => $atLimit,
+        ],
+    ]);
+
+    expect(mb_strlen($atLimit))->toBe(254)
+        ->and($rol['contactpersoonRol']['emailadres'])->toBe($atLimit);
+});
+
+test('cuts the vestiging handelsnaam to 625 and keeps a name at the bound unchanged', function () {
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $over = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => str_repeat('o', 700),
+    ]);
+
+    $atLimit = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => str_repeat('o', 625),
+    ]);
+
+    expect($over['betrokkeneIdentificatie']['handelsnaam'])->toBe([str_repeat('o', 625)])
+        ->and($atLimit['betrokkeneIdentificatie']['handelsnaam'])->toBe([str_repeat('o', 625)]);
+});
+
+test('cuts the niet_natuurlijk_persoon statutaireNaam to 500 and keeps a name at the bound unchanged', function () {
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $over = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => str_repeat('o', 700),
+    ]);
+
+    $atLimit = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => str_repeat('o', 500),
+    ]);
+
+    expect($over['betrokkeneIdentificatie']['statutaireNaam'])->toBe(str_repeat('o', 500))
+        ->and($atLimit['betrokkeneIdentificatie']['statutaireNaam'])->toBe(str_repeat('o', 500));
+});
+
+test('drops a KvK number that does not fit the schema bound instead of cutting it', function () {
+    // Cutting would put a different, existing company number on the zaak, so an
+    // oversized value is dropped and the rol registers on the name alone, the
+    // same way it does for an already hashed number.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $vestiging = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '123456789',
+        'organisatie_naam' => 'Woweb',
+    ]);
+
+    $nietNatuurlijkPersoon = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '123456789',
+        'organisatie_naam' => 'Woweb',
+    ]);
+
+    expect($vestiging['betrokkeneIdentificatie'])->toBe(['handelsnaam' => ['Woweb']])
+        ->and($nietNatuurlijkPersoon['betrokkeneIdentificatie'])->toBe(['statutaireNaam' => 'Woweb']);
+});
+
+test('keeps a KvK number of exactly eight characters', function () {
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+    ]);
+
+    expect($rol['betrokkeneIdentificatie']['kvkNummer'])->toBe('12345678');
 });
