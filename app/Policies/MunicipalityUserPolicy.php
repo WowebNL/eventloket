@@ -11,10 +11,15 @@ class MunicipalityUserPolicy
 {
     /**
      * Determine whether the user can view any models.
+     *
+     * Managing municipality user accounts is a settings task, so it is limited
+     * to the same roles that may already create and update them. The resources
+     * on this model live in a settings cluster or in the navigation only, and a
+     * cluster or navigation entry does not gate the route of a resource page.
      */
     public function viewAny(User $user): bool
     {
-        return true;
+        return in_array($user->role, [Role::Admin, Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
     }
 
     /**
