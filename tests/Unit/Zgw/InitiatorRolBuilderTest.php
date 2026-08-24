@@ -251,21 +251,21 @@ test('caps contactpersoonRol.naam to 40 on a natuurlijk_persoon rol on a OneGrou
     // The composed name is 42 characters, so afwijkendeNaamBetrokkene (max 625)
     // still carries it in full while contactpersoonRol.naam is bounded to 40.
     $state = FormState::fromSnapshot(['values' => [
-        'watIsUwVoornaam' => 'Rob',
+        'watIsUwVoornaam' => 'Jan',
         'watIsUwAchternaam' => 'van Testeling modelpersoon budget vier',
     ]]);
 
     $rol = InitiatorRolBuilder::build('rxmission', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
-        'contactpersoon' => ['naam' => $longNaam, 'emailadres' => 'rob@example.test'],
+        'contactpersoon' => ['naam' => $longNaam, 'emailadres' => 'jan@example.test'],
     ], 'EVL42');
 
     expect($rol['betrokkeneType'])->toBe('natuurlijk_persoon')
         ->and($rol['contactpersoonRol']['naam'])->toBe($boundedNaam40)
         ->and(mb_strlen($rol['contactpersoonRol']['naam']))->toBe(40)
-        ->and($rol['contactpersoonRol']['emailadres'])->toBe('rob@example.test')
+        ->and($rol['contactpersoonRol']['emailadres'])->toBe('jan@example.test')
         ->and($rol['afwijkendeNaamBetrokkene'])->toBe($longNaam)
         ->and($rol['betrokkeneIdentificatie']['geslachtsnaam'])->toBe('van Testeling modelpersoon budget vier')
-        ->and($rol['betrokkeneIdentificatie']['voornamen'])->toBe('Rob')
+        ->and($rol['betrokkeneIdentificatie']['voornamen'])->toBe('Jan')
         ->and($rol['betrokkeneIdentificatie']['anpIdentificatie'])->toBe('EVL42');
 });
 
@@ -340,7 +340,7 @@ test('keeps a name between 41 and 200 characters in full on a non-OneGround conn
     expect(ZgwConnectionConfig::isOneGround('main'))->toBeFalse();
 
     $state = FormState::fromSnapshot(['values' => [
-        'watIsUwVoornaam' => 'Rob',
+        'watIsUwVoornaam' => 'Jan',
         'watIsUwAchternaam' => 'van Testeling modelpersoon budget vier',
     ]]);
 
