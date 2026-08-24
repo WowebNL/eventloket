@@ -3,6 +3,7 @@
 use App\Enums\ZaaktypeRole;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\Organisation;
 use App\Models\Zaak;
@@ -1048,4 +1049,202 @@ test('a single drawn route still yields exactly the municipality it crosses', fu
     CreateDoorkomstZaken::dispatchSync($hoofdzaak);
 
     expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m')]);
+});
+
+/**
+ * ---------------------------------------------------------------------------
+ * Eigenschap namen across two koppelingen
+ * ---------------------------------------------------------------------------
+ *
+ * The hoofdzaak and the doorkomst zaaktype each have their own koppeling, and
+ * a koppeling decides what the catalogus on that side calls an eigenschap. So
+ * a value has to travel hoofdzaak naam → logical key → deel naam, both when it
+ * is copied onto the deelzaak and when the created deelzaak is read back into
+ * reference_data. Matching the namen literally skips the value in silence.
+ */
+
+/** A doorkomst zaaktype for the passing municipality, with its own eigenschap map. */
+function doorkomstZaaktypeWithEigenschapMap(Municipality $passing, array $eigenschapMap): Zaaktype
+{
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $passing->id,
+        'identificatie' => 'DK-1',
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $passing->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'zaaktype_identificatie' => 'DK-1',
+        'eigenschap_map' => $eigenschapMap,
+    ]));
+
+    return $zaaktype;
+}
+
+/** Drop the evenement dates from the hoofdzaak so nothing can fall back to them. */
+function withoutEvenementDates(Zaak $hoofdzaak): void
+{
+    $hoofdzaak->update([
+        'reference_data' => new ZaakReferenceData(
+            ...array_merge($hoofdzaak->reference_data->toArray(), [
+                'start_evenement' => null,
+                'eind_evenement' => null,
+                'naam_evenement' => null,
+            ])
+        ),
+    ]);
+}
+
+test('reads the created deelzaak back onto the logical keys when its koppeling renames the eigenschappen', function () {
+    // The deel catalogus names the eigenschappen its own way, so the read-back
+    // has to be translated or the values never reach reference_data.
+    fakeDoorkomstZgw(deelZaakEigenschappen: [
+        ['naam' => '1.start evenement', 'waarde' => '2026-07-01 10:00'],
+        ['naam' => '2.eind evenement', 'waarde' => '2026-07-01 18:00'],
+        ['naam' => '3.naam evenement', 'waarde' => 'Zomerfeest'],
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withoutEvenementDates($scenario['hoofdzaak']);
+    doorkomstZaaktypeWithEigenschapMap($scenario['passing'], [
+        'start_evenement' => '1.start evenement',
+        'eind_evenement' => '2.eind evenement',
+        'naam_evenement' => '3.naam evenement',
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->start_evenement)->toBe('2026-07-01 10:00')
+        ->and($deel->reference_data->eind_evenement)->toBe('2026-07-01 18:00')
+        ->and($deel->reference_data->naam_evenement)->toBe('Zomerfeest');
+});
+
+test('a doorkomst koppeling that uses the logical keys reads back exactly as before', function () {
+    // Regression anchor for the read-back: an identity map changes nothing.
+    fakeDoorkomstZgw();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    doorkomstZaaktypeWithEigenschapMap($scenario['passing'], [
+        'start_evenement' => 'start_evenement',
+        'eind_evenement' => 'eind_evenement',
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->start_evenement)->toBe('2026-07-01 10:00')
+        ->and($deel->reference_data->eind_evenement)->toBe('2026-07-01 18:00');
+});
+
+/**
+ * Cross-instance doorkomst where the hoofdzaak read carries the given
+ * eigenschappen and the deel catalogus exposes the given eigenschap namen.
+ *
+ * @param  array<string, string>  $hoofdEigenschappen  hoofdzaak naam => waarde
+ * @param  array<string, string>  $deelCatalogus  deel catalogus naam => eigenschap slug
+ */
+function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, array $deelCatalogus): void
+{
+    $expanded = [];
+    foreach ($hoofdEigenschappen as $naam => $waarde) {
+        $expanded[] = ['naam' => $naam, 'waarde' => $waarde];
+    }
+
+    $catalogus = [];
+    foreach ($deelCatalogus as $naam => $slug) {
+        $catalogus[] = [
+            'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/'.$slug,
+            'naam' => $naam,
+        ];
+    }
+
+    Http::fake([
+        OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+            '_expand' => ['eigenschappen' => $expanded],
+        ], 200),
+        OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope($catalogus), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+/** The eigenschap urls the job posted onto the deelzaak, keyed by waarde. */
+function copiedZaakeigenschappen(): array
+{
+    return collect(Http::recorded())
+        ->filter(fn ($pair) => $pair[0]->method() === 'POST'
+            && str_contains((string) parse_url($pair[0]->url(), PHP_URL_PATH), '/zaakeigenschappen'))
+        ->mapWithKeys(fn ($pair) => [(string) ($pair[0]->data()['waarde'] ?? '') => (string) ($pair[0]->data()['eigenschap'] ?? '')])
+        ->all();
+}
+
+test('copies an eigenschap onto the deelzaak even when both koppelingen rename it differently', function () {
+    // Hoofdzaak catalogus calls it "A.…", deel catalogus "B.…". Only the logical
+    // key in between connects the two.
+    fakeDoorkomstWithCatalogusEigenschappen(
+        hoofdEigenschappen: ['A.naam evenement' => 'Zomerfeest', 'A.risico klasse' => 'C'],
+        deelCatalogus: ['B.naam evenement' => 'b-naam', 'B.risico klasse' => 'b-risico'],
+    );
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->zaaktype->update(['identificatie' => 'HZ-1']);
+    MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $scenario['hoofd']->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'HZ-1',
+        'eigenschap_map' => [
+            'naam_evenement' => 'A.naam evenement',
+            'risico_classificatie' => 'A.risico klasse',
+        ],
+    ]));
+    doorkomstZaaktypeWithEigenschapMap($scenario['passing'], [
+        'naam_evenement' => 'B.naam evenement',
+        'risico_classificatie' => 'B.risico klasse',
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect(copiedZaakeigenschappen())->toBe([
+        'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/b-naam',
+        'C' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/b-risico',
+    ]);
+});
+
+test('copies eigenschappen by their own naam when neither zaaktype has a koppeling', function () {
+    // Regression anchor for the copy: without any eigenschap map the namen match
+    // literally, exactly as they always did.
+    fakeDoorkomstWithCatalogusEigenschappen(
+        hoofdEigenschappen: ['naam_evenement' => 'Zomerfeest'],
+        deelCatalogus: ['naam_evenement' => 'plain-naam'],
+    );
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect(copiedZaakeigenschappen())->toBe([
+        'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/plain-naam',
+    ]);
 });

@@ -225,6 +225,10 @@ class CreateDoorkomstZaken implements ShouldQueue
         $deelConnectionName = $doorkomstZaaktype->zgwConnectionName();
         $deelConnection = Zgw::connection($deelConnectionName);
 
+        // The koppeling of the doorkomst zaaktype decides how its catalogus names
+        // the eigenschappen, both when writing them and when reading them back.
+        $deelMapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+
         $payload = [
             'zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url,
             'bronorganisatie' => $hoofdZaak->bronorganisatie,
@@ -254,7 +258,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             return;
         }
 
-        $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
+        $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping);
         $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
         $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
         $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
@@ -273,12 +277,18 @@ class CreateDoorkomstZaken implements ShouldQueue
                 'zaaktype_id' => $doorkomstZaaktype->id,
                 'hoofdzaak_id' => $this->zaak->id, // local hoofdzaak link (works cross-instance)
                 'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
-                'data_object_url' => null, // Objects API is in nieuwe flow weg
+                'data_object_url' => null, // the Objects API is no longer part of the new flow
                 'organisation_id' => $this->zaak->organisation_id,
                 'organiser_user_id' => $this->zaak->organiser_user_id,
                 'reference_data' => new ZaakReferenceData(
                     ...array_merge(
-                        $this->withEvenementDatesFromHoofdzaak($newOzZaak->eigenschappen_key_value),
+                        // Read back through the koppeling first: the deelzaak
+                        // returns its eigenschappen under the namen its own
+                        // catalogus uses, and a naam that is not translated back
+                        // to its logical key is dropped by ZaakReferenceData.
+                        $this->withEvenementDatesFromHoofdzaak(
+                            ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value)
+                        ),
                         [
                             'registratiedatum' => $newOzZaak->registratiedatum,
                             'status_name' => $newOzZaak->status_name ?? '',
@@ -287,9 +297,8 @@ class CreateDoorkomstZaken implements ShouldQueue
                         ]
                     )
                 ),
-                // Deelzaken krijgen dezelfde snapshot mee zodat ze zelfstandig
-                // vervolg-acties kunnen doen zonder van de hoofdzaak af te
-                // hangen.
+                // Deelzaken carry the same snapshot so they can perform follow-up
+                // actions on their own, without depending on the hoofdzaak.
                 'form_state_snapshot' => $state->toSnapshot(),
             ]
         );
@@ -350,18 +359,30 @@ class CreateDoorkomstZaken implements ShouldQueue
         return (string) ($this->zaak->organiserUser?->name);
     }
 
-    private function copyZaakeigenschappen(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
+    /**
+     * Copy the hoofdzaak eigenschappen onto the deelzaak.
+     *
+     * The two zaaktypen can have their own koppeling, so the same eigenschap can
+     * carry a different naam on each side. Matching the hoofdzaak naam against
+     * the deel catalogus directly therefore silently skips values whenever one
+     * of the two renames. The naam is routed through the logical key instead:
+     * hoofdzaak naam, logical key, deel naam.
+     */
+    private function copyZaakeigenschappen(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype, ?MunicipalityZaaktypeMapping $deelMapping): void
     {
         $newUuid = basename($newZaakUrl);
         $catalogi = $deelConnection->catalogi()->eigenschappen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])
             ->collect()
             ->map(fn ($e) => EigenschapData::from($e));
 
-        foreach ($ozZaak->eigenschappen_key_value as $naam => $waarde) {
+        $hoofdMapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $eigenschappen = ZaaktypeBlueprint::logicalEigenschappen($hoofdMapping, $ozZaak->eigenschappen_key_value);
+
+        foreach ($eigenschappen as $logicalKey => $waarde) {
             if (! $waarde) {
                 continue;
             }
-            $cat = $catalogi->firstWhere('naam', $naam);
+            $cat = $catalogi->firstWhere('naam', ZaaktypeBlueprint::eigenschapNaam($deelMapping, (string) $logicalKey));
             if (! $cat) {
                 continue;
             }
