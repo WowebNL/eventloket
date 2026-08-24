@@ -42,6 +42,28 @@ use Woweb\Openzaak\Openzaak;
 
 class ZaakInfolist
 {
+    /**
+     * Roles that handle a case and may therefore see the case parties:
+     * municipality staff, advisory staff and platform admins. The organiser
+     * role is deliberately absent — the organiser panel renders the same
+     * information schema.
+     *
+     * @var list<Role>
+     */
+    private const CASE_HANDLER_ROLES = [
+        Role::MunicipalityAdmin,
+        Role::ReviewerMunicipalityAdmin,
+        Role::Coordinator,
+        Role::Reviewer,
+        Role::Advisor,
+        Role::Admin,
+    ];
+
+    public static function isCaseHandler(): bool
+    {
+        return in_array(auth()->user()?->role, self::CASE_HANDLER_ROLES, true);
+    }
+
     public static function informationschema(): array
     {
         return [
@@ -60,6 +82,19 @@ class ZaakInfolist
             TextEntry::make('reference_data.organisator')
                 ->label(__('municipality/resources/zaak.columns.organisator.label'))
                 ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])),
+            TextEntry::make('organiserUser.name')
+                ->label(__('municipality/resources/zaak.columns.naam_organisator.label'))
+                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
+            TextEntry::make('organisation.name')
+                ->label(__('municipality/resources/zaak.columns.naam_organisatie.label'))
+                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
+            TextEntry::make('openzaak.zaakAddresses')
+                ->label(__('municipality/resources/zaak.columns.adres_evenement.label'))
+                ->listWithLineBreaks()
+                ->visible(fn (?array $state) => self::isCaseHandler() && ! empty($state)),
+            TextEntry::make('organisation.coc_number')
+                ->label(__('municipality/resources/zaak.columns.kvk_nummer_organisatie.label'))
+                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
             TextEntry::make('organisation.phone')
                 ->label(__('resources/zaak.columns.telefoon.label'))
                 ->visible(fn (?string $state) => ! empty($state)),
