@@ -15,6 +15,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
+use App\Support\RisicoClassificatie;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\StatusType;
@@ -76,6 +77,7 @@ class ZaakInfolist
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             TextEntry::make('reference_data.risico_classificatie')
                 ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
                 ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
@@ -220,6 +222,7 @@ class ZaakInfolist
                                     ->placeholder(__('municipality/resources/zaak.infolist.sections.actions.reviewer_user.placeholder')),
                                 TextEntry::make('reference_data.risico_classificatie')
                                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                                    ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
                                     ->suffix(function (Zaak $record) {
                                         if (! empty($record->reference_data->risico_toelichting)) {
                                             return new HtmlString(
@@ -249,12 +252,7 @@ class ZaakInfolist
                                             ->schema([
                                                 Select::make('risico_classificatie')
                                                     ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.fields.risico_classificatie.label'))
-                                                    ->options([
-                                                        '0' => '0',
-                                                        'A' => 'A',
-                                                        'B' => 'B',
-                                                        'C' => 'C',
-                                                    ])->required(),
+                                                    ->options(RisicoClassificatie::options())->required(),
                                                 Textarea::make('risico_toelichting')
                                                     ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.fields.risico_classificatie_toelichting.label'))
                                                     ->rows(3)
