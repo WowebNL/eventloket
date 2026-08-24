@@ -33,6 +33,14 @@ test('existing channels keep their classification', function () {
         ->and(classify('update', 'documenten', 'enkelvoudiginformatieobject'))->toBe(OpenNotificationType::UpdatedZaakDocument);
 });
 
+test('an eigenschap added to the zaak refreshes the reference data too', function () {
+    // Only update/partial_update used to match, so an eigenschap first filled in
+    // outside Eventloket never reached the zaak.
+    expect(classify('create', 'zaken', 'zaakeigenschap'))->toBe(OpenNotificationType::UpdateZaakEigenschap)
+        ->and(classify('update', 'zaken', 'zaakeigenschap'))->toBe(OpenNotificationType::UpdateZaakEigenschap)
+        ->and(classify('destroy', 'zaken', 'zaakeigenschap'))->toBeNull();
+});
+
 test('the besluiten channel is classified so a zaak drops its cached besluiten', function () {
     // We subscribe to this channel; before it was handled the notification was
     // dropped and a besluit taken in the ZGW backend never reached the zaak.

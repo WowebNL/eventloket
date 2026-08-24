@@ -20,7 +20,10 @@ class GetIncommingNotificationType
     {
         $data = $notification->toArray();
 
-        if (($data['actie'] === 'update' || $data['actie'] === 'partial_update') && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaakeigenschap') {
+        // `create` is included: an eigenschap added to the zaak in the
+        // zaaksysteem carries a value we display, so it has to refresh the
+        // reference data just like a changed one.
+        if (in_array($data['actie'], ['create', 'update', 'partial_update'], true) && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaakeigenschap') {
             return OpenNotificationType::UpdateZaakEigenschap;
         } elseif ($data['actie'] === 'create' && $data['kanaal'] === 'zaken' && $data['resource'] === 'status') {
             // zaak status created, this happens when a status is changed on a zaak
