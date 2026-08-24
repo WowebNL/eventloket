@@ -128,6 +128,78 @@ test('background callers can opt in to a longer timeout budget', function () {
         ->and($options['timeout'])->toEqual(20.0);
 });
 
+test('an empty timeout setting falls back to the default budget', function () {
+    // An operator who blanks out LOCATIESERVER_TIMEOUT gets an empty string,
+    // and casting that straight to float would hand Guzzle a 0 it reads as
+    // "wait indefinitely" — worse than the framework defaults this replaces.
+    Config::set('services.locatieserver.connect_timeout', '');
+    Config::set('services.locatieserver.timeout', '');
+
+    $options = captureRequestOptions();
+
+    (new LocatieserverService)->getBagObjectById('0123456789');
+
+    expect($options['connect_timeout'])->toEqual(2.0)
+        ->and($options['timeout'])->toEqual(5.0);
+});
+
+test('timeout settings missing from the config fall back to the default budget', function () {
+    // What a config cache built before these keys existed looks like.
+    Config::set('services.locatieserver', ['base_url' => 'https://locatieserver.test']);
+
+    $options = captureRequestOptions();
+
+    (new LocatieserverService)->getBagObjectById('0123456789');
+
+    expect($options['connect_timeout'])->toEqual(2.0)
+        ->and($options['timeout'])->toEqual(5.0);
+});
+
+test('the background budget falls back to its own defaults when the config is missing', function () {
+    Config::set('services.locatieserver', ['base_url' => 'https://locatieserver.test']);
+
+    $options = captureRequestOptions();
+
+    (new LocatieserverService)->forBackgroundWork()->getBagObjectById('0123456789');
+
+    expect($options['connect_timeout'])->toEqual(5.0)
+        ->and($options['timeout'])->toEqual(20.0);
+});
+
+test('a timeout configured below the floor is raised to it instead of left unlimited', function () {
+    Config::set('services.locatieserver.connect_timeout', 0);
+    Config::set('services.locatieserver.timeout', 0);
+
+    $options = captureRequestOptions();
+
+    (new LocatieserverService)->getBagObjectById('0123456789');
+
+    expect($options['connect_timeout'])->toBeGreaterThan(0.0)
+        ->and($options['timeout'])->toBeGreaterThan(0.0);
+});
+
+test('a caller can tell an unreachable Locatieserver from an address it does not know', function () {
+    fakeUnreachablePdok();
+
+    $service = new LocatieserverService;
+    $service->getBagObjectById('0123456789');
+
+    expect($service->lastRequestWasUnreachable())->toBeTrue();
+});
+
+test('an answered request is not reported as unreachable', function () {
+    Http::fake([
+        'https://locatieserver.test/*' => Http::response('Service Unavailable', 503),
+    ]);
+
+    $service = new LocatieserverService;
+    $service->getBagObjectById('0123456789');
+
+    // PDOK answered, so there is nothing to come back for; only a transport
+    // failure leaves the question genuinely unanswered.
+    expect($service->lastRequestWasUnreachable())->toBeFalse();
+});
+
 test('opting in to the background budget leaves the original service untouched', function () {
     $service = new LocatieserverService;
     $service->forBackgroundWork();
