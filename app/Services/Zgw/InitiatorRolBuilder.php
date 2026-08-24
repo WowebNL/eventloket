@@ -130,8 +130,9 @@ final class InitiatorRolBuilder
      * recognisable, and the alternative is a 400 on the rol POST that aborts
      * the submit chain and leaves the zaak without an initiator. Values that
      * only mean something whole are dropped instead of cut; see
-     * {@see self::kvkNummer()} and {@see self::verblijfsadres()}. A value at or
-     * under its bound is left byte-for-byte as is.
+     * {@see self::contactpersoonRol()}, {@see self::kvkNummer()} and
+     * {@see self::verblijfsadres()}. A value at or under its bound is left
+     * byte-for-byte as is.
      */
     private static function bounded(mixed $value, int $max): ?string
     {
@@ -150,7 +151,16 @@ final class InitiatorRolBuilder
      * so an organisation with a KvK number and a long contact name is bounded
      * just like a natuurlijk persoon. More of the name survives elsewhere
      * (afwijkendeNaamBetrokkene, geslachtsnaam plus voornamen), whose bounds
-     * are far wider, so a plain cut to the hard limit is enough here.
+     * are far wider, so a plain cut to the hard limit is enough there.
+     *
+     * emailadres is the exception and is dropped instead of cut, for the same
+     * reason as kvkNummer and aoaPostcode: the schema types it as a string with
+     * maxLength 254 *and* format email, so a value cut at 254 is either no
+     * longer an address at all (the part after the @ is what gets removed) or,
+     * worse, a valid address belonging to someone else. Both outcomes are worse
+     * than sending no address: the first still returns the 400 this bound is
+     * meant to avoid, the second routes correspondence to a stranger. The field
+     * is optional on the schema, so leaving it out keeps the rol valid.
      *
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>|null
@@ -165,7 +175,6 @@ final class InitiatorRolBuilder
 
         $maxima = [
             'naam' => $naamMax,
-            'emailadres' => self::EMAILADRES_MAX,
             'telefoonnummer' => self::TELEFOONNUMMER_MAX,
         ];
 
@@ -173,6 +182,13 @@ final class InitiatorRolBuilder
             if (isset($contactpersoon[$field]) && is_string($contactpersoon[$field])) {
                 $contactpersoon[$field] = Str::substr($contactpersoon[$field], 0, $max);
             }
+        }
+
+        if (isset($contactpersoon['emailadres'])
+            && is_string($contactpersoon['emailadres'])
+            && Str::length($contactpersoon['emailadres']) > self::EMAILADRES_MAX
+        ) {
+            unset($contactpersoon['emailadres']);
         }
 
         return $contactpersoon;

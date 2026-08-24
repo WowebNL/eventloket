@@ -412,15 +412,26 @@ function rolPayloadBounds(): array
 }
 
 /**
- * Assert that no string in the payload is longer than its schema bound. The
- * offending paths are collected first so a failure names every field at once
- * instead of stopping at the first.
+ * Assert that no string in the payload is longer than its schema bound, and
+ * that an emailadres that did survive is still a usable address. The offending
+ * paths are collected first so a failure names every field at once instead of
+ * stopping at the first.
+ *
+ * The email check is what a plain length check cannot catch: the schema types
+ * contactpersoonRol.emailadres as format email, so an address cut at 254 would
+ * pass the bound while no longer being an address (or being someone else's).
+ * Dropping it leaves the key absent, which passes both checks.
  *
  * @param  array<string, mixed>  $rol
  */
 function expectRolWithinSchemaBounds(array $rol): void
 {
     $violations = [];
+
+    $emailadres = data_get($rol, 'contactpersoonRol.emailadres');
+    if ($emailadres !== null && filter_var($emailadres, FILTER_VALIDATE_EMAIL) === false) {
+        $violations['contactpersoonRol.emailadres'] = 'not a valid email address';
+    }
 
     foreach (rolPayloadBounds() as $path => $max) {
         $value = data_get($rol, $path);
@@ -603,7 +614,11 @@ test('keeps a huisnummer at exactly the schema maximum', function () {
     expect($rol['betrokkeneIdentificatie']['verblijfsadres']['aoaHuisnummer'])->toBe(99999);
 });
 
-test('cuts the contactpersoonRol contact details to their schema bounds', function () {
+test('drops an oversized contactpersoonRol emailadres and cuts the other contact details to their schema bounds', function () {
+    // The schema types emailadres as format email as well as maxLength 254, so
+    // cutting a long address at 254 would remove the part after the @ and leave
+    // a value that is not an address (or, on a shorter cut, someone else's).
+    // The field is optional, so it is dropped instead.
     $state = FormState::fromSnapshot(['values' => []]);
 
     $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
@@ -616,10 +631,28 @@ test('cuts the contactpersoonRol contact details to their schema bounds', functi
         ],
     ]);
 
-    expect(mb_strlen($rol['contactpersoonRol']['emailadres']))->toBe(254)
-        ->and($rol['contactpersoonRol']['emailadres'])->toBe(str_repeat('e', 254))
+    expect($rol['contactpersoonRol'])->not->toHaveKey('emailadres')
         ->and($rol['contactpersoonRol']['telefoonnummer'])->toBe(str_repeat('0', 20))
         ->and($rol['contactpersoonRol']['naam'])->toBe('Contact Persoon');
+});
+
+test('keeps a contactpersoonRol emailadres at or under its bound byte-for-byte unchanged', function () {
+    // Boundary anchor next to the drop above: an address of exactly 254
+    // characters is inside the bound and must be sent as typed.
+    $atLimit = str_repeat('e', 254 - mb_strlen('@example.test')).'@example.test';
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'contactpersoon' => [
+            'naam' => 'Contact Persoon',
+            'emailadres' => $atLimit,
+        ],
+    ]);
+
+    expect(mb_strlen($atLimit))->toBe(254)
+        ->and($rol['contactpersoonRol']['emailadres'])->toBe($atLimit);
 });
 
 test('cuts the vestiging handelsnaam to 625 and keeps a name at the bound unchanged', function () {
