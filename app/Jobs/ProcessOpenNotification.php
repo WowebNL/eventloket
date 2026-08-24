@@ -19,7 +19,11 @@ class ProcessOpenNotification implements ShouldQueue
     public function handle(GetIncommingNotificationType $typeProcessor): void
     {
         match ($typeProcessor->handle($this->notification)) {
-            OpenNotificationType::UpdateZaakEigenschap => ClearZaakCache::dispatch($this->notification),
+            // Delay so the burst of zaakeigenschap notifications one zaak fires
+            // (every eigenschap is written separately, all sharing the same
+            // hoofdObject) collapses into the one unique job, instead of a full
+            // ZGW refetch per eigenschap.
+            OpenNotificationType::UpdateZaakEigenschap => ClearZaakCache::dispatch($this->notification)->delay(now()->addSeconds(30)),
             OpenNotificationType::ZaakStatusChanged => ZaakStatusNotificationReceived::dispatch($this->notification),
             OpenNotificationType::NewZaakDocument => DocumentNotificationReceived::dispatch($this->notification, true)->delay(now()->addSeconds(10)), // delay because document needs to be linked to the zaak first
             OpenNotificationType::UpdatedZaakDocument => DocumentNotificationReceived::dispatch($this->notification, false)->delay(now()->addSeconds(10)),
