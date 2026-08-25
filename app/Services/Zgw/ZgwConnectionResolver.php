@@ -8,6 +8,8 @@ use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\ValueObjects\OpenNotification;
+use App\ValueObjects\ZGW\NotificationConnectionResolution;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -173,6 +175,190 @@ class ZgwConnectionResolver
     }
 
     /**
+     * Resolve which connection an incoming notification belongs to, without
+     * contacting any ZGW instance.
+     *
+     * Unlike {@see forUrl()} this does not assume a host belongs to a single
+     * connection. Several connections may be configured against the same
+     * instance, each with its own credentials, so the layers are:
+     *
+     * 0. an exact local match on the object url (a zaak or a zaaktype version we
+     *    already know) is ground truth and needs nothing else;
+     * 1. otherwise the connections that have the url's host configured are the
+     *    candidates. One candidate is the answer. Several candidates are told
+     *    apart by the notification's organisation kenmerk, matched against each
+     *    candidate's bronorganisatie RSIN.
+     *
+     * A kenmerk that matches no candidate means the notification is about
+     * another organisation on a shared instance. When there is no kenmerk to go
+     * on, the resolution stays undecided and the candidates are handed back so a
+     * caller can try to read the resource with each of them in turn.
+     *
+     * The candidate set never widens the trust boundary: it only ever contains
+     * connections that already have this host in their own allowlist, so no
+     * connection is asked to send its token anywhere it was not already
+     * configured to talk to.
+     */
+    public function forNotification(OpenNotification $notification): NotificationConnectionResolution
+    {
+        $url = $notification->hoofdObject;
+
+        $local = $this->localMatch($url);
+
+        if ($local !== null) {
+            return NotificationConnectionResolution::decided($local);
+        }
+
+        $host = $this->host($url);
+        $candidates = $host === null ? [] : $this->candidatesForHost($host);
+
+        if ($candidates === []) {
+            // No connection claims this host. Keep the historical fallback: the
+            // read then fails on the connection allowlist, which is the correct
+            // outcome for a host we are not configured to talk to.
+            return NotificationConnectionResolution::decided(self::DEFAULT_CONNECTION);
+        }
+
+        if (count($candidates) === 1) {
+            return NotificationConnectionResolution::decided($candidates[0]);
+        }
+
+        $organisatie = $this->notificationOrganisatie($notification);
+
+        if ($organisatie === null) {
+            return NotificationConnectionResolution::undecided($candidates);
+        }
+
+        $matches = array_values(array_filter(
+            $candidates,
+            fn (string $candidate): bool => $this->connectionRsin($candidate) === $organisatie,
+        ));
+
+        return match (count($matches)) {
+            1 => NotificationConnectionResolution::decided($matches[0]),
+            0 => NotificationConnectionResolution::foreign($candidates, $organisatie),
+            // Several candidates share an RSIN, so the kenmerk does not
+            // discriminate; narrow the candidates and let the caller decide.
+            default => NotificationConnectionResolution::undecided($matches),
+        };
+    }
+
+    /**
+     * The connection of a local row that already records this exact url: the
+     * zaak of a zaken-channel notification, or the zaaktype version of a
+     * zaaktypen-channel one. Null when there is no row, or when rows on more
+     * than one connection record the same url (which decides nothing).
+     */
+    private function localMatch(string $url): ?string
+    {
+        $zaak = Zaak::query()->where('zgw_zaak_url', $url)->first();
+
+        if ($zaak !== null) {
+            return $this->for($zaak);
+        }
+
+        $connections = Zaaktype::query()
+            ->where('zgw_zaaktype_url', $url)
+            ->get()
+            ->map(fn (Zaaktype $zaaktype): string => $this->for($zaaktype))
+            ->unique()
+            ->values();
+
+        return $connections->count() === 1 ? (string) $connections->first() : null;
+    }
+
+    /**
+     * Every connection that has the given host explicitly configured, in a
+     * deterministic order: the main connection first, then per-municipality
+     * connections by municipality id.
+     *
+     * A municipality connection whose config cannot be built (it then routes to
+     * main, logged by {@see register()}) is left out: it cannot be used to read
+     * anything anyway.
+     *
+     * Note what "main first" means for the read-attempt fallback in
+     * {@see NotificationResourceReader}: it probes candidates in this order and
+     * takes the first one allowed to read the resource. On an instance that main
+     * shares with municipality connections, main therefore wins every probe for
+     * which its credentials happen to be authorised, even when the resource
+     * belongs to a municipality. The attribution that follows (the municipality
+     * on the request log, and which catalogus a zaaktype refresh runs against)
+     * is then main's, not the owner's.
+     *
+     * That only bites when the probe is reached at all, so the way to keep
+     * attribution correct on a shared host is to make sure it is not: give every
+     * connection on such a host its own bronorganisatie RSIN, so the organisation
+     * kenmerk decides before any probe runs. See {@see connectionRsin()} for the
+     * inheritance that makes an unset RSIN easy to miss.
+     *
+     * @return list<string>
+     */
+    private function candidatesForHost(string $host): array
+    {
+        $candidates = [];
+
+        if (in_array($host, $this->configHosts((array) config('zgw.connections.main', [])), true)) {
+            $candidates[] = self::DEFAULT_CONNECTION;
+        }
+
+        $connections = MunicipalityZgwConnection::query()
+            ->active()
+            ->with('municipality')
+            ->orderBy('municipality_id')
+            ->get();
+
+        foreach ($connections as $connection) {
+            if (! in_array($host, $this->connectionHosts($connection), true)) {
+                continue;
+            }
+
+            $name = $this->forMunicipality($connection->municipality);
+
+            if ($name !== self::DEFAULT_CONNECTION) {
+                $candidates[] = $name;
+            }
+        }
+
+        return array_values(array_unique($candidates));
+    }
+
+    /**
+     * The RSIN of the organisation a notification is about, per channel: the
+     * zaken and documenten channels carry `bronorganisatie`, the besluiten
+     * channel `verantwoordelijkeOrganisatie`. Both map onto the same RSIN on our
+     * side. The zaaktypen channel carries no organisation at all (its kenmerk is
+     * the catalogus), so it always resolves through the other layers.
+     */
+    private function notificationOrganisatie(OpenNotification $notification): ?string
+    {
+        return match ($notification->kanaal) {
+            'zaken', 'documenten' => $notification->kenmerk('bronorganisatie'),
+            'besluiten' => $notification->kenmerk('verantwoordelijkeOrganisatie') ?? $notification->kenmerk('bronorganisatie'),
+            default => null,
+        };
+    }
+
+    /**
+     * The bronorganisatie RSIN a connection acts as. Candidates are registered
+     * into the runtime config before this is read, so both the main connection
+     * and per-municipality connections resolve through the same config path.
+     *
+     * A per-municipality connection that leaves its RSIN empty inherits main's
+     * (see {@see MunicipalityZgwConnection::buildConfig()}), which is what makes
+     * kenmerk matching on such a row surprising: it never matches the
+     * municipality's own organisation, so its notifications look like another
+     * organisation's on a shared host, while it does match every notification
+     * carrying main's RSIN. Connections that share a host are therefore expected
+     * to set their own RSIN.
+     */
+    private function connectionRsin(string $connection): ?string
+    {
+        $rsin = trim((string) config("zgw.connections.{$connection}.bronorganisatie_rsin", ''));
+
+        return $rsin === '' ? null : $rsin;
+    }
+
+    /**
      * Every host that belongs to a trusted ZGW connection: the main connection's
      * URLs and allowed_hosts, the legacy OpenZaak host, and each activated
      * per-municipality connection's explicit URLs and allowed_hosts. An inactive
@@ -292,6 +478,16 @@ class ZgwConnectionResolver
 
             foreach ($hostOwners as $host => $owners) {
                 if (count($owners) !== 1) {
+                    // Not an error: several connections may share one instance
+                    // by design. Logged because it is the reason url-only
+                    // attribution cannot decide, and knowing which hosts are
+                    // shared is the first thing you want when a notification
+                    // takes the candidate route.
+                    Log::warning('ZGW host is configured on more than one connection; url-only attribution is ambiguous.', [
+                        'host' => $host,
+                        'owners' => array_map(static fn (int|string $owner): string => (string) $owner, array_keys($owners)),
+                    ]);
+
                     continue;
                 }
 

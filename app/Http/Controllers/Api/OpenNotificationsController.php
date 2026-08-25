@@ -27,6 +27,10 @@ class OpenNotificationsController extends Controller
             hoofdObject: $data['hoofdObject'],
             resourceUrl: $data['resourceUrl'],
             aanmaakdatum: $data['aanmaakdatum'],
+            // Carried through to the queued job: the kenmerken are what tells a
+            // handler which connection owns the notification when several share
+            // a host.
+            kenmerken: OpenNotification::normaliseKenmerken($data['kenmerken'] ?? null),
         );
 
         $this->logIncomingNotification($notification);

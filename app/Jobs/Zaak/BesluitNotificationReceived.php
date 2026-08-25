@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Jobs\Zaak;
 
+use App\Exceptions\UnresolvedNotificationConnectionException;
 use App\Models\Zaak;
-use App\Services\Zgw\ZgwConnectionResolver;
+use App\Services\Zgw\NotificationResourceReader;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
-use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Clears a zaak's cached besluiten when the besluiten channel reports a change.
@@ -30,13 +29,45 @@ class BesluitNotificationReceived implements ShouldQueue
     public function handle(): void
     {
         $besluitUrl = $this->notification->hoofdObject;
+        $reader = app(NotificationResourceReader::class);
+
+        // Deliberately outside the catch below: failing to work out which
+        // connection owns the besluit is not "could not read this besluit". It
+        // used to end up in that warning, which turned every besluit taken on a
+        // shared instance into a silent drop that left the zaak page stale.
+        try {
+            $resource = $reader->resolve($this->notification);
+        } catch (UnresolvedNotificationConnectionException $e) {
+            if ($e->allCandidatesReportGone()) {
+                // Every connection that could own this besluit reports it as
+                // gone. That is a destroy, or a replay of a payload queued
+                // before the notification carried an organisation kenmerk;
+                // either way there is no besluit left to read and no cache to
+                // clear, so it is not a failure. A refusal (any other status)
+                // still falls through and fails the job.
+                Log::warning('Besluit notification for a besluit that no longer exists on any connection ignored.', [
+                    'besluit' => $besluitUrl,
+                    'actie' => $this->notification->actie,
+                    'attempts' => $e->attempts,
+                ]);
+
+                return;
+            }
+
+            throw $e;
+        }
+
+        if ($resource === null) {
+            // Another organisation's besluit on a shared instance.
+            return;
+        }
 
         try {
-            $connectionName = app(ZgwConnectionResolver::class)->forUrl($besluitUrl);
-            $besluit = (new DirectEndpoint(Zgw::connection($connectionName)))->getByUrl($besluitUrl);
+            $besluit = $reader->read($resource, $this->notification);
         } catch (\Throwable $e) {
             Log::warning('Could not read besluit for a besluiten notification: '.$e->getMessage(), [
                 'besluit' => $besluitUrl,
+                'connection' => $resource->connection,
             ]);
 
             return;

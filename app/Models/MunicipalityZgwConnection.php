@@ -217,6 +217,16 @@ class MunicipalityZgwConnection extends Model
      * back to "main" rather than letting the package throw a WeakSecretException
      * later, at an arbitrary call site.
      *
+     * Inheritance deserves one warning. `bronorganisatie_rsin` is inherited like
+     * every other unset value, so a row that leaves it empty acts as main's
+     * organisation. That is fine for writing (the zaken this connection creates
+     * carry main's RSIN, which is what it did before this column existed), but it
+     * also decides which incoming notifications are attributed to this connection
+     * when it shares a ZGW host with another one: the row then matches main's
+     * organisation instead of the municipality's own. Give every connection on a
+     * shared host its own RSIN. See
+     * {@see ZgwConnectionResolver::connectionRsin()}.
+     *
      * @return array<string, mixed>
      */
     public function buildConfig(): array

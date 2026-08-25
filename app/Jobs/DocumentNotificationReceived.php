@@ -5,10 +5,9 @@ namespace App\Jobs;
 use App\Enums\Role;
 use App\Models\Zaak;
 use App\Notifications\NewZaakDocument;
+use App\Services\Zgw\NotificationResourceReader;
 use App\Services\Zgw\SubmissionDocumentDetector;
 use App\Services\Zgw\ZgwConnectionConfig;
-use App\Services\Zgw\ZgwConnectionResolver;
-use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OpenNotification;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -34,13 +33,20 @@ class DocumentNotificationReceived implements ShouldQueue
      */
     public function handle(): void
     {
-        // The incoming document URL determines which ZGW connection it belongs
-        // to. Resolved here (never serialized) so per-municipality connections
-        // route the read to the right instance once host matching lands.
-        $connectionName = app(ZgwConnectionResolver::class)->forUrl($this->notification->hoofdObject);
-        $connection = Zgw::connection($connectionName);
+        // Which connection this document belongs to is resolved here (never
+        // serialized), so the read runs against the instance that owns it even
+        // when several connections are configured against the same host.
+        $reader = app(NotificationResourceReader::class);
+        $resource = $reader->resolve($this->notification);
 
-        $informatieobject = new Informatieobject(...ZgwResource::byUrl($connectionName, $this->notification->hoofdObject));
+        if ($resource === null) {
+            // Another organisation's document on a shared instance.
+            return;
+        }
+
+        $connection = Zgw::connection($resource->connection);
+
+        $informatieobject = new Informatieobject(...$reader->read($resource, $this->notification));
 
         if ($this->isNew) {
             // ignore documents received while creating the zaak
@@ -64,9 +70,10 @@ class DocumentNotificationReceived implements ShouldQueue
         if (Arr::has($zaakinformatieObject, 'zaak') && $zaakUrl = Arr::get($zaakinformatieObject, 'zaak')) {
             $zaak = Zaak::where('zgw_zaak_url', $zaakUrl)->first();
             if ($zaak) {
-                // Versie 1 van inzendingsdocumenten (aanvraagformulier-PDF en form-bijlagen)
-                // triggert geen notificatie — de organisator krijgt al de bevestigingsmail.
-                // Versie 2+ (isNew=false) triggert wel een notificatie.
+                // Version 1 of a submission document (the application form PDF
+                // and its attachments) triggers no notification: the organiser
+                // already receives the confirmation mail. Version 2 and up
+                // (isNew=false) does trigger one.
                 if ($isNew && SubmissionDocumentDetector::isSubmissionDocument($informatieobject, $zaak)) {
                     $zaak->clearZgwCache();
 
