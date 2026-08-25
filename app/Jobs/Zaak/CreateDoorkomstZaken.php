@@ -6,33 +6,38 @@ namespace App\Jobs\Zaak;
 
 use App\Actions\Geospatial\CheckIntersects;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Municipality;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
-use App\Normalizers\OpenFormsNormalizer;
-use App\Support\Helpers\ArrayHelper;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
+use Brick\Geo\Curve;
 use Brick\Geo\Engine\PdoEngine;
-use Brick\Geo\Io\GeoJsonReader;
-use Brick\Geo\LineString;
+use Brick\Geo\Geometry;
+use Brick\Geo\GeometryCollection;
+use Brick\Geo\Point;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Woweb\Openzaak\Openzaak;
 
 /**
- * Voor route-events (zaaktype met `triggers_route_check = true`): maakt
- * per gemeente waar de route doorheen loopt (exclusief start- en
- * eindgemeente) een "doorkomst"-deelzaak aan en kopieert relevante
- * eigenschappen / initiator / documenten / initiële status.
+ * For route events (a zaaktype with `triggers_route_check = true`): creates
+ * a "doorkomst" deelzaak for every municipality a route passes through
+ * (excluding the start and end municipality) and copies the relevant
+ * eigenschappen / initiator / documents / initial status.
  *
- * Input is nu `Zaak`; de LineString komt uit `form_state_snapshot`
- * via `ZaakeigenschappenMap::buildEventLocation()`.
+ * Input is a `Zaak`; the routes come from `form_state_snapshot` via
+ * `ZaakeigenschappenMap::buildEventLocation()`. An event can have more than
+ * one route drawn on the map, so all of them are read and the result is the
+ * union of the municipalities they cross, minus the start and end
+ * municipalities of all routes together.
  */
 class CreateDoorkomstZaken implements ShouldQueue
 {
@@ -50,30 +55,19 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
 
         $state = FormState::fromSnapshot($this->zaak->form_state_snapshot ?? []);
-        $lineArray = $this->extractLineArray($map->buildEventLocation($state));
-        if (! $lineArray) {
+        $lines = $this->extractLines($map->buildEventLocation($state));
+        if ($lines === []) {
             return;
         }
-
-        /** @var LineString $line */
-        $line = (new GeoJsonReader)->read((string) json_encode($lineArray));
 
         $engine = new PdoEngine(DB::connection()->getPdo());
         $checkIntersects = new CheckIntersects($engine);
 
-        $all = $checkIntersects->checkIntersectsWithModels($line);
-        $startModels = $checkIntersects->checkIntersectsWithModels($line->startPoint());
-        $endModels = $checkIntersects->checkIntersectsWithModels($line->endPoint());
-
-        $excluded = $startModels->pluck('brk_identification')
-            ->merge($endModels->pluck('brk_identification'))
-            ->unique()
-            ->toArray();
+        $passing = $this->passingMunicipalities($lines, $checkIntersects);
 
         $hoofdZaakMuniBrk = $this->zaak->municipality?->brk_identification;
 
-        $passing = $all->reject(fn ($m) => in_array($m->brk_identification, $excluded, true))
-            ->reject(fn ($m) => $hoofdZaakMuniBrk && $m->brk_identification === $hoofdZaakMuniBrk);
+        $passing = $passing->reject(fn ($m) => $hoofdZaakMuniBrk && $m->brk_identification === $hoofdZaakMuniBrk);
         if ($passing->isEmpty()) {
             return;
         }
@@ -88,23 +82,82 @@ class CreateDoorkomstZaken implements ShouldQueue
     }
 
     /**
+     * All routes drawn on the map, parsed with the very same parser the
+     * submit flow uses. That parser understands both the current map state
+     * (one FeatureCollection holding N routes) and the old repeater rows
+     * kept in existing drafts.
+     *
      * @param  array<string, mixed>  $eventLocation
-     * @return array<string, mixed>|null
+     * @return list<Geometry>
      */
-    private function extractLineArray(array $eventLocation): ?array
+    private function extractLines(array $eventLocation): array
     {
         $line = $eventLocation['line'] ?? null;
-        if (! $line || $line === 'None') {
-            return null;
+        if (empty($line) || $line === 'None') {
+            return [];
         }
 
-        $json = is_array($line) ? json_encode($line) : OpenFormsNormalizer::normalizeGeoJson($line);
-        $decoded = json_decode((string) $json, true);
-        if (! is_array($decoded)) {
-            return null;
+        return array_values(array_filter(
+            EventLocationGeometryBuilder::parseLines($line),
+            static fn (Geometry $geometry) => ! $geometry->isEmpty(),
+        ));
+    }
+
+    /**
+     * The union of the municipalities the routes pass through, minus the
+     * start and end municipalities of ALL routes. The exclusion is deliberately
+     * global and not per route: a municipality where any route begins or ends
+     * is a start or end municipality for this event, so it never gets a
+     * doorkomst deelzaak, not even when another route merely passes through it.
+     *
+     * @param  list<Geometry>  $lines
+     * @return Collection<int, Municipality>
+     */
+    private function passingMunicipalities(array $lines, CheckIntersects $checkIntersects): Collection
+    {
+        $excluded = [];
+        $passing = new Collection;
+
+        foreach ($lines as $line) {
+            foreach ($this->boundaryPoints($line) as $point) {
+                foreach ($checkIntersects->checkIntersectsWithModels($point) as $municipality) {
+                    $excluded[] = $municipality->brk_identification;
+                }
+            }
+
+            $passing = $passing->merge($checkIntersects->checkIntersectsWithModels($line));
         }
 
-        return ArrayHelper::findElementWithKey($decoded, 'coordinates');
+        return $passing
+            ->reject(fn ($m) => in_array($m->brk_identification, $excluded, true))
+            ->unique('brk_identification')
+            ->values();
+    }
+
+    /**
+     * Start and end points of a route. A route drawn as a MultiLineString has
+     * no start point of its own, so its parts are walked instead.
+     *
+     * @return list<Point>
+     */
+    private function boundaryPoints(Geometry $geometry): array
+    {
+        if ($geometry instanceof Curve) {
+            return $geometry->isEmpty() ? [] : [$geometry->startPoint(), $geometry->endPoint()];
+        }
+
+        if ($geometry instanceof GeometryCollection) {
+            $points = [];
+            foreach ($geometry->geometries() as $part) {
+                foreach ($this->boundaryPoints($part) as $point) {
+                    $points[] = $point;
+                }
+            }
+
+            return $points;
+        }
+
+        return [];
     }
 
     private function createDeelzaakFor(Openzaak $openzaak, OzZaak $hoofdZaak, Municipality $muniRef, FormState $state): void
