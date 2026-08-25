@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs\Zaak;
 
+use App\Exceptions\UnresolvedNotificationConnectionException;
 use App\Models\Zaak;
 use App\Services\Zgw\NotificationResourceReader;
 use App\ValueObjects\OpenNotification;
@@ -34,7 +35,27 @@ class BesluitNotificationReceived implements ShouldQueue
         // connection owns the besluit is not "could not read this besluit". It
         // used to end up in that warning, which turned every besluit taken on a
         // shared instance into a silent drop that left the zaak page stale.
-        $resource = $reader->resolve($this->notification);
+        try {
+            $resource = $reader->resolve($this->notification);
+        } catch (UnresolvedNotificationConnectionException $e) {
+            if ($e->allCandidatesReportGone()) {
+                // Every connection that could own this besluit reports it as
+                // gone. That is a destroy, or a replay of a payload queued
+                // before the notification carried an organisation kenmerk;
+                // either way there is no besluit left to read and no cache to
+                // clear, so it is not a failure. A refusal (any other status)
+                // still falls through and fails the job.
+                Log::warning('Besluit notification for a besluit that no longer exists on any connection ignored.', [
+                    'besluit' => $besluitUrl,
+                    'actie' => $this->notification->actie,
+                    'attempts' => $e->attempts,
+                ]);
+
+                return;
+            }
+
+            throw $e;
+        }
 
         if ($resource === null) {
             // Another organisation's besluit on a shared instance.

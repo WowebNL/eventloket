@@ -15,6 +15,7 @@ use App\ValueObjects\OpenNotification;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -302,6 +303,29 @@ test('a besluit notification that cannot be attributed fails the job instead of 
     expect(fn () => dispatch(new BesluitNotificationReceived(
         tenantNotification('besluiten', 'besluit', $besluitUrl),
     )))->toThrow(UnresolvedNotificationConnectionException::class);
+});
+
+test('a besluit that is gone on every connection is logged and does not fail the job', function () {
+    Log::spy();
+    twoTenantsOnOneInstance();
+
+    $besluitUrl = SHARED.'/besluiten/api/v1/besluiten/gone';
+
+    Http::fake([
+        $besluitUrl => Http::response(['detail' => 'Not found'], 404),
+    ]);
+
+    // Nothing tells the candidates apart (a destroy, or a payload from before
+    // the kenmerken were carried through), and the besluit is gone everywhere.
+    dispatch(new BesluitNotificationReceived(
+        tenantNotification('besluiten', 'besluit', $besluitUrl, [], 'destroy'),
+    ));
+
+    expect(clientIdsUsedFor($besluitUrl))->toBe(['client-a', 'client-b']);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (...$args) => isset($args[0]) && is_string($args[0]) && str_contains($args[0], 'no longer exists on any connection'))
+        ->once();
 });
 
 test('a besluit that the owning connection cannot read is still only logged', function () {
