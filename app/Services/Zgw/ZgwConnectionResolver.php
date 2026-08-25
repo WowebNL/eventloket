@@ -276,6 +276,21 @@ class ZgwConnectionResolver
      * main, logged by {@see register()}) is left out: it cannot be used to read
      * anything anyway.
      *
+     * Note what "main first" means for the read-attempt fallback in
+     * {@see NotificationResourceReader}: it probes candidates in this order and
+     * takes the first one allowed to read the resource. On an instance that main
+     * shares with municipality connections, main therefore wins every probe for
+     * which its credentials happen to be authorised, even when the resource
+     * belongs to a municipality. The attribution that follows (the municipality
+     * on the request log, and which catalogus a zaaktype refresh runs against)
+     * is then main's, not the owner's.
+     *
+     * That only bites when the probe is reached at all, so the way to keep
+     * attribution correct on a shared host is to make sure it is not: give every
+     * connection on such a host its own bronorganisatie RSIN, so the organisation
+     * kenmerk decides before any probe runs. See {@see connectionRsin()} for the
+     * inheritance that makes an unset RSIN easy to miss.
+     *
      * @return list<string>
      */
     private function candidatesForHost(string $host): array
@@ -327,6 +342,14 @@ class ZgwConnectionResolver
      * The bronorganisatie RSIN a connection acts as. Candidates are registered
      * into the runtime config before this is read, so both the main connection
      * and per-municipality connections resolve through the same config path.
+     *
+     * A per-municipality connection that leaves its RSIN empty inherits main's
+     * (see {@see MunicipalityZgwConnection::buildConfig()}), which is what makes
+     * kenmerk matching on such a row surprising: it never matches the
+     * municipality's own organisation, so its notifications look like another
+     * organisation's on a shared host, while it does match every notification
+     * carrying main's RSIN. Connections that share a host are therefore expected
+     * to set their own RSIN.
      */
     private function connectionRsin(string $connection): ?string
     {

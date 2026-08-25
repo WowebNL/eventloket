@@ -90,6 +90,13 @@ return [
             */
 
             // RSIN used as bronorganisatie / verantwoordelijkeOrganisatie on every zaak.
+            //
+            // This is also the value a per-municipality connection inherits when its
+            // own bronorganisatie_rsin is empty, and incoming notifications are
+            // attributed by that RSIN when several connections share a ZGW host. A
+            // connection on a shared host that relies on this default is therefore
+            // read as main's organisation rather than the municipality's; configure
+            // its own RSIN on the connection instead.
             'bronorganisatie_rsin' => env('OPENZAAK_BRONORGANISATIE_RSIN', '820151130'),
 
         ],
