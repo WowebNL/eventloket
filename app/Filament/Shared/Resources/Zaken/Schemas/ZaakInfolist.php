@@ -15,6 +15,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\ZaakStatusChanged;
+use App\Support\RisicoClassificatie;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\CatalogiEigenschap;
 use App\ValueObjects\ZGW\StatusType;
@@ -42,6 +43,28 @@ use Woweb\Openzaak\Openzaak;
 
 class ZaakInfolist
 {
+    /**
+     * Roles that handle a case and may therefore see the case parties:
+     * municipality staff, advisory staff and platform admins. The organiser
+     * role is deliberately absent — the organiser panel renders the same
+     * information schema.
+     *
+     * @var list<Role>
+     */
+    private const CASE_HANDLER_ROLES = [
+        Role::MunicipalityAdmin,
+        Role::ReviewerMunicipalityAdmin,
+        Role::Coordinator,
+        Role::Reviewer,
+        Role::Advisor,
+        Role::Admin,
+    ];
+
+    public static function isCaseHandler(): bool
+    {
+        return in_array(auth()->user()?->role, self::CASE_HANDLER_ROLES, true);
+    }
+
     public static function informationschema(): array
     {
         return [
@@ -54,12 +77,26 @@ class ZaakInfolist
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             TextEntry::make('reference_data.risico_classificatie')
                 ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
                 ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
             TextEntry::make('reference_data.organisator')
                 ->label(__('municipality/resources/zaak.columns.organisator.label'))
                 ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])),
+            TextEntry::make('organiserUser.name')
+                ->label(__('municipality/resources/zaak.columns.naam_organisator.label'))
+                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
+            TextEntry::make('organisation.name')
+                ->label(__('municipality/resources/zaak.columns.naam_organisatie.label'))
+                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
+            TextEntry::make('openzaak.zaakAddresses')
+                ->label(__('municipality/resources/zaak.columns.adres_evenement.label'))
+                ->listWithLineBreaks()
+                ->visible(fn (?array $state) => self::isCaseHandler() && ! empty($state)),
+            TextEntry::make('organisation.coc_number')
+                ->label(__('municipality/resources/zaak.columns.kvk_nummer_organisatie.label'))
+                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
             TextEntry::make('organisation.phone')
                 ->label(__('resources/zaak.columns.telefoon.label'))
                 ->visible(fn (?string $state) => ! empty($state)),
@@ -185,6 +222,7 @@ class ZaakInfolist
                                     ->placeholder(__('municipality/resources/zaak.infolist.sections.actions.reviewer_user.placeholder')),
                                 TextEntry::make('reference_data.risico_classificatie')
                                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                                    ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
                                     ->suffix(function (Zaak $record) {
                                         if (! empty($record->reference_data->risico_toelichting)) {
                                             return new HtmlString(
@@ -214,12 +252,7 @@ class ZaakInfolist
                                             ->schema([
                                                 Select::make('risico_classificatie')
                                                     ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.fields.risico_classificatie.label'))
-                                                    ->options([
-                                                        '0' => '0',
-                                                        'A' => 'A',
-                                                        'B' => 'B',
-                                                        'C' => 'C',
-                                                    ])->required(),
+                                                    ->options(RisicoClassificatie::options())->required(),
                                                 Textarea::make('risico_toelichting')
                                                     ->label(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_risico_classificatie.fields.risico_classificatie_toelichting.label'))
                                                     ->rows(3)

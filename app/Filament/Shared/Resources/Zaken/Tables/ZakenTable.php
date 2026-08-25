@@ -7,6 +7,7 @@ use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use App\Models\Advisory;
 use App\Models\Zaak;
+use App\Support\RisicoClassificatie;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
@@ -66,6 +67,7 @@ class ZakenTable
                     ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                    ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
                     ->sortable()
                     ->toggleable()
                     ->searchable()
@@ -178,12 +180,7 @@ class ZakenTable
                     ->attribute('reference_data->status_name'),
                 SelectFilter::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
-                    ->options([
-                        '0' => '0',
-                        'A' => 'A',
-                        'B' => 'B',
-                        'C' => 'C',
-                    ])
+                    ->options(RisicoClassificatie::options())
                     ->multiple()
                     ->attribute('reference_data->risico_classificatie'),
                 SelectFilter::make('organisation_id')

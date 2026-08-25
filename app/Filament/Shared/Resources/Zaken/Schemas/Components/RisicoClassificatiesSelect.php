@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Schemas\Components;
 
+use App\Support\RisicoClassificatie;
 use Filament\Forms\Components\Select;
 
 class RisicoClassificatiesSelect
@@ -10,12 +11,7 @@ class RisicoClassificatiesSelect
     {
         return Select::make('risico_classificaties')
             ->label(__('resources/zaak.columns.risico_classificatie.label'))
-            ->options([
-                '0' => '0',
-                'A' => 'A',
-                'B' => 'B',
-                'C' => 'C',
-            ])
+            ->options(RisicoClassificatie::options())
             ->multiple();
     }
 }
