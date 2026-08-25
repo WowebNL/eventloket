@@ -118,9 +118,15 @@ class AppServiceProvider extends ServiceProvider
 
         Carbon::mixin(new CarbonBusinessDaysMixin);
 
-        // NotifySlackOfFailedJob and LogZgwRequest are registered automatically
-        // by Laravel's event discovery (they live in app/Listeners and type-hint
-        // their event). Registering them manually here as well would fire each
-        // listener twice, so we rely on discovery only.
+        // NotifySlackOfFailedJob, LogZgwRequest and LogZgwErrorResponse are
+        // registered automatically by Laravel's event discovery (they live in
+        // app/Listeners and type-hint their event). Registering them manually
+        // here as well would fire each listener twice, so we rely on discovery
+        // only.
+        //
+        // The bindMethod() bindings that used to live here are gone: the jobs
+        // and commands that needed them now resolve their own dependencies
+        // through the multi-connection resolver instead of a single injected
+        // Openzaak client.
     }
 }

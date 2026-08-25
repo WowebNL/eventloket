@@ -84,6 +84,9 @@ class MunicipalityAdminUserResource extends Resource
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                         Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
                     ])
+                    // An inline editable column saves without consulting the
+                    // model policy, so the policy check is applied here.
+                    ->disabled(fn (User $record): bool => ! auth()->user()->can('update', $record))
                     ->selectablePlaceholder(false)
                     ->afterStateUpdated(function () {
                         Notification::make()

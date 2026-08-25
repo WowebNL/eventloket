@@ -880,6 +880,37 @@ function routeMapSnapshot(array $geometries): array
     ]]];
 }
 
+/**
+ * Old draft state: one Repeater row per route, each row holding its own Map
+ * state. Existing drafts still carry this shape.
+ *
+ * @param  list<list<array<string, mixed>>>  $rows  one list of geometries per row
+ */
+function routeRepeaterSnapshot(array $rows): array
+{
+    return ['values' => ['routesOpKaart' => array_map(
+        static fn (array $geometries) => ['routeVanHetEvenement' => routeMapSnapshot($geometries)['values']['routesOpKaart']],
+        $rows,
+    )]];
+}
+
+/**
+ * Give the end municipality of the diagonal route its own doorkomst zaaktype,
+ * so it is a candidate that only the start/end rule can keep out.
+ */
+function withEindgemeenteDoorkomstZaaktype(): void
+{
+    $eind = Municipality::where('name', 'Eindgemeente')->firstOrFail();
+
+    Zaaktype::factory()->create([
+        'municipality_id' => $eind->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-eind',
+        'is_active' => true,
+    ]);
+}
+
 /** A second passing municipality with its own doorkomst zaaktype on main. */
 function secondPassingMunicipality(): Municipality
 {
@@ -1049,6 +1080,44 @@ test('a single drawn route still yields exactly the municipality it crosses', fu
     CreateDoorkomstZaken::dispatchSync($hoofdzaak);
 
     expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m')]);
+});
+
+test('excludes the municipality a route ends in, even when it has a doorkomst zaaktype', function () {
+    // Without a doorkomst zaaktype an end municipality is skipped for the wrong
+    // reason, so give it one: only the boundary rule may keep it out.
+    fakeDoorkomstZgwOnMain();
+
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+    ]);
+    withEindgemeenteDoorkomstZaaktype();
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    $created = createdDeelzaakZaaktypen();
+
+    expect($created)->not->toContain(doorkomstZaaktypeUrl('dk-eind'))
+        ->and($created)->toBe([doorkomstZaaktypeUrl('dk-m')]);
+});
+
+test('reads every route from an old repeater draft state', function () {
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipality();
+
+    // Drafts made before the Repeater around the route map was dropped hold one
+    // row per route, each row carrying its own Map state.
+    $hoofdzaak = multiRouteHoofdZaak([]);
+    $hoofdzaak->update(['form_state_snapshot' => routeRepeaterSnapshot([
+        [lineGeometry([[0.5, 0.5], [3.5, 3.5]])],
+        [lineGeometry([[0.5, -2.0], [3.5, -2.0]])],
+    ])]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m2'),
+    ]);
 });
 
 /**

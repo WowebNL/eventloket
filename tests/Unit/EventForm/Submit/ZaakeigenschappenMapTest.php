@@ -171,3 +171,82 @@ test('locaties_evenement ontbreekt als geen locatie-velden zijn opgegeven', func
 
     expect($naden)->not->toContain('locaties_evenement');
 });
+
+// --- Location-state leak (ZGW/PDF counterpart of #493) ---------------------
+//
+// Unticking a location kind hides its field but leaves the value in the state
+// (Filament keeps a hidden field's value). A copied application therefore still
+// carries the source event's location. These tests prove that leftover state of
+// an unticked kind no longer reaches the zaakeigenschappen, while a ticked kind
+// (or an unanswered question, which counts as "no opinion") is unchanged.
+
+test('event_location laat een afgevinkte gebouw/buiten-soort niet lekken', function () {
+    // Alleen "route" aangevinkt, maar gebouw-adres en buiten-vlak staan nog in
+    // de state (overgekopieerd uit een eerder evenement).
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['route'],
+        'adresVanDeGebouwEn' => ['uuid-1' => ['postcode' => '6211AB', 'huisnummer' => '1']],
+        'locatieSOpKaart' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+        'routesOpKaart' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+    ]);
+
+    $location = $this->map->buildEventLocation($state);
+
+    expect($location)->toHaveKey('line')
+        ->and($location)->not->toHaveKey('bag_addresses')
+        ->and($location)->not->toHaveKey('multipolygons');
+});
+
+test('locaties_evenement laat de naam van een afgevinkte soort niet lekken', function () {
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['route'],
+        'adresVanDeGebouwEn' => [['naamVanDeLocatieGebouw' => 'Sporthal Noord']],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+    ]);
+
+    $plat = collect($this->map->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toHaveKey('locaties_evenement', 'Route Centrum');
+});
+
+test('regressie-anker: met alle waarde-dragende soorten aangevinkt blijft de output identiek', function () {
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['gebouw', 'buiten', 'route'],
+        'adresVanDeGebouwEn' => [
+            ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+            ['naamVanDeLocatieGebouw' => 'Gymzaal West'],
+        ],
+        'locatieSOpKaart' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+        'routesOpKaart' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+        'watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt' => 'Vrijthof',
+    ]);
+
+    $plat = collect($this->map->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toHaveKey('locaties_evenement', 'Sporthal Noord, Gymzaal West, Stadspark, Route Centrum')
+        ->and($this->map->buildEventLocation($state))->toBe([
+            'multipolygons' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+            'line' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+            'bag_addresses' => [
+                ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+                ['naamVanDeLocatieGebouw' => 'Gymzaal West'],
+            ],
+            'name' => 'Vrijthof',
+        ]);
+});
+
+test('geen mening: zonder waarVindtHetEvenementPlaats telt elke soort mee (ongewijzigd)', function () {
+    // Exact het bestaande event_location-scenario, maar nu expliciet als anker
+    // voor het "geen mening"-contract: een afwezige vraag mag niets wissen.
+    $state = new FormState(values: [
+        'locatieSOpKaart' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+        'routesOpKaart' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+        'adresVanDeGebouwEn' => ['uuid-1' => ['postcode' => '6211AB', 'huisnummer' => '1']],
+        'watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt' => 'Vrijthof',
+    ]);
+
+    expect($this->map->buildEventLocation($state))->toHaveKeys(['multipolygons', 'line', 'bag_addresses', 'name']);
+});

@@ -29,6 +29,18 @@ return [
         'organisation' => [
             'label' => 'Organisatie',
         ],
+        'naam_organisator' => [
+            'label' => 'Naam organisator',
+        ],
+        'naam_organisatie' => [
+            'label' => 'Naam organisatie',
+        ],
+        'adres_evenement' => [
+            'label' => 'Adres van het evenement',
+        ],
+        'kvk_nummer_organisatie' => [
+            'label' => 'KVK-nummer van de organisatie',
+        ],
         'uiterlijkeEinddatumAfdoening' => [
             'label' => 'Uiterlijke einddatum afdoening',
         ],

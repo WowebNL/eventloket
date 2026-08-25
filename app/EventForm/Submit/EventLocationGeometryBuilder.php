@@ -25,7 +25,18 @@ final class EventLocationGeometryBuilder
     /** @var list<BagObject> */
     private array $collectedAddresses = [];
 
+    private bool $unreachableLookups = false;
+
     public function __construct(private readonly LocatieserverService $locationService) {}
+
+    /**
+     * A copy of this builder that gives the address lookups the longer budget
+     * meant for callers with nobody waiting on them.
+     */
+    public function forBackgroundWork(): self
+    {
+        return new self($this->locationService->forBackgroundWork());
+    }
 
     /**
      * @param  array<string, mixed>  $eventLocation
@@ -33,6 +44,7 @@ final class EventLocationGeometryBuilder
     public function buildGeoJson(array $eventLocation): ?string
     {
         $this->collectedAddresses = [];
+        $this->unreachableLookups = false;
 
         if ($eventLocation === []) {
             return null;
@@ -77,6 +89,19 @@ final class EventLocationGeometryBuilder
     public function collectedAddresses(): array
     {
         return $this->collectedAddresses;
+    }
+
+    /**
+     * Did the last build lose an address because the location service could
+     * not be reached? The result is then incomplete through no fault of the
+     * input: the same build over the same input succeeds once the service is
+     * back. A caller that can run again later should therefore discard this
+     * result rather than store it, because a partial geometry is easily
+     * mistaken for a complete one afterwards.
+     */
+    public function hadUnreachableLookups(): bool
+    {
+        return $this->unreachableLookups;
     }
 
     private function notEmpty(mixed $value): bool
@@ -130,7 +155,8 @@ final class EventLocationGeometryBuilder
      *  3. Old (pre-Map): the state is a bare GeoJSON geometry.
      *
      * In the first two cases `features[].geometry` is taken; if that is
-     * missing we fall back to a recursive search for `coordinates`.
+     * missing we fall back to a recursive search for `coordinates` (pre-Map
+     * state shapes from the old OF flow).
      *
      * @param  callable(string): ?string  $normalizer  turns a raw string payload into valid JSON
      * @param  string  $candidateKey  Repeater row key for the old shape
@@ -235,6 +261,10 @@ final class EventLocationGeometryBuilder
         );
 
         if (! $bagObject) {
+            if ($this->locationService->lastRequestWasUnreachable()) {
+                $this->unreachableLookups = true;
+            }
+
             return null;
         }
 
