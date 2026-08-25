@@ -33,8 +33,13 @@ class OpenNotificationRequest extends FormRequest
             'hoofdObject' => ['required', 'url', $this->zgwHostRule()],
             'resourceUrl' => ['required', 'url', $this->zgwHostRule()],
             'aanmaakdatum' => 'required|date',
-            // ZGW notifications may carry kenmerken; we do not act on them, so the
-            // field stays optional.
+            // The channel's kenmerken (e.g. `bronorganisatie`), used to decide
+            // which connection an incoming notification belongs to. Senders are
+            // free to omit them, so the field stays optional. The individual
+            // values are deliberately not constrained here: a sender using a
+            // non-string value must not have its whole notification rejected.
+            // OpenNotification::normaliseKenmerken() keeps only what we can
+            // match on.
             'kenmerken' => 'sometimes|array',
         ];
     }

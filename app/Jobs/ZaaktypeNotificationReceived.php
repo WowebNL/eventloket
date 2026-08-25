@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Exceptions\UnresolvedNotificationConnectionException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
 use App\Models\ZgwRequestLog;
+use App\Services\Zgw\NotificationResourceReader;
 use App\Services\Zgw\ZaaktypeRefresher;
 use App\Services\Zgw\ZgwConnectionResolver;
-use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\OpenNotification;
+use App\ValueObjects\ZGW\NotificationResource;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -52,11 +54,33 @@ class ZaaktypeNotificationReceived implements ShouldBeUnique, ShouldQueue
 
     public function handle(ZaaktypeRefresher $refresher): void
     {
-        // Zaaktype urls never match a zaak, so this is the unique-host index;
-        // ambiguous or unknown hosts resolve to main.
-        $connectionName = app(ZgwConnectionResolver::class)->forUrl($this->notification->hoofdObject);
+        $reader = app(NotificationResourceReader::class);
 
-        $identificatie = $this->resolveIdentificatie($connectionName);
+        // The zaaktypen channel carries no organisation kenmerk, so on an
+        // instance shared by several connections the local zaaktype row is what
+        // identifies the owner; a version we do not know yet falls through to a
+        // read attempt per candidate.
+        try {
+            $resource = $reader->resolve($this->notification);
+        } catch (UnresolvedNotificationConnectionException $e) {
+            if ($e->allCandidatesReportGone()) {
+                // The version is gone everywhere and matches no local row: a
+                // destroy of a zaaktype we never referenced.
+                Log::debug('Zaaktype notification for a version that no longer exists ignored.', $this->context(ZgwConnectionResolver::DEFAULT_CONNECTION, null));
+
+                return;
+            }
+
+            throw $e;
+        }
+
+        if ($resource === null) {
+            return;
+        }
+
+        $connectionName = $resource->connection;
+
+        $identificatie = $this->resolveIdentificatie($resource, $reader);
 
         $municipalityId = ZgwRequestLog::municipalityIdFromConnection($connectionName);
 
@@ -82,10 +106,10 @@ class ZaaktypeNotificationReceived implements ShouldBeUnique, ShouldQueue
      * the catalogus, or matched against local rows when the version is already
      * gone (destroy). Null when neither resolves.
      */
-    private function resolveIdentificatie(string $connectionName): ?string
+    private function resolveIdentificatie(NotificationResource $resource, NotificationResourceReader $reader): ?string
     {
         try {
-            $identificatie = ZgwResource::byUrl($connectionName, $this->notification->hoofdObject)['identificatie'] ?? null;
+            $identificatie = $reader->read($resource, $this->notification)['identificatie'] ?? null;
 
             return is_string($identificatie) && $identificatie !== '' ? $identificatie : null;
         } catch (Throwable $e) {
@@ -97,7 +121,7 @@ class ZaaktypeNotificationReceived implements ShouldBeUnique, ShouldQueue
         }
 
         return Zaaktype::query()
-            ->where('connection', $connectionName)
+            ->where('connection', $resource->connection)
             ->where('zgw_zaaktype_url', $this->notification->hoofdObject)
             ->value('identificatie');
     }
