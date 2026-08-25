@@ -65,7 +65,7 @@ return [
         ],
         'bronorganisatie_rsin' => [
             'label' => 'Bronorganisatie RSIN',
-            'helper' => 'RSIN die als bronorganisatie op elke zaak wordt gezet.',
+            'helper' => 'RSIN die als bronorganisatie op elke zaak wordt gezet. Bepaalt ook aan welke koppeling een binnenkomende notificatie wordt toegewezen: deelt deze koppeling een host met andere koppelingen, vul dan altijd een eigen RSIN in. Leeg laten erft de standaardwaarde van de hoofdkoppeling en maakt die toewijzing onbetrouwbaar.',
         ],
         'vertrouwelijkheid_visibility' => [
             'label' => 'Maximaal zichtbaar niveau',
