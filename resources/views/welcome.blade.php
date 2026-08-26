@@ -6,6 +6,10 @@
 
         <title>{{ config('app.name') }}</title>
 
+        <!-- Icons -->
+        <link href="{{ asset('images/logos/favicon-v2.svg') }}" rel="icon" type="image/svg+xml" />
+        <link href="{{ asset('images/logos/favicon-v2.ico') }}" rel="icon" sizes="16x16 32x32 48x48" />
+
         <!-- Fonts -->
         <link href="{{ asset('css/fonts/satoshi.css') }}" rel="stylesheet" />
 

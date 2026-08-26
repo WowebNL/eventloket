@@ -46,6 +46,7 @@ class AdvisorPanelProvider extends PanelProvider
                 'primary' => Color::Blue,
             ])
             ->font('Satoshi', url: asset('css/fonts/satoshi.css'), provider: LocalFontProvider::class)
+            ->favicon(asset('images/logos/favicon-v2.svg'))
             ->brandLogo(asset('images/logos/logo-dark-v2.svg'))
             ->darkModeBrandLogo(asset('images/logos/logo-light-v2.svg'))
             ->brandLogoHeight('2.5rem')
