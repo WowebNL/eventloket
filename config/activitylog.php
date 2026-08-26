@@ -12,8 +12,13 @@ return [
     /*
      * When the clean-command is executed, all recording activities older than
      * the number of days specified here will be deleted.
+     *
+     * This must stay above archiving.organiser_inactivity_months, because the
+     * login entries in this log are what the anonymise-inactive-organisers
+     * command uses to tell a dormant account from an active one. That command
+     * refuses to run when the retention window is shorter.
      */
-    'delete_records_older_than_days' => 365,
+    'delete_records_older_than_days' => env('ACTIVITY_LOGGER_DELETE_RECORDS_OLDER_THAN_DAYS', 1095),
 
     /*
      * If no log name is passed to the activity() helper

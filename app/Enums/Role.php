@@ -13,6 +13,8 @@ enum Role: string implements HasLabel
     case Reviewer = 'reviewer'; // Behandelaar
     case Advisor = 'advisor'; // Adviesdienst medewerker
     case Organiser = 'organiser'; // Organisator
+    case ArchiveCoordinator = 'archive_coordinator'; // Archief coördinator
+    case ArchiveReviewer = 'archive_reviewer'; // Archief beoordelaar
 
     public function getLabel(): string
     {

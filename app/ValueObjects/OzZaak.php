@@ -41,6 +41,8 @@ class OzZaak implements Arrayable
 
     public readonly ?array $resultaattype;
 
+    public readonly ?Carbon $archiefactiedatum_datetime;
+
     public function __construct(
         public readonly string $uuid,
         public readonly string $url,
@@ -54,6 +56,9 @@ class OzZaak implements Arrayable
         public readonly ?string $uiterlijkeEinddatumAfdoening,
         public readonly ?string $bronorganisatie,
         public readonly ?array $zaakgeometrie,
+        public readonly ?string $archiefnominatie = null,
+        public readonly ?string $archiefactiedatum = null,
+        public readonly ?string $archiefstatus = null,
         private readonly array $_expand = [],
         ...$otherParams
     ) {
@@ -97,6 +102,7 @@ class OzZaak implements Arrayable
             : null;
 
         $this->otherParams = $otherParams;
+        $this->archiefactiedatum_datetime = $this->archiefactiedatum ? Carbon::parse($this->archiefactiedatum) : null;
         $this->startdatum_datetime = Carbon::parse($this->startdatum);
         $this->registratiedatum_datetime = Carbon::parse($this->registratiedatum);
         $this->setZaakAddresses();
@@ -137,6 +143,9 @@ class OzZaak implements Arrayable
             'uiterlijkeEinddatumAfdoening' => $this->uiterlijkeEinddatumAfdoening ? Carbon::parse($this->uiterlijkeEinddatumAfdoening) : null,
             'resultaat' => $this->resultaat,
             'resultaattype' => $this->resultaattype,
+            'archiefnominatie' => $this->archiefnominatie,
+            'archiefactiedatum' => $this->archiefactiedatum ? Carbon::parse($this->archiefactiedatum) : null,
+            'archiefstatus' => $this->archiefstatus,
         ];
     }
 }
