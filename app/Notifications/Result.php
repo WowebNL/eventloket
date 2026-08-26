@@ -53,23 +53,68 @@ class Result extends BaseNotification
      */
     public function toMail(User $notifiable): MailMessage
     {
+        [$attachments, $omittedAttachments] = $this->resolveAttachments();
+
         $mailMessage = (new MailMessage)
             ->subject($this->title)
             ->markdown('mail.result-set', [
                 'content' => $this->message,
                 'url' => $this->url,
+                'omittedAttachments' => $omittedAttachments,
             ]);
 
-        // Add attachments if they exist
-        if ($this->attachmentUrls) {
-            $attachments = $this->zaak->documenten->whereIn('url', $this->attachmentUrls)->map(fn ($document) => Attachment::fromData(
-                fn () => (new Openzaak)->getRaw($document->inhoud), $document->bestandsnaam)->withMime($document->formaat)
-            )->toArray();
-
-            $mailMessage->attachMany($attachments);
-        }
+        $mailMessage->attachMany($attachments);
 
         return $mailMessage;
+    }
+
+    /**
+     * Build the attachments for this mail, keeping their combined size within
+     * the configured budget.
+     *
+     * A receiving mail server rejects a message that exceeds its size limit
+     * outright (SMTP 552), which loses the entire notification: message and
+     * attachments alike. Documents are therefore added in the order they appear
+     * on the zaak until the budget is spent, and a document that no longer fits
+     * is skipped without blocking the smaller ones behind it. The skipped file
+     * names are returned so the mail can name them and point the recipient at
+     * the application, where every document stays available.
+     *
+     * The size is measured on the downloaded bytes rather than on the ZGW
+     * `bestandsomvang` metadata: that field is not guaranteed to be filled by
+     * every backend, and a wrong value would put the message back over the
+     * server's limit. The bytes are fetched here either way, exactly as before,
+     * because Attachment::fromData resolves its data as soon as the attachment
+     * is added to the message.
+     *
+     * @return array{0: array<int, Attachment>, 1: array<int, string>}
+     */
+    private function resolveAttachments(): array
+    {
+        if (! $this->attachmentUrls) {
+            return [[], []];
+        }
+
+        $remaining = (int) config('mail.attachments.max_total_bytes');
+        $attachments = [];
+        $omitted = [];
+
+        foreach ($this->zaak->documenten->whereIn('url', $this->attachmentUrls) as $document) {
+            $contents = (new Openzaak)->getRaw($document->inhoud);
+
+            if (strlen($contents) > $remaining) {
+                $omitted[] = $document->bestandsnaam;
+
+                continue;
+            }
+
+            $remaining -= strlen($contents);
+
+            $attachments[] = Attachment::fromData(fn () => $contents, $document->bestandsnaam)
+                ->withMime($document->formaat);
+        }
+
+        return [$attachments, $omitted];
     }
 
     public function toDatabase(User $notifiable): array
