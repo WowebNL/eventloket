@@ -263,7 +263,11 @@ test('a failing item does not stop other items and can be retried', function () 
 
     expect($this->item->refresh()->status)->toBe(DestructionItemStatus::Deleted)
         ->and($failingItem->refresh()->status)->toBe(DestructionItemStatus::Failed)
-        ->and($failingItem->failure_reason)->not->toBeNull()
+        // The reason reaches the coordinator and the destruction report, so it
+        // carries no exception message, url or status code.
+        ->and($failingItem->failure_reason)->toBe('Er is een onverwachte fout opgetreden bij het vernietigen van deze zaak')
+        ->and($failingItem->failure_reason)->not->toContain('500')
+        ->and($failingItem->failure_reason)->not->toContain('server error')
         ->and($this->list->refresh()->status)->toBe(DestructionListStatus::Failed)
         ->and($this->list->destruction_report_id)->toBeNull();
 

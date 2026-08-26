@@ -49,14 +49,7 @@ class ArchiveUserResource extends Resource
                 EditProfile::getLastNameFormComponent(),
                 Select::make('role')
                     ->label(__('municipality/resources/archive_user.columns.role.label'))
-                    ->options([
-                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
-                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
-                        Role::Reviewer->value => Role::Reviewer->getLabel(),
-                        Role::Coordinator->value => Role::Coordinator->getLabel(),
-                        Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
-                        Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
-                    ])
+                    ->options(self::roleOptions())
                     ->selectablePlaceholder(false)
                     ->required(),
             ]);
@@ -72,14 +65,10 @@ class ArchiveUserResource extends Resource
                     ->searchable(),
                 SelectColumn::make('role')
                     ->label(__('municipality/resources/archive_user.columns.role.label'))
-                    ->options([
-                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
-                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
-                        Role::Reviewer->value => Role::Reviewer->getLabel(),
-                        Role::Coordinator->value => Role::Coordinator->getLabel(),
-                        Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
-                        Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
-                    ])
+                    ->options(self::roleOptions())
+                    // An inline editable column saves without consulting the
+                    // model policy, so the policy check is applied here.
+                    ->disabled(fn (User $record): bool => ! auth()->user()->can('update', $record))
                     ->selectablePlaceholder(false)
                     ->afterStateUpdated(function () {
                         Notification::make()
@@ -97,6 +86,24 @@ class ArchiveUserResource extends Resource
             ->toolbarActions([
                 //
             ]);
+    }
+
+    /**
+     * The roles this screen may hand out. It manages the archive team, so it
+     * offers the two archive roles plus the regular municipality roles an
+     * archivist can be moved back to. Handing out the municipality admin roles
+     * belongs on the municipality admin screen, not here.
+     *
+     * @return array<string, string>
+     */
+    private static function roleOptions(): array
+    {
+        return [
+            Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
+            Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
+            Role::Reviewer->value => Role::Reviewer->getLabel(),
+            Role::Coordinator->value => Role::Coordinator->getLabel(),
+        ];
     }
 
     public static function getEloquentQuery(): Builder

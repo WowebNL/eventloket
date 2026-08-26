@@ -89,9 +89,14 @@ class ExecuteZaakDestruction implements ShouldQueue
             // Do not rethrow: other items in the batch must keep going.
             report($exception);
 
+            Log::error("Destruction of zaak [{$item->zaaknummer}] failed: ".$exception->getMessage());
+
             $item->update([
                 'status' => DestructionItemStatus::Failed,
-                'failure_reason' => $exception->getMessage(),
+                // The reason is shown to the coordinator and copied into the
+                // destruction report, so it stays generic; the exception is in
+                // the application log for whoever has to fix it.
+                'failure_reason' => 'Er is een onverwachte fout opgetreden bij het vernietigen van deze zaak',
             ]);
         }
     }
