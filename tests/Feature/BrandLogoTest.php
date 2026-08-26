@@ -11,9 +11,17 @@ const CURRENT_LOGO_VIEWBOX = 'viewBox="0 0 1372.65 404.18"';
 const CURRENT_LOGO_ACCENT = '#fd6814';
 const PREVIOUS_LOGO_COLOURS = ['#7B0E0A', '#935A11', '#18437F', '#1A99C4', '#EE9212', '#DC141F', '#F0E517', '#908B1A'];
 
+/**
+ * The brand logo files carry a version suffix. Replacing the artwork means
+ * writing it to files with the next suffix (v3, v4, ...) and updating every
+ * reference, so that the asset URL changes and browsers cannot keep serving
+ * the previous artwork from their cache.
+ */
+const BRAND_LOGO_VERSION = 'v2';
+
 function brandLogoPath(string $variant): string
 {
-    return public_path("images/logos/logo-{$variant}.svg");
+    return public_path('images/logos/logo-'.$variant.'-'.BRAND_LOGO_VERSION.'.svg');
 }
 
 test('both brand logo variants carry the current artwork', function (string $variant) {
@@ -46,6 +54,6 @@ test('the dark mode variant differs from the default variant only in the wordmar
 test('every panel points at the brand logo files', function (string $panel) {
     $logos = Filament::getPanel($panel);
 
-    expect($logos->getBrandLogo())->toEndWith('/images/logos/logo-dark.svg')
-        ->and($logos->getDarkModeBrandLogo())->toEndWith('/images/logos/logo-light.svg');
+    expect($logos->getBrandLogo())->toEndWith('/images/logos/logo-dark-v2.svg')
+        ->and($logos->getDarkModeBrandLogo())->toEndWith('/images/logos/logo-light-v2.svg');
 })->with(['admin', 'municipality', 'advisor', 'organiser']);
