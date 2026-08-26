@@ -25,7 +25,7 @@ use Woweb\Zgw\Facades\Zgw;
  * - has a KvK number, own default connection → `niet_natuurlijk_persoon`
  *   (statutaireNaam, annIdentificatie, kvkNummer, contactpersoon)
  * - has a KvK number, any other connection → `vestiging` (kvkNummer,
- *   handelsnaam, contactpersoon)
+ *   handelsnaam, contactpersoon, verblijfsadres)
  * - otherwise → `natuurlijk_persoon` (voornamen, geslachtsnaam,
  *   anpIdentificatie, verblijfsadres)
  *
