@@ -3,6 +3,7 @@
 use App\Enums\Role;
 use App\Models\Municipality;
 use App\Models\User;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\CarbonInterface;
@@ -25,6 +26,21 @@ function recordLogin(User $user, CarbonInterface $at): void
         'created_at' => $at,
         'updated_at' => $at,
     ]);
+}
+
+/**
+ * Every activity log entry that points at this user, as either the subject of
+ * the entry or its causer.
+ */
+function activityEntriesFor(User $user): int
+{
+    $types = [User::class, OrganiserUser::class];
+
+    return DB::table('activity_log')
+        ->where(fn ($query) => $query
+            ->where(fn ($sub) => $sub->whereIn('subject_type', $types)->where('subject_id', (string) $user->id))
+            ->orWhere(fn ($sub) => $sub->whereIn('causer_type', $types)->where('causer_id', (string) $user->id)))
+        ->count();
 }
 
 /**
@@ -177,4 +193,62 @@ test('dry run does not change anything', function () {
     $this->artisan('archiving:anonymise-inactive-organisers --dry-run')->assertSuccessful();
 
     expect($organiser->refresh()->anonymised_at)->toBeNull();
+});
+
+test('the log entries of the account are removed with it', function () {
+    $organiser = User::factory()->create(['role' => Role::Organiser, 'phone' => '0612345678']);
+    makeOrganiserInactiveSince($organiser, 30);
+
+    // A login (ip and user agent) and a profile change (old name and e-mail)
+    // both leave personal data behind in the activity log.
+    $organiser->update(['first_name' => 'Nieuwe voornaam']);
+
+    expect(activityEntriesFor($organiser))->toBeGreaterThan(0);
+
+    $this->artisan('archiving:anonymise-inactive-organisers')->assertSuccessful();
+
+    expect($organiser->refresh()->anonymised_at)->not->toBeNull()
+        ->and(activityEntriesFor($organiser))->toBe(0);
+});
+
+test('anonymising does not write the old values back into the activity log', function () {
+    $organiser = User::factory()->create(['role' => Role::Organiser, 'phone' => '0612345678']);
+    makeOrganiserInactiveSince($organiser, 30);
+
+    $originalEmail = $organiser->email;
+
+    $this->artisan('archiving:anonymise-inactive-organisers')->assertSuccessful();
+
+    $properties = DB::table('activity_log')->pluck('properties')->implode(' ');
+
+    expect($properties)->not->toContain($originalEmail)
+        ->and($properties)->not->toContain('0612345678');
+});
+
+test('the log entries of other users are left alone', function () {
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    makeOrganiserInactiveSince($organiser, 30);
+
+    $other = User::factory()->create(['role' => Role::Organiser]);
+    recordLogin($other, now()->subDay());
+
+    $this->artisan('archiving:anonymise-inactive-organisers')->assertSuccessful();
+
+    expect(activityEntriesFor($other))->toBeGreaterThan(0);
+});
+
+test('the command refuses to run when logins are pruned before accounts age out', function () {
+    config(['activitylog.delete_records_older_than_days' => 365]);
+
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    makeOrganiserInactiveSince($organiser, 30);
+
+    $this->artisan('archiving:anonymise-inactive-organisers')->assertFailed();
+
+    expect($organiser->refresh()->anonymised_at)->toBeNull();
+});
+
+test('the configured retention outlives the inactivity window', function () {
+    expect((int) config('activitylog.delete_records_older_than_days'))
+        ->toBeGreaterThan((int) config('archiving.organiser_inactivity_months') * 30);
 });

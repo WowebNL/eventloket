@@ -22,7 +22,7 @@ class DestructionReportFactory extends Factory
     {
         return [
             'municipality_id' => Municipality::factory(),
-            'batch_number' => 'VL-1-'.now()->year.'-'.fake()->unique()->numberBetween(100, 999),
+            'batch_number' => 'VL-GM0001-'.now()->year.'-'.fake()->unique()->numberBetween(100, 999),
             'coordinator_name' => fake()->name(),
             'coordinator_function' => 'Archiefcoördinator',
             'destruction_method' => config('archiving.destruction_method'),

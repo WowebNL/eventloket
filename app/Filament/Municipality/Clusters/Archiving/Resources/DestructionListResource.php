@@ -5,6 +5,7 @@ namespace App\Filament\Municipality\Clusters\Archiving\Resources;
 use App\Enums\DestructionListStatus;
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Archiving;
+use App\Filament\Municipality\Clusters\Archiving\Actions\RegenerateDestructionReportAction;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\CreateDestructionList;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\EditDestructionList;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\ListDestructionLists;
@@ -171,6 +172,7 @@ class DestructionListResource extends Resource
             static::getRequestChangesAction(),
             static::getConfirmDestructionAction(),
             static::getRetryAction(),
+            RegenerateDestructionReportAction::make(),
         ];
     }
 

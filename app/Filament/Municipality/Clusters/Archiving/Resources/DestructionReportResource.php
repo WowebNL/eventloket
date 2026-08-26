@@ -3,6 +3,7 @@
 namespace App\Filament\Municipality\Clusters\Archiving\Resources;
 
 use App\Filament\Municipality\Clusters\Archiving;
+use App\Filament\Municipality\Clusters\Archiving\Actions\RegenerateDestructionReportAction;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionReportResource\Pages\ListDestructionReports;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionReportResource\Pages\ViewDestructionReport;
 use App\Models\Archiving\DestructionReport;
@@ -100,6 +101,7 @@ class DestructionReportResource extends Resource
             ->recordActions([
                 ViewAction::make(),
                 static::getDownloadPdfAction(),
+                RegenerateDestructionReportAction::make(),
             ])
             ->toolbarActions([
                 //
@@ -111,8 +113,8 @@ class DestructionReportResource extends Resource
         return Action::make('download_pdf')
             ->label(__('municipality/resources/destruction_report.actions.download_pdf.label'))
             ->icon('heroicon-o-arrow-down-tray')
-            ->visible(fn (DestructionReport $record): bool => $record->pdf_path !== null && Storage::disk('local')->exists($record->pdf_path))
-            ->action(fn (DestructionReport $record): StreamedResponse => Storage::disk('local')->download($record->pdf_path));
+            ->visible(fn (DestructionReport $record): bool => $record->hasPdf())
+            ->action(fn (DestructionReport $record): StreamedResponse => Storage::disk(config('archiving.report_disk'))->download($record->pdf_path));
     }
 
     public static function getPages(): array

@@ -33,7 +33,7 @@ beforeEach(function () {
     ]);
 
     $this->zaakUrl = ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/z1';
-    $this->dataObjectUrl = 'https://objects-api.woweb.app/api/v2/objects/obj1';
+    $this->dataObjectUrl = 'https://objects.example.com/api/v2/objects/obj1';
 
     $this->zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,

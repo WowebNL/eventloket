@@ -6,9 +6,12 @@ use App\Filament\Municipality\Clusters\Archiving;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\EditDestructionList;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\ListDestructionLists;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\ViewDestructionList;
+use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionReportResource\Pages\ViewDestructionReport;
+use App\Jobs\Archiving\GenerateDestructionReport;
 use App\Jobs\Archiving\StartDestructionListDeletion;
 use App\Models\Archiving\DestructionList;
 use App\Models\Archiving\DestructionListItem;
+use App\Models\Archiving\DestructionReport;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Notifications\DestructionListReadyForReview;
@@ -16,6 +19,7 @@ use App\Notifications\DestructionListReviewed;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 
 use function Pest\Livewire\livewire;
 
@@ -184,4 +188,94 @@ test('the coordinator cannot approve their own list', function () {
     livewire(ViewDestructionList::class, ['record' => $list->getRouteKey()])
         ->assertActionHidden('approve')
         ->assertActionHidden('request_changes');
+});
+
+test('the coordinator can regenerate a destruction report that is missing', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $list = DestructionList::factory()->deleting()->create([
+        'municipality_id' => $this->municipality->id,
+        'created_by_user_id' => $this->coordinator->id,
+    ]);
+
+    // Destroyed, but the report job never ran: there is no proof of destruction.
+    $list->transitionTo(DestructionListStatus::Deleted);
+
+    actAsInMunicipality($this->coordinator, $this->municipality);
+
+    livewire(ViewDestructionList::class, ['record' => $list->getRouteKey()])
+        ->callAction('regenerate_report')
+        ->assertHasNoActionErrors();
+
+    Queue::assertPushed(GenerateDestructionReport::class);
+});
+
+test('regenerating is hidden while the report and its pdf are readable', function () {
+    Storage::fake('local');
+
+    $report = DestructionReport::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'pdf_path' => 'archief/rapporten/report.pdf',
+    ]);
+
+    Storage::disk('local')->put($report->pdf_path, 'pdf');
+
+    $list = DestructionList::factory()->deleting()->create([
+        'municipality_id' => $this->municipality->id,
+        'created_by_user_id' => $this->coordinator->id,
+    ]);
+
+    $list->transitionTo(DestructionListStatus::Deleted, ['destruction_report_id' => $report->id]);
+
+    actAsInMunicipality($this->coordinator, $this->municipality);
+
+    livewire(ViewDestructionList::class, ['record' => $list->getRouteKey()])
+        ->assertActionHidden('regenerate_report');
+});
+
+test('the archive reviewer cannot regenerate a report', function () {
+    Storage::fake('local');
+
+    $list = DestructionList::factory()->deleting()->create([
+        'municipality_id' => $this->municipality->id,
+        'created_by_user_id' => $this->coordinator->id,
+    ]);
+
+    $list->transitionTo(DestructionListStatus::Deleted);
+
+    actAsInMunicipality($this->archiveReviewer, $this->municipality);
+
+    livewire(ViewDestructionList::class, ['record' => $list->getRouteKey()])
+        ->assertActionHidden('regenerate_report');
+});
+
+test('a report whose pdf is gone can be regenerated from the report itself', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $list = DestructionList::factory()->deleting()->create([
+        'municipality_id' => $this->municipality->id,
+        'created_by_user_id' => $this->coordinator->id,
+    ]);
+
+    $list->transitionTo(DestructionListStatus::Deleted);
+
+    // The report survives, its pdf does not: the disk was replaced.
+    $report = DestructionReport::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'destruction_list_id' => $list->id,
+        'pdf_path' => 'archief/rapporten/report.pdf',
+    ]);
+
+    $list->update(['destruction_report_id' => $report->id]);
+
+    actAsInMunicipality($this->coordinator, $this->municipality);
+
+    livewire(ViewDestructionReport::class, ['record' => $report->getRouteKey()])
+        ->assertActionHidden('download_pdf')
+        ->callAction('regenerate_report')
+        ->assertHasNoActionErrors();
+
+    Queue::assertPushed(GenerateDestructionReport::class);
 });

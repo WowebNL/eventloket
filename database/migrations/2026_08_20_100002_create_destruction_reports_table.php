@@ -15,7 +15,9 @@ return new class extends Migration
             $table->id();
             // No cascade: the destruction report is a permanent legal record.
             $table->foreignId('municipality_id')->constrained()->restrictOnDelete();
-            $table->foreignId('destruction_list_id')->nullable()->constrained()->nullOnDelete();
+            // Unique: a list has at most one report, which is what makes
+            // generating the report idempotent after a failed run.
+            $table->foreignId('destruction_list_id')->nullable()->unique()->constrained()->nullOnDelete();
             $table->string('batch_number')->unique();
             $table->string('coordinator_name');
             $table->string('coordinator_function')->nullable();

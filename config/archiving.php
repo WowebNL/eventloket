@@ -26,4 +26,16 @@ return [
     */
     'organiser_inactivity_months' => env('ARCHIVING_ORGANISER_INACTIVITY_MONTHS', 24),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Destruction report storage
+    |--------------------------------------------------------------------------
+    |
+    | The filesystem disk the destruction report PDFs are written to. The
+    | report is a permanent legal record, so point this at durable storage
+    | (for example an S3 bucket) in any environment with ephemeral disks.
+    |
+    */
+    'report_disk' => env('ARCHIVING_REPORT_DISK', 'local'),
+
 ];

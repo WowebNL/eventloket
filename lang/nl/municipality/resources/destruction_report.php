@@ -41,5 +41,12 @@ return [
         'download_pdf' => [
             'label' => 'Download PDF',
         ],
+        'regenerate' => [
+            'label' => 'Vernietigingsrapport opnieuw genereren',
+            'modal_description' => 'Het vernietigingsrapport en de bijbehorende PDF worden opnieuw opgebouwd uit de vastgelegde gegevens. Een bestaand rapport houdt zijn batchnummer en inhoud.',
+            'notification' => [
+                'title' => 'Vernietigingsrapport wordt opnieuw gegenereerd',
+            ],
+        ],
     ],
 ];

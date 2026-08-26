@@ -111,6 +111,18 @@ class DestructionListPolicy
             && $destructionList->status === DestructionListStatus::Failed;
     }
 
+    /**
+     * Determine whether the user can regenerate the destruction report of a
+     * destroyed list. The report itself stays immutable: this only rebuilds
+     * a report or PDF that is missing.
+     */
+    public function regenerateReport(User $user, DestructionList $destructionList): bool
+    {
+        return $user->role === Role::ArchiveCoordinator
+            && $this->canAccessMunicipality($user, $destructionList)
+            && $destructionList->status === DestructionListStatus::Deleted;
+    }
+
     private function canAccessMunicipality(User $user, DestructionList $destructionList): bool
     {
         return $user instanceof MunicipalityUser
