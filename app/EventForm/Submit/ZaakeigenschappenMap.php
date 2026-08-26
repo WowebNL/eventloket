@@ -130,9 +130,21 @@ final class ZaakeigenschappenMap
     }
 
     /**
-     * The natuurlijk_persoon_adres entry is assembled from the flat fields of
-     * the "Adresgegevens" fieldset (only shown to aanvragers without a KvK
-     * number), so a private aanvrager's verblijfsadres reaches the ZGW rol.
+     * The two address entries are assembled from the flat fields of the two
+     * address fieldsets, which are shown to one aanvrager each:
+     *
+     * - natuurlijk_persoon_adres from "Adresgegevens", shown only to an
+     *   aanvrager without a KvK number, so a private aanvrager's verblijfsadres
+     *   reaches the ZGW rol.
+     * - organisatie_adres from the address grid inside "Organisatie
+     *   informatie", shown only to an aanvrager with a KvK number, so an
+     *   organisation's verblijfsadres reaches the ZGW rol as well.
+     *
+     * Only one of the two fieldsets is filled in a submission, and the rol
+     * variant that consumes each entry follows the same split, so the two never
+     * compete over one rol. The organisation fieldset asks for no country: the
+     * address is prefilled from the registered organisation, which carries a
+     * Dutch BAG or postbus address, so there is no land to map here.
      *
      * @return array<string, mixed>
      */
@@ -145,6 +157,14 @@ final class ZaakeigenschappenMap
         return array_filter([
             'kvk' => $this->stringOrNull($state->get('watIsHetKamerVanKoophandelNummerVanUwOrganisatie')),
             'organisatie_naam' => $this->stringOrNull($state->get('watIsDeNaamVanUwOrganisatie')),
+            'organisatie_adres' => array_filter([
+                'postcode' => $this->stringOrNull($state->get('postcode1')),
+                'huisnummer' => $this->stringOrNull($state->get('huisnummer1')),
+                'huisletter' => $this->stringOrNull($state->get('huisletter1')),
+                'huisnummertoevoeging' => $this->stringOrNull($state->get('huisnummertoevoeging1')),
+                'straatnaam' => $this->stringOrNull($state->get('straatnaam1')),
+                'plaatsnaam' => $this->stringOrNull($state->get('plaatsnaam1')),
+            ]),
             'natuurlijk_persoon_adres' => array_filter([
                 'postcode' => $this->stringOrNull($state->get('postcode')),
                 'huisnummer' => $this->stringOrNull($state->get('huisnummer')),

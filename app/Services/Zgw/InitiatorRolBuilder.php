@@ -22,7 +22,7 @@ use Illuminate\Support\Str;
  * - has a KvK number, own default connection → niet_natuurlijk_persoon
  *   (statutaireNaam, annIdentificatie, kvkNummer)
  * - has a KvK number, any other connection   → vestiging (kvkNummer,
- *   handelsnaam)
+ *   handelsnaam, verblijfsadres)
  * - otherwise                                → natuurlijk_persoon (voornamen,
  *   geslachtsnaam, anpIdentificatie, verblijfsadres)
  *
@@ -93,6 +93,16 @@ final class InitiatorRolBuilder
     private const HUISNUMMERTOEVOEGING_MAX = 4;
 
     private const HUISNUMMER_MAX = 99999;
+
+    /**
+     * A verblijfsadres needs an aoaIdentificatie, and the form gives us a typed
+     * address rather than a BAG object id, so the identification is synthesised
+     * per rol. The kind names which address it was built from, so an
+     * identification found in a ZGW backend still says whose address it is.
+     */
+    private const AOA_KIND_PERSOON = 'persoonsadres';
+
+    private const AOA_KIND_VESTIGING = 'vestigingsadres';
 
     /**
      * @param  string  $connectionName  the connection the rol is posted to, which decides
@@ -270,10 +280,16 @@ final class InitiatorRolBuilder
      * The rol stays on the same initiator roltype; vestiging is a
      * betrokkeneType, and RolType carries no betrokkeneType binding at all.
      *
-     * Only what the form actually asks for is sent. vestigingsNummer is not
-     * asked and is not invented, and the organisation address is not the
-     * vestiging address, so no verblijfsadres either. RolVestiging requires no
-     * field, so a rol on handelsnaam alone (hashed KvK on a rerun) is valid.
+     * The submitted organisation address is recorded as the vestiging
+     * verblijfsadres (product decision), through the same helper the private
+     * variant uses, so both carry an address built to one set of rules. A
+     * foreign address is left out: subVerblijfBuitenland is intentionally not
+     * built, matching what happens for a natuurlijk persoon.
+     *
+     * Only what the form actually asks for is sent otherwise. vestigingsNummer
+     * is not asked and is not invented. RolVestiging requires no field, so a rol
+     * on handelsnaam alone (hashed KvK on a rerun, no address submitted) is
+     * valid.
      *
      * @param  array<string, mixed>  $initiator
      * @return array<string, mixed>
@@ -282,7 +298,7 @@ final class InitiatorRolBuilder
     {
         $handelsnaam = self::bounded($initiator['organisatie_naam'] ?? null, self::HANDELSNAAM_MAX);
 
-        return [
+        $rolData = [
             'zaak' => $zaakUrl,
             'betrokkeneType' => 'vestiging',
             'roltype' => $roltype,
@@ -294,6 +310,13 @@ final class InitiatorRolBuilder
                 'handelsnaam' => $handelsnaam === null ? null : [$handelsnaam],
             ]),
         ];
+
+        $verblijfsadres = self::verblijfsadres($initiator['organisatie_adres'] ?? null, self::AOA_KIND_VESTIGING);
+        if ($verblijfsadres !== null) {
+            $rolData['betrokkeneIdentificatie']['verblijfsadres'] = $verblijfsadres;
+        }
+
+        return $rolData;
     }
 
     /**
@@ -325,7 +348,7 @@ final class InitiatorRolBuilder
             $rolData['afwijkendeNaamBetrokkene'] = $afwijkendeNaam;
         }
 
-        $verblijfsadres = self::verblijfsadres($adres);
+        $verblijfsadres = self::verblijfsadres($adres, self::AOA_KIND_PERSOON);
         if ($verblijfsadres !== null) {
             $rolData['betrokkeneIdentificatie']['verblijfsadres'] = $verblijfsadres;
         }
@@ -338,6 +361,8 @@ final class InitiatorRolBuilder
      * inside the schema's integer range: aoaHuisnummer is required on the
      * address, so an address that cannot supply a valid one is left out
      * altogether rather than risking a 400 that would abort the submit chain.
+     * A foreign address is left out for the same reason and is not moved into
+     * subVerblijfBuitenland, which this application does not build.
      *
      * The optional parts follow the same rule on a smaller scale: a huisletter or
      * huisnummertoevoeging that does not fit its bound is dropped, and so is a
@@ -345,10 +370,14 @@ final class InitiatorRolBuilder
      * two required names are cut to their bound instead, since leaving them out
      * would make the address invalid on its own.
      *
+     * Both address-carrying variants come through here, so the rules above hold
+     * for a natuurlijk persoon and a vestiging alike; $aoaKind only decides
+     * which kind the synthesised aoaIdentificatie names.
+     *
      * @param  array<string, mixed>|mixed  $adres
      * @return array<string, mixed>|null
      */
-    private static function verblijfsadres(mixed $adres): ?array
+    private static function verblijfsadres(mixed $adres, string $aoaKind): ?array
     {
         if (! is_array($adres) || ! Arr::has($adres, ['postcode', 'plaatsnaam', 'huisnummer'])) {
             return null;
@@ -368,7 +397,7 @@ final class InitiatorRolBuilder
         $postcode = str_replace(' ', '', (string) $adres['postcode']);
 
         return array_filter([
-            'aoaIdentificatie' => config('app.name').'-persoonsadres-'.Str::uuid(),
+            'aoaIdentificatie' => config('app.name').'-'.$aoaKind.'-'.Str::uuid(),
             'wplWoonplaatsNaam' => Str::substr((string) $adres['plaatsnaam'], 0, self::WOONPLAATSNAAM_MAX),
             'gorOpenbareRuimteNaam' => Str::substr($straatnaam !== '' ? $straatnaam : 'adres', 0, self::OPENBARE_RUIMTE_NAAM_MAX),
             'aoaPostcode' => Str::length($postcode) <= self::POSTCODE_MAX ? $postcode : null,

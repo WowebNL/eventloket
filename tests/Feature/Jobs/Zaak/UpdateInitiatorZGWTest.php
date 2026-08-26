@@ -145,6 +145,40 @@ test('stuurt voor een organisatie op een gemeente-instance een vestiging-rol met
     });
 });
 
+test('stuurt het opgegeven organisatie-adres mee als verblijfsadres op de vestiging-rol', function () {
+    // The submitted organisation address travels all the way into the posted
+    // rol, not just into the builder's return value, so the update path is
+    // covered end to end as well as the create path.
+    $zaak = zaakMetInitiatorOpEigenInstance([
+        'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+        'watIsDeNaamVanUwOrganisatie' => 'Acme BV',
+        'postcode1' => '6411 CD',
+        'huisnummer1' => '32',
+        'straatnaam1' => 'Coriovallumstraat',
+        'plaatsnaam1' => 'Heerlen',
+    ]);
+
+    fakeZaakRoltypenEnRollenOpEigenInstance();
+
+    (new UpdateInitiatorZGW($zaak))->handle(app(ZaakeigenschappenMap::class));
+
+    Http::assertSent(function ($request) {
+        if (! str_contains($request->url(), '/zaken/api/v1/rollen') || $request->method() !== 'POST') {
+            return false;
+        }
+
+        $adres = $request->data()['betrokkeneIdentificatie']['verblijfsadres'] ?? null;
+
+        return $request->data()['betrokkeneType'] === 'vestiging'
+            && is_array($adres)
+            && str_contains($adres['aoaIdentificatie'], '-vestigingsadres-')
+            && $adres['wplWoonplaatsNaam'] === 'Heerlen'
+            && $adres['gorOpenbareRuimteNaam'] === 'Coriovallumstraat'
+            && $adres['aoaPostcode'] === '6411CD'
+            && $adres['aoaHuisnummer'] === 32;
+    });
+});
+
 test('stuurt voor een organisatie annIdentificatie naast kvkNummer mee', function () {
     $zaak = zaakMetInitiator([
         'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',

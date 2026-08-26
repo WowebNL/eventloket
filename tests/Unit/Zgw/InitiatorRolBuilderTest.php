@@ -61,9 +61,10 @@ test('builds a vestiging rol with kvkNummer and handelsnaam on a municipality co
     ]);
 });
 
-test('sends no vestigingsNummer or verblijfsadres on a vestiging rol', function () {
-    // The form asks for neither, and the organisation address is not
-    // necessarily the address of the vestiging, so nothing is invented.
+test('sends no vestigingsNummer on a vestiging rol, and no verblijfsadres without an organisation address', function () {
+    // The form does not ask for a vestigingsNummer, so it is never invented.
+    // The verblijfsadres is built from the submitted organisation address, so a
+    // submission without one still yields a valid rol without the field.
     $state = FormState::fromSnapshot(['values' => []]);
 
     $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
@@ -73,6 +74,174 @@ test('sends no vestigingsNummer or verblijfsadres on a vestiging rol', function 
 
     expect($rol['betrokkeneIdentificatie'])->not->toHaveKey('vestigingsNummer')
         ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres');
+});
+
+test('records the submitted organisation address as the vestiging verblijfsadres', function () {
+    // RolVestiging carries a verblijfsadres, and the address the organiser
+    // submits for the organisation is what goes in it (product decision). The
+    // aoaIdentificatie is synthesised because the form gives a typed address
+    // rather than a BAG object id, and names the kind of address it was built
+    // from.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => [
+            'postcode' => '6411 CD',
+            'huisnummer' => '32',
+            'huisletter' => 'a',
+            'huisnummertoevoeging' => 'bis',
+            'straatnaam' => 'Coriovallumstraat',
+            'plaatsnaam' => 'Heerlen',
+        ],
+    ]);
+
+    $adres = $rol['betrokkeneIdentificatie']['verblijfsadres'];
+
+    expect($rol['betrokkeneType'])->toBe('vestiging')
+        ->and($rol['betrokkeneIdentificatie']['kvkNummer'])->toBe('12345678')
+        ->and($rol['betrokkeneIdentificatie']['handelsnaam'])->toBe(['Woweb'])
+        ->and($adres['aoaIdentificatie'])->toContain('-vestigingsadres-')
+        ->and($adres['wplWoonplaatsNaam'])->toBe('Heerlen')
+        ->and($adres['gorOpenbareRuimteNaam'])->toBe('Coriovallumstraat')
+        ->and($adres['aoaPostcode'])->toBe('6411CD')
+        ->and($adres['aoaHuisnummer'])->toBe(32)
+        ->and($adres['aoaHuisletter'])->toBe('a')
+        ->and($adres['aoaHuisnummertoevoeging'])->toBe('bis');
+});
+
+test('names the address kind in the synthesised aoaIdentificatie per variant', function () {
+    // The two variants build their address through one helper, so the kind in
+    // the identification is the only thing that tells them apart afterwards.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Jansen']]);
+    $adres = [
+        'postcode' => '6411CD',
+        'huisnummer' => '32',
+        'plaatsnaam' => 'Heerlen',
+        'straatnaam' => 'Coriovallumstraat',
+    ];
+
+    $vestiging = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => $adres,
+    ]);
+    $persoon = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => $adres,
+    ]);
+
+    expect($vestiging['betrokkeneIdentificatie']['verblijfsadres']['aoaIdentificatie'])->toContain('-vestigingsadres-')
+        ->and($persoon['betrokkeneIdentificatie']['verblijfsadres']['aoaIdentificatie'])->toContain('-persoonsadres-');
+});
+
+test('sends no verblijfsadres on a niet_natuurlijk_persoon rol', function () {
+    // RolNietNatuurlijkPersoon defines no verblijfsadres property in any Zaken
+    // API release this application targets, so the organisation address stays
+    // off our own OpenZaak's variant even though it is now submitted.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => [
+            'postcode' => '6411CD',
+            'huisnummer' => '32',
+            'plaatsnaam' => 'Heerlen',
+        ],
+    ]);
+
+    expect($rol['betrokkeneType'])->toBe('niet_natuurlijk_persoon')
+        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres');
+});
+
+test('skips the vestiging verblijfsadres for a foreign organisation address', function () {
+    // subVerblijfBuitenland is not built, so a foreign address is left out
+    // entirely, exactly as it is for a natuurlijk persoon.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => [
+            'postcode' => '4000',
+            'huisnummer' => '7',
+            'plaatsnaam' => 'Luik',
+            'land' => 'België',
+        ],
+    ]);
+
+    expect($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres')
+        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('subVerblijfBuitenland')
+        ->and($rol['betrokkeneIdentificatie']['handelsnaam'])->toBe(['Woweb']);
+});
+
+test('skips the vestiging verblijfsadres when the huisnummer is not a plain number in range', function () {
+    // aoaHuisnummer is required on the address, so an organisation address that
+    // cannot supply a valid one is left out rather than risking a 400 that
+    // would abort the submit chain.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $build = fn (string $huisnummer) => InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => [
+            'postcode' => '6411CD',
+            'huisnummer' => $huisnummer,
+            'plaatsnaam' => 'Heerlen',
+        ],
+    ]);
+
+    expect($build('32a')['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres')
+        ->and($build('1234567890')['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres')
+        ->and($build('99999')['betrokkeneIdentificatie']['verblijfsadres']['aoaHuisnummer'])->toBe(99999);
+});
+
+test('applies the same schema bounds to the vestiging verblijfsadres', function () {
+    // The vestiging address runs through the same helper, so the required names
+    // are cut to 80 while an oversized postcode, huisletter and
+    // huisnummertoevoeging are dropped instead of cut.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => [
+            'postcode' => str_repeat('9', 12),
+            'huisnummer' => '32',
+            'huisletter' => 'abc',
+            'huisnummertoevoeging' => 'achterzijde',
+            'straatnaam' => str_repeat('s', 120),
+            'plaatsnaam' => str_repeat('p', 120),
+        ],
+    ]);
+
+    $adres = $rol['betrokkeneIdentificatie']['verblijfsadres'];
+
+    expect($adres['wplWoonplaatsNaam'])->toBe(str_repeat('p', 80))
+        ->and($adres['gorOpenbareRuimteNaam'])->toBe(str_repeat('s', 80))
+        ->and($adres)->not->toHaveKey('aoaPostcode')
+        ->and($adres)->not->toHaveKey('aoaHuisletter')
+        ->and($adres)->not->toHaveKey('aoaHuisnummertoevoeging')
+        ->and($adres['aoaHuisnummer'])->toBe(32);
+});
+
+test('falls back to a placeholder openbare ruimte when the organisation address has no straatnaam', function () {
+    // gorOpenbareRuimteNaam is required on the address, so the helper's
+    // placeholder keeps the rest of the address sendable.
+    $state = FormState::fromSnapshot(['values' => []]);
+
+    $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => [
+            'postcode' => '6411CD',
+            'huisnummer' => '32',
+            'plaatsnaam' => 'Heerlen',
+        ],
+    ]);
+
+    expect($rol['betrokkeneIdentificatie']['verblijfsadres']['gorOpenbareRuimteNaam'])->toBe('adres');
 });
 
 test('registers a vestiging on handelsnaam alone when the KvK number is already hashed', function () {
