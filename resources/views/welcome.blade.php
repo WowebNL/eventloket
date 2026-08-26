@@ -6,6 +6,10 @@
 
         <title>{{ config('app.name') }}</title>
 
+        <!-- Icons -->
+        <link href="{{ asset('images/logos/favicon-v2.svg') }}" rel="icon" type="image/svg+xml" />
+        <link href="{{ asset('images/logos/favicon-v2.ico') }}" rel="icon" sizes="16x16 32x32 48x48" />
+
         <!-- Fonts -->
         <link href="{{ asset('css/fonts/satoshi.css') }}" rel="stylesheet" />
 
@@ -18,7 +22,7 @@
     <div class="flex lg:flex-1">
       <a href="/" class="-m-1.5 p-1.5">
         <span class="sr-only">{{ config('app.name') }}</span>
-        <img src="{{ asset('images/logos/logo-dark.svg') }}" alt="" class="h-8 w-auto" />
+        <img src="{{ asset('images/logos/logo-dark-v2.svg') }}" alt="" class="h-8 w-auto" />
       </a>
     </div>
     <div class="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-6">
