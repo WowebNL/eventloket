@@ -336,79 +336,94 @@ class ZaakInfolist
                                                     ->required(),
                                             ])
                                             ->action(function ($data, $record) {
-                                                $openzaak = new Openzaak;
-                                                $success = true;
-                                                $eigenschappen = ['risico_classificatie' => null, 'risico_toelichting' => null];
+                                                try {
+                                                    $openzaak = new Openzaak;
+                                                    $success = true;
+                                                    $eigenschappen = ['risico_classificatie' => null, 'risico_toelichting' => null];
 
-                                                // Find existing eigenschappen
-                                                foreach ($record->openzaak->eigenschappen as $item) {
-                                                    if ($item->naam === 'risico_classificatie') {
-                                                        $eigenschappen['risico_classificatie'] = $item;
-                                                    } elseif ($item->naam === 'risico_toelichting') {
-                                                        $eigenschappen['risico_toelichting'] = $item;
+                                                    // Find existing eigenschappen
+                                                    foreach ($record->openzaak->eigenschappen as $item) {
+                                                        if ($item->naam === 'risico_classificatie') {
+                                                            $eigenschappen['risico_classificatie'] = $item;
+                                                        } elseif ($item->naam === 'risico_toelichting') {
+                                                            $eigenschappen['risico_toelichting'] = $item;
+                                                        }
+
+                                                        if ($eigenschappen['risico_classificatie'] && $eigenschappen['risico_toelichting']) {
+                                                            break;
+                                                        }
                                                     }
 
-                                                    if ($eigenschappen['risico_classificatie'] && $eigenschappen['risico_toelichting']) {
-                                                        break;
+                                                    // Load catalogi eigenschappen if needed
+                                                    $catalogiEigenschappen = null;
+                                                    if (! $eigenschappen['risico_classificatie'] || ! $eigenschappen['risico_toelichting']) {
+                                                        $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
                                                     }
-                                                }
 
-                                                // Load catalogi eigenschappen if needed
-                                                $catalogiEigenschappen = null;
-                                                if (! $eigenschappen['risico_classificatie'] || ! $eigenschappen['risico_toelichting']) {
-                                                    $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()->getAll(['zaaktype' => $record->openzaak->zaaktype])->map(fn ($eigenschap) => new CatalogiEigenschap(...$eigenschap));
-                                                }
-
-                                                // Handle risico_classificatie
-                                                if ($eigenschappen['risico_classificatie']) {
-                                                    // Eigenschap exists, update it
-                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschappen['risico_classificatie']->uuid, [
-                                                        'waarde' => $data['risico_classificatie'],
-                                                    ]);
-                                                } else {
-                                                    // Eigenschap doesn't exist, create it
-                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_classificatie');
-                                                    if ($catalogiEigenschap) {
-                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
-                                                            'zaak' => $record->openzaak->url,
-                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                    // Handle risico_classificatie
+                                                    if ($eigenschappen['risico_classificatie']) {
+                                                        // Eigenschap exists, update it
+                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschappen['risico_classificatie']->uuid, [
                                                             'waarde' => $data['risico_classificatie'],
                                                         ]);
                                                     } else {
-                                                        $success = false;
+                                                        // Eigenschap doesn't exist, create it
+                                                        $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_classificatie');
+                                                        if ($catalogiEigenschap) {
+                                                            $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
+                                                                'zaak' => $record->openzaak->url,
+                                                                'eigenschap' => $catalogiEigenschap->url,
+                                                                'waarde' => $data['risico_classificatie'],
+                                                            ]);
+                                                        } else {
+                                                            $success = false;
+                                                        }
                                                     }
-                                                }
 
-                                                // Handle risico_toelichting
-                                                if ($eigenschappen['risico_toelichting']) {
-                                                    // Eigenschap exists, update it
-                                                    $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschappen['risico_toelichting']->uuid, [
-                                                        'waarde' => $data['risico_toelichting'],
-                                                    ]);
-                                                } else {
-                                                    // Eigenschap doesn't exist, create it
-                                                    $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_toelichting');
-                                                    if ($catalogiEigenschap) {
-                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
-                                                            'zaak' => $record->openzaak->url,
-                                                            'eigenschap' => $catalogiEigenschap->url,
+                                                    // Handle risico_toelichting
+                                                    if ($eigenschappen['risico_toelichting']) {
+                                                        // Eigenschap exists, update it
+                                                        $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->patch($eigenschappen['risico_toelichting']->uuid, [
                                                             'waarde' => $data['risico_toelichting'],
                                                         ]);
                                                     } else {
-                                                        $success = false;
+                                                        // Eigenschap doesn't exist, create it
+                                                        $catalogiEigenschap = $catalogiEigenschappen->firstWhere('naam', 'risico_toelichting');
+                                                        if ($catalogiEigenschap) {
+                                                            $openzaak->zaken()->zaken()->zaakeigenschappen($record->openzaak->uuid)->store([
+                                                                'zaak' => $record->openzaak->url,
+                                                                'eigenschap' => $catalogiEigenschap->url,
+                                                                'waarde' => $data['risico_toelichting'],
+                                                            ]);
+                                                        } else {
+                                                            $success = false;
+                                                        }
                                                     }
-                                                }
 
-                                                if ($success) {
-                                                    // update local reference for dispaying the new value immidiately
-                                                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['risico_classificatie' => $data['risico_classificatie'], 'risico_toelichting' => $data['risico_toelichting']]));
-                                                    $record->save();
+                                                    if ($success) {
+                                                        // update local reference for dispaying the new value immidiately
+                                                        $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['risico_classificatie' => $data['risico_classificatie'], 'risico_toelichting' => $data['risico_toelichting']]));
+                                                        $record->save();
 
-                                                    Notification::make()
-                                                        ->success()
-                                                        ->title(__('Risico classificatie en toelichting zijn gewijzigd'))
-                                                        ->send();
-                                                } else {
+                                                        // Clear the cached ZGW data so a subsequent edit in the same
+                                                        // session reads the freshly stored eigenschappen instead of
+                                                        // re-taking the create branch on a stale cache (which would
+                                                        // attempt a duplicate and be rejected by the backend).
+                                                        $record->clearZgwCache();
+
+                                                        Notification::make()
+                                                            ->success()
+                                                            ->title(__('Risico classificatie en toelichting zijn gewijzigd'))
+                                                            ->send();
+                                                    } else {
+                                                        Notification::make()
+                                                            ->danger()
+                                                            ->title(__('Er is iets misgegaan bij het wijzigen van de risico classificatie'))
+                                                            ->send();
+                                                    }
+                                                } catch (\Throwable $e) {
+                                                    report($e);
+
                                                     Notification::make()
                                                         ->danger()
                                                         ->title(__('Er is iets misgegaan bij het wijzigen van de risico classificatie'))
