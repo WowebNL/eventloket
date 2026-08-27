@@ -28,11 +28,11 @@ test('the sound level questions ask for the level and point at the local APV', f
 })->with([
     [
         'watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX',
-        'Wat is de geluidsbelasting in db(A) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Check de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)',
+        'Wat is de geluidsbelasting in db(A) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)',
     ],
     [
         'watIsDeGeluidsbelastingInDecibelDBCNorm0103DBVanUwEvenement',
-        'Wat is de geluidsbelasting in db(C) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Check de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)',
+        'Wat is de geluidsbelasting in db(C) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)',
     ],
 ]);
 
@@ -53,11 +53,11 @@ test('the sound level questions interpolate the event name', function (string $f
 })->with([
     [
         'watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX',
-        'Wat is de geluidsbelasting in db(A) van uw evenement Testfeest 2026? (Check de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)',
+        'Wat is de geluidsbelasting in db(A) van uw evenement Testfeest 2026? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)',
     ],
     [
         'watIsDeGeluidsbelastingInDecibelDBCNorm0103DBVanUwEvenement',
-        'Wat is de geluidsbelasting in db(C) van uw evenement Testfeest 2026? (Check de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)',
+        'Wat is de geluidsbelasting in db(C) van uw evenement Testfeest 2026? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)',
     ],
 ]);
 
@@ -66,10 +66,10 @@ test('the sound level questions stay readable without an event name', function (
 })->with([
     [
         'watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX',
-        'Wat is de geluidsbelasting in db(A) van uw evenement ? (Check de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)',
+        'Wat is de geluidsbelasting in db(A) van uw evenement ? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)',
     ],
     [
         'watIsDeGeluidsbelastingInDecibelDBCNorm0103DBVanUwEvenement',
-        'Wat is de geluidsbelasting in db(C) van uw evenement ? (Check de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)',
+        'Wat is de geluidsbelasting in db(C) van uw evenement ? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)',
     ],
 ]);
