@@ -505,7 +505,7 @@ class ViewZaak extends ViewRecord
                      *
                      * @disregard
                      */
-                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['resultaat' => __('wordt momementeel verwerkt...')])); // @phpstan-ignore assign.propertyReadOnly
+                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['resultaat' => __('wordt momenteel verwerkt...')])); // @phpstan-ignore assign.propertyReadOnly
 
                     $record->save();
 
