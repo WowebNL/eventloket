@@ -8,6 +8,7 @@ use App\Filament\Admin\Resources\MunicipalityResource\Pages\ListMunicipalities;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\DefaultAdviceQuestionsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\LocationsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityAdminUsersRelationManager;
+use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityFormQuestionsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReportQuestionsRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerMunicipalityAdminUsersRelationManager;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerUsersRelationManager;
@@ -134,6 +135,7 @@ class MunicipalityResource extends Resource
             LocationsRelationManager::class,
             VariablesRelationManager::class,
             ReportQuestionsRelationManager::class,
+            MunicipalityFormQuestionsRelationManager::class,
             DefaultAdviceQuestionsRelationManager::class,
         ];
     }

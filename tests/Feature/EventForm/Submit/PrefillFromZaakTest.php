@@ -209,6 +209,27 @@ test('locatie-afhankelijke state van de bron-zaak komt niet mee', function () {
         ->and($state->get('evenementInGemeente'))->toBeNull();
 });
 
+test('antwoorden op de aanvullende vragen van de bron-gemeente komen niet mee', function () {
+    // De vragenlijst zelf verdwijnt met `gemeenteVariabelen`. Zouden de
+    // antwoorden blijven staan, dan sleept een kopie ze mee naar een gemeente
+    // met heel andere vragen.
+    $sc = scenarioZaakMetSnapshot([
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest 2027',
+        'gemeenteVariabelen' => [
+            'extra_questions' => [
+                ['id' => 3, 'type' => 'text', 'label' => 'Nog iets?', 'options' => []],
+            ],
+        ],
+        'extraVraag_3' => 'Ja, een springkussen',
+    ]);
+
+    $state = $this->loader->load($sc['zaak']->id, $sc['user'], $sc['org']);
+
+    expect($state->get('watIsDeNaamVanHetEvenementVergunning'))->toBe('Buurtfeest 2027')
+        ->and($state->get('gemeenteVariabelen'))->toBeNull()
+        ->and($state->get('extraVraag_3'))->toBeNull();
+});
+
 test('de brkGemeente van gekopieerde adresrijen wordt gewist', function () {
     // Het verborgen brkGemeente-veld wordt door de locatiecheck verbatim
     // vertrouwd; een gekopieerde waarde zou een gewijzigd adres naar de oude

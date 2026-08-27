@@ -18,6 +18,15 @@ class Zaaktype extends Model
 {
     use HasFactory, HasUuids;
 
+    /**
+     * Name prefix that identifies a vooraankondiging zaaktype. The "aard"
+     * of a zaaktype is a naming convention on `main` (same convention as
+     * ResolveZaaktype); keep every aard check behind isVooraankondiging()
+     * so it can be replaced in one place by the `zaaktypen.role` column
+     * once the multi-ZGW branch (PR #482) lands.
+     */
+    public const VOORAANKONDIGING_NAME_PREFIX = 'Vooraankondiging';
+
     protected $table = 'zaaktypen';
 
     protected $fillable = [
@@ -39,6 +48,11 @@ class Zaaktype extends Model
     public function zaken(): HasMany
     {
         return $this->hasMany(Zaak::class);
+    }
+
+    public function isVooraankondiging(): bool
+    {
+        return str_starts_with($this->name ?? '', self::VOORAANKONDIGING_NAME_PREFIX);
     }
 
     /** @return BelongsTo<Municipality, $this> */
