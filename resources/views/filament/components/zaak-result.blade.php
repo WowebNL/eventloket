@@ -4,7 +4,7 @@
 </span>
 
     <span class="text-xl text-blue-700 font-medium" 
-    @if(str_contains($resultaat, 'wordt momementeel verwerkt'))
+    @if(str_contains($resultaat, 'wordt momenteel verwerkt'))
     wire:poll.5s="refreshResultaat"
     @endif
     >
