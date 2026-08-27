@@ -1,5 +1,20 @@
 <?php
 
+/**
+ * Read the attachment budget from the environment, validated.
+ *
+ * An env value always arrives as a string and (int) turns anything unusable
+ * into 0, which would silently drop every attachment. A value that is not a
+ * number therefore falls back to the documented default, while a numeric value
+ * is honoured and only clamped at 0 (no attachments at all is a deliberate,
+ * if unusual, setting).
+ */
+$attachmentBudget = function (string $key, int $default): int {
+    $value = env($key, $default);
+
+    return is_numeric($value) ? max(0, (int) $value) : $default;
+};
+
 return [
 
     /*
@@ -114,6 +129,30 @@ return [
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attachments
+    |--------------------------------------------------------------------------
+    |
+    | "max_total_bytes" is the combined size all attachments on a single mail
+    | may occupy. A receiving mail server rejects an oversized message outright
+    | (SMTP 552), which loses the notification as a whole, so the application
+    | caps what it attaches instead and refers to the documents in the
+    | application for whatever does not fit.
+    |
+    | The budget counts the raw (decoded) bytes. MIME base64 inflates those by
+    | roughly a third on the wire, so the default of 6 MiB leaves a message of
+    | about 8.5 MiB including the body and headers: below the 10 MB limit that
+    | is common on on-premise relays and well below the 25 MB of the large
+    | hosted providers. Raise it per environment once the receiving side's
+    | actual limit is known.
+    |
+    */
+
+    'attachments' => [
+        'max_total_bytes' => $attachmentBudget('MAIL_MAX_TOTAL_ATTACHMENT_BYTES', 6 * 1024 * 1024),
     ],
 
 ];
