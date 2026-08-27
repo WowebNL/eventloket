@@ -256,6 +256,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 ]),
             ExportAction::make()
                 ->exporter($exporter)
+                // The organiser calendar is not scoped to a single
+                // organisation, so an export there would expose case-party
+                // data of other organisations. Export stays available to the
+                // case-handling roles only.
+                ->visible(fn () => auth()->user()->role !== Role::Organiser)
                 ->label(__('shared/widgets/calendar.actions.export.label'))
                 ->modalHeading(__('shared/widgets/calendar.actions.export.label'))
                 ->columnMapping(false)

@@ -47,6 +47,9 @@ return [
         'telefoon' => [
             'label' => 'Telefoonnummer organisatie',
         ],
+        'naam-organiser' => [
+            'label' => 'Naam indiener',
+        ],
         'telefoon-organiser' => [
             'label' => 'Telefoonnummer indiener',
         ],

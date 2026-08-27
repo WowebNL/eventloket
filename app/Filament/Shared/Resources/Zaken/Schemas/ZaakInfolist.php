@@ -66,11 +66,102 @@ class ZaakInfolist
         return in_array(auth()->user()?->role, self::CASE_HANDLER_ROLES, true);
     }
 
+    /**
+     * Whether the current user may see the case parties (submitter name,
+     * organisation name, event address and chamber of commerce number).
+     *
+     * Case handlers always may. An organiser may too, but only for cases of
+     * an organisation they belong to. This matters because the same schema
+     * feeds the calendar modal, which also lists events of other
+     * organisations; the per-organisation check keeps those parties hidden
+     * there while showing them on the organiser's own cases.
+     */
+    public static function canSeeCaseParties(Zaak $record): bool
+    {
+        if (self::isCaseHandler()) {
+            return true;
+        }
+
+        $user = auth()->user();
+
+        return $user instanceof OrganiserUser && $user->canAccessOrganisation($record->organisation_id);
+    }
+
     public static function informationschema(): array
     {
         return [
+            // Event: what and when. Grouped first so the case reads from the
+            // event, through the parties, to the case administration.
             TextEntry::make('reference_data.naam_evenement')
                 ->label(__('resources/zaak.columns.naam_evenement.label')),
+            TextEntry::make('reference_data.start_evenement_datetime')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_evenement.label')),
+            TextEntry::make('reference_data.eind_evenement_datetime')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_evenement.label')),
+            self::dagenEntry('dagen_evenement', __('resources/zaak.columns.dagen_evenement.label')),
+            TextEntry::make('reference_data.start_opbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_opbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.eind_opbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_opbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            self::dagenEntry('dagen_opbouw', __('resources/zaak.columns.dagen_opbouw.label')),
+            TextEntry::make('reference_data.start_afbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.start_afbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.eind_afbouw')
+                ->dateTime(config('app.datetime_format'))
+                ->label(__('resources/zaak.columns.eind_afbouw.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            self::dagenEntry('dagen_afbouw', __('resources/zaak.columns.dagen_afbouw.label')),
+            TextEntry::make('reference_data.locaties_evenement')
+                ->label(__('resources/zaak.columns.locaties_evenement.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('openzaak.zaakAddresses')
+                ->label(__('municipality/resources/zaak.columns.adres_evenement.label'))
+                ->listWithLineBreaks()
+                ->visible(fn (Zaak $record, ?array $state) => self::canSeeCaseParties($record) && ! empty($state)),
+            TextEntry::make('reference_data.aanwezigen')
+                ->label(__('resources/zaak.columns.aanwezigen.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('reference_data.types_evenement')
+                ->label(__('resources/zaak.columns.types_evenement.label'))
+                ->bulleted()
+                ->formatStateUsing(fn ($state) => Str::ucfirst(Str::lower(Str::headline($state))))
+                ->visible(fn ($state) => ! empty($state)),
+
+            // Parties: organiser (organisation) and submitter (user).
+            TextEntry::make('reference_data.organisator')
+                ->label(__('municipality/resources/zaak.columns.organisator.label'))
+                ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])),
+            TextEntry::make('organiserUser.name')
+                ->label(__('resources/zaak.columns.naam-organiser.label'))
+                ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state)),
+            TextEntry::make('organisation.name')
+                ->label(__('municipality/resources/zaak.columns.naam_organisatie.label'))
+                ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state) && $record->organisation && ! $record->organisation->isPersonal()),
+            TextEntry::make('organisation.coc_number')
+                ->label(__('municipality/resources/zaak.columns.kvk_nummer_organisatie.label'))
+                ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state)),
+            TextEntry::make('organisation.phone')
+                ->label(__('resources/zaak.columns.telefoon.label'))
+                ->visible(fn (?string $state) => ! empty($state)),
+            TextEntry::make('organiseruser.phone')
+                ->label(__('resources/zaak.columns.telefoon-organiser.label'))
+                ->visible(fn ($state) => ! empty($state)),
+            TextEntry::make('organisation.email')
+                ->label(__('resources/zaak.columns.email.label'))
+                ->visible(fn (?string $state) => ! empty($state)),
+            TextEntry::make('organiserUser.email')
+                ->label(__('resources/zaak.columns.email-organiser.label'))
+                ->visible(fn (?string $state) => ! empty($state)),
+
+            // Case administration: identifiers, type, links, status.
             TextEntry::make('public_id')
                 ->icon('heroicon-o-identification')
                 ->label(__('resources/zaak.columns.public_id.label')),
@@ -101,70 +192,6 @@ class ZaakInfolist
                 ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
-            TextEntry::make('reference_data.organisator')
-                ->label(__('municipality/resources/zaak.columns.organisator.label'))
-                ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])),
-            TextEntry::make('organiserUser.name')
-                ->label(__('municipality/resources/zaak.columns.naam_organisator.label'))
-                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
-            TextEntry::make('organisation.name')
-                ->label(__('municipality/resources/zaak.columns.naam_organisatie.label'))
-                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
-            TextEntry::make('openzaak.zaakAddresses')
-                ->label(__('municipality/resources/zaak.columns.adres_evenement.label'))
-                ->listWithLineBreaks()
-                ->visible(fn (?array $state) => self::isCaseHandler() && ! empty($state)),
-            TextEntry::make('organisation.coc_number')
-                ->label(__('municipality/resources/zaak.columns.kvk_nummer_organisatie.label'))
-                ->visible(fn (?string $state) => self::isCaseHandler() && ! empty($state)),
-            TextEntry::make('organisation.phone')
-                ->label(__('resources/zaak.columns.telefoon.label'))
-                ->visible(fn (?string $state) => ! empty($state)),
-            TextEntry::make('organiseruser.phone')
-                ->label(__('resources/zaak.columns.telefoon-organiser.label'))
-                ->visible(fn ($state) => ! empty($state)),
-            TextEntry::make('organisation.email')
-                ->label(__('resources/zaak.columns.email.label'))
-                ->visible(fn (?string $state) => ! empty($state)),
-            TextEntry::make('organiserUser.email')
-                ->label(__('resources/zaak.columns.email-organiser.label'))
-                ->visible(fn (?string $state) => ! empty($state)),
-            TextEntry::make('reference_data.start_evenement_datetime')
-                ->dateTime(config('app.datetime_format'))
-                ->label(__('resources/zaak.columns.start_evenement.label')),
-            TextEntry::make('reference_data.eind_evenement_datetime')
-                ->dateTime(config('app.datetime_format'))
-                ->label(__('resources/zaak.columns.eind_evenement.label')),
-            self::dagenEntry('dagen_evenement', __('resources/zaak.columns.dagen_evenement.label')),
-            TextEntry::make('reference_data.start_opbouw')
-                ->dateTime(config('app.datetime_format'))
-                ->label(__('resources/zaak.columns.start_opbouw.label'))
-                ->visible(fn ($state) => ! empty($state)),
-            TextEntry::make('reference_data.eind_opbouw')
-                ->dateTime(config('app.datetime_format'))
-                ->label(__('resources/zaak.columns.eind_opbouw.label'))
-                ->visible(fn ($state) => ! empty($state)),
-            self::dagenEntry('dagen_opbouw', __('resources/zaak.columns.dagen_opbouw.label')),
-            TextEntry::make('reference_data.start_afbouw')
-                ->dateTime(config('app.datetime_format'))
-                ->label(__('resources/zaak.columns.start_afbouw.label'))
-                ->visible(fn ($state) => ! empty($state)),
-            TextEntry::make('reference_data.eind_afbouw')
-                ->dateTime(config('app.datetime_format'))
-                ->label(__('resources/zaak.columns.eind_afbouw.label'))
-                ->visible(fn ($state) => ! empty($state)),
-            self::dagenEntry('dagen_afbouw', __('resources/zaak.columns.dagen_afbouw.label')),
-            TextEntry::make('reference_data.locaties_evenement')
-                ->label(__('resources/zaak.columns.locaties_evenement.label'))
-                ->visible(fn ($state) => ! empty($state)),
-            TextEntry::make('reference_data.aanwezigen')
-                ->label(__('resources/zaak.columns.aanwezigen.label'))
-                ->visible(fn ($state) => ! empty($state)),
-            TextEntry::make('reference_data.types_evenement')
-                ->label(__('resources/zaak.columns.types_evenement.label'))
-                ->bulleted()
-                ->formatStateUsing(fn ($state) => Str::ucfirst(Str::lower(Str::headline($state))))
-                ->visible(fn ($state) => ! empty($state)),
             TextEntry::make('reference_data.status_name')
                 ->label(__('resources/zaak.columns.status.label'))
                 ->visible(function (Zaak $record) {
