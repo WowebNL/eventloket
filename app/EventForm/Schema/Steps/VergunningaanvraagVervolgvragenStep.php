@@ -151,7 +151,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 return ! (in_array('anders', (array) $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement'), true));
                             }),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX')
-                            ->label(Label::render('Wat is de geluidsbelasting in db(A) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Check de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)'))
+                            ->label(Label::render('Wat is de geluidsbelasting in db(A) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)'))
                             ->numeric()
                             ->required()
                             ->belowContent([
@@ -159,7 +159,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'Deze geluidssterkte moet gemeten worden op de zogenaamde "Front of House" afstand van maximaal 25 meter. De dB(A) norm meet het geluidsniveau zoals het menselijk oor dat waarneemt. Het kan gemeten worden met een geluidsniveaumeter, die een A-filter toepast. Bij festivals wordt dat gemeten op 25 meter vanaf het podium.',
                             ]),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBCNorm0103DBVanUwEvenement')
-                            ->label(Label::render('Wat is de geluidsbelasting in db(C) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Check de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)'))
+                            ->label(Label::render('Wat is de geluidsbelasting in db(C) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)'))
                             ->numeric()
                             ->required()
                             ->belowContent([

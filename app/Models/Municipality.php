@@ -118,6 +118,12 @@ class Municipality extends Model implements HasGeometry
         return $this->hasMany(ReportQuestion::class);
     }
 
+    /** @return HasMany<MunicipalityFormQuestion, $this> */
+    public function formQuestions(): HasMany
+    {
+        return $this->hasMany(MunicipalityFormQuestion::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Enums\MunicipalityFormQuestionType;
 use App\EventForm\Components\VerticalWizard;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
@@ -13,6 +14,7 @@ use App\EventForm\State\FormDerivedState;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\EventForm\Submit\SubmitEventForm;
+use App\EventForm\Support\ExtraQuestions;
 use App\EventForm\Support\LocationKinds;
 use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
@@ -177,6 +179,8 @@ class EventFormPage extends Page implements HasForms
                 $this->data[$mapKey] = $values[$mapKey];
             }
         }
+
+        $this->hydrateAanvullendeVragenState();
     }
 
     /**
@@ -395,7 +399,7 @@ class EventFormPage extends Page implements HasForms
 
         return $form
             ->schema([
-                VerticalWizard::make(EventFormSchema::steps($organisation))
+                VerticalWizard::make(EventFormSchema::steps($organisation, $this->hasAanvullendeVragen()))
                     ->stepApplicability(fn (string $stepKey): bool => $this->state->isStepApplicable($stepKey))
                     // Resume bij terugkeer: als de organisator weg is geweest
                     // (bv. naar Dashboard) en geen `?step=`-query-param meer
@@ -437,6 +441,11 @@ class EventFormPage extends Page implements HasForms
         // intern op input-hash, dus dezelfde state → geen werk.
         $this->triggerFetchesFor($propertyName);
 
+        // Na de fetches, want die kunnen een nieuwe vragenlijst opleveren —
+        // en na absorb, want een gewijzigd antwoord kan het aanvraagpad
+        // omzetten en daarmee andere vragen van toepassing maken.
+        $this->hydrateAanvullendeVragenState();
+
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
 
         // Kaart-state moet altijd direct gepersisteerd worden — een tekening
@@ -462,6 +471,7 @@ class EventFormPage extends Page implements HasForms
     public function saveDraftNow(): void
     {
         $this->absorbFormData($this->data ?? []);
+        $this->hydrateAanvullendeVragenState();
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
         $this->persistDraft();
         $this->lastDraftSaveAt = time();
@@ -538,13 +548,27 @@ class EventFormPage extends Page implements HasForms
         // geval een legacy-draft de `form.`-prefix nog meeschrijft.
         $cleanKey = str_starts_with($key, 'form.') ? substr($key, 5) : $key;
 
-        foreach (EventFormSchema::stepUuidsInOrder() as $index => $uuid) {
+        // Dezelfde conditie als in form(): laat de wizard de stap
+        // "Aanvullende vragen" weg en deze lijst niet, dan liggen alle
+        // posities daarna er één naast en opent het concept op de
+        // verkeerde stap.
+        foreach (EventFormSchema::stepUuidsInOrder($this->hasAanvullendeVragen()) as $index => $uuid) {
             if ($uuid === $cleanKey) {
                 return $index + 1;
             }
         }
 
         return 1;
+    }
+
+    /**
+     * Of de stap "Aanvullende vragen" in de wizard hoort: alleen wanneer de
+     * gemeente minstens één actieve vraag heeft die op het huidige
+     * aanvraagpad van toepassing is.
+     */
+    private function hasAanvullendeVragen(): bool
+    {
+        return ExtraQuestions::hasAny($this->state);
     }
 
     /**
@@ -555,6 +579,43 @@ class EventFormPage extends Page implements HasForms
      * `AlsBoolEnIsNietGelijkAanNone*`). De ServiceFetcher cachet intern
      * op een input-hash, dus over-fetchen kost geen extra werk.
      */
+    /**
+     * Geef elke aanvullende meerkeuzevraag een lege array als er nog geen
+     * antwoord is.
+     *
+     * De stap bouwt z'n componenten uit de state, dus een CheckboxList kan
+     * pas halverwege het invullen ontstaan — en dan heeft `$form->fill()`
+     * z'n sleutel in `$this->data` nooit aangemaakt. Livewire ziet dan `null`
+     * in plaats van een array en bindt de hele groep als één boolean: één
+     * optie aanvinken zet ze allemaal aan, en de samenvatting toont `1`
+     * (de boolean als string) in plaats van de gekozen opties.
+     *
+     * Dit draait bewust bij élke roundtrip en niet alleen na een
+     * gemeente-fetch. De set toepasselijke vragen hangt namelijk óók van het
+     * aanvraagpad af: een vraag die alleen bij een vooraankondiging hoort,
+     * ontstaat pas zodra de organisator dat pad kiest — lang nadat de
+     * gemeente bekend werd.
+     *
+     * Radio en Textarea hebben dit probleem niet; die werken gewoon met `null`.
+     */
+    private function hydrateAanvullendeVragenState(): void
+    {
+        foreach (ExtraQuestions::forState($this->state) as $question) {
+            if (($question['type'] ?? null) !== MunicipalityFormQuestionType::Checkboxes->value) {
+                continue;
+            }
+
+            $key = ExtraQuestions::fieldKey($question);
+
+            if (is_array($this->data[$key] ?? null)) {
+                continue;
+            }
+
+            $this->data[$key] = [];
+            $this->state->setField($key, []);
+        }
+    }
+
     private function triggerFetchesFor(string $propertyName): void
     {
         $field = $this->fieldKeyFromProperty($propertyName);
@@ -625,6 +686,8 @@ class EventFormPage extends Page implements HasForms
         $this->resetStaleGemeenteKeuze();
         $fetcher->fetch('gemeenteVariabelen', $this->state);
         $fetcher->fetch('evenementenInDeGemeente', $this->state);
+
+        $this->hydrateAanvullendeVragenState();
 
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
     }
