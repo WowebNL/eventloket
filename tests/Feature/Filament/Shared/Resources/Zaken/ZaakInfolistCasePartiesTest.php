@@ -23,6 +23,8 @@ beforeEach(function () {
     $this->organisation = Organisation::factory()->create([
         'name' => 'Testorganisatie BV',
         'coc_number' => '12345678',
+        'phone' => '0600000011',
+        'email' => 'eigen-org@voorbeeld.test',
     ]);
 
     $this->organiser = User::factory()->create([
@@ -93,7 +95,11 @@ test('the organiser sees the case parties on a case of their own organisation', 
         ->assertSee('Naam organisatie')
         ->assertSee('Testorganisatie BV')
         ->assertSee('KVK-nummer van de organisatie')
-        ->assertSee('12345678');
+        ->assertSee('12345678')
+        // The contact fields carry the same gate and stay visible on the
+        // organiser's own-organisation case.
+        ->assertSee('0600000011')
+        ->assertSee('eigen-org@voorbeeld.test');
 });
 
 // --- Decision D: another organisation's case leaks nothing on the calendar ---
@@ -102,6 +108,8 @@ test('an organiser does not see the case parties of another organisation on the 
     $otherOrg = Organisation::factory()->create([
         'name' => 'Andere Organisatie BV',
         'coc_number' => '87654321',
+        'phone' => '0600000022',
+        'email' => 'andere-org@voorbeeld.test',
     ]);
     $otherSubmitter = User::factory()->create([
         'role' => Role::Organiser,
@@ -130,7 +138,10 @@ test('an organiser does not see the case parties of another organisation on the 
         ->assertOk()
         ->assertDontSee('Andere Persoon')
         ->assertDontSee('Andere Organisatie BV')
-        ->assertDontSee('87654321');
+        ->assertDontSee('87654321')
+        // Contact fields of the other organisation stay hidden as well.
+        ->assertDontSee('0600000022')
+        ->assertDontSee('andere-org@voorbeeld.test');
 });
 
 // --- Case handler behaviour is unchanged (regression guard) ---
@@ -149,7 +160,9 @@ test('a case handler still sees the case parties', function () {
         ->assertSee('Naam organisatie')
         ->assertSee('Testorganisatie BV')
         ->assertSee('KVK-nummer van de organisatie')
-        ->assertSee('12345678');
+        ->assertSee('12345678')
+        ->assertSee('0600000011')
+        ->assertSee('eigen-org@voorbeeld.test');
 });
 
 // --- Decision B: the "Mijn omgeving" placeholder is suppressed ---

@@ -148,18 +148,24 @@ class ZaakInfolist
             TextEntry::make('organisation.coc_number')
                 ->label(__('municipality/resources/zaak.columns.kvk_nummer_organisatie.label'))
                 ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state)),
+            // Contact details of the organisation and the submitter. These
+            // carry the same per-organisation gate as the four fields above:
+            // today they never leak (the calendar scope does not load these
+            // columns for the organiser), but the explicit gate keeps a later
+            // widening of that scope from turning them into a cross-organisation
+            // leak on the shared calendar modal.
             TextEntry::make('organisation.phone')
                 ->label(__('resources/zaak.columns.telefoon.label'))
-                ->visible(fn (?string $state) => ! empty($state)),
+                ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state)),
             TextEntry::make('organiseruser.phone')
                 ->label(__('resources/zaak.columns.telefoon-organiser.label'))
-                ->visible(fn ($state) => ! empty($state)),
+                ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state)),
             TextEntry::make('organisation.email')
                 ->label(__('resources/zaak.columns.email.label'))
-                ->visible(fn (?string $state) => ! empty($state)),
+                ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state)),
             TextEntry::make('organiserUser.email')
                 ->label(__('resources/zaak.columns.email-organiser.label'))
-                ->visible(fn (?string $state) => ! empty($state)),
+                ->visible(fn (Zaak $record, ?string $state) => self::canSeeCaseParties($record) && ! empty($state)),
 
             // Case administration: identifiers, type, links, status.
             TextEntry::make('public_id')
