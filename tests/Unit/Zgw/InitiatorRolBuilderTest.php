@@ -155,24 +155,31 @@ test('sends no verblijfsadres on a niet_natuurlijk_persoon rol', function () {
         ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres');
 });
 
-test('skips the vestiging verblijfsadres for a foreign organisation address', function () {
-    // subVerblijfBuitenland is not built, so a foreign address is left out
-    // entirely, exactly as it is for a natuurlijk persoon.
+test('sends a foreign organisation address as subVerblijfBuitenland, not as a verblijfsadres', function () {
+    // verblijfsadres models a BAG address and cannot hold a foreign one, so the
+    // standard puts it in subVerblijfBuitenland instead. RolVestiging carries
+    // both, exactly as RolNatuurlijkPersoon does.
     $state = FormState::fromSnapshot(['values' => []]);
 
     $rol = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
         'kvk' => '12345678',
         'organisatie_naam' => 'Woweb',
         'organisatie_adres' => [
-            'postcode' => '4000',
+            'postcode' => '1000',
             'huisnummer' => '7',
-            'plaatsnaam' => 'Luik',
+            'straatnaam' => 'Teststraat',
+            'plaatsnaam' => 'Teststad',
             'land' => 'België',
         ],
     ]);
 
     expect($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres')
-        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('subVerblijfBuitenland')
+        ->and($rol['betrokkeneIdentificatie']['subVerblijfBuitenland'])->toBe([
+            'lndLandcode' => '5010',
+            'lndLandnaam' => 'België',
+            'subAdresBuitenland_1' => 'Teststraat 7',
+            'subAdresBuitenland_2' => '1000 Teststad',
+        ])
         ->and($rol['betrokkeneIdentificatie']['handelsnaam'])->toBe(['Woweb']);
 });
 
@@ -337,14 +344,131 @@ test('builds the same natuurlijk_persoon rol whatever the connection is', functi
     expect($municipality)->toBe($default);
 });
 
-test('skips the verblijfsadres for a foreign address', function () {
-    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Jansen']]);
+test('sends a foreign address as subVerblijfBuitenland, not as a verblijfsadres', function () {
+    // The two blocks are mutually exclusive: verblijfsadres is a BAG address,
+    // so a foreign one is expressed as subVerblijfBuitenland. The house number
+    // and its additions join the street on the first line, the postcode joins
+    // the place on the second: the schema has no separate fields for them.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
 
     $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
         'natuurlijk_persoon_adres' => [
-            'postcode' => '4000',
+            'postcode' => '1000',
             'huisnummer' => '7',
-            'plaatsnaam' => 'Luik',
+            'huisletter' => 'b',
+            'straatnaam' => 'Teststraat',
+            'plaatsnaam' => 'Teststad',
+            'land' => 'België',
+        ],
+    ]);
+
+    expect($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres')
+        ->and($rol['betrokkeneIdentificatie']['subVerblijfBuitenland'])->toBe([
+            'lndLandcode' => '5010',
+            'lndLandnaam' => 'België',
+            'subAdresBuitenland_1' => 'Teststraat 7 b',
+            'subAdresBuitenland_2' => '1000 Teststad',
+        ]);
+});
+
+test('resolves the country through the BRP table rather than as plain text', function () {
+    // lndLandcode comes from the BRP Land/Gebied table, which is also what
+    // decides whether an address is foreign at all: an ISO code or a differing
+    // spelling of the Netherlands stays an ordinary verblijfsadres, while a
+    // country published under a longer official name is still recognised.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+
+    $build = fn (string $land) => InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => '1000AA',
+            'huisnummer' => '7',
+            'straatnaam' => 'Teststraat',
+            'plaatsnaam' => 'Teststad',
+            'land' => $land,
+        ],
+    ])['betrokkeneIdentificatie'];
+
+    expect($build('NL'))->toHaveKey('verblijfsadres')
+        ->and($build('nederland'))->toHaveKey('verblijfsadres')
+        ->and($build('Duitsland')['subVerblijfBuitenland']['lndLandcode'])->toBe('9089')
+        ->and($build('Duitsland')['subVerblijfBuitenland']['lndLandnaam'])->toBe('Bondsrepubliek Duitsland')
+        ->and($build('DE')['subVerblijfBuitenland']['lndLandcode'])->toBe('9089');
+});
+
+test('leaves out a foreign address whose country cannot be resolved to a BRP code', function () {
+    // lndLandcode is required on subVerblijfBuitenland, so a country the table
+    // does not know leaves nothing that may be sent. Inventing a code would put
+    // a different country on the zaak, and sending the block without one is a
+    // 400 that aborts the submit chain, so the address is left out, exactly as
+    // a foreign address was before this block was built.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => '1000',
+            'huisnummer' => '7',
+            'straatnaam' => 'Teststraat',
+            'plaatsnaam' => 'Teststad',
+            'land' => 'Neverland',
+        ],
+    ]);
+
+    expect($rol['betrokkeneIdentificatie'])->not->toHaveKey('verblijfsadres')
+        ->and($rol['betrokkeneIdentificatie'])->not->toHaveKey('subVerblijfBuitenland');
+});
+
+test('cuts the foreign address lines to the schema bound instead of dropping them', function () {
+    // The schema has no separate street/place fields to preserve here, so a
+    // shortened line is the only thing that can be sent and it still identifies
+    // the address.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => str_repeat('9', 20),
+            'huisnummer' => '7',
+            'straatnaam' => str_repeat('s', 120),
+            'plaatsnaam' => str_repeat('p', 120),
+            'land' => 'België',
+        ],
+    ]);
+
+    $buitenland = $rol['betrokkeneIdentificatie']['subVerblijfBuitenland'];
+
+    expect($buitenland['subAdresBuitenland_1'])->toBe(str_repeat('s', 35))
+        ->and($buitenland['subAdresBuitenland_2'])->toBe(str_repeat('9', 20).' '.str_repeat('p', 14))
+        ->and(mb_strlen($buitenland['subAdresBuitenland_2']))->toBe(35);
+});
+
+test('builds a foreign address from whatever lines the form supplied', function () {
+    // Only the country is required to build the block; the rest of the address
+    // is optional free text, so a partial address still travels.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'plaatsnaam' => 'Teststad',
+            'land' => 'België',
+        ],
+    ]);
+
+    expect($rol['betrokkeneIdentificatie']['subVerblijfBuitenland'])->toBe([
+        'lndLandcode' => '5010',
+        'lndLandnaam' => 'België',
+        'subAdresBuitenland_1' => 'Teststad',
+    ]);
+});
+
+test('skips the verblijfsadres for a foreign address', function () {
+    // A foreign address with a huisnummer the BAG block would accept still must
+    // not become a verblijfsadres.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => '1000',
+            'huisnummer' => '7',
+            'plaatsnaam' => 'Teststad',
             'land' => 'België',
         ],
     ]);
@@ -577,6 +701,11 @@ function rolPayloadBounds(): array
         'betrokkeneIdentificatie.verblijfsadres.aoaPostcode' => 7,
         'betrokkeneIdentificatie.verblijfsadres.aoaHuisletter' => 1,
         'betrokkeneIdentificatie.verblijfsadres.aoaHuisnummertoevoeging' => 4,
+        'betrokkeneIdentificatie.subVerblijfBuitenland.lndLandcode' => 4,
+        'betrokkeneIdentificatie.subVerblijfBuitenland.lndLandnaam' => 40,
+        'betrokkeneIdentificatie.subVerblijfBuitenland.subAdresBuitenland_1' => 35,
+        'betrokkeneIdentificatie.subVerblijfBuitenland.subAdresBuitenland_2' => 35,
+        'betrokkeneIdentificatie.subVerblijfBuitenland.subAdresBuitenland_3' => 35,
     ];
 }
 
@@ -887,4 +1016,92 @@ test('keeps a KvK number of exactly eight characters', function () {
     ]);
 
     expect($rol['betrokkeneIdentificatie']['kvkNummer'])->toBe('12345678');
+});
+
+test('keeps every foreign-address field inside its schema bound for a maximum length form submission', function () {
+    $initiator = oversizedInitiator();
+    $initiator['natuurlijk_persoon_adres']['land'] = 'België';
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', oversizedState(), $initiator, 'EVL42');
+
+    expect($rol['betrokkeneIdentificatie'])->toHaveKey('subVerblijfBuitenland');
+    expectRolWithinSchemaBounds($rol);
+});
+
+// The address fields the form asks for are separate inputs, and they stay
+// separate all the way to the rol: the place name and the house number are
+// carried by two different properties of the ZGW address. These anchor that,
+// so a report of one turning up in the other can be answered from the payload
+// this application builds rather than from reasoning about it.
+
+test('maps the place name and the house number onto their own address properties', function () {
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => '1000AA',
+            'huisnummer' => '5',
+            'straatnaam' => 'Teststraat',
+            'plaatsnaam' => 'Teststad',
+        ],
+    ]);
+
+    $adres = $rol['betrokkeneIdentificatie']['verblijfsadres'];
+
+    expect($adres['wplWoonplaatsNaam'])->toBe('Teststad')
+        ->and($adres['aoaHuisnummer'])->toBe(5)
+        // The one that would show up as a corrupted woonplaats: the place name
+        // is never the house number, in either direction.
+        ->and($adres['wplWoonplaatsNaam'])->not->toBe('5')
+        ->and($adres['gorOpenbareRuimteNaam'])->toBe('Teststraat')
+        ->and($adres['aoaPostcode'])->toBe('1000AA');
+});
+
+test('keeps the place name and the house number apart on both address-carrying variants', function () {
+    // Both variants build their address through one helper, so the mapping
+    // cannot differ between them; asserted on both anyway, since a rol on an
+    // organisation and one on a private aanvrager are separate payloads.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+    $adres = [
+        'postcode' => '1000AA',
+        'huisnummer' => '5',
+        'straatnaam' => 'Teststraat',
+        'plaatsnaam' => 'Teststad',
+    ];
+
+    $vestiging = InitiatorRolBuilder::build('heerlen', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'kvk' => '12345678',
+        'organisatie_naam' => 'Woweb',
+        'organisatie_adres' => $adres,
+    ])['betrokkeneIdentificatie']['verblijfsadres'];
+
+    $persoon = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => $adres,
+    ])['betrokkeneIdentificatie']['verblijfsadres'];
+
+    foreach ([$vestiging, $persoon] as $built) {
+        expect($built['wplWoonplaatsNaam'])->toBe('Teststad')
+            ->and($built['aoaHuisnummer'])->toBe(5);
+    }
+});
+
+test('carries a numeric-looking place name through as the place name', function () {
+    // A place name that happens to look like a house number is still the place
+    // name: nothing in the mapping reads a value's shape to decide where it
+    // goes, so an address cannot be repaired or corrupted on the way out.
+    $state = FormState::fromSnapshot(['values' => ['watIsUwAchternaam' => 'Testachternaam']]);
+
+    $rol = InitiatorRolBuilder::build('main', 'https://zgw/zaken/1', 'https://zgw/roltype/1', $state, [
+        'natuurlijk_persoon_adres' => [
+            'postcode' => '1000AA',
+            'huisnummer' => '12',
+            'straatnaam' => 'Teststraat',
+            'plaatsnaam' => '5',
+        ],
+    ]);
+
+    $adres = $rol['betrokkeneIdentificatie']['verblijfsadres'];
+
+    expect($adres['wplWoonplaatsNaam'])->toBe('5')
+        ->and($adres['aoaHuisnummer'])->toBe(12);
 });
