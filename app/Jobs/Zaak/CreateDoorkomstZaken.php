@@ -286,7 +286,7 @@ class CreateDoorkomstZaken implements ShouldQueue
                         // returns its eigenschappen under the namen its own
                         // catalogus uses, and a naam that is not translated back
                         // to its logical key is dropped by ZaakReferenceData.
-                        $this->withEvenementDatesFromHoofdzaak(
+                        $this->withHoofdzaakFallbacks(
                             ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value)
                         ),
                         [
@@ -305,11 +305,29 @@ class CreateDoorkomstZaken implements ShouldQueue
     }
 
     /**
-     * Fill in the evenement dates for the deelzaak registration when the
-     * doorkomst zaaktype does not carry the start_evenement/eind_evenement
-     * eigenschappen (or the hoofdzaak had nothing to copy). The hoofdzaak
-     * reference_data always holds them: it is built from the form state
-     * ({@see MapFormStateToReferenceData}), not from ZGW.
+     * The logical eigenschappen a deelzaak takes from the hoofdzaak when its own
+     * doorkomst zaaktype does not carry them.
+     *
+     * All three describe the event itself rather than the deelzaak, so they are
+     * the same on every deelzaak of one aanvraag. The event name is the one that
+     * is visible everywhere: it names the zaak in the lists, the exports and the
+     * notifications, so a doorkomst zaaktype whose catalogus does not know the
+     * eigenschap left every deelzaak of that route nameless.
+     *
+     * @var array<int, string>
+     */
+    private const HOOFDZAAK_FALLBACK_KEYS = [
+        'start_evenement',
+        'eind_evenement',
+        'naam_evenement',
+    ];
+
+    /**
+     * Fill in the evenement fields for the deelzaak registration when the
+     * doorkomst zaaktype does not carry the matching eigenschappen (or the
+     * hoofdzaak had nothing to copy). The hoofdzaak reference_data always holds
+     * them: it is built from the form state ({@see MapFormStateToReferenceData}),
+     * not from ZGW.
      *
      * Eigenschappen that the deelzaak does have always win, so a complete
      * zaaktype produces exactly the same reference_data as before.
@@ -317,9 +335,9 @@ class CreateDoorkomstZaken implements ShouldQueue
      * @param  array<string, mixed>  $eigenschappen
      * @return array<string, mixed>
      */
-    private function withEvenementDatesFromHoofdzaak(array $eigenschappen): array
+    private function withHoofdzaakFallbacks(array $eigenschappen): array
     {
-        foreach (['start_evenement', 'eind_evenement'] as $key) {
+        foreach (self::HOOFDZAAK_FALLBACK_KEYS as $key) {
             if (($eigenschappen[$key] ?? '') !== '') {
                 continue;
             }
