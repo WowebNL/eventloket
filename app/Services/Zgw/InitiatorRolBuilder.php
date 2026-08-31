@@ -94,6 +94,10 @@ final class InitiatorRolBuilder
 
     private const HUISNUMMER_MAX = 99999;
 
+    private const LANDNAAM_MAX = 40;
+
+    private const ADRES_BUITENLAND_MAX = 35;
+
     /**
      * A verblijfsadres needs an aoaIdentificatie, and the form gives us a typed
      * address rather than a BAG object id, so the identification is synthesised
@@ -283,8 +287,8 @@ final class InitiatorRolBuilder
      * The submitted organisation address is recorded as the vestiging
      * verblijfsadres (product decision), through the same helper the private
      * variant uses, so both carry an address built to one set of rules. A
-     * foreign address is left out: subVerblijfBuitenland is intentionally not
-     * built, matching what happens for a natuurlijk persoon.
+     * foreign address goes into subVerblijfBuitenland instead, again exactly as
+     * it does for a natuurlijk persoon.
      *
      * Only what the form actually asks for is sent otherwise. vestigingsNummer
      * is not asked and is not invented. RolVestiging requires no field, so a rol
@@ -311,12 +315,35 @@ final class InitiatorRolBuilder
             ]),
         ];
 
-        $verblijfsadres = self::verblijfsadres($initiator['organisatie_adres'] ?? null, self::AOA_KIND_VESTIGING);
-        if ($verblijfsadres !== null) {
-            $rolData['betrokkeneIdentificatie']['verblijfsadres'] = $verblijfsadres;
-        }
+        self::withAddress($rolData, $initiator['organisatie_adres'] ?? null, self::AOA_KIND_VESTIGING);
 
         return $rolData;
+    }
+
+    /**
+     * Add the submitted address to a rol in whichever of the two shapes the
+     * standard has for it, or leave the rol untouched when neither can be
+     * built. Both betrokkeneType variants that carry an address use this, so
+     * neither can gain an address shape the other does not have.
+     *
+     * @param  array<string, mixed>  $rolData
+     * @param  array<string, mixed>|mixed  $adres
+     */
+    private static function withAddress(array &$rolData, mixed $adres, string $aoaKind): void
+    {
+        $verblijfsadres = self::verblijfsadres($adres, $aoaKind);
+
+        if ($verblijfsadres !== null) {
+            $rolData['betrokkeneIdentificatie']['verblijfsadres'] = $verblijfsadres;
+
+            return;
+        }
+
+        $buitenland = self::subVerblijfBuitenland($adres);
+
+        if ($buitenland !== null) {
+            $rolData['betrokkeneIdentificatie']['subVerblijfBuitenland'] = $buitenland;
+        }
     }
 
     /**
@@ -348,12 +375,95 @@ final class InitiatorRolBuilder
             $rolData['afwijkendeNaamBetrokkene'] = $afwijkendeNaam;
         }
 
-        $verblijfsadres = self::verblijfsadres($adres, self::AOA_KIND_PERSOON);
-        if ($verblijfsadres !== null) {
-            $rolData['betrokkeneIdentificatie']['verblijfsadres'] = $verblijfsadres;
-        }
+        self::withAddress($rolData, $adres, self::AOA_KIND_PERSOON);
 
         return $rolData;
+    }
+
+    /**
+     * Whether an address is a Dutch one, which decides between the two address
+     * shapes the standard offers: verblijfsadres for a Dutch address,
+     * subVerblijfBuitenland for a foreign one.
+     *
+     * The form asks for a country only when the address is not a Dutch one, so
+     * an address without one is Dutch. A country that is filled in is read
+     * through the BRP table rather than compared as text, so both the name and
+     * the ISO code of the Netherlands are recognised.
+     *
+     * @param  array<string, mixed>|mixed  $adres
+     */
+    private static function isDutchAddress(mixed $adres): bool
+    {
+        $land = is_array($adres) ? trim((string) ($adres['land'] ?? '')) : '';
+
+        if ($land === '') {
+            return true;
+        }
+
+        // A country the table does not know is not the Netherlands. It yields no
+        // sendable foreign address either, so such an address is left out
+        // altogether rather than sent as if it were a Dutch one.
+        return (BrpLandGebied::resolve($land)['code'] ?? null) === BrpLandGebied::NETHERLANDS;
+    }
+
+    /**
+     * The foreign-address block for a rol, or null when this address cannot be
+     * expressed as one.
+     *
+     * The standard puts a foreign address in subVerblijfBuitenland rather than
+     * in verblijfsadres, which models a BAG address and cannot hold one. Both
+     * the country code and the country name are required there, and the code
+     * comes from the BRP Land/Gebied table, so a country the form user typed
+     * has to be resolved against that table first. When it cannot be, the
+     * address is left out, exactly as it was before this block was built:
+     * inventing a code would put a different country on the zaak, and sending
+     * the block without one is a 400 that aborts the submit chain.
+     *
+     * The street and place lines are free text of at most 35 characters each,
+     * which is why they are cut rather than dropped: the schema has no separate
+     * fields to preserve, so a shortened line is the only thing that can be
+     * sent, and it still identifies the address.
+     *
+     * @param  array<string, mixed>|mixed  $adres
+     * @return array<string, mixed>|null
+     */
+    private static function subVerblijfBuitenland(mixed $adres): ?array
+    {
+        if (! is_array($adres) || self::isDutchAddress($adres)) {
+            return null;
+        }
+
+        $land = BrpLandGebied::resolve((string) ($adres['land'] ?? ''));
+
+        if ($land === null) {
+            return null;
+        }
+
+        $huisnummer = trim(implode(' ', array_filter([
+            trim((string) ($adres['huisnummer'] ?? '')),
+            trim((string) ($adres['huisletter'] ?? '')),
+            trim((string) ($adres['huisnummertoevoeging'] ?? '')),
+        ], static fn (string $part): bool => $part !== '')));
+
+        $lines = array_values(array_filter([
+            trim(trim((string) ($adres['straatnaam'] ?? '')).' '.$huisnummer),
+            trim(trim((string) ($adres['postcode'] ?? '')).' '.trim((string) ($adres['plaatsnaam'] ?? ''))),
+        ], static fn (string $line): bool => $line !== ''));
+
+        if ($lines === []) {
+            return null;
+        }
+
+        $block = [
+            'lndLandcode' => $land['code'],
+            'lndLandnaam' => Str::substr($land['naam'], 0, self::LANDNAAM_MAX),
+        ];
+
+        foreach ($lines as $index => $line) {
+            $block['subAdresBuitenland_'.($index + 1)] = Str::substr($line, 0, self::ADRES_BUITENLAND_MAX);
+        }
+
+        return $block;
     }
 
     /**
@@ -361,8 +471,8 @@ final class InitiatorRolBuilder
      * inside the schema's integer range: aoaHuisnummer is required on the
      * address, so an address that cannot supply a valid one is left out
      * altogether rather than risking a 400 that would abort the submit chain.
-     * A foreign address is left out for the same reason and is not moved into
-     * subVerblijfBuitenland, which this application does not build.
+     * A foreign address is not a verblijfsadres at all and goes through
+     * {@see self::subVerblijfBuitenland()} instead.
      *
      * The optional parts follow the same rule on a smaller scale: a huisletter or
      * huisnummertoevoeging that does not fit its bound is dropped, and so is a
@@ -382,7 +492,7 @@ final class InitiatorRolBuilder
         if (! is_array($adres) || ! Arr::has($adres, ['postcode', 'plaatsnaam', 'huisnummer'])) {
             return null;
         }
-        if (! empty($adres['land']) && strtolower((string) $adres['land']) !== 'nederland') {
+        if (! self::isDutchAddress($adres)) {
             return null;
         }
 
