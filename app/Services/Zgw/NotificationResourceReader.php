@@ -27,15 +27,23 @@ use Woweb\Zgw\Exceptions\DisallowedHostException;
 class NotificationResourceReader
 {
     /**
-     * Statuses that mean "this candidate is not the owner, try the next one".
+     * Statuses that mean "this resource is not ours to read".
      *
      * Which of these a ZGW instance returns for a read with another tenant's
      * credentials differs per implementation (an authorisation failure may show
      * up as 401, 403 or as a plain 404), so all three are treated as a rejection.
      * Anything else (5xx, a timeout) is transient and is rethrown so the job
      * retries instead of silently attributing the resource to another candidate.
+     *
+     * In the probe below this means "not this candidate, try the next one". The
+     * same answer can come back after a connection has been chosen, when the
+     * chosen one turns out not to be allowed to read the resource after all (or
+     * it is already gone), which is why the constant is shared with the jobs
+     * rather than kept private here.
+     *
+     * @var array<int, int>
      */
-    private const REJECTION_STATUSES = [401, 403, 404];
+    public const REJECTION_STATUSES = [401, 403, 404];
 
     public function __construct(private readonly ZgwConnectionResolver $connections) {}
 
