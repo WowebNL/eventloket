@@ -40,7 +40,12 @@ class ZakenTable
                     ->toggleable(),
                 TextColumn::make('public_id')
                     ->label(__('resources/zaak.columns.public_id.label'))
-                    ->sortable()
+                    // The column is nullable, and the database places NULLs first on a
+                    // descending sort. Records without an identification would then fill
+                    // the first page, so they are forced to the bottom in both directions.
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByRaw(
+                        $query->qualifyColumn('public_id').' '.($direction === 'desc' ? 'desc' : 'asc').' nulls last'
+                    ))
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('zaaktype.name')
