@@ -143,6 +143,96 @@ final class ZaaktypeCatalogusOptions
     }
 
     /**
+     * Reconcile stored resultaattype urls with the identificatie's current
+     * definitief version.
+     *
+     * A resultaattype url identifies one resultaattype of one zaaktype version,
+     * so republishing a zaaktype gives every resultaattype a new url while the
+     * omschrijving stays the same. A selection stored against the previous
+     * version then names urls the current version does not have, which is not
+     * only wrong for the runtime comparison: it also falls outside the options
+     * the picker offers, so the form refuses to save until the selection is
+     * cleared by hand.
+     *
+     * The stored urls are therefore matched onto the current version: a url the
+     * version still has is kept as is, and one it no longer has is followed to
+     * read its omschrijving and re-pointed at the current resultaattype with
+     * that omschrijving. Only a url that resolves to neither is dropped, since
+     * it names a resultaattype this zaaktype no longer offers under any url.
+     *
+     * @param  array<int|string, mixed>  $stored
+     * @return array<int, string>
+     */
+    public static function reconcileResultaattypeUrls(string $connectionName, string $identificatie, array $stored): array
+    {
+        if ($stored === []) {
+            return [];
+        }
+
+        $current = self::resultaattypenByUrl($connectionName, $identificatie);
+
+        if ($current === []) {
+            // Every catalogi read here degrades to an empty list on failure, so
+            // "no resultaattypen" cannot be told apart from "could not read
+            // them". Keep the selection rather than discard a configuration
+            // over an unreachable backend.
+            return array_values(array_filter($stored, 'is_string'));
+        }
+
+        $currentByOmschrijving = [];
+
+        foreach ($current as $url => $omschrijving) {
+            $currentByOmschrijving[$omschrijving] ??= $url;
+        }
+
+        $reconciled = [];
+
+        foreach ($stored as $url) {
+            if (! is_string($url) || $url === '') {
+                continue;
+            }
+
+            if (isset($current[$url])) {
+                $reconciled[$url] = true;
+
+                continue;
+            }
+
+            $omschrijving = self::resultaattypeOmschrijving($connectionName, $url);
+
+            if ($omschrijving !== null && isset($currentByOmschrijving[$omschrijving])) {
+                $reconciled[$currentByOmschrijving[$omschrijving]] = true;
+
+                continue;
+            }
+
+            Log::info('ZaaktypeCatalogusOptions: opgeslagen resultaattype hoort niet meer bij de huidige zaaktypeversie', [
+                'connection' => $connectionName,
+                'identificatie' => $identificatie,
+                'resultaattype' => $url,
+            ]);
+        }
+
+        return array_keys($reconciled);
+    }
+
+    /**
+     * The omschrijving of a single resultaattype, read by url and cached like
+     * the option lists. Returns null when it cannot be read, which is what a
+     * url from a withdrawn zaaktype version looks like.
+     */
+    private static function resultaattypeOmschrijving(string $connectionName, string $url): ?string
+    {
+        $resolved = self::remember($connectionName, 'resultaattype_omschrijving', $url, function () use ($connectionName, $url): array {
+            $omschrijving = ZgwResource::byUrl($connectionName, $url)['omschrijving'] ?? null;
+
+            return is_string($omschrijving) && $omschrijving !== '' ? ['omschrijving' => $omschrijving] : [];
+        });
+
+        return $resolved['omschrijving'] ?? null;
+    }
+
+    /**
      * The informatieobjecttypen linked to the zaaktype via the standard relation.
      *
      * @return array<string, string> omschrijving => omschrijving
