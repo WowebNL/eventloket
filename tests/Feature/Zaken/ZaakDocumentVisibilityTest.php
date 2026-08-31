@@ -74,6 +74,9 @@ test('an openbaar document follows the defaults on a connection without a map', 
     // zaakvertrouwelijk, not a maximum, so openbaar is outside them. A
     // connection whose backend labels documents openbaar configures a maximum
     // instead (see the test below).
+    //
+    // Only the configurable roles are listed: the platform-wide ones never
+    // reach the defaults at all (see the test after this one).
     $zaak = Zaak::factory()->create([
         'organisation_id' => Organisation::factory()->create()->id,
         'zaaktype_id' => Zaaktype::factory()->create()->id,
@@ -88,7 +91,32 @@ test('an openbaar document follows the defaults on a connection without a map', 
     'reviewer' => Role::Reviewer,
     'municipality admin' => Role::MunicipalityAdmin,
     'coordinator' => Role::Coordinator,
+]);
+
+test('the platform-wide roles see a document at any level, map or no map', function (Role $role) {
+    // These roles are not part of the configurable role groups, so no
+    // connection carries a visibility entry for them. Reading that as
+    // "unconfigured" put them on the defaults, which leave out openbaar,
+    // beperkt_openbaar and intern: a backend labelling its documents at one of
+    // those levels then hid them from the roles that exist to see everything.
+    $zaak = Zaak::factory()->create([
+        'organisation_id' => Organisation::factory()->create()->id,
+        'zaaktype_id' => Zaaktype::factory()->create()->id,
+    ]);
+
+    $documents = collect([
+        documentWith('public', 'openbaar'),
+        documentWith('internal', 'intern'),
+        documentWith('case-confidential', 'zaakvertrouwelijk'),
+        documentWith('secret', 'geheim'),
+    ]);
+
+    $visible = $zaak->filterDocumentenForRole($documents, $role)->pluck('uuid');
+
+    expect($visible->all())->toEqualCanonicalizing(['public', 'internal', 'case-confidential', 'secret']);
+})->with([
     'admin' => Role::Admin,
+    'koppelingbeheerder' => Role::KoppelingBeheerder,
 ]);
 
 test('an openbaar document is visible to every role on a connection with maxima', function (Role $role) {
