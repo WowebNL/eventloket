@@ -39,6 +39,11 @@ enum DocumentVertrouwelijkheden: string
      * connection that wants the inclusive behaviour of the standard configures a
      * maximum per role group instead (see {@see ZgwConnectionConfig::documentVisibilityForRole()}).
      *
+     * The platform-wide roles are listed here for completeness only. They never
+     * reach this fallback: {@see ZgwConnectionConfig::documentVisibilityForRole()}
+     * answers the full scale for them before consulting either regime, because
+     * their visibility is not configurable on any connection.
+     *
      * @return array<int, string>
      */
     public static function fromUserRole(Role $role): array

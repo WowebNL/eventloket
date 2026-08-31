@@ -57,6 +57,43 @@ it('falls back to the enum defaults for document visibility', function () {
         ->not->toContain(DocumentVertrouwelijkheden::Openbaar->value);
 });
 
+it('lets the platform-wide roles see the full vertrouwelijkheid scale on every connection', function () {
+    // Regression anchor. These roles are not part of the connection form's role
+    // groups, so they carry no visibility entry; reading that as "unconfigured"
+    // dropped them onto the legacy defaults, which exclude openbaar,
+    // beperkt_openbaar and intern. A backend registering a document at one of
+    // those levels then hid it from exactly the roles meant to see everything.
+    Config::set('zgw.connections.main.vertrouwelijkheid_map', null);
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::Organiser->value => 'openbaar',
+        Role::Reviewer->value => 'intern',
+    ]);
+
+    foreach (['main', 'gemeente_9'] as $connection) {
+        foreach ([Role::Admin, Role::KoppelingBeheerder] as $role) {
+            expect(ZgwConnectionConfig::documentVisibilityForRole($connection, $role))
+                ->toBe(DocumentVertrouwelijkheden::order())
+                ->toContain(DocumentVertrouwelijkheden::Openbaar->value)
+                ->toContain(DocumentVertrouwelijkheden::Intern->value)
+                ->toContain(DocumentVertrouwelijkheden::ZeerGegeheim->value);
+        }
+    }
+});
+
+it('does not let a connection map narrow the platform-wide roles', function () {
+    // Even a map that names these roles explicitly cannot restrict them: their
+    // visibility is decided before the map is read.
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::Admin->value => 'openbaar',
+        Role::KoppelingBeheerder->value => 'openbaar',
+    ]);
+
+    expect(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Admin))
+        ->toBe(DocumentVertrouwelijkheden::order())
+        ->and(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::KoppelingBeheerder))
+        ->toBe(DocumentVertrouwelijkheden::order());
+});
+
 it('derives the visible set from the maximum a connection configures', function () {
     Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
         Role::Organiser->value => 'intern',
