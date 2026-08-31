@@ -1,11 +1,13 @@
 <?php
 
+use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\Organisation;
+use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -496,10 +498,12 @@ test('registers the deelzaak locally when neither the deelzaak nor the hoofdzaak
 });
 
 test('stores exactly the same reference_data as before when the deelzaak carries its own eigenschappen', function () {
-    // Regression anchor for the fallback: with the eigenschappen present the
-    // fallback must not fire, so the persisted reference_data stays exactly
-    // what it was, values and key order included. (The jsonb column itself does
-    // not preserve key order, so the assertion runs on the emitted array.)
+    // Regression anchor for the fallback: for the eigenschappen the deelzaak
+    // does carry (the two dates) the fallback must not fire, so those keep the
+    // deelzaak's own values, and the shape of the whole row stays what it was,
+    // key order included. (The jsonb column itself does not preserve key order,
+    // so the assertion runs on the emitted array.) The event name is the one
+    // key this deelzaak read does not carry, so it comes from the hoofdzaak.
     fakeDoorkomstZgw();
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
     withPassingDoorkomstZaaktype($scenario['passing']);
@@ -516,7 +520,7 @@ test('stores exactly the same reference_data as before when the deelzaak carries
         'registratiedatum' => '2026-06-01',
         'status_name' => '',
         'statustype_url' => '',
-        'naam_evenement' => null,
+        'naam_evenement' => 'Test event',
         'naam_locatie_evenement' => null,
         'organisator' => '',
         'resultaat' => null,
@@ -1319,4 +1323,67 @@ test('copies eigenschappen by their own naam when neither zaaktype has a koppeli
     expect(copiedZaakeigenschappen())->toBe([
         'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/plain-naam',
     ]);
+});
+
+test('takes the event name from the hoofdzaak when the doorkomst zaaktype does not carry it', function () {
+    // A doorkomst zaaktype whose catalogus knows none of the evenement
+    // eigenschappen: the deelzaak read comes back without a name, which left
+    // every deelzaak of the route nameless in the lists, exports and
+    // notifications. The hoofdzaak reference_data holds the name, because it is
+    // built from the form state rather than from ZGW.
+    fakeDoorkomstZgw(deelZaakEigenschappen: []);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->naam_evenement)
+        ->toBe($scenario['hoofdzaak']->reference_data->naam_evenement)
+        ->not->toBeNull();
+});
+
+test('keeps the deelzaak event name when the doorkomst zaaktype does carry it', function () {
+    // The fallback must never overwrite a name the deelzaak read supplies.
+    fakeDoorkomstZgw(deelZaakEigenschappen: [
+        ['naam' => 'naam_evenement', 'waarde' => 'Doorkomst eigen naam'],
+    ]);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->naam_evenement)->toBe('Doorkomst eigen naam');
+});
+
+test('creates a deelzaak for every passing gemeente even when the hoofdzaak has no event name', function () {
+    // The zaak observer notifies the municipality handlers synchronously, so a
+    // notification that could not be built aborted the whole job: the gemeente
+    // being handled at that moment got its ZGW deelzaak but no local record,
+    // and every gemeente after it got nothing at all.
+    fakeDoorkomstZgw(deelZaakEigenschappen: []);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    $scenario['hoofdzaak']->update([
+        'reference_data' => new ZaakReferenceData(
+            ...array_merge($scenario['hoofdzaak']->reference_data->toArray(), [
+                'naam_evenement' => null,
+            ])
+        ),
+    ]);
+
+    // A handler on the passing gemeente, so the notification is actually built.
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $scenario['passing']->users()->attach($reviewer);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->reference_data->naam_evenement)->toBeNull()
+        ->and($deel->public_id)->toBe('DEEL-1');
 });
