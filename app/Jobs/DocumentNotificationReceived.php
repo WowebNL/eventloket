@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
 use Woweb\Zgw\Connection\ZgwConnection;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 use Woweb\Zgw\Facades\Zgw;
 
 class DocumentNotificationReceived implements ShouldQueue
@@ -46,19 +47,53 @@ class DocumentNotificationReceived implements ShouldQueue
 
         $connection = Zgw::connection($resource->connection);
 
-        $informatieobject = new Informatieobject(...$reader->read($resource, $this->notification));
+        try {
+            $informatieobject = new Informatieobject(...$reader->read($resource, $this->notification));
 
-        if ($this->isNew) {
-            // ignore documents received while creating the zaak
-            if ($informatieobject->auteur == config('services.open_forms.auteur_name')) {
-                // Document created by the applicant in open forms, ignore
-                return;
+            if ($this->isNew) {
+                // ignore documents received while creating the zaak
+                if ($informatieobject->auteur == config('services.open_forms.auteur_name')) {
+                    // Document created by the applicant in open forms, ignore
+                    return;
+                }
+
+                $this->notifyUsers($connection, $informatieobject, true);
+            } else {
+                $this->notifyUsers($connection, $informatieobject, false);
             }
-
-            $this->notifyUsers($connection, $informatieobject, true);
-        } else {
-            $this->notifyUsers($connection, $informatieobject, false);
+        } catch (ApiRequestException $e) {
+            $this->skipOrRethrow($e, $resource->connection);
         }
+    }
+
+    /**
+     * Treat a rejection from the chosen connection as "not (or no longer) ours"
+     * and stop, mirroring how the connection probe reads the same statuses.
+     *
+     * Choosing a connection is not the same as being able to read what the
+     * notification points at. A notification can be attributed on an
+     * organisation kenmerk without any read, and the follow-up calls filter on
+     * urls the chosen instance need not know, so a document belonging to
+     * another tenant, or one that has since been removed, comes back as a 401,
+     * 403 or 404 here. There is nothing to notify about in any of those cases,
+     * while failing the job buries a real problem under retries of a
+     * notification that can never succeed.
+     *
+     * Every other status stays a failure, so a genuine outage still retries.
+     */
+    private function skipOrRethrow(ApiRequestException $e, string $connectionName): void
+    {
+        if (! in_array($e->getResponse()->status(), NotificationResourceReader::REJECTION_STATUSES, true)) {
+            throw $e;
+        }
+
+        Log::info('ZGW document notification skipped: the resolved connection may not read the resource, or it no longer exists.', [
+            'connection' => $connectionName,
+            'kanaal' => $this->notification->kanaal,
+            'resource' => $this->notification->resource,
+            'actie' => $this->notification->actie,
+            'status' => $e->getResponse()->status(),
+        ]);
     }
 
     private function notifyUsers(ZgwConnection $connection, Informatieobject $informatieobject, bool $isNew = true)
