@@ -18,6 +18,18 @@ use Throwable;
 class ZgwConnectionConfig
 {
     /**
+     * The roles whose document visibility no connection may narrow: they span
+     * every municipality and every connection, so they see the full
+     * vertrouwelijkheid scale by definition rather than by configuration.
+     *
+     * @var array<int, Role>
+     */
+    private const UNRESTRICTED_ROLES = [
+        Role::Admin,
+        Role::KoppelingBeheerder,
+    ];
+
+    /**
      * Format a scalar zaakeigenschap value for the wire.
      *
      * The catalogus eigenschap's formaat is authoritative: a `datum` wants
@@ -65,8 +77,15 @@ class ZgwConnectionConfig
      * The vertrouwelijkheidaanduiding values a given role may see on this
      * connection.
      *
-     * Two regimes, deliberately kept apart:
+     * Three regimes, deliberately kept apart:
      *
+     * - The platform-wide roles see the full scale on every connection. Their
+     *   visibility is not configurable (they are not part of the connection
+     *   form's role groups, see {@see DocumentAudience::groups()}), and reading
+     *   them as unconfigured would drop them onto the legacy defaults below,
+     *   which exclude openbaar, beperkt_openbaar and intern. A backend that
+     *   registers a document at one of those levels would then hide it from the
+     *   very roles that exist to see everything.
      * - A connection without a map for this role falls back to the hardcoded
      *   {@see DocumentVertrouwelijkheden::fromUserRole()} sets. Those are the
      *   legacy three-step defaults and are used verbatim, so the default
@@ -83,6 +102,10 @@ class ZgwConnectionConfig
      */
     public static function documentVisibilityForRole(string $connectionName, Role $role): array
     {
+        if (in_array($role, self::UNRESTRICTED_ROLES, true)) {
+            return DocumentVertrouwelijkheden::order();
+        }
+
         $max = self::documentVisibilityMaxForRole($connectionName, $role);
 
         if ($max !== null) {
