@@ -224,3 +224,50 @@ it('rejects a second mapping for the same role', function () {
         ->call('create')
         ->assertHasFormErrors(['role']);
 });
+
+it('re-points a hidden-results selection at the current zaaktype version so the koppeling still saves', function () {
+    // Republishing a zaaktype gives every resultaattype a new url. The picker
+    // keys its options by url, so a selection stored against the previous
+    // version fell outside the options and the form refused to save until it
+    // was cleared by hand. The stored url is now followed to its omschrijving
+    // and matched onto the current version instead.
+    $base = 'https://gemeente.example.com/catalogi/api/v1';
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $this->municipality->id,
+    ]);
+
+    Http::fake([
+        // The withdrawn resultaattype of the previous version is still readable
+        // by url; it must be matched before the broader list pattern below.
+        "{$base}/resultaattypen/old-1" => Http::response([
+            'url' => "{$base}/resultaattypen/old-1",
+            'omschrijving' => 'Verleend',
+        ]),
+        "{$base}/zaaktypen*" => Http::response(ZgwHttpFake::envelope([
+            ['identificatie' => 'EVT-1', 'omschrijving' => 'Evenementenvergunning', 'url' => "{$base}/zaaktypen/2"],
+        ])),
+        "{$base}/resultaattypen*" => Http::response(ZgwHttpFake::envelope([
+            ['url' => "{$base}/resultaattypen/new-1", 'omschrijving' => 'Verleend'],
+            ['url' => "{$base}/resultaattypen/new-2", 'omschrijving' => 'Ingetrokken'],
+        ])),
+        "{$base}/*" => Http::response(ZgwHttpFake::envelope([])),
+    ]);
+
+    $mapping = MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'EVT-1',
+        'hidden_resultaat_types' => ["{$base}/resultaattypen/old-1"],
+    ]);
+
+    // Saving the koppeling without touching anything is what used to fail: the
+    // stale url is not among the picker's options, so the checkbox list
+    // rejected the untouched selection.
+    livewire(EditMunicipalityZaaktypeMapping::class, ['record' => $mapping->getKey()])
+        ->call('save')
+        ->assertHasNoFormErrors()
+        ->assertFormSet(['hidden_resultaat_types' => ["{$base}/resultaattypen/new-1"]]);
+
+    expect($mapping->refresh()->hidden_resultaat_types)->toBe(["{$base}/resultaattypen/new-1"]);
+});

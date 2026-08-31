@@ -182,6 +182,37 @@ class MunicipalityZaaktypeMappingResource extends Resource
     }
 
     /**
+     * Point the stored hidden-results selection at the zaaktype's current
+     * definitief version before the edit form is filled.
+     *
+     * The picker keys its options by resultaattype url, and republishing a
+     * zaaktype gives every resultaattype a new one. Without this, a selection
+     * made against the previous version falls outside the options on the next
+     * edit, so the form rejects it on save and the koppeling can only be saved
+     * again after clearing the selection by hand.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function reconcileHiddenResultaatTypes(array $data): array
+    {
+        $stored = $data['hidden_resultaat_types'] ?? null;
+        $identificatie = $data['zaaktype_identificatie'] ?? null;
+
+        if (! is_array($stored) || $stored === [] || ! is_string($identificatie) || $identificatie === '' || ! self::hasOwnConnection()) {
+            return $data;
+        }
+
+        $data['hidden_resultaat_types'] = ZaaktypeCatalogusOptions::reconcileResultaattypeUrls(
+            self::connectionName(),
+            $identificatie,
+            $stored,
+        );
+
+        return $data;
+    }
+
+    /**
      * One select per logical eigenschap key, mapping it to an eigenschap naam
      * of the chosen zaaktype. Stored into the eigenschap_map json via dot paths.
      *
