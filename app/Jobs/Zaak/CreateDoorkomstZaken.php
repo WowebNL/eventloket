@@ -294,6 +294,12 @@ class CreateDoorkomstZaken implements ShouldQueue
                             'status_name' => $newOzZaak->status_name ?? '',
                             'statustype_url' => $newOzZaak->statustype_url ?? '',
                             'organisator' => $organisator,
+                            // Per-day times of a multi-day event do not exist
+                            // as a zaakeigenschap, so carry them over from the
+                            // parent case directly.
+                            'dagen_evenement' => $this->zaak->reference_data->dagen_evenement,
+                            'dagen_opbouw' => $this->zaak->reference_data->dagen_opbouw,
+                            'dagen_afbouw' => $this->zaak->reference_data->dagen_afbouw,
                         ]
                     )
                 ),

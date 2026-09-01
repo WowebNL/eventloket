@@ -25,16 +25,36 @@ class ViewZaak extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            // "Herhaal aanvraag" — start een nieuwe aanvraag voorgevuld met de
-            // gegevens van deze zaak. Landt op het concepten-overzicht, dat
-            // de prefill in een nieuw concept zet (bestaande concepten worden
-            // dus nooit overschreven). PrefillLoader valt stil terug op lege
-            // waarden voor velden die inmiddels uit het schema zijn.
+            // "Repeat aanvraag" — start a new aanvraag prefilled with the
+            // data of this zaak. Lands on the concepts overview, which puts
+            // the prefill in a new concept (existing concepts are never
+            // overwritten). PrefillLoader falls back silently to empty
+            // values for fields that have since left the schema.
+            // On a vooraankondiging the dedicated convert action below
+            // replaces this one.
             Action::make('prefil_new_request')
                 ->label('Nieuwe aanvraag met deze gegevens')
                 ->icon('heroicon-o-arrow-path-rounded-square')
                 ->tooltip('Start een nieuwe aanvraag waarbij de ingevulde gegevens uit deze zaak vooraf zijn ingevuld. U kunt alles aanpassen voordat u opnieuw indient.')
-                ->visible(fn (Zaak $record): bool => $record->form_state_snapshot !== null)
+                ->visible(fn (Zaak $record): bool => $record->form_state_snapshot !== null && ! $record->isVooraankondiging())
+                ->action(function (Zaak $record) {
+                    $this->redirect(EventFormDraftsPage::getUrl([
+                        'tenant' => Filament::getTenant(),
+                        'prefill_from_zaak' => $record->id,
+                    ]));
+                }),
+            // Convert a vooraankondiging into the definitive aanvraag
+            // (issue #10). Same prefill path; EventFormDraftsPage detects
+            // that the source is a vooraankondiging, flips the form to the
+            // regular aanvraag flow and presets the link fields so the
+            // zaaknummer is carried over into a locked field. Disappears
+            // once a definitive aanvraag is linked — a vooraankondiging
+            // is converted at most once.
+            Action::make('convert_vooraankondiging')
+                ->label('Definitieve aanvraag indienen')
+                ->icon('heroicon-o-arrow-right-circle')
+                ->tooltip('Start de definitieve aanvraag voor dit evenement. De gegevens uit uw vooraankondiging zijn vooraf ingevuld en het zaaknummer van de vooraankondiging wordt automatisch meegenomen.')
+                ->visible(fn (Zaak $record): bool => $record->form_state_snapshot !== null && $record->isVooraankondiging() && $record->opgevolgdDoor()->doesntExist())
                 ->action(function (Zaak $record) {
                     $this->redirect(EventFormDraftsPage::getUrl([
                         'tenant' => Filament::getTenant(),
@@ -101,7 +121,7 @@ class ViewZaak extends ViewRecord
                     ])->dispatch();
 
                     /** @disregard */
-                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['resultaat' => __('wordt momementeel verwerkt...')])); // @phpstan-ignore assign.propertyReadOnly
+                    $record->reference_data = new ZaakReferenceData(...array_merge($record->reference_data->toArray(), ['resultaat' => __('wordt momenteel verwerkt...')])); // @phpstan-ignore assign.propertyReadOnly
 
                     $record->save();
                     $record->clearZgwCache();

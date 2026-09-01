@@ -1,5 +1,44 @@
 # Changelog
 
+## v1.2.0 - 2026-08-27
+
+### What's Changed
+
+#### ✨ New features
+
+* Let each municipality add its own questions to the event form (#488) @Michel-Verhoeven
+* Convert a vooraankondiging into a definitive aanvraag (#489) @Michel-Verhoeven
+* Add per-day times for multi-day events, including build-up and tear-down (#486) @Michel-Verhoeven
+* Four improvements to the zaak page: case party fields, brand logo, risk classification label and sound level questions (#512) @Michel-Verhoeven
+
+#### 🐛 Bug Fixes
+
+* Fix the error shown when changing a risk classification a second time in the same session (a stale ZGW cache caused a duplicate write)
+* Fix a typo in the processing-result text (#519) @Michel-Verhoeven
+* Cap the total attachment size of an outgoing result mail (#517) @Michel-Verhoeven
+* Rename brand logo assets and add a favicon, so replaced artwork is not served from stale browser caches (#515) @Michel-Verhoeven
+* Create doorkomst zaken for every drawn route, not just the first one (#492) @Michel-Verhoeven
+* Degrade the BAG address lookup instead of taking the page down (#508) @Michel-Verhoeven
+* Stop a hidden field's last value from reaching the application (#505) @Michel-Verhoeven
+* Keep a deselected location kind out of ZGW and the PDF (#502) @Michel-Verhoeven
+* Fix duplicate Slack notification for failed jobs (#499) @Michel-Verhoeven
+* Keep a deselected location kind out of the municipality check (#493) @Michel-Verhoeven
+* Hide the derived season field for a vooraankondiging too (#487) @Michel-Verhoeven
+* Open the zaak view modal when a row is clicked in the list view (#485) @Michel-Verhoeven
+* Fix report questions, submission summary and invite acceptance (#483) @Michel-Verhoeven
+* Order thread messages chronologically (#484) @Michel-Verhoeven
+
+#### Other changes
+
+* Change the interface text "check" to "Raadpleeg"
+* Make municipality user resources carry their own authorization (#513) @Michel-Verhoeven
+* Make trusted proxies configurable per environment (#501) @Michel-Verhoeven
+* Sentry: opt-in Redis ignore toggle and breadcrumb query scrub (#494) @Michel-Verhoeven
+* Log why a ZGW call failed, with a strict field whitelist (#509) @Michel-Verhoeven
+* Add user-facing release notes for v1.1.4 (#481) @Michel-Verhoeven
+
+**Full Changelog**: https://github.com/WowebNL/eventloket/compare/v1.1.4...v1.2.0
+
 ## v1.1.4 - 2026-08-12
 
 ### What's Changed
@@ -127,6 +166,7 @@ Run the following when upgrading from v1.0.x.
    
    
    
+   
    ```
    This adds the `table_states` table (#374), the `status_resultaat_colors` table with a default color set (#378), the `reviewer_user_id` column on `zaken` (#389), and seeds the indieningstermijn municipality variables (#407).
    
@@ -141,6 +181,7 @@ Run the following when upgrading from v1.0.x.
    
    
    
+   
    ```
    This adds the `intern_zaaknummer` eigenschap to every active, synced zaaktype in OpenZaak. Run it after the zaaktypen have been synced (`app:sync-zaaktypen`). Without this, internal case numbers cannot be written to OpenZaak.
    
@@ -148,6 +189,7 @@ Run the following when upgrading from v1.0.x.
    
    ```bash
    npm install && npm run build
+   
    
    
    
@@ -270,6 +312,7 @@ npm ci && npm run build
 
 
 
+
 ```
 This is a major framework bump (Laravel 13, Filament 5). The private VCS map
 repositories were removed, so a clean `composer install` is recommended over an
@@ -301,6 +344,7 @@ the local field map tooling, not needed in production).
 
 ```
 php artisan migrate --force
+
 
 
 
@@ -359,6 +403,7 @@ php artisan eventform:backfill-snapshots-from-objects
 
 
 
+
 ```
 The command is idempotent (only touches cases without a snapshot), repeatable,
 and performs one external Objects API call per case. It is intentionally a
@@ -372,6 +417,7 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan filament:optimize
+
 
 
 
@@ -632,6 +678,7 @@ php artisan filament:optimize
 
 ```
 php artisan zaak:update-reference-property --property=statustype_url
+
 
 
 
