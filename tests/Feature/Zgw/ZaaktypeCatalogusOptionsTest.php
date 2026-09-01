@@ -95,7 +95,7 @@ test('the zaaktype version is resolved once and reused across resource lists', f
  * withdrawn urls a previous version published.
  *
  * @param  array<string, string>  $current  url suffix => omschrijving
- * @param  array<string, string|null>  $withdrawn  full url => omschrijving, or null for an unreadable one
+ * @param  array<string, string|null>  $withdrawn  full url => omschrijving, or null for a url the backend reports as gone
  */
 function fakeResultaattypeVersions(array $current, array $withdrawn = []): void
 {
@@ -152,17 +152,56 @@ test('a stored resultaattype url the current version still has is left untouched
 test('a stored resultaattype that no longer exists under any url is dropped', function () {
     $base = ZgwHttpFake::$baseUrl.'/catalogi/api/v1';
     $removed = $base.'/resultaattypen/old-9';
-    $unreadable = $base.'/resultaattypen/old-8';
+    $gone = $base.'/resultaattypen/old-8';
 
     fakeResultaattypeVersions(
         current: ['new-1' => 'Verleend'],
         // One resolves to an omschrijving the current version no longer offers,
-        // the other cannot be read at all.
-        withdrawn: [$removed => 'Buiten behandeling', $unreadable => null],
+        // the other the backend reports as gone. Both are answers about the
+        // stored url, so both may be acted on.
+        withdrawn: [$removed => 'Buiten behandeling', $gone => null],
     );
 
-    expect(ZaaktypeCatalogusOptions::reconcileResultaattypeUrls('main', 'ZT-1', [$removed, $unreadable]))
+    expect(ZaaktypeCatalogusOptions::reconcileResultaattypeUrls('main', 'ZT-1', [$removed, $gone]))
         ->toBe([]);
+});
+
+test('a stored resultaattype whose own read fails is kept, not dropped', function () {
+    // The list read succeeds (it may even come from the cache) while the read
+    // of this one url fails with a 500. That is not evidence the resultaattype
+    // is gone, and dropping it here would be permanent as soon as the koppeling
+    // is saved, so the stored selection is left exactly as it is.
+    $base = ZgwHttpFake::$baseUrl.'/catalogi/api/v1';
+    $stale = $base.'/resultaattypen/old-1';
+
+    Http::fake([
+        $stale => Http::response(['detail' => 'nope'], 500),
+        $base.'/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([['url' => $base.'/zaaktypen/2']]), 200),
+        $base.'/resultaattypen?*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => $base.'/resultaattypen/new-1', 'omschrijving' => 'Verleend'],
+        ]), 200),
+    ]);
+
+    expect(ZaaktypeCatalogusOptions::reconcileResultaattypeUrls('main', 'ZT-1', [$stale]))
+        ->toBe([$stale]);
+});
+
+test('a rejected read of a stored resultaattype keeps it too', function () {
+    // A 401 or 403 says something about our credentials, not about whether the
+    // resultaattype still exists, so it is treated like any other failed read.
+    $base = ZgwHttpFake::$baseUrl.'/catalogi/api/v1';
+    $stale = $base.'/resultaattypen/old-1';
+
+    Http::fake([
+        $stale => Http::response(['detail' => 'no'], 403),
+        $base.'/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([['url' => $base.'/zaaktypen/2']]), 200),
+        $base.'/resultaattypen?*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => $base.'/resultaattypen/new-1', 'omschrijving' => 'Verleend'],
+        ]), 200),
+    ]);
+
+    expect(ZaaktypeCatalogusOptions::reconcileResultaattypeUrls('main', 'ZT-1', [$stale]))
+        ->toBe([$stale]);
 });
 
 test('the option lists of one zaaktype are forgotten together', function () {
