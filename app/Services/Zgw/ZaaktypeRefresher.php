@@ -23,8 +23,9 @@ use Throwable;
 /**
  * Orchestrates a targeted zaaktype refresh: syncs the local row, engages or
  * logs the main fallback on availability transitions, clears the caches a
- * version bump invalidates, runs the blueprint health check, and warns the
- * platform admins plus the municipality's koppeling-beheerders.
+ * version bump invalidates, re-points the koppeling settings that reference a
+ * version by url, runs the blueprint health check, and warns the platform
+ * admins plus the municipality's koppeling-beheerders.
  *
  * Used by the zaaktypen-kanaal webhook, the koppeling observer, and the
  * app:sync-zaaktypen command, so every refresh path shares the same
@@ -103,6 +104,8 @@ final class ZaaktypeRefresher
                 ->where('municipality_id', $municipality->id)
                 ->where('zaaktype_identificatie', $identificatie)
                 ->first();
+
+            $this->reconcileHiddenResultaatTypes($mapping, $connectionName, $identificatie, $context);
 
             $this->checkBlueprint($result->zaaktype, $connectionName, $identificatie, $mapping, $municipality);
         }
@@ -211,6 +214,52 @@ final class ZaaktypeRefresher
             ZaaktypeKoppelingIssue::MainUnavailable,
             $municipality,
         ), $municipality);
+    }
+
+    /**
+     * Re-point a koppeling's hidden-results selection at the version that was
+     * just published.
+     *
+     * The selection stores resultaattype urls, and a republish gives every
+     * resultaattype of the zaaktype a new url. The stored urls then no longer
+     * match the ones incoming zaken carry, so results the gemeente chose to
+     * hide reappear in the calendar and the zaken list. The koppeling form
+     * reconciles the same selection, but only once someone opens and saves it,
+     * which leaves the runtime comparison wrong for as long as that takes.
+     * Doing it on the version bump keeps the stored value the single source for
+     * both, and keeps the reads off the request path that renders those lists.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function reconcileHiddenResultaatTypes(?MunicipalityZaaktypeMapping $mapping, string $connectionName, string $identificatie, array $context): void
+    {
+        $stored = $mapping?->hidden_resultaat_types;
+
+        if ($mapping === null || ! is_array($stored) || $stored === []) {
+            return;
+        }
+
+        // The option lists are cached per identificatie and were filled before
+        // the republish, so the new version is only visible after forgetting
+        // them. They are stale for every reader now, not just for this one.
+        ZaaktypeCatalogusOptions::forgetZaaktype($connectionName, $identificatie);
+
+        $reconciled = ZaaktypeCatalogusOptions::reconcileResultaattypeUrls($connectionName, $identificatie, $stored);
+
+        if ($reconciled === array_values($stored)) {
+            return;
+        }
+
+        // Quietly: the observer on this model refreshes the zaaktype again, and
+        // that is exactly the refresh we are already inside.
+        $mapping->hidden_resultaat_types = $reconciled;
+        $mapping->saveQuietly();
+
+        Log::info('Hidden-results selection re-pointed at the new zaaktype version.', [
+            ...$context,
+            'stored_count' => count($stored),
+            'reconciled_count' => count($reconciled),
+        ]);
     }
 
     private function checkBlueprint(Zaaktype $zaaktype, string $connectionName, string $identificatie, ?MunicipalityZaaktypeMapping $mapping, Municipality $municipality): void
