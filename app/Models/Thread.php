@@ -75,7 +75,7 @@ class Thread extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class, 'thread_id')
-            ->orderBy('created_at')
+            ->oldest()
             ->orderBy('id');
     }
 
