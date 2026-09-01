@@ -29,9 +29,6 @@ return [
         'organisation' => [
             'label' => 'Organisatie',
         ],
-        'naam_organisator' => [
-            'label' => 'Naam organisator',
-        ],
         'naam_organisatie' => [
             'label' => 'Naam organisatie',
         ],

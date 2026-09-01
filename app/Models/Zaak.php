@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
@@ -19,11 +20,14 @@ use App\ValueObjects\ZGW\Informatieobject;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -315,6 +319,90 @@ class Zaak extends Model implements Eventable
             'zaaktype_id',
             'municipality_id'
         );
+    }
+
+    /**
+     * Generic typed relations where this zaak is the subject. Code outside
+     * the datamodel should use the named helpers per type (see
+     * vervangtVooraankondiging() / opgevolgdDoor()) instead of these.
+     *
+     * @return HasMany<ZaakRelatie, $this>
+     */
+    public function relaties(): HasMany
+    {
+        return $this->hasMany(ZaakRelatie::class, 'zaak_id');
+    }
+
+    /**
+     * Generic typed relations where this zaak is the object.
+     *
+     * @return HasMany<ZaakRelatie, $this>
+     */
+    public function inverseRelaties(): HasMany
+    {
+        return $this->hasMany(ZaakRelatie::class, 'gerelateerde_zaak_id');
+    }
+
+    /**
+     * The vooraankondiging(en) this zaak replaces: read on the definitive
+     * aanvraag. Functionally one-to-one, modelled through the generic
+     * relation table.
+     *
+     * @return BelongsToMany<Zaak, $this>
+     */
+    public function vervangtVooraankondiging(): BelongsToMany
+    {
+        return $this->belongsToMany(Zaak::class, 'zaak_relaties', 'zaak_id', 'gerelateerde_zaak_id')
+            ->wherePivot('type', ZaakRelatieType::VervangtVooraankondiging->value);
+    }
+
+    /**
+     * The definitive aanvraag that replaced this vooraankondiging. The
+     * related model carries SoftDeletes, so a soft-deleted successor is
+     * excluded automatically.
+     *
+     * @return BelongsToMany<Zaak, $this>
+     */
+    public function opgevolgdDoor(): BelongsToMany
+    {
+        return $this->belongsToMany(Zaak::class, 'zaak_relaties', 'gerelateerde_zaak_id', 'zaak_id')
+            ->wherePivot('type', ZaakRelatieType::VervangtVooraankondiging->value);
+    }
+
+    /**
+     * Whether this zaak is a vooraankondiging. Delegates to the zaaktype
+     * naming convention; single seam to swap for `zaaktypen.role` after
+     * the multi-ZGW branch (PR #482) is merged.
+     */
+    public function isVooraankondiging(): bool
+    {
+        return $this->zaaktype?->isVooraankondiging() ?? false;
+    }
+
+    /**
+     * @param  Builder<Zaak>  $query
+     * @return Builder<Zaak>
+     */
+    #[Scope]
+    protected function vooraankondigingen(Builder $query): Builder
+    {
+        return $query->whereHas('zaaktype', fn (Builder $q): Builder => $q->where('name', 'like', Zaaktype::VOORAANKONDIGING_NAME_PREFIX.'%'));
+    }
+
+    /**
+     * Only zaken without a (non-soft-deleted) replacing aanvraag. A
+     * vooraankondiging that already has a definitive aanvraag cannot be
+     * linked a second time; when that aanvraag is soft-deleted the
+     * vooraankondiging becomes linkable again, consistent with the
+     * calendar filter.
+     *
+     * @param  Builder<Zaak>  $query
+     * @return Builder<Zaak>
+     */
+    #[Scope]
+    protected function nogNietOpgevolgd(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('opgevolgdDoor');
     }
 
     /**

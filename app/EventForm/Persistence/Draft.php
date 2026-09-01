@@ -6,6 +6,7 @@ namespace App\EventForm\Persistence;
 
 use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Zaak;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -27,6 +28,7 @@ class Draft extends Model
     protected $fillable = [
         'user_id',
         'organisation_id',
+        'source_zaak_id',
         'state',
         'name',
         'current_step_key',
@@ -75,5 +77,16 @@ class Draft extends Model
     public function organisation(): BelongsTo
     {
         return $this->belongsTo(Organisation::class);
+    }
+
+    /**
+     * The zaak this concept was prefilled from ("Nieuwe aanvraag met deze
+     * gegevens" / "Definitieve aanvraag indienen"), null for a blank
+     * concept. The FK is nullOnDelete: a hard-deleted source zaak leaves
+     * the concept itself intact.
+     */
+    public function sourceZaak(): BelongsTo
+    {
+        return $this->belongsTo(Zaak::class, 'source_zaak_id');
     }
 }

@@ -42,7 +42,14 @@ class ZakenTable
                     ->toggleable(),
                 TextColumn::make('public_id')
                     ->label(__('resources/zaak.columns.public_id.label'))
-                    ->sortable()
+                    // The column is nullable, and PostgreSQL places NULLs first on a
+                    // descending sort. Records without an identification would then fill
+                    // the first page, so they are forced to the bottom in both directions.
+                    // The null check is ordered on directly instead of using a NULLS LAST
+                    // clause, which MySQL does not support.
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query
+                        ->orderByRaw($query->qualifyColumn('public_id').' is null')
+                        ->orderBy($query->qualifyColumn('public_id'), $direction))
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('zaaktype.name')

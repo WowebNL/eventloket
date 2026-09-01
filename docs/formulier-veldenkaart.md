@@ -421,6 +421,31 @@ PRE-PROD Evenementformulier in Open Forms.
 | —`heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement` | radio | Heeft u een evenementenverzekering afgesloten voor uw e | ✓ |  | `=` |
 | —`uploadDeVerzekeringspolis` | file | Upload de verzekeringspolis |  | toon als [heeftUEenEvenementenverzekeringAfgeslotenVoorUwEvenement] = [Ja] |  |
 
+## Stap 14a: Aanvullende vragen (per gemeente)
+
+Deze stap heeft geen Open Forms-herkomst en daarom geen vast nummer in deze
+kaart. Hij staat in de wizard tussen "Vergunningaanvraag: overig" en
+"Bijlagen" (`AanvullendeVragenStep`, UUID `50af8cc6-425b-46b5-9751-f5337d611b91`).
+
+De velden liggen niet vast in code: elke gemeente stelt haar eigen vragen in
+via het gemeentepaneel (Instellingen → Aanvullende vragen), maximaal
+`config('extra-questions.max_per_municipality')` stuks. Per vraag:
+
+| Eigenschap | Betekenis |
+|------|-------|
+| type | `text` (textarea), `radio` of `checkboxes` |
+| label | de vraagtekst |
+| helper_text | optionele toelichting onder de vraag |
+| options | de antwoordopties bij radio en checkboxes; waarde is gelijk aan de tekst |
+| is_required | blokkeert de Volgende-knop zolang de vraag onbeantwoord is |
+| show_for_aanvraag_types | bij welke paden de vraag geldt; leeg betekent alle paden |
+
+De veldsleutel in de FormState is `extraVraag_{id}`. De vragenlijst komt via
+`gemeenteVariabelen.extra_questions` in de state en gaat mee in de snapshot,
+dus bij een ingediende aanvraag ligt hij vast. Heeft de gemeente geen enkele
+actieve vraag die op het huidige pad geldt, dan staat de stap helemaal niet in
+de wizard (dus ook niet doorgestreept in de zijbalk).
+
 ## Stap 15: Bijlagen
 
 | Veld | Type | Label | Verplicht | Conditie | Opties / Logica |

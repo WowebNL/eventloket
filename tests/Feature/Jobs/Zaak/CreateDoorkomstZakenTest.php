@@ -533,6 +533,9 @@ test('stores exactly the same reference_data as before when the deelzaak carries
         'eind_afbouw' => null,
         'locaties_evenement' => null,
         'intern_zaaknummer' => null,
+        'dagen_evenement' => null,
+        'dagen_opbouw' => null,
+        'dagen_afbouw' => null,
     ]);
 });
 

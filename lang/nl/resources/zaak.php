@@ -35,8 +35,20 @@ return [
         'eind_evenement' => [
             'label' => 'Eind evenement',
         ],
+        'dagen_evenement' => [
+            'label' => 'Evenement per dag',
+        ],
+        'dagen_opbouw' => [
+            'label' => 'Opbouw per dag',
+        ],
+        'dagen_afbouw' => [
+            'label' => 'Afbouw per dag',
+        ],
         'telefoon' => [
             'label' => 'Telefoonnummer organisatie',
+        ],
+        'naam-organiser' => [
+            'label' => 'Naam indiener',
         ],
         'telefoon-organiser' => [
             'label' => 'Telefoonnummer indiener',
@@ -88,6 +100,12 @@ return [
         ],
         'eind_afbouw' => [
             'label' => 'Eind afbouw',
+        ],
+        'vervangt_vooraankondiging' => [
+            'label' => 'Vervangt vooraankondiging',
+        ],
+        'opgevolgd_door' => [
+            'label' => 'Opgevolgd door',
         ],
     ],
     'filters' => [
