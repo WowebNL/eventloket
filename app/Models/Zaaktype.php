@@ -3,18 +3,23 @@
 namespace App\Models;
 
 use App\Enums\ZaaktypeRole;
+use App\EventForm\Submit\ResolveZaaktype;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
@@ -26,15 +31,6 @@ use Woweb\Zgw\Facades\Zgw;
 class Zaaktype extends Model
 {
     use HasFactory, HasUuids;
-
-    /**
-     * Name prefix that identifies a vooraankondiging zaaktype. The "aard"
-     * of a zaaktype is a naming convention on `main` (same convention as
-     * ResolveZaaktype); keep every aard check behind isVooraankondiging()
-     * so it can be replaced in one place by the `zaaktypen.role` column
-     * once the multi-ZGW branch (PR #482) lands.
-     */
-    public const VOORAANKONDIGING_NAME_PREFIX = 'Vooraankondiging';
 
     protected $table = 'zaaktypen';
 
@@ -66,9 +62,77 @@ class Zaaktype extends Model
         return $this->hasMany(Zaak::class);
     }
 
+    /**
+     * The Eventloket role this zaaktype fulfils, resolved with the same ladder
+     * {@see ResolveZaaktype} uses to pick a zaaktype for a role, only read in
+     * the opposite direction:
+     *
+     * 1. The municipality's koppeling, a {@see MunicipalityZaaktypeMapping} for
+     *    this municipality and identificatie. It is the only reliable source for
+     *    a municipality on its own ZGW instance: the local row then carries the
+     *    omschrijving of the external zaaktype, which follows no Eventloket
+     *    naming convention, so the name says nothing about the role.
+     * 2. The stored `role` column, filled by the catalogus syncs.
+     * 3. The name prefix of the shared catalogus. Still needed as a last resort:
+     *    the shared-catalogus sync only fills `role` when it is still null, so
+     *    rows that predate that column keep a null role until a sync or an
+     *    admin sets one.
+     */
+    public function effectiveRole(): ?ZaaktypeRole
+    {
+        // The ?? already guards the null case with isset semantics, so no
+        // nullsafe operator is needed on the left-hand side.
+        return MunicipalityZaaktypeMapping::forZaaktype($this)->role
+            ?? $this->role
+            ?? ZaaktypeRole::fromName($this->name);
+    }
+
     public function isVooraankondiging(): bool
     {
-        return str_starts_with($this->name ?? '', self::VOORAANKONDIGING_NAME_PREFIX);
+        return $this->effectiveRole() === ZaaktypeRole::Vooraankondiging;
+    }
+
+    /**
+     * Zaaktypen whose effective role is $role, expressing the ladder of
+     * {@see effectiveRole()} in SQL so query-level and model-level checks agree.
+     *
+     * @param  Builder<Zaaktype>  $query
+     * @return Builder<Zaaktype>
+     */
+    #[Scope]
+    protected function withEffectiveRole(Builder $query, ZaaktypeRole $role): Builder
+    {
+        return $query->where(function (Builder $ladder) use ($role): void {
+            $ladder
+                ->whereExists(fn (QueryBuilder $sub) => self::mappingsOfZaaktype($sub)->where('municipality_zaaktype_mappings.role', $role->value))
+                ->orWhere(function (Builder $withoutKoppeling) use ($role): void {
+                    $withoutKoppeling
+                        ->whereNotExists(fn (QueryBuilder $sub) => self::mappingsOfZaaktype($sub))
+                        ->where(function (Builder $fallback) use ($role): void {
+                            $fallback
+                                ->where('zaaktypen.role', $role->value)
+                                ->orWhere(function (Builder $byName) use ($role): void {
+                                    $byName
+                                        ->whereNull('zaaktypen.role')
+                                        ->where('zaaktypen.name', 'like', $role->namePrefix().'%');
+                                });
+                        });
+                });
+        });
+    }
+
+    /**
+     * Correlated subquery over the koppelingen of the zaaktype row in the outer
+     * query. A null municipality_id or identificatie matches nothing, which is
+     * what the ladder needs: no koppeling, so fall through to the next step.
+     */
+    private static function mappingsOfZaaktype(QueryBuilder $query): QueryBuilder
+    {
+        return $query
+            ->select(DB::raw(1))
+            ->from('municipality_zaaktype_mappings')
+            ->whereColumn('municipality_zaaktype_mappings.municipality_id', 'zaaktypen.municipality_id')
+            ->whereColumn('municipality_zaaktype_mappings.zaaktype_identificatie', 'zaaktypen.identificatie');
     }
 
     /** @return BelongsTo<Municipality, $this> */
