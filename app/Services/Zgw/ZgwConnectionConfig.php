@@ -18,9 +18,15 @@ use Throwable;
 class ZgwConnectionConfig
 {
     /**
-     * The roles whose document visibility no connection may narrow: they span
-     * every municipality and every connection, so they see the full
-     * vertrouwelijkheid scale by definition rather than by configuration.
+     * The roles whose document visibility no connection may narrow.
+     *
+     * Their reach differs: Admin is platform-wide, while KoppelingBeheerder
+     * only reaches the municipalities it is attached to. What they share is
+     * that they administer the koppeling itself, so both have to see a zaak the
+     * way the backend holds it, including the levels a connection hides from
+     * the roles that merely work in it. Their scale is therefore fixed here
+     * instead of left to per-connection configuration; which zaken they may
+     * reach at all stays a policy question and is unaffected by this list.
      *
      * @var array<int, Role>
      */
