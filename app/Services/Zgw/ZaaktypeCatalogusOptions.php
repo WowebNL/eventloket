@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Zgw;
 
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -37,6 +39,14 @@ final class ZaaktypeCatalogusOptions
         'resultaattypen_by_url',
         'informatieobjecttypen',
     ];
+
+    /**
+     * The response statuses that confirm a resource is really gone, as opposed
+     * to temporarily unreadable. Deliberately narrower than the notification
+     * skip list: a 401 or 403 says something about our credentials, not about
+     * whether the resource still exists.
+     */
+    private const GONE_STATUSES = [404, 410];
 
     /**
      * The definitief zaaktypen of the connection, one entry per identificatie.
@@ -171,8 +181,13 @@ final class ZaaktypeCatalogusOptions
      * The stored urls are therefore matched onto the current version: a url the
      * version still has is kept as is, and one it no longer has is followed to
      * read its omschrijving and re-pointed at the current resultaattype with
-     * that omschrijving. Only a url that resolves to neither is dropped, since
-     * it names a resultaattype this zaaktype no longer offers under any url.
+     * that omschrijving.
+     *
+     * Dropping a url takes evidence, because a dropped url is gone for good
+     * once the koppeling is saved. Only two answers are evidence: the backend
+     * confirming the url is gone, and a successful read whose omschrijving the
+     * current version no longer offers. Anything else, an unreadable list or an
+     * unreadable single url, leaves the stored selection alone.
      *
      * @param  array<int|string, mixed>  $stored
      * @return array<int, string>
@@ -212,7 +227,19 @@ final class ZaaktypeCatalogusOptions
                 continue;
             }
 
-            $omschrijving = self::resultaattypeOmschrijving($connectionName, $url);
+            $read = self::readResultaattype($connectionName, $url);
+
+            if (! $read['readable']) {
+                // The list read succeeded but this one url could not be read.
+                // That says nothing about whether the resultaattype still
+                // exists, so keep it: dropping it here would quietly and
+                // permanently discard a configuration over a hiccup.
+                $reconciled[$url] = true;
+
+                continue;
+            }
+
+            $omschrijving = $read['omschrijving'];
 
             if ($omschrijving !== null && isset($currentByOmschrijving[$omschrijving])) {
                 $reconciled[$currentByOmschrijving[$omschrijving]] = true;
@@ -231,19 +258,68 @@ final class ZaaktypeCatalogusOptions
     }
 
     /**
-     * The omschrijving of a single resultaattype, read by url and cached like
-     * the option lists. Returns null when it cannot be read, which is what a
-     * url from a withdrawn zaaktype version looks like.
+     * Read a single resultaattype back by its url, reporting whether the answer
+     * can be trusted as a statement about that resultaattype.
+     *
+     * `readable` is true when the backend answered about this url: either with
+     * the resource (`omschrijving` filled) or with a confirmed "it is gone"
+     * (`omschrijving` null). It is false for every other failure (a 5xx, a
+     * timeout, a rejected credential), since none of those tell us whether the
+     * resultaattype still exists. Only a readable answer may be acted on.
+     *
+     * A readable answer is cached like the option lists; a failed read is not,
+     * so the next attempt reaches the backend again.
+     *
+     * @return array{readable: bool, omschrijving: string|null}
      */
-    private static function resultaattypeOmschrijving(string $connectionName, string $url): ?string
+    private static function readResultaattype(string $connectionName, string $url): array
     {
-        $resolved = self::remember($connectionName, 'resultaattype_omschrijving', $url, function () use ($connectionName, $url): array {
-            $omschrijving = ZgwResource::byUrl($connectionName, $url)['omschrijving'] ?? null;
+        $key = self::cacheKey($connectionName, 'resultaattype_read', $url);
 
-            return is_string($omschrijving) && $omschrijving !== '' ? ['omschrijving' => $omschrijving] : [];
-        });
+        try {
+            /** @var array{readable: bool, omschrijving: string|null} */
+            return Cache::remember($key, self::TTL_SECONDS, function () use ($connectionName, $url): array {
+                try {
+                    $omschrijving = ZgwResource::byUrl($connectionName, $url)['omschrijving'] ?? null;
+                } catch (Throwable $e) {
+                    if (! self::confirmsGone($e)) {
+                        // Not an answer about this url: let it out of the
+                        // callback, so the failure is not cached as a result.
+                        throw $e;
+                    }
 
-        return $resolved['omschrijving'] ?? null;
+                    return ['readable' => true, 'omschrijving' => null];
+                }
+
+                return [
+                    'readable' => true,
+                    'omschrijving' => is_string($omschrijving) && $omschrijving !== '' ? $omschrijving : null,
+                ];
+            });
+        } catch (Throwable $e) {
+            Log::warning('ZaaktypeCatalogusOptions: kon resultaattype niet ophalen', [
+                'connection' => $connectionName,
+                'resultaattype' => $url,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return ['readable' => false, 'omschrijving' => null];
+        }
+    }
+
+    /**
+     * Whether an exception is the backend confirming the resource no longer
+     * exists, rather than a transport or server error.
+     */
+    private static function confirmsGone(Throwable $e): bool
+    {
+        $status = match (true) {
+            $e instanceof ApiRequestException => $e->getResponse()->status(),
+            $e instanceof RequestException => $e->response->status(),
+            default => null,
+        };
+
+        return in_array($status, self::GONE_STATUSES, true);
     }
 
     /**
