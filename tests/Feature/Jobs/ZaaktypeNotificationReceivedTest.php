@@ -148,6 +148,74 @@ test('a published new version refreshes the own-instance row and clears the vers
     Notification::assertNothingSent();
 });
 
+test('a republish re-points the hidden-results selection without a manual re-save', function () {
+    // "Te verbergen resultaten" stores resultaattype urls, and a republish gives
+    // every resultaattype of the zaaktype a new url. The runtime comparison then
+    // matches nothing, so results a gemeente chose to hide quietly reappear in
+    // the calendar and the zaken list until someone opens and saves the
+    // koppeling. The version bump itself re-points them instead.
+    $v1 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v1';
+    $v2 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v2';
+    $oldHidden = ZTN_OWN_BASE.'/catalogi/api/v1/resultaattypen/old-ingetrokken';
+    $newHidden = ZTN_OWN_BASE.'/catalogi/api/v1/resultaattypen/new-ingetrokken';
+
+    [$municipality, $zaaktype] = ownInstanceSetup($v1);
+
+    $mapping = MunicipalityZaaktypeMapping::query()->where('municipality_id', $municipality->id)->sole();
+    $mapping->hidden_resultaat_types = [$oldHidden];
+    $mapping->saveQuietly();
+
+    // The new version lists new urls only; the withdrawn one is still readable
+    // at its own url, which is what its omschrijving is matched on. Its stub is
+    // registered first, so the resultaattypen wildcard does not shadow it.
+    Http::fake(array_merge([
+        $oldHidden => Http::response(['url' => $oldHidden, 'omschrijving' => 'Ingetrokken'], 200),
+        $v2 => Http::response(zaaktypeVersionData($v2), 200),
+        ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([zaaktypeVersionData($v2)]), 200),
+    ], healthyCatalogusFakes([
+        ZTN_OWN_BASE.'/catalogi/api/v1/resultaattypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZTN_OWN_BASE.'/catalogi/api/v1/resultaattypen/new-verleend', 'omschrijving' => 'Verleend', 'omschrijvingGeneriek' => 'Afgehandeld'],
+            ['url' => $newHidden, 'omschrijving' => 'Ingetrokken', 'omschrijvingGeneriek' => 'Ingetrokken'],
+        ]), 200),
+    ])));
+
+    (new ZaaktypeNotificationReceived(zaaktypeNotification($v2)))->handle(app(ZaaktypeRefresher::class));
+
+    // Both the stored selection and the map the calendar and the zaken list
+    // filter on now name the current version's url.
+    expect($mapping->refresh()->hidden_resultaat_types)->toBe([$newHidden])
+        ->and(Zaaktype::effectiveHiddenResultaatTypesMap())->toBe([$zaaktype->id => [$newHidden]]);
+
+    Notification::assertNothingSent();
+});
+
+test('a republish whose resultaattypen cannot be read leaves the hidden-results selection alone', function () {
+    // An unreadable list is indistinguishable from an empty one, so the
+    // reconcile must not treat a hiccup as "this zaaktype has no results".
+    $v1 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v1';
+    $v2 = ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen/v2';
+    $oldHidden = ZTN_OWN_BASE.'/catalogi/api/v1/resultaattypen/old-ingetrokken';
+
+    [$municipality, $zaaktype] = ownInstanceSetup($v1);
+
+    $mapping = MunicipalityZaaktypeMapping::query()->where('municipality_id', $municipality->id)->sole();
+    $mapping->hidden_resultaat_types = [$oldHidden];
+    $mapping->saveQuietly();
+
+    Http::fake(array_merge([
+        $oldHidden => Http::response(['url' => $oldHidden, 'omschrijving' => 'Ingetrokken'], 200),
+        $v2 => Http::response(zaaktypeVersionData($v2), 200),
+        ZTN_OWN_BASE.'/catalogi/api/v1/zaaktypen?*' => Http::response(ZgwHttpFake::envelope([zaaktypeVersionData($v2)]), 200),
+    ], healthyCatalogusFakes([
+        ZTN_OWN_BASE.'/catalogi/api/v1/resultaattypen*' => Http::response(['detail' => 'nope'], 500),
+    ])));
+
+    (new ZaaktypeNotificationReceived(zaaktypeNotification($v2)))->handle(app(ZaaktypeRefresher::class));
+
+    expect($zaaktype->refresh()->zgw_zaaktype_url)->toBe($v2)
+        ->and($mapping->refresh()->hidden_resultaat_types)->toBe([$oldHidden]);
+});
+
 test('a new version without any eigenschap refreshes without warning the beheerders', function () {
     // Eigenschappen are optional, so a zaaktype that carries none of them must
     // not produce the daily koppeling warning.

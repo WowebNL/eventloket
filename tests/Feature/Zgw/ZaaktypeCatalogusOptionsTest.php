@@ -165,6 +165,32 @@ test('a stored resultaattype that no longer exists under any url is dropped', fu
         ->toBe([]);
 });
 
+test('the option lists of one zaaktype are forgotten together', function () {
+    // Every per-zaaktype list hangs off the same definitief version, so a
+    // republish makes them all stale at once and they are dropped as a set.
+    // The catalogus answers with the first version until it is asked again.
+    $base = ZgwHttpFake::$baseUrl.'/catalogi/api/v1';
+
+    Http::fake([
+        $base.'/zaaktypen?*' => Http::sequence()
+            ->push(ZgwHttpFake::envelope([['url' => $base.'/zaaktypen/1']]), 200)
+            ->push(ZgwHttpFake::envelope([['url' => $base.'/zaaktypen/2']]), 200),
+        $base.'/statustypen?*' => Http::sequence()
+            ->push(ZgwHttpFake::envelope([['omschrijving' => 'Ontvangen', 'volgnummer' => 1]]), 200)
+            ->push(ZgwHttpFake::envelope([['omschrijving' => 'Afgehandeld', 'volgnummer' => 1]]), 200),
+    ]);
+
+    // The second call is served from the cache, so it leaves the next response
+    // in the sequence untouched.
+    expect(ZaaktypeCatalogusOptions::statustypen('main', 'ZT-1'))->toBe(['Ontvangen' => '1. Ontvangen'])
+        ->and(ZaaktypeCatalogusOptions::statustypen('main', 'ZT-1'))->toBe(['Ontvangen' => '1. Ontvangen']);
+
+    ZaaktypeCatalogusOptions::forgetZaaktype('main', 'ZT-1');
+
+    expect(ZaaktypeCatalogusOptions::statustypen('main', 'ZT-1'))
+        ->toBe(['Afgehandeld' => '1. Afgehandeld']);
+});
+
 test('an unreadable resultaattypen list leaves the stored selection alone', function () {
     // Every catalogi read degrades to an empty list on failure, so an empty
     // list cannot be told apart from an unreachable backend: discarding the

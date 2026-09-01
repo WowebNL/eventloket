@@ -25,6 +25,20 @@ final class ZaaktypeCatalogusOptions
     private const TTL_SECONDS = 300;
 
     /**
+     * The option lists that describe one zaaktype identificatie. They all hang
+     * off its current definitief version, so republishing that version makes
+     * every one of them stale at the same moment.
+     */
+    private const ZAAKTYPE_RESOURCES = [
+        'eigenschappen',
+        'statustypen',
+        'roltypen',
+        'resultaattypen',
+        'resultaattypen_by_url',
+        'informatieobjecttypen',
+    ];
+
+    /**
      * The definitief zaaktypen of the connection, one entry per identificatie.
      *
      * @return array<string, string> identificatie => "identificatie — omschrijving"
@@ -233,6 +247,20 @@ final class ZaaktypeCatalogusOptions
     }
 
     /**
+     * Forget the cached option lists of one zaaktype identificatie, so the next
+     * read reflects a version that has just been published. Reads keyed by a
+     * version-specific url need no invalidation: a new version means new urls.
+     */
+    public static function forgetZaaktype(string $connectionName, string $identificatie): void
+    {
+        Cache::forget(self::cacheKey($connectionName, 'version_url', $identificatie));
+
+        foreach (self::ZAAKTYPE_RESOURCES as $resource) {
+            Cache::forget(self::cacheKey($connectionName, $resource, $identificatie));
+        }
+    }
+
+    /**
      * The informatieobjecttypen linked to the zaaktype via the standard relation.
      *
      * @return array<string, string> omschrijving => omschrijving
@@ -370,7 +398,7 @@ final class ZaaktypeCatalogusOptions
      */
     private static function remember(string $connectionName, string $resource, string $discriminator, callable $builder): array
     {
-        $key = 'zaaktype_catalogus_options.'.md5($connectionName.'|'.$resource.'|'.$discriminator);
+        $key = self::cacheKey($connectionName, $resource, $discriminator);
 
         try {
             return Cache::remember($key, self::TTL_SECONDS, $builder);
@@ -387,5 +415,10 @@ final class ZaaktypeCatalogusOptions
 
             return [];
         }
+    }
+
+    private static function cacheKey(string $connectionName, string $resource, string $discriminator): string
+    {
+        return 'zaaktype_catalogus_options.'.md5($connectionName.'|'.$resource.'|'.$discriminator);
     }
 }
