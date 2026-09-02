@@ -1,7 +1,7 @@
 # ZGW-koppelingbeheer
 
-Versie: 1.1
-<br>Datum: 20-08-2026
+Versie: 1.2
+<br>Datum: 21-08-2026
 <br>Door: Michel Verhoeven
 
 Dit document beschrijft hoe een functioneel beheerder een ZGW-koppeling voor een gemeente opzet en onderhoudt in Eventloket. Het legt uit hoe de beheeromgeving werkt en geeft een volledig stappenplan, inclusief wat er aan de externe zaaksysteem-applicatie (bijvoorbeeld Open Zaak of OneGround) klaargezet moet worden.
