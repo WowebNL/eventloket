@@ -27,6 +27,18 @@ final class EventDagen
     public const NACHT_GRENS = '06:00:00';
 
     /**
+     * The largest number of calendar days one period may span.
+     *
+     * Ninety days is a plausibility bound rather than a rule the domain
+     * imposes. It sits well above the longest period the form realistically
+     * has to collect, such as a seasonal ice rink, a fair that runs for weeks
+     * or a drawn-out build-up, and well below the range a datetime input can
+     * produce. It doubles as the upper bound of the day list, so an
+     * implausible end date can never drive an unbounded loop.
+     */
+    public const MAX_DAGEN = 90;
+
+    /**
      * The calendar day an end moment belongs to. An end at or before the night
      * boundary is attributed to the day before.
      *
@@ -63,9 +75,26 @@ final class EventDagen
     }
 
     /**
+     * Whether the period spans more calendar days than the bound allows.
+     * Answers in constant time and without building the day list, so it stays
+     * cheap for an end date far outside the intended range.
+     */
+    public static function overschrijdtMaximum(mixed $start, mixed $eind): bool
+    {
+        return self::spanInDagen($start, $eind) > self::MAX_DAGEN;
+    }
+
+    /**
      * The calendar days the period covers, from the start date up to and
      * including the effective end date. Returns an empty list when either
      * moment is missing or unparseable.
+     *
+     * The list never grows past {@see self::MAX_DAGEN} days. Clipping a longer
+     * period is deliberate: it keeps reporting itself as multi-day and still
+     * shows day rows, so the period stays visible and the duration rule on the
+     * form can explain what is wrong. Returning an empty list instead would
+     * make isMeerdaags() call a months-long period single-day and make the day
+     * rows vanish without a word.
      *
      * @return list<CarbonImmutable>
      */
@@ -78,15 +107,47 @@ final class EventDagen
             return [];
         }
 
-        $dag = CarbonImmutable::parse($startMoment->toDateTimeString())->startOfDay();
+        $eersteDag = CarbonImmutable::parse($startMoment->toDateTimeString())->startOfDay();
+        $aantal = min(self::kalenderdagenTussen($eersteDag, $eindDatum), self::MAX_DAGEN);
 
         $dagen = [];
-        while ($dag->lessThanOrEqualTo($eindDatum)) {
-            $dagen[] = $dag;
-            $dag = $dag->addDay();
+        for ($nummer = 0; $nummer < $aantal; $nummer++) {
+            $dagen[] = $eersteDag->addDays($nummer);
         }
 
         return $dagen;
+    }
+
+    /**
+     * The number of calendar days the period would cover if it were not capped,
+     * or zero when either moment is missing or unparseable.
+     */
+    private static function spanInDagen(mixed $start, mixed $eind): int
+    {
+        $startMoment = self::parse($start);
+        $eindDatum = self::effectieveEinddatum($start, $eind);
+
+        if ($startMoment === null || $eindDatum === null) {
+            return 0;
+        }
+
+        $eersteDag = CarbonImmutable::parse($startMoment->toDateTimeString())->startOfDay();
+
+        return self::kalenderdagenTussen($eersteDag, $eindDatum);
+    }
+
+    /**
+     * Calendar days from one day up to and including another, both already at
+     * the start of their day. Counted on the dates alone, so a clock change in
+     * between cannot shorten or lengthen the count. Always at least one:
+     * effectieveEinddatum() never returns a day before the start.
+     */
+    private static function kalenderdagenTussen(CarbonImmutable $eersteDag, CarbonImmutable $laatsteDag): int
+    {
+        $eerste = new \DateTimeImmutable($eersteDag->toDateString(), new \DateTimeZone('UTC'));
+        $laatste = new \DateTimeImmutable($laatsteDag->toDateString(), new \DateTimeZone('UTC'));
+
+        return (int) $eerste->diff($laatste)->days + 1;
     }
 
     /**
