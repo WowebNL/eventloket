@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
 use App\EventForm\Schema\EventFormSchema;
@@ -12,6 +13,7 @@ use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormDraftsPage;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -261,4 +263,44 @@ test('prefill vanaf een gewone zaak zet geen omzettings-presets', function () {
 
     expect($state->get(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBeNull()
         ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBeNull();
+});
+
+test('prefill vanaf een via de koppeling herkende vooraankondiging zet de omzettings-presets', function () {
+    // Same conversion, but for a municipality on its own ZGW instance: the
+    // zaaktype name is the external omschrijving, so only the koppeling
+    // identifies the vooraankondiging.
+    $municipality = Municipality::factory()->create();
+
+    MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Vooraankondiging,
+        'zaaktype_identificatie' => 'EXT-1',
+    ]);
+
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'identificatie' => 'EXT-1',
+        'name' => 'Activiteit behandelen',
+        'role' => ZaaktypeRole::Vooraankondiging,
+        'is_active' => true,
+    ]);
+
+    $vooraankondiging = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'organiser_user_id' => $this->user->id,
+        'form_state_snapshot' => ['values' => [
+            'watIsDeNaamVanHetEvenementVergunning' => 'Kermis 2027',
+            'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        ], 'system' => []],
+    ]);
+
+    Livewire::withQueryParams(['prefill_from_zaak' => $vooraankondiging->id])
+        ->test(EventFormDraftsPage::class);
+
+    $state = FormState::fromSnapshot(Draft::ownedBy($this->user, $this->organisation)->sole()->state);
+
+    expect($state->get('waarvoorWiltUEventloketGebruiken'))->toBe('evenement')
+        ->and($state->get(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBe('Ja')
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBe($vooraankondiging->id);
 });

@@ -11,6 +11,7 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
 
@@ -270,4 +271,68 @@ it('re-points a hidden-results selection at the current zaaktype version so the 
         ->assertFormSet(['hidden_resultaat_types' => ["{$base}/resultaattypen/new-1"]]);
 
     expect($mapping->refresh()->hidden_resultaat_types)->toBe(["{$base}/resultaattypen/new-1"]);
+});
+
+it('refuses a second koppeling on the same zaaktype', function () {
+    fakeCatalogus();
+
+    MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'EVT-1',
+    ]);
+
+    livewire(CreateMunicipalityZaaktypeMapping::class)
+        ->fillForm([
+            'role' => ZaaktypeRole::Vooraankondiging->value,
+            'zaaktype_identificatie' => 'EVT-1',
+        ])
+        ->call('create')
+        ->assertHasFormErrors(['zaaktype_identificatie']);
+
+    expect(MunicipalityZaaktypeMapping::count())->toBe(1);
+});
+
+it('allows a zaaktype that is only koppeld by another municipality', function () {
+    fakeCatalogus();
+
+    // Inserted directly: while a panel tenant is booted, saving a tenant-owned
+    // model rewrites its municipality onto that tenant, which would defeat the
+    // point of this test.
+    DB::table('municipality_zaaktype_mappings')->insert([
+        'municipality_id' => Municipality::factory()->createQuietly()->id,
+        'role' => ZaaktypeRole::Vergunning->value,
+        'zaaktype_identificatie' => 'EVT-1',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    livewire(CreateMunicipalityZaaktypeMapping::class)
+        ->fillForm([
+            'role' => ZaaktypeRole::Vooraankondiging->value,
+            'zaaktype_identificatie' => 'EVT-1',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    // Counted on the table: model queries are scoped to the current tenant here,
+    // and the point of this test is the row of the other municipality.
+    expect(DB::table('municipality_zaaktype_mappings')->count())->toBe(2);
+});
+
+it('still allows several koppelingen without a chosen zaaktype', function () {
+    fakeCatalogus();
+
+    MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => null,
+    ]);
+
+    livewire(CreateMunicipalityZaaktypeMapping::class)
+        ->fillForm(['role' => ZaaktypeRole::Vooraankondiging->value])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(MunicipalityZaaktypeMapping::count())->toBe(2);
 });

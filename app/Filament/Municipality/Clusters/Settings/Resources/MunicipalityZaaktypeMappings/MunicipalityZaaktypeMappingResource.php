@@ -93,7 +93,18 @@ class MunicipalityZaaktypeMappingResource extends Resource
                                 $value,
                             ))
                             ->live()
-                            ->afterStateUpdated(fn (Set $set) => self::resetDependentFields($set)),
+                            ->afterStateUpdated(fn (Set $set) => self::resetDependentFields($set))
+                            // A municipality maps an external zaaktype to at most one
+                            // role. Call sites that only know a zaaktype look its
+                            // koppeling up by municipality + identificatie, so a second
+                            // koppeling on the same zaaktype would make them pick an
+                            // arbitrary one of the two and read the wrong role's
+                            // statustypen, eigenschappen and documenttypen. Mirrors the
+                            // rule on `role` above; a unique index on the same columns
+                            // backs it up for the paths that skip this form. Leaving the
+                            // zaaktype empty stays allowed: the field is nullable, so
+                            // the rule is skipped on a null value.
+                            ->unique(ignoreRecord: true, modifyRuleUsing: fn (Unique $rule): Unique => $rule->where('municipality_id', Filament::getTenant()?->getKey())),
                     ]),
 
                 Section::make(__('municipality/resources/zaaktype_mapping.sections.behaviour.heading'))
