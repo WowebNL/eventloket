@@ -114,7 +114,15 @@ class Zaaktype extends Model
                                 ->orWhere(function (Builder $byName) use ($role): void {
                                     $byName
                                         ->whereNull('zaaktypen.role')
-                                        ->where('zaaktypen.name', 'like', $role->namePrefix().'%');
+                                        // Lowered on both sides to match the
+                                        // case-insensitive prefix check
+                                        // {@see ZaaktypeRole::fromName()} does in
+                                        // PHP. A plain `like` would not: it is
+                                        // case-sensitive on PostgreSQL and
+                                        // case-insensitive on MySQL, so the same
+                                        // row would answer differently per engine
+                                        // and differently from the model.
+                                        ->whereRaw('lower(zaaktypen.name) like ?', [mb_strtolower($role->namePrefix()).'%']);
                                 });
                         });
                 });

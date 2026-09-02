@@ -201,3 +201,22 @@ it('ends up with a name that defeats the naming convention after a real sync', f
     expect($zaaktype->name)->toBe('Activiteit behandelen')
         ->and($zaaktype->isVooraankondiging())->toBeTrue();
 });
+
+it('reads the naming convention case-insensitively in PHP and in SQL alike', function () {
+    // ZaaktypeRole::fromName() lowercases both sides of the prefix comparison,
+    // so the SQL rung has to as well. A plain `like` does not: it is
+    // case-sensitive on PostgreSQL and case-insensitive on MySQL, which would
+    // let the same row answer differently per engine and differently from the
+    // model it is supposed to mirror.
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => Municipality::factory()->create()->id,
+        'name' => 'vooraankondiging gemeente Test',
+        'role' => null,
+        'is_active' => true,
+    ]);
+
+    $zaak = zaakOp($zaaktype);
+
+    expect($zaaktype->isVooraankondiging())->toBeTrue()
+        ->and(Zaak::query()->vooraankondigingen()->pluck('id')->all())->toBe([$zaak->id]);
+});
