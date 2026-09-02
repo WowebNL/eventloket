@@ -17,7 +17,7 @@ use Filament\Schemas\Components\Utilities\Get;
  * saying so. This rule is what turns the cap into a message the organiser can
  * act on, so the period is either fully expressed in day rows or refused.
  *
- * @see EventDagen::MAX_DAGEN for the functional limit itself
+ * @see EventDagen::MAX_DAGEN for the bound itself
  */
 final class PeriodeDuurRule
 {
