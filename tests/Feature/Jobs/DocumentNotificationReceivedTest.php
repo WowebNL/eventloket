@@ -17,12 +17,18 @@ use App\Models\Zaaktype;
 use App\Notifications\NewZaakDocument;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Tests\Fakes\ZgwHttpFake;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 
 beforeEach(function () {
     Notification::fake();
     Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
+
+    // Documents are not besluitdocuments by default, so the verzenddatum gate
+    // is a no-op for the existing scenarios.
+    ZgwHttpFake::fakeBesluitinformatieobjecten();
 
     $this->newDocumentNotification = new OpenNotification(
         actie: 'create',
@@ -95,6 +101,68 @@ test('Organisation users are notified on new document', function () {
 
     Notification::assertSentTo($organisation->users, NewZaakDocument::class);
 
+});
+
+test('No notification is sent for a concept document', function () {
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument('1', ['status' => 'in_bewerking']);
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $organisation = Organisation::factory(['type' => OrganisationType::Business])->create();
+    $users = User::factory(['role' => Role::Organiser])->createMany(2);
+    $organisation->users()->attach($users, ['role' => OrganisationRole::Admin]);
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'organisation_id' => $organisation->id,
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    dispatch(new DocumentNotificationReceived(
+        new OpenNotification(
+            actie: 'create',
+            kanaal: 'documenten',
+            resource: 'enkelvoudiginformatieobject',
+            hoofdObject: $documentUrl,
+            resourceUrl: $documentUrl,
+            aanmaakdatum: now(),
+        ),
+        true
+    ));
+
+    Notification::assertNothingSent();
+});
+
+test('A notification IS sent for a definitief document', function () {
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument('1', ['status' => 'definitief']);
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $organisation = Organisation::factory(['type' => OrganisationType::Business])->create();
+    $users = User::factory(['role' => Role::Organiser])->createMany(2);
+    $organisation->users()->attach($users, ['role' => OrganisationRole::Admin]);
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'organisation_id' => $organisation->id,
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    dispatch(new DocumentNotificationReceived(
+        new OpenNotification(
+            actie: 'create',
+            kanaal: 'documenten',
+            resource: 'enkelvoudiginformatieobject',
+            hoofdObject: $documentUrl,
+            resourceUrl: $documentUrl,
+            aanmaakdatum: now(),
+        ),
+        true
+    ));
+
+    Notification::assertSentTo($organisation->users, NewZaakDocument::class);
 });
 
 test('No notification is sent for the aanvraagformulier PDF on initial upload', function () {
@@ -287,3 +355,93 @@ test('Advisors of an advice request in a final status are no longer notified abo
     'rejected' => AdviceStatus::Rejected,
     'no reaction' => AdviceStatus::NoReaction,
 ]);
+
+test('a document the resolved connection may not read is skipped, not failed', function (int $status) {
+    // Choosing a connection is not the same as being able to read what the
+    // notification points at: on a shared instance a notification can be
+    // attributed without any read, and the document itself may belong to
+    // another tenant or already be gone. Failing the job there buries the
+    // notification under retries that can never succeed.
+    ZgwHttpFake::fakeSingleZaak();
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $documentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/rejected';
+    Http::fake([$documentUrl => Http::response(['detail' => 'Geen toegang'], $status)]);
+
+    $notification = new OpenNotification(
+        actie: 'create',
+        kanaal: 'documenten',
+        resource: 'enkelvoudiginformatieobject',
+        hoofdObject: $documentUrl,
+        resourceUrl: $documentUrl,
+        aanmaakdatum: now(),
+    );
+
+    dispatch(new DocumentNotificationReceived($notification, true));
+
+    Notification::assertNothingSent();
+})->with([
+    'unauthenticated' => 401,
+    'forbidden' => 403,
+    'not found' => 404,
+]);
+
+test('a document whose zaakinformatieobjecten cannot be read on the resolved connection is skipped', function () {
+    // The same rejection can come from the follow-up calls, which filter on
+    // urls the chosen instance need not know.
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument();
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response([
+            'invalidParams' => [['name' => 'informatieobject', 'code' => 'invalid']],
+        ], 404),
+    ]);
+
+    $organisation = Organisation::factory(['type' => OrganisationType::Business])->create();
+    $users = User::factory(['role' => Role::Organiser])->createMany(2);
+    $organisation->users()->attach($users, ['role' => OrganisationRole::Admin]);
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'organisation_id' => $organisation->id,
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    dispatch(new DocumentNotificationReceived(
+        new OpenNotification(
+            actie: 'create',
+            kanaal: 'documenten',
+            resource: 'enkelvoudiginformatieobject',
+            hoofdObject: $documentUrl,
+            resourceUrl: $documentUrl,
+            aanmaakdatum: now(),
+        ),
+        true
+    ));
+
+    Notification::assertNothingSent();
+});
+
+test('a server error on the resolved connection still fails the job so it retries', function () {
+    // Only the rejection statuses mean "not ours"; anything else is transient
+    // and must keep its retries.
+    ZgwHttpFake::fakeSingleZaak();
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $documentUrl = ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/500';
+    Http::fake([$documentUrl => Http::response(['detail' => 'Server error'], 500)]);
+
+    $notification = new OpenNotification(
+        actie: 'create',
+        kanaal: 'documenten',
+        resource: 'enkelvoudiginformatieobject',
+        hoofdObject: $documentUrl,
+        resourceUrl: $documentUrl,
+        aanmaakdatum: now(),
+    );
+
+    expect(fn () => dispatch(new DocumentNotificationReceived($notification, true)))
+        ->toThrow(ApiRequestException::class);
+});

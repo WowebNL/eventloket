@@ -109,13 +109,13 @@ final class ExtraQuestions
     }
 
     /**
-     * Het huidige aanvraagpad als string. `DetermineAanvraagType` is de enige
-     * plek die alle drie de paden kent; door 'm hier af te vangen is dit ook
-     * het enige punt dat aangepast hoeft te worden mocht die klasse ooit een
-     * enum in plaats van een string teruggeven.
+     * Het huidige aanvraagpad als string. `DetermineAanvraagType` geeft de
+     * `ZaaktypeRole` terug; de opgeslagen `show_for_aanvraag_types` zijn nog
+     * losse strings, dus dit is het ene punt waar de enum naar zijn
+     * backing value wordt teruggebracht.
      */
     private static function currentAanvraagType(FormState $state): string
     {
-        return app(DetermineAanvraagType::class)->forState($state);
+        return app(DetermineAanvraagType::class)->forState($state)->value;
     }
 }

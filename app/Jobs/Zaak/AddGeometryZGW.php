@@ -9,10 +9,11 @@ use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Exceptions\LocatieserverUnavailableException;
 use App\Models\Zaak;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZgwResource;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Writes the zaakgeometrie (line/polygons/address points) onto the ZGW zaak
@@ -31,7 +32,6 @@ class AddGeometryZGW implements ShouldQueue
     public function __construct(public readonly Zaak $zaak) {}
 
     public function handle(
-        Openzaak $openzaak,
         ZaakeigenschappenMap $map,
         EventLocationGeometryBuilder $geometryBuilder,
     ): void {
@@ -39,7 +39,10 @@ class AddGeometryZGW implements ShouldQueue
             return;
         }
 
-        $ozZaak = new OzZaak(...$openzaak->get($this->zaak->zgw_zaak_url)->toArray());
+        $connectionName = $this->zaak->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
+
+        $ozZaak = ZaakReadModel::fromArray(ZgwResource::byUrl($connectionName, $this->zaak->zgw_zaak_url));
         if ($ozZaak->zaakgeometrie) {
             return;
         }
@@ -68,20 +71,24 @@ class AddGeometryZGW implements ShouldQueue
         }
 
         if ($geoJson) {
-            $openzaak->zaken()->zaken()->patch($ozZaak->uuid, [
+            $connection->zaken()->zaken()->patch($ozZaak->uuid, [
                 'zaakgeometrie' => json_decode($geoJson, true),
             ]);
             $this->zaak->clearZgwCache();
         }
 
         foreach ($geometryBuilder->collectedAddresses() as $bagObject) {
-            $openzaak->zaken()->zaakobjecten()->store([
+            $connection->zaken()->zaakobjecten()->store([
                 'zaak' => $ozZaak->url,
                 'objectType' => 'adres',
                 'relatieomschrijving' => 'Adres van het evenement',
                 'objectIdentificatie' => [
+                    // ZGW ObjectAdres requires `identificatie` (the BAG
+                    // nummeraanduiding id); gorOpenbareRuimteNaam is the street
+                    // name, not the Locatieserver adres id.
+                    'identificatie' => $bagObject->nummeraanduiding_id,
                     'wplWoonplaatsNaam' => $bagObject->woonplaatsnaam,
-                    'gorOpenbareRuimteNaam' => $bagObject->id,
+                    'gorOpenbareRuimteNaam' => $bagObject->straatnaam,
                     'huisnummer' => $bagObject->huisnummer,
                     'huisletter' => $bagObject->huisletter,
                     'huisnummertoevoeging' => $bagObject->huisnummertoevoeging,

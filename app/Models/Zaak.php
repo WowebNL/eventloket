@@ -3,18 +3,20 @@
 namespace App\Models;
 
 use App\Enums\AdviceStatus;
-use App\Enums\DocumentVertrouwelijkheden;
+use App\Enums\Role;
 use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
+use App\Services\Zgw\ZaakReadModel;
+use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwConnectionResolver;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\OzStatustype;
-use App\ValueObjects\OzZaak;
 use App\ValueObjects\ZGW\Besluit;
-use App\ValueObjects\ZGW\BesluitType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
@@ -30,11 +32,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Traits\LogsActivity;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
+use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
+use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * @property ZaakReferenceData $reference_data
@@ -43,12 +51,24 @@ use Woweb\Openzaak\Openzaak;
  * @property-read ?Organisation                $organisation
  * @property-read ?Municipality                $municipality
  * @property-read Collection<Informatieobject> $documenten
- * @property-read ?OzStatustype                $statustype
+ * @property-read ?StatusTypeData              $statustype
  */
 #[ObservedBy(ZaakObserver::class)]
 class Zaak extends Model implements Eventable
 {
     use HasFactory, HasUuids, LogsActivity, SoftDeletes;
+
+    /**
+     * How long the documents and besluiten read from ZGW are cached.
+     *
+     * These caches used to be kept forever and relied on ZGW notifications to be
+     * invalidated. That is not a safe assumption for an external connection: a
+     * subscription that is missing, unreachable or on an unhandled channel meant
+     * an empty list read once (before the documents existed) was served
+     * indefinitely. A short TTL bounds that failure to a few minutes; explicit
+     * invalidation via {@see clearZgwCache()} keeps the common path immediate.
+     */
+    private const ZGW_READ_CACHE_TTL = 300;
 
     protected $table = 'zaken';
 
@@ -56,6 +76,8 @@ class Zaak extends Model implements Eventable
         'public_id',
         'zgw_zaak_url',
         'zaaktype_id',
+        'zgw_zaaktype_url',
+        'hoofdzaak_id',
         'data_object_url',
         'organisation_id',
         'organiser_user_id',
@@ -79,6 +101,181 @@ class Zaak extends Model implements Eventable
     public function zaaktype(): BelongsTo
     {
         return $this->belongsTo(Zaaktype::class);
+    }
+
+    /**
+     * The hoofdzaak this zaak belongs to, when it is a doorkomst deelzaak.
+     *
+     * @return BelongsTo<Zaak, $this>
+     */
+    public function hoofdzaak(): BelongsTo
+    {
+        return $this->belongsTo(Zaak::class, 'hoofdzaak_id');
+    }
+
+    /**
+     * The doorkomst deelzaken created from this (hoofd)zaak. The relationship is
+     * tracked locally because ZGW only relates hoofdzaak/deelzaak within a single
+     * instance, while doorkomst zaken may live in other municipalities' instances.
+     *
+     * @return HasMany<Zaak, $this>
+     */
+    public function deelzaken(): HasMany
+    {
+        return $this->hasMany(Zaak::class, 'hoofdzaak_id');
+    }
+
+    /**
+     * The ZGW connection name to use for calls about this zaak.
+     */
+    public function zgwConnectionName(): string
+    {
+        return app(ZgwConnectionResolver::class)->for($this);
+    }
+
+    /**
+     * The per-municipality ZGW connection row this zaak actually runs on, or
+     * null when it runs on the global "main" connection (which has no row, hence
+     * default behaviour).
+     *
+     * Gated on the resolved connection name so this never contradicts
+     * {@see zgwConnectionName()}, which is what every data call uses. Reading
+     * `municipality->zgwConnection` directly would return the municipality's
+     * connection even when the zaak reads from main: that happens for a zaak on
+     * a main-fallback zaaktype, and for every zaak of a municipality whose
+     * connection is not (or no longer) activated. Behaviour flags such as
+     * {@see showsTab()} would then describe a different instance than the one
+     * the data comes from.
+     */
+    public function zgwConnectionModel(): ?MunicipalityZgwConnection
+    {
+        if ($this->zgwConnectionName() === ZgwConnectionResolver::DEFAULT_CONNECTION) {
+            return null;
+        }
+
+        return $this->municipality?->zgwConnection;
+    }
+
+    /**
+     * Whether a behandelaar may change the status (and finish) this zaak inside
+     * Eventloket. Locked connections let the municipality drive status in its
+     * own system; organiser withdrawal stays possible regardless.
+     */
+    public function behandelaarCanChangeStatus(): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        return $connection === null || ! $connection->lock_status_for_behandelaar;
+    }
+
+    /**
+     * Whether an organiser may withdraw ("intrekken") this zaak from inside
+     * Eventloket. Always disabled for a OneGround (RX Mission) connection, where
+     * setting the eind-status archives the zaak immediately and is rejected
+     * unless all related documents are already 'gearchiveerd'; otherwise it
+     * follows the connection's own toggle. The global "main" connection (no row)
+     * always allows withdrawal.
+     */
+    public function organiserCanWithdraw(): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        return $connection === null
+            || (! $connection->is_oneground && $connection->allow_organiser_withdrawal);
+    }
+
+    /**
+     * Whether a behandelaar may change the risico classificatie (and toelichting)
+     * from inside Eventloket. The edit writes these eigenschappen by hardcoded
+     * naam and bypasses the per-municipality blueprint, so it is only offered on
+     * the global "main" connection; a municipality with its own ZGW connection
+     * drives these eigenschappen in its own system.
+     */
+    public function behandelaarCanEditRisicoClassificatie(): bool
+    {
+        return $this->zgwConnectionModel() === null;
+    }
+
+    /**
+     * Whether a given zaak detail tab should be shown for this connection.
+     *
+     * @param  'besluiten'|'bestanden'|'adviesvragen'|'organisatievragen'  $tab
+     */
+    public function showsTab(string $tab): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        if ($connection === null) {
+            return true;
+        }
+
+        return match ($tab) {
+            'besluiten' => $connection->show_besluiten_tab,
+            'bestanden' => $connection->show_bestanden_tab,
+            'adviesvragen' => $connection->show_adviesvragen_tab,
+            'organisatievragen' => $connection->show_organisatievragen_tab,
+            default => true,
+        };
+    }
+
+    /**
+     * Whether all zaak notifications are suppressed for this connection (only
+     * the submission confirmation mail still goes out).
+     */
+    public function suppressesNotifications(): bool
+    {
+        $connection = $this->zgwConnectionModel();
+
+        return $connection !== null && $connection->suppress_notifications;
+    }
+
+    /**
+     * The exact zaaktype version url this zaak was created against.
+     *
+     * Prefers the snapshot column; falls back to the version on the ZGW zaak DTO
+     * for rows created before the snapshot existed, and finally to the logical
+     * zaaktype's (latest) version url.
+     */
+    public function zgwZaaktypeVersionUrl(): ?string
+    {
+        if ($this->zgw_zaaktype_url) {
+            return $this->zgw_zaaktype_url;
+        }
+
+        // openzaak is only non-null when the zaak has a ZGW url; guard on that so
+        // we never dereference a null DTO.
+        if ($this->zgw_zaak_url && $this->openzaak->zaaktype) {
+            return $this->openzaak->zaaktype;
+        }
+
+        return $this->zaaktype?->zgw_zaaktype_url;
+    }
+
+    /** @return Attribute<Collection<int, InformatieObjectTypeData>, void> */
+    protected function documentTypes(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->zaaktype?->documentTypesForUser($this->zgwZaaktypeVersionUrl()) ?? collect(),
+        );
+    }
+
+    /**
+     * The zaaktype's documenttypes without the per-user visibility filter, for
+     * decisions that belong to the koppeling rather than to the current user.
+     *
+     * @return Collection<int, InformatieObjectTypeData>
+     */
+    public function catalogusDocumentTypes(): Collection
+    {
+        return $this->zaaktype?->catalogusDocumentTypes($this->zgwZaaktypeVersionUrl()) ?? collect();
+    }
+
+    /** @return Attribute<array<string, mixed>|null, void> */
+    protected function intrekkenResultaatType(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->zaaktype?->intrekkenResultaatTypeForVersion($this->zgwZaaktypeVersionUrl()),
+        );
     }
 
     public function organisation(): BelongsTo
@@ -174,9 +371,9 @@ class Zaak extends Model implements Eventable
     }
 
     /**
-     * Whether this zaak is a vooraankondiging. Delegates to the zaaktype
-     * naming convention; single seam to swap for `zaaktypen.role` after
-     * the multi-ZGW branch (PR #482) is merged.
+     * Whether this zaak is a vooraankondiging. Single seam: it delegates to the
+     * zaaktype, which resolves its role from the municipality's koppeling first
+     * and only falls back to the shared-catalogus naming convention.
      */
     public function isVooraankondiging(): bool
     {
@@ -190,7 +387,10 @@ class Zaak extends Model implements Eventable
     #[Scope]
     protected function vooraankondigingen(Builder $query): Builder
     {
-        return $query->whereHas('zaaktype', fn (Builder $q): Builder => $q->where('name', 'like', Zaaktype::VOORAANKONDIGING_NAME_PREFIX.'%'));
+        return $query->whereHas('zaaktype', function (Builder $zaaktypen): Builder {
+            /** @var Builder<Zaaktype> $zaaktypen */
+            return $zaaktypen->withEffectiveRole(ZaaktypeRole::Vooraankondiging);
+        });
     }
 
     /**
@@ -274,7 +474,7 @@ class Zaak extends Model implements Eventable
         );
     }
 
-    /** @return Attribute<OzZaak, void> */
+    /** @return Attribute<ZaakReadModel|null, void> */
     protected function openzaak(): Attribute
     {
         return Attribute::make(
@@ -283,8 +483,12 @@ class Zaak extends Model implements Eventable
                     return null;
                 }
 
-                return Cache::rememberForever("zaak.{$attributes['id']}.openzaak", function () use ($attributes) {
-                    return new OzZaak(...(new Openzaak)->get($attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype')->all());
+                // Cache key bumped to .v2: the cached type changed from the old
+                // OzZaak value object to ZaakReadModel.
+                return Cache::rememberForever("zaak.{$attributes['id']}.openzaak.v2", function () use ($attributes) {
+                    $url = $attributes['zgw_zaak_url'].'?expand=status,status.statustype,eigenschappen,zaakinformatieobjecten,zaakobjecten,resultaat,resultaat.resultaattype';
+
+                    return ZaakReadModel::fromArray(ZgwResource::byUrl($this->zgwConnectionName(), $url));
                 });
             },
             // set: function($value, $attributes) {
@@ -297,14 +501,79 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
+                // Only show established documents; concepts from an external ZGW
+                // backend are hidden (documents without an explicit status, such
+                // as our own uploads, count as established, and so do archived
+                // ones). See Informatieobject::isVastgesteld().
+                $documenten = $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld());
+
                 if (app()->runningInConsole()) {
                     // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
-                    return $this->getDocuments();
-                } else {
-                    return $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role)));
+                    return $documenten->values();
                 }
+
+                return $this->filterDocumentenForRole($documenten, auth()->user()->role);
             },
         );
+    }
+
+    /**
+     * How many documents ZGW holds for this zaak, before the status and role
+     * filters run. Lets a view tell "nothing has arrived yet" apart from
+     * "everything is filtered out", which otherwise look identical.
+     */
+    public function allDocumentsCount(): int
+    {
+        return $this->getDocuments()->count();
+    }
+
+    /**
+     * Filter a document collection to what the given role may see: the
+     * vertrouwelijkheid levels configured (or defaulted) for that role, plus —
+     * for an organiser — the documents they submitted themselves, which they may
+     * always see regardless of the configured visibility.
+     *
+     * @param  Collection<int, Informatieobject>  $documenten
+     * @return Collection<int, Informatieobject>
+     */
+    public function filterDocumentenForRole(Collection $documenten, Role $role): Collection
+    {
+        $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), $role);
+
+        $ownDocumentUuids = $role === Role::Organiser
+            ? $this->organiserSubmittedDocumentUuids()
+            : collect();
+
+        return $documenten->filter(
+            fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, $allowed)
+                || $ownDocumentUuids->contains($informatieobject->uuid)
+        )->values();
+    }
+
+    /**
+     * The uuids of the documents the organiser submitted for this zaak (the
+     * aanvraag-PDF and the form bijlagen), identified via the activity log:
+     * document-created events on this zaak caused by the zaak's organiser. Used
+     * so an organiser always sees their own files regardless of the configured
+     * vertrouwelijkheid visibility.
+     *
+     * @return Collection<int, string>
+     */
+    private function organiserSubmittedDocumentUuids(): Collection
+    {
+        if (! $this->organiser_user_id) {
+            return collect();
+        }
+
+        return Activity::query()
+            ->where('log_name', 'document')
+            ->where('event', 'created')
+            ->where('subject_id', $this->getKey())
+            ->where('causer_id', $this->organiser_user_id)
+            ->get()
+            ->map(fn (Activity $activity) => data_get($activity->properties, 'document_uuid'))
+            ->filter(fn ($uuid): bool => is_string($uuid))
+            ->values();
     }
 
     /** @return Attribute<Collection<Informatieobject>, void> */
@@ -326,22 +595,91 @@ class Zaak extends Model implements Eventable
     {
         return Attribute::make(
             get: function ($value, $attributes) {
+                // Only show a besluit once its send date has been reached. See
+                // besluitIsPubliceerbaar(). This is a publication rule, not a role
+                // rule, so it also applies in console context.
+                $besluiten = $this->getBesluiten()
+                    ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
+                    ->values();
+
                 if (app()->runningInConsole()) {
                     // Queue and console have no authenticated user; the role filter
                     // is applied before the job is queued, mirroring documenten().
-                    return $this->getBesluiten();
+                    return $besluiten;
                 }
 
-                // map(), not each(): each() returns the collection unchanged and the
-                // rebuilt Besluit would be thrown away, leaving every role with all
-                // besluitdocumenten. map() also leaves the cached collection alone.
-                return $this->getBesluiten()->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                    'besluitDocumenten' => $besluit->besluitDocumenten?->filter(
-                        fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, DocumentVertrouwelijkheden::fromUserRole(auth()->user()->role))
-                    )->values(),
-                ])));
+                // The besluitdocumenten are filtered to what the current role may
+                // see on this connection: map(), not each(), because the value
+                // object is readonly and a rebuilt besluit has to replace the
+                // original one. each() returns the collection unchanged, which
+                // would leave every role with all besluitdocumenten.
+                $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role);
+
+                return $besluiten
+                    ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                        'besluitDocumenten' => $besluit->besluitDocumenten
+                            ?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, $allowed))
+                            ->values(),
+                    ])))
+                    ->values();
             },
         );
+    }
+
+    /**
+     * Whether a besluit may be shown to and notified about: its send date must
+     * have been reached (on or before today, Europe/Amsterdam) and it must carry
+     * an established besluitdocument. Besluiten created in Eventloket get a
+     * verzenddatum of today and a document, so their behaviour is unchanged.
+     *
+     * A besluit taken in the ZGW backend itself need not have a
+     * besluitinformatieobject linked to it at all: on a OneGround (RX Mission)
+     * connection the decision document is commonly kept as a zaakdocument. The
+     * document requirement is therefore lifted for those connections, where the
+     * send date alone decides. Requiring it there hid every such besluit
+     * indefinitely.
+     */
+    private function besluitIsPubliceerbaar(Besluit $besluit): bool
+    {
+        $verzenddatum = $this->besluitVerzenddatum($besluit);
+        if ($verzenddatum === null) {
+            return false;
+        }
+
+        if (! $this->besluitHeeftVastgesteldDocument($besluit) && ! ZgwConnectionConfig::isOneGround($this->zgwConnectionName())) {
+            return false;
+        }
+
+        try {
+            return Carbon::parse($verzenddatum, 'Europe/Amsterdam')
+                ->startOfDay()
+                ->lessThanOrEqualTo(Carbon::now('Europe/Amsterdam')->startOfDay());
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function besluitHeeftVastgesteldDocument(Besluit $besluit): bool
+    {
+        return $besluit->besluitDocumenten?->contains(
+            fn (Informatieobject $document) => $document->isVastgesteld()
+        ) ?? false;
+    }
+
+    /**
+     * The date that decides when a besluit becomes visible. `verzenddatum` is
+     * optional in the ZGW Besluiten API; `publicatiedatum` is the fallback for a
+     * besluit that was published without one.
+     */
+    private function besluitVerzenddatum(Besluit $besluit): ?string
+    {
+        if (! empty($besluit->verzenddatum)) {
+            return $besluit->verzenddatum;
+        }
+
+        $publicatiedatum = $besluit->otherParams['publicatiedatum'] ?? null;
+
+        return is_string($publicatiedatum) && $publicatiedatum !== '' ? $publicatiedatum : null;
     }
 
     private function getBesluiten(): Collection
@@ -350,18 +688,19 @@ class Zaak extends Model implements Eventable
             return collect();
         }
 
-        return Cache::rememberForever("zaak.{$this->id}.besluiten", function () {
-            $openzaak = new Openzaak;
-            $besluiten = $openzaak->besluiten()->besluiten()->getAll(['zaak' => $this->zgw_zaak_url]);
+        return Cache::remember("zaak.{$this->id}.besluiten", self::ZGW_READ_CACHE_TTL, function () {
+            $connection = Zgw::connection($this->zgwConnectionName());
+            $direct = new DirectEndpoint($connection);
+            $besluiten = $connection->besluiten()->besluiten()->index(['zaak' => $this->zgw_zaak_url]);
             $collection = collect();
             foreach ($besluiten as $besluit) {
                 $besluitDocumentenCollection = collect();
-                $besluitInformatieObjecten = $openzaak->besluiten()->besluitinformatieobjecten()->getAll(['besluit' => $besluit['url']]);
-                $besluitInformatieObjecten->each(function ($besluitInformatieObject) use ($besluitDocumentenCollection, $openzaak) {
-                    $besluitDocumentenCollection->push(new Informatieobject(...$openzaak->get($besluitInformatieObject['informatieobject'])->toArray()));
-                });
+                $besluitInformatieObjecten = $connection->besluiten()->besluitinformatieobjecten()->index(['besluit' => $besluit['url']]);
+                foreach ($besluitInformatieObjecten as $besluitInformatieObject) {
+                    $besluitDocumentenCollection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($besluitInformatieObject['informatieobject']))));
+                }
                 $collection->push(new Besluit(...array_merge($besluit, [
-                    'besluittypeObject' => new BesluitType(...$openzaak->get($besluit['besluittype'])->toArray()),
+                    'besluittypeObject' => BesluitTypeData::from($direct->getByUrl($besluit['besluittype'])),
                     'besluitDocumenten' => $besluitDocumentenCollection,
                 ])));
             }
@@ -376,32 +715,38 @@ class Zaak extends Model implements Eventable
             return collect();
         }
 
-        return Cache::rememberForever("zaak.{$this->id}.documenten", function () {
-            $openzaak = new Openzaak;
-            $zaakinformatieobjecten = $openzaak->zaken()->zaakinformatieobjecten()->getAll(['zaak' => $this->zgw_zaak_url]);
+        return Cache::remember("zaak.{$this->id}.documenten", self::ZGW_READ_CACHE_TTL, function () {
+            $connection = Zgw::connection($this->zgwConnectionName());
+            $direct = new DirectEndpoint($connection);
+            $zaakinformatieobjecten = $connection->zaken()->zaakinformatieobjecten()->index(['zaak' => $this->zgw_zaak_url]);
             $collection = collect();
             foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
-                $collection->push(new Informatieobject(...$openzaak->get($zaakinformatieobject['informatieobject'])->toArray()));
+                $collection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($zaakinformatieobject['informatieobject']))));
             }
 
             return $collection;
         });
     }
 
-    /** @return Attribute<OzStatustype, void> */
+    /** @return Attribute<StatusTypeData|null, void> */
     protected function statustype(): Attribute
     {
         return Attribute::make(
-            get: function (): ?OzStatustype {
-                $statustypen = Cache::remember('statustypen', 60 * 60 * 24, function () {
-                    return (new Openzaak)->catalogi()->statustypen()->getAll(['pageSize' => 999999999])
-                        ->map(function ($statustype) {
-                            return new OzStatustype(...$statustype);
-                        });
+            get: function (): ?StatusTypeData {
+                // Cache key bumped to .v2 because the stored DTO type changed from
+                // the old OzStatustype value object to the package StatusTypeData.
+                $statustypen = Cache::remember("statustypen.v2.{$this->zgwConnectionName()}", 60 * 60 * 24, function () {
+                    return Zgw::connection($this->zgwConnectionName())
+                        ->catalogi()
+                        ->statustypen()
+                        ->index()
+                        ->collect()
+                        ->map(fn ($statustype) => StatusTypeData::from($statustype));
                 });
 
-                // TODO: Eventueel nog cachen
-                return $statustypen->firstWhere('url', $this->reference_data->statustype_url);
+                return $statustypen->first(
+                    fn (StatusTypeData $statustype) => (string) $statustype->url === $this->reference_data->statustype_url
+                );
             },
         );
     }
@@ -418,9 +763,19 @@ class Zaak extends Model implements Eventable
     {
         // Status tekstueel toevoegen
         $event = CalendarEvent::make($this)
-            ->title($this->reference_data->naam_evenement ?? $this->public_id)
-            ->start($this->reference_data->start_evenement)
-            ->end($this->reference_data->eind_evenement);
+            ->title($this->reference_data->naam_evenement ?? $this->public_id);
+
+        // The evenement dates are optional (the zaaktype does not have to carry
+        // those eigenschappen) and CalendarEvent::start()/end() do not accept
+        // null. The month query already filters on start_evenement, so a zaak
+        // without dates simply stays out of the calendar.
+        if ($this->reference_data->start_evenement !== null) {
+            $event->start($this->reference_data->start_evenement);
+        }
+
+        if ($this->reference_data->eind_evenement !== null) {
+            $event->end($this->reference_data->eind_evenement);
+        }
 
         if ($this->status_color) {
             $event->backgroundColor($this->status_color);
@@ -431,7 +786,7 @@ class Zaak extends Model implements Eventable
 
     public function clearZgwCache(): void
     {
-        Cache::forget("zaak.{$this->id}.openzaak");
+        Cache::forget("zaak.{$this->id}.openzaak.v2");
         Cache::forget("zaak.{$this->id}.documenten");
         Cache::forget("zaak.{$this->id}.besluiten");
     }

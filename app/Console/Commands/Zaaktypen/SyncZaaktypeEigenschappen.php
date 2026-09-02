@@ -3,18 +3,17 @@
 namespace App\Console\Commands\Zaaktypen;
 
 use App\Models\Zaaktype;
-use App\ValueObjects\ZGW\CatalogiEigenschap;
+use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Http;
 use Throwable;
-use Woweb\Openzaak\Connection\OpenzaakConnection;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
+use Woweb\Zgw\Facades\Zgw;
 
 class SyncZaaktypeEigenschappen extends Command
 {
     protected $signature = 'app:sync-zaaktype-eigenschappen';
 
-    protected $description = 'Voegt ontbrekende eigenschappen toe aan ieder gesynct zaaktype in Open Zaak';
+    protected $description = 'Voegt ontbrekende eigenschappen toe aan ieder gesynct zaaktype in onze eigen Open Zaak; voor externe instanties alleen read-only validatie';
 
     /**
      * @var array<string, array{definitie: string, specificatie: array<string, mixed>}>
@@ -32,7 +31,7 @@ class SyncZaaktypeEigenschappen extends Command
         ],
     ];
 
-    public function handle(Openzaak $openzaak): int
+    public function handle(ZgwConnectionResolver $resolver): int
     {
         $this->info('Eigenschappen aanvullen voor gesynchroniseerde zaaktypen...');
 
@@ -46,22 +45,23 @@ class SyncZaaktypeEigenschappen extends Command
             return Command::FAILURE;
         }
 
-        $connection = new OpenzaakConnection;
-        $headers = $connection->getHeaders();
-        $baseUrl = rtrim((string) config('openzaak.url'), '/').'/catalogi/api/v1/';
-
         $updated = 0;
         $alreadyCorrect = 0;
         $failed = 0;
+        $validationGaps = 0;
 
         foreach ($zaaktypen as $zaaktype) {
-            $catalogiEigenschappen = $openzaak->catalogi()->eigenschappen()
-                ->getAll(['zaaktype' => $zaaktype->zgw_zaaktype_url])
-                ->map(fn ($item) => new CatalogiEigenschap(...$item));
+            $connectionName = $zaaktype->zgwConnectionName();
+            $connection = Zgw::connection($connectionName);
+
+            $catalogiEigenschappen = $connection->catalogi()->eigenschappen()
+                ->index(['zaaktype' => $zaaktype->zgw_zaaktype_url])
+                ->collect()
+                ->map(fn ($item) => EigenschapData::from($item));
 
             $missing = collect(self::REQUIRED_EIGENSCHAPPEN)
                 ->keys()
-                ->reject(fn (string $naam) => $catalogiEigenschappen->contains(fn (CatalogiEigenschap $eigenschap) => $eigenschap->naam === $naam))
+                ->reject(fn (string $naam) => $catalogiEigenschappen->contains(fn (EigenschapData $eigenschap) => $eigenschap->naam === $naam))
                 ->values();
 
             if ($missing->isEmpty()) {
@@ -71,35 +71,19 @@ class SyncZaaktypeEigenschappen extends Command
                 continue;
             }
 
-            $this->line("  Aanvullen: {$zaaktype->name} (".$missing->implode(', ').')');
-
-            $uuid = basename((string) $zaaktype->zgw_zaaktype_url);
-
-            $currentResponse = Http::withHeaders($headers)->get($zaaktype->zgw_zaaktype_url);
-
-            if (! $currentResponse->successful()) {
-                $this->warn("    Ophalen mislukt: HTTP {$currentResponse->status()}");
-                $failed++;
+            // Externally managed instances are validated read-only: we report the
+            // missing eigenschappen but never create them on a catalogus we do not own.
+            if (! $resolver->isManaged($connectionName)) {
+                $this->warn(
+                    "  Ontbrekende eigenschappen op externe connectie '{$connectionName}' voor {$zaaktype->name}: ".
+                    $missing->implode(', ').'. Maak deze handmatig aan in de externe catalogus (read-only validatie).'
+                );
+                $validationGaps++;
 
                 continue;
             }
 
-            $isConcept = (bool) ($currentResponse->json('concept') ?? false);
-
-            // Eigenschappen kunnen alleen aan een concept-zaaktype worden toegevoegd.
-            if (! $isConcept) {
-                $conceptResponse = Http::withHeaders($headers)->patch(
-                    $baseUrl."zaaktypen/{$uuid}",
-                    ['concept' => true]
-                );
-
-                if (! $conceptResponse->successful()) {
-                    $this->warn("    Terugzetten naar concept mislukt (HTTP {$conceptResponse->status()}).");
-                    $failed++;
-
-                    continue;
-                }
-            }
+            $this->line("  Aanvullen: {$zaaktype->name} (".$missing->implode(', ').')');
 
             $eigenschapFailed = false;
 
@@ -107,7 +91,7 @@ class SyncZaaktypeEigenschappen extends Command
                 $definition = self::REQUIRED_EIGENSCHAPPEN[$naam];
 
                 try {
-                    $openzaak->catalogi()->eigenschappen()->store([
+                    $connection->catalogi()->eigenschappen()->store([
                         'zaaktype' => $zaaktype->zgw_zaaktype_url,
                         'naam' => $naam,
                         'definitie' => $definition['definitie'],
@@ -117,20 +101,11 @@ class SyncZaaktypeEigenschappen extends Command
 
                     $this->line("    Eigenschap toegevoegd: {$naam}");
                 } catch (Throwable $exception) {
-                    $this->warn("    Toevoegen van eigenschap '{$naam}' mislukt: {$exception->getMessage()}");
+                    $this->warn(
+                        "    Toevoegen van eigenschap '{$naam}' mislukt: {$exception->getMessage()}. ".
+                        'Eigenschappen kunnen alleen aan een concept-zaaktype worden toegevoegd.'
+                    );
                     $eigenschapFailed = true;
-                }
-            }
-
-            // Herpubliceren als het zaaktype eerst gepubliceerd was.
-            if (! $isConcept) {
-                $publishResponse = Http::withHeaders($headers)->post($baseUrl."zaaktypen/{$uuid}/publish");
-
-                if (! $publishResponse->successful()) {
-                    $this->warn("    Herpubliceren mislukt (HTTP {$publishResponse->status()}). Publiceer handmatig.");
-                    $eigenschapFailed = true;
-                } else {
-                    $this->line('    Hergepubliceerd.');
                 }
             }
 
@@ -144,8 +119,8 @@ class SyncZaaktypeEigenschappen extends Command
         }
 
         $this->newLine();
-        $this->info("Klaar. Bijgewerkt: {$updated}, al correct: {$alreadyCorrect}, mislukt: {$failed}.");
+        $this->info("Klaar. Bijgewerkt: {$updated}, al correct: {$alreadyCorrect}, mislukt: {$failed}, validatie-gaten (extern): {$validationGaps}.");
 
-        return $failed === 0 ? Command::SUCCESS : Command::FAILURE;
+        return $failed === 0 && $validationGaps === 0 ? Command::SUCCESS : Command::FAILURE;
     }
 }

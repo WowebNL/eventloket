@@ -2,8 +2,8 @@
 
 use App\Enums\MunicipalityFormQuestionType;
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Services\MunicipalityVariablesService;
-use App\EventForm\Submit\DetermineAanvraagType;
 use App\Exceptions\MunicipalityFormQuestionLimitReached;
 use App\Filament\Admin\Resources\MunicipalityResource\Pages\EditMunicipality;
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\MunicipalityFormQuestionsRelationManager;
@@ -207,7 +207,7 @@ test('de kolom "Tonen bij" toont de labels, en "Alle aanvragen" bij geen selecti
         'order' => 1,
     ]);
     $alleenMelding = MunicipalityFormQuestion::factory()
-        ->forAanvraagTypes([DetermineAanvraagType::MELDING])
+        ->forAanvraagTypes([ZaaktypeRole::Melding->value])
         ->create(['municipality_id' => $municipality->id, 'order' => 2]);
 
     actAsMunicipalityAdmin($municipality);
@@ -228,16 +228,16 @@ test('filteren op aanvraagtype toont ook de vragen die voor alle paden gelden', 
         'order' => 1,
     ]);
     $alleenMelding = MunicipalityFormQuestion::factory()
-        ->forAanvraagTypes([DetermineAanvraagType::MELDING])
+        ->forAanvraagTypes([ZaaktypeRole::Melding->value])
         ->create(['municipality_id' => $municipality->id, 'order' => 2]);
     $alleenVergunning = MunicipalityFormQuestion::factory()
-        ->forAanvraagTypes([DetermineAanvraagType::VERGUNNING])
+        ->forAanvraagTypes([ZaaktypeRole::Vergunning->value])
         ->create(['municipality_id' => $municipality->id, 'order' => 3]);
 
     actAsMunicipalityAdmin($municipality);
 
     livewire(ListMunicipalityFormQuestions::class)
-        ->filterTable('show_for_aanvraag_types', DetermineAanvraagType::MELDING)
+        ->filterTable('show_for_aanvraag_types', ZaaktypeRole::Melding->value)
         ->assertCanSeeTableRecords([$overal, $alleenMelding])
         ->assertCanNotSeeTableRecords([$alleenVergunning]);
 });
@@ -247,7 +247,7 @@ test('zonder filterkeuze blijven alle vragen zichtbaar', function () {
 
     $overal = MunicipalityFormQuestion::factory()->create(['municipality_id' => $municipality->id, 'order' => 1]);
     $alleenVergunning = MunicipalityFormQuestion::factory()
-        ->forAanvraagTypes([DetermineAanvraagType::VERGUNNING])
+        ->forAanvraagTypes([ZaaktypeRole::Vergunning->value])
         ->create(['municipality_id' => $municipality->id, 'order' => 2]);
 
     actAsMunicipalityAdmin($municipality);
@@ -268,7 +268,7 @@ test('een gemeentelijk beheerder kan een keuzevraag aanmaken', function () {
             'options' => ['Ja', 'Nee'],
             'is_required' => true,
             'is_active' => true,
-            'show_for_aanvraag_types' => [DetermineAanvraagType::VERGUNNING],
+            'show_for_aanvraag_types' => [ZaaktypeRole::Vergunning->value],
         ])
         ->call('create')
         ->assertHasNoFormErrors();
@@ -280,7 +280,7 @@ test('een gemeentelijk beheerder kan een keuzevraag aanmaken', function () {
         ->and($question->options)->toBe(['Ja', 'Nee'])
         ->and($question->is_required)->toBeTrue()
         ->and($question->order)->toBe(1)
-        ->and($question->show_for_aanvraag_types)->toBe([DetermineAanvraagType::VERGUNNING]);
+        ->and($question->show_for_aanvraag_types)->toBe([ZaaktypeRole::Vergunning->value]);
 });
 
 test('een tekstblok kan aangemaakt worden zonder opties', function () {
@@ -461,7 +461,7 @@ test('de service levert per vraag de volledige vorm die het formulier verwacht',
     $question = MunicipalityFormQuestion::factory()
         ->radio(['Ja', 'Nee'])
         ->required()
-        ->forAanvraagTypes([DetermineAanvraagType::MELDING])
+        ->forAanvraagTypes([ZaaktypeRole::Melding->value])
         ->create([
             'municipality_id' => $municipality->id,
             'order' => 1,
@@ -479,7 +479,7 @@ test('de service levert per vraag de volledige vorm die het formulier verwacht',
         'helper_text' => 'Ook achtergrondmuziek telt.',
         'options' => ['Ja', 'Nee'],
         'is_required' => true,
-        'show_for_aanvraag_types' => [DetermineAanvraagType::MELDING],
+        'show_for_aanvraag_types' => [ZaaktypeRole::Melding->value],
     ]]);
 });
 
