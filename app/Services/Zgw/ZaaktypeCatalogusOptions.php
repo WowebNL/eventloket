@@ -42,9 +42,14 @@ final class ZaaktypeCatalogusOptions
 
     /**
      * The response statuses that confirm a resource is really gone, as opposed
-     * to temporarily unreadable. Deliberately narrower than the notification
-     * skip list: a 401 or 403 says something about our credentials, not about
-     * whether the resource still exists.
+     * to temporarily unreadable.
+     *
+     * Deliberately not the same set as the statuses the notification handling
+     * skips on: that list also treats a 401 and a 403 as a reason to move on,
+     * and those say something about our credentials rather than about whether
+     * the resource still exists. A 410 is the other way round, an answer about
+     * the resource that the notification side has no use for. The two sets
+     * therefore overlap on 404 rather than one containing the other.
      */
     private const GONE_STATUSES = [404, 410];
 
