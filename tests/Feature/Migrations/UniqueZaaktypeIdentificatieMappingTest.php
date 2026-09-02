@@ -11,13 +11,24 @@ declare(strict_types=1);
 use App\Enums\ZaaktypeRole;
 use App\Models\Municipality;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 uses(RefreshDatabase::class);
 
+const PLAIN_MAPPING_INDEX = 'municipality_zaaktype_map_identificatie_index';
+
 const UNIQUE_MAPPING_INDEX = 'municipality_zaaktype_map_identificatie_unique';
+
+/**
+ * The name a database carries that created this table before the create
+ * migration named the index explicitly: the generated
+ * `municipality_zaaktype_mappings_municipality_id_zaaktype_identificatie_index`
+ * is 75 characters, which PostgreSQL silently truncates to 63.
+ */
+const LEGACY_MAPPING_INDEX = 'municipality_zaaktype_mappings_municipality_id_zaaktype_identif';
 
 /** The migration under test. It is an anonymous class, so it has to be required. */
 function uniqueMappingMigration(): Migration
@@ -76,7 +87,7 @@ it('adds the index when no zaaktype is mapped twice', function () {
         ->toBe(['municipality_id', 'zaaktype_identificatie'])
         // The plain index on the same columns has been replaced by it.
         ->and(collect(Schema::getIndexes('municipality_zaaktype_mappings'))->pluck('name'))
-        ->not->toContain('municipality_zaaktype_map_identificatie_index');
+        ->not->toContain(PLAIN_MAPPING_INDEX);
 });
 
 it('keeps allowing several koppelingen without a zaaktype', function () {
@@ -112,4 +123,28 @@ it('refuses to add the index and names the duplicates', function () {
     }
 
     expect(uniqueMappingIndexExists())->toBeFalse();
+});
+
+it('drops the plain index whatever the database happens to call it', function () {
+    // The create migration did not always name this index explicitly, so a
+    // database created in that window carries the generated name instead. The
+    // migration has to find the index by its columns: dropping a hard-coded
+    // name that is not there aborts the deploy, after the duplicate guard and
+    // before the unique index, so nothing is added and the release stops.
+    $municipality = Municipality::factory()->create();
+    uniqueMappingMigration()->down();
+
+    Schema::table('municipality_zaaktype_mappings', function (Blueprint $table): void {
+        $table->renameIndex(PLAIN_MAPPING_INDEX, LEGACY_MAPPING_INDEX);
+    });
+
+    koppelingRow($municipality, ZaaktypeRole::Vooraankondiging, 'EXT-1');
+
+    uniqueMappingMigration()->up();
+
+    $names = collect(Schema::getIndexes('municipality_zaaktype_mappings'))->pluck('name');
+
+    expect($names)->toContain(UNIQUE_MAPPING_INDEX)
+        ->and($names)->not->toContain(LEGACY_MAPPING_INDEX)
+        ->and($names)->not->toContain(PLAIN_MAPPING_INDEX);
 });

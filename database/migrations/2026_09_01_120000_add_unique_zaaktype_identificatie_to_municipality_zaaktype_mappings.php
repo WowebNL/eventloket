@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    private const TABLE = 'municipality_zaaktype_mappings';
+
+    /** @var list<string> */
+    private const COLUMNS = ['municipality_id', 'zaaktype_identificatie'];
+
     private const PLAIN_INDEX = 'municipality_zaaktype_map_identificatie_index';
 
     private const UNIQUE_INDEX = 'municipality_zaaktype_map_identificatie_unique';
@@ -29,20 +34,62 @@ return new class extends Migration
     {
         $this->guardAgainstDuplicates();
 
-        Schema::table('municipality_zaaktype_mappings', function (Blueprint $table): void {
+        $plainIndex = $this->indexOnMappedColumns(unique: false);
+
+        Schema::table(self::TABLE, function (Blueprint $table) use ($plainIndex): void {
             // The plain index on the same two columns becomes redundant: the
-            // unique index serves exactly the same lookups.
-            $table->dropIndex(self::PLAIN_INDEX);
-            $table->unique(['municipality_id', 'zaaktype_identificatie'], self::UNIQUE_INDEX);
+            // unique index serves exactly the same lookups. Drop it by the name
+            // the database actually carries instead of by the name this table is
+            // created with today, because the create migration only started
+            // naming this index explicitly later. A database created before that
+            // has the generated name, which PostgreSQL silently truncates to its
+            // 63-character identifier limit, and dropping a name that is not
+            // there aborts the whole migration.
+            if ($plainIndex !== null) {
+                $table->dropIndex($plainIndex);
+            }
+
+            $table->unique(self::COLUMNS, self::UNIQUE_INDEX);
         });
     }
 
     public function down(): void
     {
-        Schema::table('municipality_zaaktype_mappings', function (Blueprint $table): void {
-            $table->dropUnique(self::UNIQUE_INDEX);
-            $table->index(['municipality_id', 'zaaktype_identificatie'], self::PLAIN_INDEX);
+        // The mirror image: look the unique index up by its columns as well, so
+        // a rollback does not depend on this migration having created it under
+        // exactly this name either. The plain index comes back under the
+        // explicit name the create migration uses today.
+        $uniqueIndex = $this->indexOnMappedColumns(unique: true);
+
+        Schema::table(self::TABLE, function (Blueprint $table) use ($uniqueIndex): void {
+            if ($uniqueIndex !== null) {
+                // dropUnique, not dropIndex: on PostgreSQL a unique index added
+                // through the schema builder is backed by a constraint, which
+                // refuses to let the index be dropped out from under it.
+                $table->dropUnique($uniqueIndex);
+            }
+
+            $table->index(self::COLUMNS, self::PLAIN_INDEX);
         });
+    }
+
+    /**
+     * The name of the index on exactly the mapped columns, or null when there is
+     * none. The column order inside an index does not matter for this lookup, so
+     * both sides are sorted before they are compared.
+     */
+    private function indexOnMappedColumns(bool $unique): ?string
+    {
+        foreach (Schema::getIndexes(self::TABLE) as $index) {
+            $columns = $index['columns'];
+            sort($columns);
+
+            if ($columns === self::COLUMNS && $index['unique'] === $unique) {
+                return $index['name'];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -54,7 +101,7 @@ return new class extends Migration
      */
     private function guardAgainstDuplicates(): void
     {
-        $duplicates = DB::table('municipality_zaaktype_mappings')
+        $duplicates = DB::table(self::TABLE)
             ->select('municipality_id', 'zaaktype_identificatie')
             ->whereNotNull('zaaktype_identificatie')
             ->groupBy('municipality_id', 'zaaktype_identificatie')
@@ -69,7 +116,7 @@ return new class extends Migration
 
         $lines = $duplicates
             ->map(function (object $duplicate): string {
-                $roles = DB::table('municipality_zaaktype_mappings')
+                $roles = DB::table(self::TABLE)
                     ->where('municipality_id', $duplicate->municipality_id)
                     ->where('zaaktype_identificatie', $duplicate->zaaktype_identificatie)
                     ->orderBy('role')
