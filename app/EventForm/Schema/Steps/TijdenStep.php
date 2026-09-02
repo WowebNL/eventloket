@@ -14,6 +14,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Support\SafeDateTime;
 use App\EventForm\Support\TijdenOverzicht;
 use App\EventForm\Template\LabelRenderer;
+use App\EventForm\Validation\PeriodeDuurRule;
 use App\Filament\Organiser\Pages\Calendar;
 use App\Models\Organisation;
 use Filament\Forms\Components\Radio;
@@ -91,6 +92,7 @@ final class TijdenStep
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('EvenementStart') ?: today())
                             ->afterOrEqual('EvenementStart')
+                            ->rule(PeriodeDuurRule::voor('EvenementStart'))
                             ->validationMessages([
                                 'after_or_equal' => 'De einddatum van het evenement moet op of na de startdatum liggen.',
                             ])
@@ -169,6 +171,7 @@ final class TijdenStep
                             ->minDate(fn (Get $get) => $get('OpbouwStart') ?: today())
                             ->maxDate(fn (Get $get) => $get('EvenementStart'))
                             ->beforeOrEqual('EvenementStart')
+                            ->rule(PeriodeDuurRule::voor('OpbouwStart'))
                             ->validationMessages([
                                 'before_or_equal' => 'De eindtijd van de opbouw moet op of voor de startdatum van het evenement liggen.',
                             ])
@@ -238,6 +241,7 @@ final class TijdenStep
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('AfbouwStart') ?: $get('EvenementEind'))
                             ->afterOrEqual('AfbouwStart')
+                            ->rule(PeriodeDuurRule::voor('AfbouwStart'))
                             ->validationMessages([
                                 'after_or_equal' => 'De eindtijd van de afbouw moet op of na de starttijd van de afbouw liggen.',
                             ])
