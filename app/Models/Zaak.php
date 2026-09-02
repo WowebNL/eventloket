@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
@@ -370,9 +371,9 @@ class Zaak extends Model implements Eventable
     }
 
     /**
-     * Whether this zaak is a vooraankondiging. Delegates to the zaaktype
-     * naming convention; single seam to swap for `zaaktypen.role` after
-     * the multi-ZGW branch (PR #482) is merged.
+     * Whether this zaak is a vooraankondiging. Single seam: it delegates to the
+     * zaaktype, which resolves its role from the municipality's koppeling first
+     * and only falls back to the shared-catalogus naming convention.
      */
     public function isVooraankondiging(): bool
     {
@@ -386,7 +387,10 @@ class Zaak extends Model implements Eventable
     #[Scope]
     protected function vooraankondigingen(Builder $query): Builder
     {
-        return $query->whereHas('zaaktype', fn (Builder $q): Builder => $q->where('name', 'like', Zaaktype::VOORAANKONDIGING_NAME_PREFIX.'%'));
+        return $query->whereHas('zaaktype', function (Builder $zaaktypen): Builder {
+            /** @var Builder<Zaaktype> $zaaktypen */
+            return $zaaktypen->withEffectiveRole(ZaaktypeRole::Vooraankondiging);
+        });
     }
 
     /**
