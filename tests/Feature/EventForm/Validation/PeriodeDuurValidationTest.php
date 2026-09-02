@@ -16,9 +16,7 @@ use App\EventForm\Support\EventDagen;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Organisation;
 use App\Models\User;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Schemas\Components\Component;
-use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 
@@ -76,47 +74,6 @@ function tijdenStepErrors(EventFormPage $page): array
     return [];
 }
 
-/**
- * Collect the datetime pickers of a step by field name. A step built in
- * isolation has no container, so `getChildComponents()` is out of reach and we
- * walk the raw child arrays instead.
- *
- * @return array<string, DateTimePicker>
- */
-function findPeriodePickers(Step $step): array
-{
-    $found = [];
-
-    $walk = function (object $component) use (&$walk, &$found): void {
-        if ($component instanceof DateTimePicker) {
-            $found[$component->getName()] = $component;
-        }
-
-        if (! property_exists($component, 'childComponents')) {
-            return;
-        }
-
-        $childProp = (new ReflectionObject($component))->getProperty('childComponents');
-        $childProp->setAccessible(true);
-
-        foreach ($childProp->getValue($component) as $componentList) {
-            if (! is_array($componentList)) {
-                continue;
-            }
-
-            foreach ($componentList as $child) {
-                if (is_object($child)) {
-                    $walk($child);
-                }
-            }
-        }
-    };
-
-    $walk($step);
-
-    return $found;
-}
-
 test('een einddatum ver buiten het bedoelde bereik geeft een melding op het veld in plaats van een foutpagina', function () {
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
@@ -152,7 +109,7 @@ test('een periode van precies het maximum aantal dagen komt zonder duurmelding d
 });
 
 test('de duurgrens staat op het eindveld van elke periode, niet alleen op het evenement', function (string $eindVeld, string $startVeld) {
-    $pickers = findPeriodePickers(TijdenStep::make());
+    $pickers = findDateTimePickers(TijdenStep::make());
 
     $reflection = new ReflectionClass($pickers[$eindVeld]);
     $rulesProp = $reflection->getProperty('rules');
