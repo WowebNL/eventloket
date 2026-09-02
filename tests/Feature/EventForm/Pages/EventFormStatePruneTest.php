@@ -89,8 +89,20 @@ function geldigeVooraankondiging(): array
         'soortEvenement' => 'Festival',
 
         'waarVindtHetEvenementPlaats' => ['gebouw'],
+        // The repeater item carries an AddressNL group whose postcode, house
+        // number, street and town have always been required. Server-side
+        // revalidation reaches the fields inside a repeater item, so an item
+        // without an address is not a valid answer.
         'adresVanDeGebouwEn' => [
-            ['naamVanDeLocatieGebouw' => 'Stadhuis Heerlen'],
+            [
+                'naamVanDeLocatieGebouw' => 'Stadhuis Heerlen',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6411CD',
+                    'huisnummer' => '1',
+                    'straatnaam' => 'Teststraat',
+                    'woonplaatsnaam' => 'Heerlen',
+                ],
+            ],
         ],
 
         'EvenementStart' => $morgen.' 10:00',
