@@ -83,17 +83,18 @@ test('een doorlopend blok mag niet voorbij de nachtgrens eindigen', function () 
 });
 
 test('een periode van precies het maximum aantal dagen levert alle dagen op', function () {
-    $dagen = EventDagen::dagen('2026-07-01 10:00', '2026-07-31 18:00');
+    $dagen = EventDagen::dagen('2026-07-01 10:00', '2026-09-28 18:00');
 
     expect($dagen)->toHaveCount(EventDagen::MAX_DAGEN);
     expect($dagen[0]->toDateString())->toBe('2026-07-01');
-    expect($dagen[count($dagen) - 1]->toDateString())->toBe('2026-07-31');
-    expect(EventDagen::overschrijdtMaximum('2026-07-01 10:00', '2026-07-31 18:00'))->toBeFalse();
+    expect($dagen[count($dagen) - 1]->toDateString())->toBe('2026-09-28');
+    expect(EventDagen::overschrijdtMaximum('2026-07-01 10:00', '2026-09-28 18:00'))->toBeFalse();
 });
 
 test('een zomertijdwissel binnen de periode verandert het aantal dagen niet', function () {
     // March 2026 contains a clock change; counting on the dates alone keeps
-    // that day exactly one day long.
+    // that day exactly one day long. The 31 below is the length of March, well
+    // under the maximum, so nothing is clipped here.
     $dagen = EventDagen::dagen('2026-03-01 10:00', '2026-03-31 18:00');
 
     expect($dagen)->toHaveCount(31);
@@ -101,18 +102,18 @@ test('een zomertijdwissel binnen de periode verandert het aantal dagen niet', fu
 });
 
 test('een periode van één dag boven het maximum wordt begrensd', function () {
-    $dagen = EventDagen::dagen('2026-07-01 10:00', '2026-08-01 18:00');
+    $dagen = EventDagen::dagen('2026-07-01 10:00', '2026-09-29 18:00');
 
-    expect(EventDagen::overschrijdtMaximum('2026-07-01 10:00', '2026-08-01 18:00'))->toBeTrue();
+    expect(EventDagen::overschrijdtMaximum('2026-07-01 10:00', '2026-09-29 18:00'))->toBeTrue();
     expect($dagen)->toHaveCount(EventDagen::MAX_DAGEN);
-    expect($dagen[count($dagen) - 1]->toDateString())->toBe('2026-07-31');
+    expect($dagen[count($dagen) - 1]->toDateString())->toBe('2026-09-28');
 });
 
 test('de grens telt de effectieve einddatum, dus een nachtelijke eindtijd valt er nog binnen', function () {
-    // Ending at 02:00 on 1 August still belongs to 31 July, so this is a
-    // 31-day period rather than a 32-day one.
-    expect(EventDagen::overschrijdtMaximum('2026-07-01 16:00', '2026-08-01 02:00'))->toBeFalse();
-    expect(EventDagen::dagen('2026-07-01 16:00', '2026-08-01 02:00'))->toHaveCount(EventDagen::MAX_DAGEN);
+    // Ending at 02:00 on 29 September still belongs to 28 September, so this
+    // is a 90-day period rather than a 91-day one.
+    expect(EventDagen::overschrijdtMaximum('2026-07-01 16:00', '2026-09-29 02:00'))->toBeFalse();
+    expect(EventDagen::dagen('2026-07-01 16:00', '2026-09-29 02:00'))->toHaveCount(EventDagen::MAX_DAGEN);
 });
 
 test('een einddatum ver buiten het bedoelde bereik levert een begrensde lijst op in plaats van een onbegrensde reeks', function () {
@@ -122,7 +123,7 @@ test('een einddatum ver buiten het bedoelde bereik levert een begrensde lijst op
 
     expect($dagen)->toHaveCount(EventDagen::MAX_DAGEN);
     expect($dagen[0]->toDateString())->toBe('2026-07-01');
-    expect($dagen[count($dagen) - 1]->toDateString())->toBe('2026-07-31');
+    expect($dagen[count($dagen) - 1]->toDateString())->toBe('2026-09-28');
     expect(EventDagen::overschrijdtMaximum('2026-07-01 10:00', '9999-12-31 18:00'))->toBeTrue();
 });
 

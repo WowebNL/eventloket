@@ -92,7 +92,7 @@ test('een periode van één dag boven het maximum wordt geweigerd', function () 
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     $component->set('data.EvenementStart', '2026-07-01 10:00:00');
-    $component->set('data.EvenementEind', '2026-08-01 18:00:00');
+    $component->set('data.EvenementEind', '2026-09-29 18:00:00');
 
     expect(tijdenStepErrors($component->instance()))->toHaveKey('data.EvenementEind');
 });
@@ -101,7 +101,7 @@ test('een periode van precies het maximum aantal dagen komt zonder duurmelding d
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
     $component->set('data.EvenementStart', '2026-07-01 10:00:00');
-    $component->set('data.EvenementEind', '2026-07-31 18:00:00');
+    $component->set('data.EvenementEind', '2026-09-28 18:00:00');
 
     // Other fields on the step are still empty, so there are other messages;
     // the end date itself must not be one of them.

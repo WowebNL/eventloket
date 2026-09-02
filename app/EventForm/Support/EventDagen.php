@@ -29,12 +29,14 @@ final class EventDagen
     /**
      * The largest number of calendar days one period may span.
      *
-     * This is a functional limit on how long an event (or its build-up or
-     * tear-down) is allowed to run, not a technical one. It doubles as the
-     * upper bound of the day list, so an end date outside the range the form is
-     * meant to accept can never drive an unbounded loop.
+     * Ninety days is a plausibility bound rather than a rule the domain
+     * imposes. It sits well above the longest period the form realistically
+     * has to collect, such as a seasonal ice rink, a fair that runs for weeks
+     * or a drawn-out build-up, and well below the range a datetime input can
+     * produce. It doubles as the upper bound of the day list, so an
+     * implausible end date can never drive an unbounded loop.
      */
-    public const MAX_DAGEN = 31;
+    public const MAX_DAGEN = 90;
 
     /**
      * The calendar day an end moment belongs to. An end at or before the night
@@ -73,9 +75,9 @@ final class EventDagen
     }
 
     /**
-     * Whether the period spans more calendar days than one period is allowed to
-     * cover. Answers in constant time and without building the day list, so it
-     * stays cheap for an end date far outside the intended range.
+     * Whether the period spans more calendar days than the bound allows.
+     * Answers in constant time and without building the day list, so it stays
+     * cheap for an end date far outside the intended range.
      */
     public static function overschrijdtMaximum(mixed $start, mixed $eind): bool
     {
