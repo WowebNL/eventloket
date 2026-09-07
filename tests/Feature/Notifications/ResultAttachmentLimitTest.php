@@ -264,6 +264,33 @@ it('renders a file name with markdown syntax as literal text', function () {
         ->not->toContain('<b>vet</b>');
 });
 
+/**
+ * A blank line inside a file name closes the raw HTML block that carries the
+ * list, and everything after it is handed back to the Markdown parser, so the
+ * escaping that the block provides stops halfway through the name. Line breaks
+ * are folded into spaces before the name is listed, which keeps the whole name
+ * inside the block and as literal text.
+ */
+it('renders a file name containing line breaks as literal text on one line', function () {
+    Config::set('mail.attachments.max_total_bytes', 1000);
+
+    $hostileName = "verslag\r\n\r\n[klik hier](https://example.org/elders)\n# kop.pdf";
+    $expected = 'verslag    [klik hier](https://example.org/elders) # kop.pdf';
+
+    $documents = seedAttachmentDocuments($this->zaak, [
+        $hostileName => 2000,
+    ]);
+
+    $rendered = (string) resultNotification($this->zaak, $this->organisation, $documents)
+        ->toMail($this->organiser)
+        ->render();
+
+    expect($rendered)
+        ->not->toContain('href="https://example.org/elders"')
+        ->not->toContain('<h1>')
+        ->toContain('>'.e($expected).'</li>');
+});
+
 it('leaves the mail without an omission notice when nothing is left out', function () {
     $documents = seedAttachmentDocuments($this->zaak, [
         'plattegrond.pdf' => 1024,

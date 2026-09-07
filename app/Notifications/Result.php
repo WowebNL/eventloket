@@ -103,7 +103,11 @@ class Result extends BaseNotification
             $contents = (new Openzaak)->getRaw($document->inhoud);
 
             if (strlen($contents) > $remaining) {
-                $omitted[] = $document->bestandsnaam;
+                // A line break in the name would close the raw HTML block the mail
+                // lists these names in, which would hand the remainder of the name
+                // back to the Markdown parser. Each name is listed on one line, so
+                // folding the breaks into spaces keeps the block intact.
+                $omitted[] = str_replace(["\r", "\n"], ' ', $document->bestandsnaam);
 
                 continue;
             }
