@@ -19,51 +19,6 @@ declare(strict_types=1);
 
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\Validation\TijdenFieldRules;
-use Filament\Forms\Components\DateTimePicker;
-use Filament\Schemas\Components\Wizard\Step;
-
-/**
- * Helper: walk recursief door alle child-components van een Step en
- * verzamel de DateTimePickers per veld-naam. Filament's wizard-stap
- * heeft zijn velden via Grid::make(2)->schema([...]) genest, dus we
- * moeten via reflection bij de raw `childComponents`-array komen —
- * `getChildComponents()` zelf vereist een container, die we in een
- * geïsoleerde test niet hebben.
- */
-function findDateTimePickers(Step $step): array
-{
-    $found = [];
-    $walk = function (object $component) use (&$walk, &$found): void {
-        if ($component instanceof DateTimePicker) {
-            $found[$component->getName()] = $component;
-        }
-
-        // Pak via reflection de raw `childComponents`-array; die bevat de
-        // schema-arrays zoals doorgegeven via `->schema([...])`. Voor
-        // Grid::make(2)->schema([...]) zit daar onder 'default' een
-        // gewone PHP-array van child-components.
-        if (! property_exists($component, 'childComponents')) {
-            return;
-        }
-        $reflection = new ReflectionObject($component);
-        $childProp = $reflection->getProperty('childComponents');
-        $childProp->setAccessible(true);
-        $children = $childProp->getValue($component);
-        foreach ($children as $componentList) {
-            if (! is_array($componentList)) {
-                continue;
-            }
-            foreach ($componentList as $child) {
-                if (is_object($child)) {
-                    $walk($child);
-                }
-            }
-        }
-    };
-    $walk($step);
-
-    return $found;
-}
 
 test('elk Tijden-veld in TijdenFieldRules komt terug als DateTimePicker in de gerenderde stap', function () {
     $pickers = findDateTimePickers(TijdenStep::make());
