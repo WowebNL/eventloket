@@ -17,6 +17,7 @@
  * wegen af"), geen stilzwijgende default.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
 
@@ -32,7 +33,7 @@ test('keuze "vooraankondiging" op stap 5 → aanvraag is een vooraankondiging', 
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
     ]);
 
-    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VOORAANKONDIGING);
+    expect($this->determine->forState($state))->toBe(ZaaktypeRole::Vooraankondiging);
 });
 
 test('wegen afsluiten = Nee → melding', function () {
@@ -41,7 +42,7 @@ test('wegen afsluiten = Nee → melding', function () {
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
     ]);
 
-    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::MELDING);
+    expect($this->determine->forState($state))->toBe(ZaaktypeRole::Melding);
 });
 
 test('wegen afsluiten = Ja → evenementenvergunning', function () {
@@ -50,7 +51,7 @@ test('wegen afsluiten = Ja → evenementenvergunning', function () {
         'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
     ]);
 
-    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+    expect($this->determine->forState($state))->toBe(ZaaktypeRole::Vergunning);
 });
 
 test('geen wegen-antwoord ingevuld → evenementenvergunning (OF-default)', function () {
@@ -58,13 +59,13 @@ test('geen wegen-antwoord ingevuld → evenementenvergunning (OF-default)', func
         'waarvoorWiltUEventloketGebruiken' => 'evenement',
     ]);
 
-    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+    expect($this->determine->forState($state))->toBe(ZaaktypeRole::Vergunning);
 });
 
 test('volledig lege FormState → evenementenvergunning (OF-default)', function () {
     $state = FormState::empty();
 
-    expect($this->determine->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+    expect($this->determine->forState($state))->toBe(ZaaktypeRole::Vergunning);
 });
 
 describe('Nieuw ReportQuestion-pad (use_new_report_questions = true)', function () {
@@ -90,7 +91,7 @@ describe('Nieuw ReportQuestion-pad (use_new_report_questions = true)', function 
             'reportQuestion_2' => 'Ja',
         ]);
 
-        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::MELDING);
+        expect((new DetermineAanvraagType)->forState($state))->toBe(ZaaktypeRole::Melding);
     });
 
     test('één reportQuestion Nee → vergunning', function () {
@@ -98,7 +99,7 @@ describe('Nieuw ReportQuestion-pad (use_new_report_questions = true)', function 
             'reportQuestion_1' => 'Nee',
         ]);
 
-        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+        expect((new DetermineAanvraagType)->forState($state))->toBe(ZaaktypeRole::Vergunning);
     });
 
     test('halve cascade (geen Nee maar nog niet alle Ja) → vergunning (default)', function () {
@@ -107,13 +108,13 @@ describe('Nieuw ReportQuestion-pad (use_new_report_questions = true)', function 
             // reportQuestion_2 nog niet beantwoord
         ]);
 
-        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+        expect((new DetermineAanvraagType)->forState($state))->toBe(ZaaktypeRole::Vergunning);
     });
 
     test('geen antwoorden ingevuld → vergunning', function () {
         $state = reportQuestionState();
 
-        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+        expect((new DetermineAanvraagType)->forState($state))->toBe(ZaaktypeRole::Vergunning);
     });
 
     test('vooraankondiging-keuze wint ook in nieuw pad', function () {
@@ -123,7 +124,7 @@ describe('Nieuw ReportQuestion-pad (use_new_report_questions = true)', function 
             'reportQuestion_2' => 'Nee',
         ]);
 
-        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VOORAANKONDIGING);
+        expect((new DetermineAanvraagType)->forState($state))->toBe(ZaaktypeRole::Vooraankondiging);
     });
 
     test('legacy wegen-veld wordt genegeerd in nieuw pad', function () {
@@ -135,6 +136,6 @@ describe('Nieuw ReportQuestion-pad (use_new_report_questions = true)', function 
             'reportQuestion_1' => 'Nee',
         ]);
 
-        expect((new DetermineAanvraagType)->forState($state))->toBe(DetermineAanvraagType::VERGUNNING);
+        expect((new DetermineAanvraagType)->forState($state))->toBe(ZaaktypeRole::Vergunning);
     });
 });

@@ -43,6 +43,29 @@ final class ZaakeigenschappenMap
     ];
 
     /**
+     * The logical eigenschap keys this map can emit: the FormState-derived
+     * ones plus `locaties_evenement`, which is composed by the caller. These are
+     * the keys a per-municipality blueprint maps to concrete ZGW eigenschap namen.
+     *
+     * @return list<string>
+     */
+    public static function logicalKeys(): array
+    {
+        return [...array_keys(self::EIGENSCHAPPEN), 'locaties_evenement'];
+    }
+
+    /**
+     * The default (identity) eigenschap_map: our own OpenZaak names every
+     * eigenschap exactly like its logical key. Used to seed the blueprint.
+     *
+     * @return array<string, string>
+     */
+    public static function defaultEigenschapMap(): array
+    {
+        return array_combine(self::logicalKeys(), self::logicalKeys());
+    }
+
+    /**
      * Bouwt de lijst zaakeigenschappen uit de FormState. Format matcht
      * het oude Objects-API-record: `[{"naam_evenement": "..."}, ...]`.
      * Entries met lege waarde worden weggelaten — OF's `AddZaakeigenschappenZGW`
@@ -65,11 +88,6 @@ final class ZaakeigenschappenMap
         if ($locaties !== null && $locaties !== '') {
             $out[] = ['locaties_evenement' => $locaties];
         }
-
-        // formsubmission_id: OF gebruikte hiervoor `submission.kenmerk` —
-        // wij hebben geen submission-object, dus dit wordt het lokale
-        // zaak-public_id (= OpenZaak identificatie). Wordt door de caller
-        // toegevoegd want op build-tijd is dat nog niet bekend.
 
         return $out;
     }
@@ -112,6 +130,22 @@ final class ZaakeigenschappenMap
     }
 
     /**
+     * The two address entries are assembled from the flat fields of the two
+     * address fieldsets, which are shown to one aanvrager each:
+     *
+     * - natuurlijk_persoon_adres from "Adresgegevens", shown only to an
+     *   aanvrager without a KvK number, so a private aanvrager's verblijfsadres
+     *   reaches the ZGW rol.
+     * - organisatie_adres from the address grid inside "Organisatie
+     *   informatie", shown only to an aanvrager with a KvK number, so an
+     *   organisation's verblijfsadres reaches the ZGW rol as well.
+     *
+     * Only one of the two fieldsets is filled in a submission, and the rol
+     * variant that consumes each entry follows the same split, so the two never
+     * compete over one rol. The organisation fieldset asks for no country: the
+     * address is prefilled from the registered organisation, which carries a
+     * Dutch BAG or postbus address, so there is no land to map here.
+     *
      * @return array<string, mixed>
      */
     public function buildInitiator(FormState $state): array
@@ -123,7 +157,23 @@ final class ZaakeigenschappenMap
         return array_filter([
             'kvk' => $this->stringOrNull($state->get('watIsHetKamerVanKoophandelNummerVanUwOrganisatie')),
             'organisatie_naam' => $this->stringOrNull($state->get('watIsDeNaamVanUwOrganisatie')),
-            'organisatie_adres' => $state->get('watIsHetAdresVanUwOrganisatie'),
+            'organisatie_adres' => array_filter([
+                'postcode' => $this->stringOrNull($state->get('postcode1')),
+                'huisnummer' => $this->stringOrNull($state->get('huisnummer1')),
+                'huisletter' => $this->stringOrNull($state->get('huisletter1')),
+                'huisnummertoevoeging' => $this->stringOrNull($state->get('huisnummertoevoeging1')),
+                'straatnaam' => $this->stringOrNull($state->get('straatnaam1')),
+                'plaatsnaam' => $this->stringOrNull($state->get('plaatsnaam1')),
+            ]),
+            'natuurlijk_persoon_adres' => array_filter([
+                'postcode' => $this->stringOrNull($state->get('postcode')),
+                'huisnummer' => $this->stringOrNull($state->get('huisnummer')),
+                'huisletter' => $this->stringOrNull($state->get('huisletter')),
+                'huisnummertoevoeging' => $this->stringOrNull($state->get('huisnummertoevoeging')),
+                'straatnaam' => $this->stringOrNull($state->get('straatnaam')),
+                'plaatsnaam' => $this->stringOrNull($state->get('plaatsnaam')),
+                'land' => $this->stringOrNull($state->get('land')),
+            ]),
             'contactpersoon' => array_filter([
                 'naam' => $naam !== '' ? $naam : null,
                 'emailadres' => $this->stringOrNull($state->get('watIsUwEMailadres')),

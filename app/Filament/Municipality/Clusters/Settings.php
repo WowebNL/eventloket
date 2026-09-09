@@ -29,6 +29,6 @@ class Settings extends Cluster
 
     public static function canAccess(): bool
     {
-        return in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+        return in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::KoppelingBeheerder]);
     }
 }

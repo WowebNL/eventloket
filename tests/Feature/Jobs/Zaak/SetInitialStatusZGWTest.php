@@ -21,7 +21,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
-use Woweb\Openzaak\Openzaak;
 
 uses(RefreshDatabase::class);
 
@@ -37,6 +36,7 @@ function zaakMetZgwUrl(?string $zgwZaakUrl = null): Zaak
     return Zaak::factory()->create([
         'zaaktype_id' => $zaaktype->id,
         'zgw_zaak_url' => $zgwZaakUrl ?? ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/test-uuid',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
     ]);
 }
 
@@ -56,7 +56,7 @@ test('zet statustype met volgnummer 1 als initiële status op de ZGW-zaak', func
         $statussenUrl => Http::response(['url' => $statussenUrl.'/new'], 201),
     ]);
 
-    (new SetInitialStatusZGW($zaak))->handle(app(Openzaak::class));
+    (new SetInitialStatusZGW($zaak))->handle();
 
     Http::assertSent(function ($request) use ($zaak) {
         return str_contains($request->url(), '/zaken/api/v1/statussen')
@@ -75,7 +75,7 @@ test('geen zgw_zaak_url: job doet niets en stuurt geen request', function () {
 
     Http::fake();
 
-    (new SetInitialStatusZGW($zaak))->handle(app(Openzaak::class));
+    (new SetInitialStatusZGW($zaak))->handle();
 
     Http::assertNothingSent();
 });
@@ -90,7 +90,7 @@ test('geen statustypen gevonden: job slaat over zonder exception', function () {
         ZgwHttpFake::$baseUrl.'*' => Http::response([], 200),
     ]);
 
-    expect(fn () => (new SetInitialStatusZGW($zaak))->handle(app(Openzaak::class)))
+    expect(fn () => (new SetInitialStatusZGW($zaak))->handle())
         ->not->toThrow(Throwable::class);
 
     Http::assertNotSent(fn ($r) => str_contains($r->url(), '/zaken/api/v1/statussen'));

@@ -12,12 +12,12 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ZGW\Besluit;
-use App\ValueObjects\ZGW\BesluitType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 
 use function Pest\Livewire\livewire;
 
@@ -89,14 +89,14 @@ function seedBesluitenCache(Zaak $zaak): void
             toelichting: 'Toelichting',
             ingangsdatum: now()->format('Y-m-d'),
             verzenddatum: now()->format('Y-m-d'),
-            besluittypeObject: new BesluitType(
-                url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/besluittypen/1',
-                omschrijving: 'Vergunning',
-                omschrijvingGeneriek: 'Vergunning',
-                zaaktypen: [ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1'],
-                informatieobjecttypen: [ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1'],
-                toelichting: '',
-            ),
+            besluittypeObject: BesluitTypeData::from([
+                'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/besluittypen/1',
+                'omschrijving' => 'Vergunning',
+                'omschrijvingGeneriek' => 'Vergunning',
+                'zaaktypen' => [ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1'],
+                'informatieobjecttypen' => [ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1'],
+                'toelichting' => '',
+            ]),
             besluitDocumenten: collect([
                 besluitDocument('open-doc', 'Openbaar besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value),
                 besluitDocument('geheim-doc', 'Vertrouwelijk besluitdocument', DocumentVertrouwelijkheden::Vertrouwelijk->value),

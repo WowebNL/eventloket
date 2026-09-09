@@ -2,10 +2,12 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Organiser\Resources\Zaken\Pages\ListZaken as OrganiserListZaken;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -166,7 +168,7 @@ test('editing intern zaaknummer creates a new zaakeigenschap and updates referen
     $catalogiEigenschapUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/intern-zaaknummer';
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope([
             [
                 'url' => $catalogiEigenschapUrl,
                 'naam' => 'intern_zaaknummer',
@@ -174,7 +176,7 @@ test('editing intern zaaknummer creates a new zaakeigenschap and updates referen
                 'definitie' => 'Intern zaaknummer',
                 'specificatie' => [],
             ],
-        ], 200),
+        ]), 200),
         ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen*' => function (Request $request) use ($zgwZaakUrl, $catalogiEigenschapUrl) {
             return Http::response([
                 'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen/new-eigenschap',
@@ -207,10 +209,116 @@ test('editing intern zaaknummer creates a new zaakeigenschap and updates referen
     expect($zaak->refresh()->reference_data->intern_zaaknummer)->toBe('INT-999');
 });
 
+test('editing intern zaaknummer saves locally when the zaaktype does not know the eigenschap', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak('1', [
+        '_expand' => [
+            'eigenschappen' => [],
+        ],
+    ]);
+
+    // The catalogus of this zaaktype has no eigenschappen at all.
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope([]), 200),
+    ]);
+
+    ZgwHttpFake::wildcardFake();
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+        'reference_data' => referenceDataWithInternZaaknummer(null),
+    ]);
+
+    $this->actingAs($this->admin);
+
+    livewire(ViewZaak::class, ['record' => $zaak->id])
+        ->assertOk()
+        ->callAction(TestAction::make('editInternZaaknummer')->schemaComponent('reference_data.intern_zaaknummer'), data: [
+            'intern_zaaknummer' => 'INT-777',
+        ])
+        ->assertNotified(__('municipality/resources/zaak.infolist.sections.actions.actions.edit_intern_zaaknummer.notifications.saved_locally.title'));
+
+    expect($zaak->refresh()->reference_data->intern_zaaknummer)->toBe('INT-777');
+
+    // Nothing was written to the zaaksysteem.
+    Http::assertNotSent(fn (Request $request) => $request->method() !== 'GET'
+        && str_contains($request->url(), '/zaakeigenschappen'));
+});
+
+test('editing intern zaaknummer uses the eigenschap naam from the koppeling', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak('1', [
+        '_expand' => [
+            'eigenschappen' => [],
+        ],
+    ]);
+
+    $catalogiEigenschapUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/zaaknummer-intern';
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope([
+            [
+                'url' => $catalogiEigenschapUrl,
+                'naam' => 'zaaknummer_intern',
+                'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+                'definitie' => 'Intern zaaknummer',
+                'specificatie' => [],
+            ],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen/new-eigenschap',
+            'uuid' => 'new-eigenschap',
+            'naam' => 'zaaknummer_intern',
+            'waarde' => 'INT-888',
+        ], 200),
+    ]);
+
+    ZgwHttpFake::wildcardFake();
+
+    $this->zaaktype->update(['identificatie' => 'EVT-1']);
+    MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'EVT-1',
+        'eigenschap_map' => ['intern_zaaknummer' => 'zaaknummer_intern'],
+    ]));
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+        'reference_data' => referenceDataWithInternZaaknummer(null),
+    ]);
+
+    $this->actingAs($this->admin);
+
+    livewire(ViewZaak::class, ['record' => $zaak->id])
+        ->assertOk()
+        ->callAction(TestAction::make('editInternZaaknummer')->schemaComponent('reference_data.intern_zaaknummer'), data: [
+            'intern_zaaknummer' => 'INT-888',
+        ])
+        ->assertNotified();
+
+    expect($zaak->refresh()->reference_data->intern_zaaknummer)->toBe('INT-888');
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'POST'
+        && str_contains($request->url(), '/zaakeigenschappen')
+        && ($request->data()['eigenschap'] ?? null) === $catalogiEigenschapUrl);
+});
+
 test('deleting intern zaaknummer removes the zaakeigenschap and clears reference data', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
     $existingEigenschapUrl = ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1/zaakeigenschappen/existing-eigenschap';
+
+    // ZGW returns 204 No Content for a successful DELETE; the new client requires it.
+    // Register this before fakeSingleZaak so its greedy ".../zaken/1*" stub does not
+    // catch the zaakeigenschap delete URL first (Http::fake is first-match-wins).
+    Http::fake([
+        $existingEigenschapUrl => Http::response(null, 204),
+    ]);
 
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak('1', [
         '_expand' => [
@@ -225,17 +333,6 @@ test('deleting intern zaaknummer removes the zaakeigenschap and clears reference
                 ],
             ],
         ],
-    ]);
-
-    Http::fake([
-        $existingEigenschapUrl => Http::response([
-            'url' => $existingEigenschapUrl,
-            'uuid' => 'existing-eigenschap',
-            'zaak' => $zgwZaakUrl,
-            'eigenschap' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/intern-zaaknummer',
-            'naam' => 'intern_zaaknummer',
-            'waarde' => '',
-        ], 200),
     ]);
 
     ZgwHttpFake::wildcardFake();

@@ -20,6 +20,8 @@ class BagObject implements Arrayable
         public readonly string $woonplaatsnaam,
         public readonly string $huisletter = '',
         public readonly string $huisnummertoevoeging = '',
+        // The BAG nummeraanduiding id, used as the ZGW ObjectAdres identificatie.
+        public readonly ?string $nummeraanduiding_id = null,
         ...$otherParams
     ) {
         $this->otherParams = $otherParams;
@@ -38,6 +40,7 @@ class BagObject implements Arrayable
             'woonplaatsnaam' => $this->woonplaatsnaam,
             'huisletter' => $this->huisletter,
             'huisnummertoevoeging' => $this->huisnummertoevoeging,
+            'nummeraanduiding_id' => $this->nummeraanduiding_id,
             'otherParams' => $this->otherParams,
         ];
     }

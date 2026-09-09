@@ -4,6 +4,7 @@ namespace App\ValueObjects\ZGW;
 
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
+use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 
 final readonly class Besluit implements Arrayable
 {
@@ -17,11 +18,15 @@ final readonly class Besluit implements Arrayable
         public string $besluittype,
         public string $zaak,
         public string $datum,
-        public string $toelichting,
         public string $ingangsdatum,
-        public string $verzenddatum,
+        // toelichting and verzenddatum are optional in the ZGW Besluiten API; a
+        // OneGround (RX Mission) besluit omits them from the response, so they
+        // must be nullable to avoid a TypeError when the value object is built
+        // (e.g. while rendering the besluiten on the zaak page).
+        public ?string $toelichting = null,
+        public ?string $verzenddatum = null,
         public ?string $vervaldatum = null,
-        public ?BesluitType $besluittypeObject = null,
+        public ?BesluitTypeData $besluittypeObject = null,
         public ?Collection $besluitDocumenten = null,
         ...$otherParams
     ) {

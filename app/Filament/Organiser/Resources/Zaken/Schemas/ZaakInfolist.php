@@ -41,16 +41,23 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(BesluitenInfolist::class, ['zaak' => $schema->model])->key('besluiten-table-'.($schema->model->id ?? 'new')),
                                     ])
-                                    ->visible(fn (Zaak $record) => $record->besluiten->count() > 0),
+                                    ->visible(fn (Zaak $record) => $record->showsTab('besluiten') && $record->besluiten->count() > 0),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->icon('heroicon-o-document')
                                     ->schema([
-                                        Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
+                                        // When the bestanden tab is disabled for this connection the
+                                        // organiser still sees the files delivered with the application,
+                                        // but read-only (no new uploads).
+                                        Livewire::make(ZaakDocumentsTable::class, fn (Zaak $record): array => [
+                                            'zaak' => $record,
+                                            'submissionOnly' => ! $record->showsTab('bestanden'),
+                                        ])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ]),
                                 Tab::make('messages')
                                     ->label(__('organiser/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
+                                    ->visible(fn (Zaak $record) => $record->showsTab('organisatievragen'))
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()

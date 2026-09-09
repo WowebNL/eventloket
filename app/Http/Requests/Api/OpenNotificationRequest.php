@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Api;
 
+use App\Services\Zgw\ZgwConnectionResolver;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -22,21 +24,41 @@ class OpenNotificationRequest extends FormRequest
      */
     public function rules(): array
     {
-        $allowedHost = parse_url(config('openzaak.url', ''), PHP_URL_HOST);
+        return [
+            // The Notificaties API standard uses "destroy" for deletions; "delete"
+            // is kept for tolerance towards non-standard senders.
+            'actie' => 'required|string|in:create,update,delete,partial_update,destroy',
+            'kanaal' => 'required|string|in:zaken,objecten,documenten,besluiten,autorisaties,zaaktypen',
+            'resource' => 'required|string',
+            'hoofdObject' => ['required', 'url', $this->zgwHostRule()],
+            'resourceUrl' => ['required', 'url', $this->zgwHostRule()],
+            'aanmaakdatum' => 'required|date',
+            // The channel's kenmerken (e.g. `bronorganisatie`), used to decide
+            // which connection an incoming notification belongs to. Senders are
+            // free to omit them, so the field stays optional. The individual
+            // values are deliberately not constrained here: a sender using a
+            // non-string value must not have its whole notification rejected.
+            // OpenNotification::normaliseKenmerken() keeps only what we can
+            // match on.
+            'kenmerken' => 'sometimes|array',
+        ];
+    }
 
-        $openzaakHostRule = function (string $attribute, mixed $value, \Closure $fail) use ($allowedHost): void {
-            if (! $allowedHost || parse_url($value, PHP_URL_HOST) !== $allowedHost) {
-                $fail("The {$attribute} must point to the configured OpenZaak host.");
+    /**
+     * SSRF guard: the URL must point at a host belonging to a trusted ZGW
+     * connection (any per-municipality connection or main), since the app fetches
+     * these URLs.
+     */
+    private function zgwHostRule(): Closure
+    {
+        $allowedHosts = app(ZgwConnectionResolver::class)->allowedNotificationHosts();
+
+        return function (string $attribute, mixed $value, Closure $fail) use ($allowedHosts): void {
+            $host = is_string($value) ? parse_url($value, PHP_URL_HOST) : null;
+
+            if (! is_string($host) || ! in_array(strtolower($host), $allowedHosts, true)) {
+                $fail("The {$attribute} must point to a configured ZGW host.");
             }
         };
-
-        return [
-            'actie' => 'required|string|in:create,update,delete,partial_update',
-            'kanaal' => 'required|string|in:zaken,objecten,documenten,besluiten,autorisaties',
-            'resource' => 'required|string',
-            'hoofdObject' => ['required', 'url', $openzaakHostRule],
-            'resourceUrl' => ['required', 'url', $openzaakHostRule],
-            'aanmaakdatum' => 'required|date',
-        ];
     }
 }

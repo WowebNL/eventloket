@@ -3,6 +3,7 @@
 namespace App\Livewire\Thread;
 
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -11,7 +12,6 @@ use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Woweb\Openzaak\Openzaak;
 
 class Document extends Component implements HasActions, HasSchemas
 {
@@ -38,7 +38,7 @@ class Document extends Component implements HasActions, HasSchemas
         $this->latestVersion = (int) $this->document->versie;
 
         if ((int) $this->document->versie !== $this->versie) {
-            $this->document = new Informatieobject(...(new Openzaak)->get($this->documentUrl.'?versie='.$this->versie)->toArray());
+            $this->document = new Informatieobject(...ZgwResource::showDocumentVersion($this->zaak->zgwConnectionName(), $this->document->uuid, $this->versie));
         }
     }
 

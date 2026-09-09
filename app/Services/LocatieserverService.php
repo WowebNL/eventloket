@@ -149,7 +149,7 @@ class LocatieserverService
             'lat' => $lat,
             'lon' => $lon,
             'fq' => 'type:(adres)',
-            'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging',
+            'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging nummeraanduiding_id',
         ]);
 
         if ($httpResponse !== null && $httpResponse->successful()) {
@@ -167,7 +167,7 @@ class LocatieserverService
         $httpResponse = $this->request('/search/v3_1/free', [
             'q' => $postcode.' '.$huisnummer,
             'fq' => 'type:(adres)',
-            'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging',
+            'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging nummeraanduiding_id',
         ]);
 
         if ($httpResponse !== null && $httpResponse->successful()) {
@@ -256,7 +256,7 @@ class LocatieserverService
     {
         $httpResponse = $this->request('/search/v3_1/lookup', [
             'id' => $bagId,
-            'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging',
+            'fl' => 'id type centroide_ll weergavenaam straatnaam postcode huisnummer woonplaatsnaam gemeentecode huisletter huisnummertoevoeging nummeraanduiding_id',
         ]);
 
         if ($httpResponse !== null && $httpResponse->successful()) {

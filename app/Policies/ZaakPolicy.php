@@ -20,6 +20,8 @@ class ZaakPolicy
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::Organiser => true,
             Role::Advisor => true,
             Role::Admin => true,
+            // Read-only access to its municipality's zaken (filtered in view()).
+            Role::KoppelingBeheerder => true,
         };
     }
 
@@ -46,7 +48,7 @@ class ZaakPolicy
 
         return match ($user->role) {
             /** @phpstan-ignore-next-line */
-            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer => $user->canAccessMunicipality($zaak->zaaktype->municipality_id),
+            Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer, Role::KoppelingBeheerder => $user->canAccessMunicipality($zaak->zaaktype->municipality_id),
             Role::Admin => true,
             default => false,
         };

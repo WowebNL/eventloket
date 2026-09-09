@@ -27,7 +27,7 @@ class PendingMunicipalityAdminUserInvitesWidget extends TableWidget
                 $tenant = Filament::getTenant();
 
                 return MunicipalityInvite::query()
-                    ->whereIn('role', [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin])
+                    ->whereIn('role', [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::KoppelingBeheerder])
                     ->whereHas('municipalities', fn (Builder $query): Builder => $query->where('id', $tenant->id ?? $this->record->id));
             })
             ->modelLabel(__('municipality/resources/municipality_admin.widgets.pending_invites.label'))

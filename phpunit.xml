@@ -39,5 +39,7 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="APP_REQUIRE_2FA" value="true"/>
         <env name="OPENZAAK_URL" value="https://zgw.example.com/"/>
+        <env name="ZGW_CLIENT_ID" value="test-client-id"/>
+        <env name="ZGW_CLIENT_SECRET" value="test-client-secret-at-least-32-bytes-long"/>
     </php>
 </phpunit>

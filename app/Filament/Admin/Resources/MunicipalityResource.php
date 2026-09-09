@@ -15,6 +15,7 @@ use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\ReviewerU
 use App\Filament\Admin\Resources\MunicipalityResource\RelationManagers\VariablesRelationManager;
 use App\Models\Municipality;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -23,6 +24,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class MunicipalityResource extends Resource
 {
@@ -85,6 +87,13 @@ class MunicipalityResource extends Resource
                     ->searchable()
                     ->nullable()
                     ->preload(),
+                Placeholder::make('zgw_instance')
+                    ->label(__('admin/resources/municipality.columns.zgw_instance.label'))
+                    ->content(fn (?Municipality $record): string => $record?->zgwConnection
+                        ? ($record->zgwConnection->displayName ?: __('admin/resources/municipality.columns.zgw_instance.own'))
+                        : __('admin/resources/municipality.columns.zgw_instance.shared'))
+                    ->visible(fn (?Municipality $record): bool => $record !== null)
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -101,6 +110,13 @@ class MunicipalityResource extends Resource
                     ->searchable(),
                 TextColumn::make('zaaktypen.name')
                     ->sortable(),
+                TextColumn::make('zgwConnection')
+                    ->label(__('admin/resources/municipality.columns.zgw_instance.label'))
+                    ->state(fn (Municipality $record): string => $record->zgwConnection
+                        ? ($record->zgwConnection->displayName ?: __('admin/resources/municipality.columns.zgw_instance.own'))
+                        : __('admin/resources/municipality.columns.zgw_instance.shared'))
+                    ->badge()
+                    ->color(fn (Municipality $record): string => $record->zgwConnection ? 'info' : 'gray'),
                 IconColumn::make('use_new_report_questions')
                     ->label('Nieuwe meldingvragen')
                     ->boolean()
@@ -147,5 +163,11 @@ class MunicipalityResource extends Resource
             'create' => CreateMunicipality::route('/create'),
             'edit' => EditMunicipality::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        // Eager-load the optional own ZGW connection for the "ZGW-instantie" column.
+        return parent::getEloquentQuery()->with('zgwConnection');
     }
 }
