@@ -76,6 +76,7 @@ final class CreateDocumentsZipJob implements ShouldQueue
         }
 
         $usedNames = [];
+        $missing = [];
 
         foreach ($documentUuids as $uuid) {
             $document = $zaak->documenten->where('uuid', $uuid)->first();
@@ -85,6 +86,8 @@ final class CreateDocumentsZipJob implements ShouldQueue
                     'zaak_id' => $zaak->id,
                     'uuid' => $uuid,
                 ]);
+
+                $missing[] = $uuid;
 
                 continue;
             }
@@ -97,6 +100,8 @@ final class CreateDocumentsZipJob implements ShouldQueue
                     'uuid' => $uuid,
                     'error' => $e->getMessage(),
                 ]);
+
+                $missing[] = $document->bestandsnaam ?: $document->titel;
 
                 continue;
             }
@@ -111,18 +116,17 @@ final class CreateDocumentsZipJob implements ShouldQueue
                 $fileName = $uuid.'.bin';
             }
 
-            // Deduplicate filenames within the zip.
-            $base = pathinfo($fileName, PATHINFO_FILENAME);
-            $ext = pathinfo($fileName, PATHINFO_EXTENSION);
-            $suffix = 0;
-            $candidate = $fileName;
-            while (in_array($candidate, $usedNames, true)) {
-                $suffix++;
-                $candidate = $ext !== '' ? "{$base}_{$suffix}.{$ext}" : "{$base}_{$suffix}";
-            }
+            $candidate = self::uniqueName($fileName, $usedNames);
             $usedNames[] = $candidate;
 
             $zip->addFromString($candidate, $content);
+        }
+
+        if ($missing !== []) {
+            $zip->addFromString(
+                self::uniqueName((string) __('shared/actions.download_documents.missing.file_name'), $usedNames),
+                self::missingDocumentsNotice($missing),
+            );
         }
 
         $zip->close();
@@ -140,5 +144,46 @@ final class CreateDocumentsZipJob implements ShouldQueue
         Storage::disk('local')->setVisibility("zips/{$token}.zip", 'private');
 
         return $token;
+    }
+
+    /**
+     * A file name that is not in use inside the archive yet, numbering it when it is.
+     *
+     * @param  array<int, string>  $usedNames
+     */
+    private static function uniqueName(string $fileName, array $usedNames): string
+    {
+        $base = pathinfo($fileName, PATHINFO_FILENAME);
+        $ext = pathinfo($fileName, PATHINFO_EXTENSION);
+        $suffix = 0;
+        $candidate = $fileName;
+
+        while (in_array($candidate, $usedNames, true)) {
+            $suffix++;
+            $candidate = $ext !== '' ? "{$base}_{$suffix}.{$ext}" : "{$base}_{$suffix}";
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * The text file that names the documents that could not be put in the archive.
+     *
+     * An archive that silently holds fewer files than were selected looks complete, so it
+     * says which ones are missing instead. The names come from whoever uploaded the
+     * document, so line breaks are folded into spaces to keep one name per line.
+     *
+     * @param  array<int, string>  $missing
+     */
+    private static function missingDocumentsNotice(array $missing): string
+    {
+        $names = array_map(
+            static fn (string $name): string => '- '.str_replace(["\r", "\n"], ' ', $name),
+            $missing,
+        );
+
+        return (string) __('shared/actions.download_documents.missing.intro')."\n\n"
+            .implode("\n", $names)."\n\n"
+            .(string) __('shared/actions.download_documents.missing.outro', ['app_name' => config('app.name')])."\n";
     }
 }
