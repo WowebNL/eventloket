@@ -13,6 +13,7 @@ use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 use Woweb\Zgw\Facades\Zgw;
 
@@ -75,9 +76,23 @@ final class CreateZaakInZGW
                 if (isset($version['url']) && is_string($version['url']) && $version['url'] !== '') {
                     return $version['url'];
                 }
-            } catch (Throwable) {
-                // fall through to the stored url
+
+                $reason = 'the catalogus returned no definitief version valid today';
+            } catch (Throwable $e) {
+                $reason = $e->getMessage();
             }
+
+            // Both outcomes leave the zaak to be created against the stored version
+            // url, which may be closed, still a concept, or hosted by a different
+            // instance than the one the zaak is created in. The backend then rejects
+            // the create with a validation error that says nothing about where the
+            // resolution went wrong, so record that here.
+            Log::warning('CreateZaakInZGW: could not resolve the zaaktype version valid today, falling back to the stored version url.', [
+                'zaaktype_id' => $zaaktype->id,
+                'connection' => $connectionName,
+                'identificatie' => $identificatie,
+                'reason' => $reason,
+            ]);
         }
 
         return (string) $zaaktype->zgw_zaaktype_url;
