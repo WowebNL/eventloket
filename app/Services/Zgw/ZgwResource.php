@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Zgw;
 
 use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -35,13 +36,35 @@ class ZgwResource
      * Used for current-version downloads where only the resource `inhoud` URL is at hand
      * (bulk zips, e-mail attachments). The host allowlist is still enforced. Version-specific
      * downloads go through {@see self::downloadDocument()}.
+     *
+     * A download endpoint hands over raw file content, which cannot be served to a request
+     * that only accepts JSON: the connection puts `Accept: application/json` on every
+     * request, so it is replaced with a wildcard here. The response status is checked as
+     * well, because the HTTP client is configured not to throw on an error status and the
+     * body of a refused request would otherwise be returned as if it were the file. Both
+     * are what the client's own uuid-based `download()` does, so the two paths behave the
+     * same.
+     *
+     * @throws ApiRequestException when the endpoint does not hand over the file
      */
     public static function downloadByUrl(string $connectionName, string $url): string
     {
         $connection = Zgw::connection($connectionName);
         $connection->assertUrlAllowed($url);
 
-        return $connection->request()->get($url)->body();
+        $response = $connection->request()
+            ->replaceHeaders(['Accept' => '*/*'])
+            ->get($url);
+
+        if ($response->failed()) {
+            throw new ApiRequestException(
+                "ZGW download failed [{$response->status()}].",
+                $response,
+                $response->status(),
+            );
+        }
+
+        return $response->body();
     }
 
     /**

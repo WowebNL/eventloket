@@ -14,6 +14,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Log;
 
 /**
  * note: municipality users are only informed if organisation withdraws a pending request
@@ -100,7 +101,24 @@ class Result extends BaseNotification
         $omitted = [];
 
         foreach ($this->zaak->documenten->whereIn('url', $this->attachmentUrls) as $document) {
-            $contents = ZgwResource::downloadByUrl($this->zaak->zgwConnectionName(), $document->inhoud);
+            try {
+                $contents = ZgwResource::downloadByUrl($this->zaak->zgwConnectionName(), $document->inhoud);
+            } catch (\Throwable $e) {
+                // Deliberately not turned into a "leave this one out" path. A result mail
+                // whose attachments are incomplete is worse than no mail at all: neither
+                // the recipient nor the handler can see that something is missing. The
+                // error is logged with enough to trace it and then left to surface, which
+                // keeps the notification in the queue's failed jobs. Callers that still
+                // have the handler in front of them check the selection with
+                // {@see self::unretrievableAttachments()} before they get here.
+                Log::error('Result: attachment could not be downloaded, mail not built', [
+                    'zaak_id' => $this->zaak->id,
+                    'uuid' => $document->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+
+                throw $e;
+            }
 
             if (strlen($contents) > $remaining) {
                 // A line break in the name would close the raw HTML block the mail
@@ -119,6 +137,43 @@ class Result extends BaseNotification
         }
 
         return [$attachments, $omitted];
+    }
+
+    /**
+     * The documents selected as attachments that cannot be downloaded right now,
+     * by their title.
+     *
+     * The mail is built in a queued job, so a document that cannot be fetched there
+     * fails out of sight of the person who selected it. A caller that still has that
+     * person in front of it asks this first and stops, so the decision stays with the
+     * handler instead of a recipient receiving a set that is incomplete without saying so.
+     *
+     * @param  array<int, string>|null  $attachmentUrls
+     * @return array<int, string>
+     */
+    public static function unretrievableAttachments(Zaak $zaak, ?array $attachmentUrls): array
+    {
+        if (! $attachmentUrls) {
+            return [];
+        }
+
+        $unretrievable = [];
+
+        foreach ($zaak->documenten->whereIn('url', $attachmentUrls) as $document) {
+            try {
+                ZgwResource::downloadByUrl($zaak->zgwConnectionName(), $document->inhoud);
+            } catch (\Throwable $e) {
+                Log::error('Result: attachment could not be downloaded, action stopped', [
+                    'zaak_id' => $zaak->id,
+                    'uuid' => $document->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $unretrievable[] = $document->titel;
+            }
+        }
+
+        return $unretrievable;
     }
 
     public function toDatabase(User $notifiable): array
