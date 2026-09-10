@@ -9,6 +9,7 @@ use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\Zaak;
+use App\Models\Zaaktype;
 use App\Support\RisicoClassificatie;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
@@ -222,12 +223,19 @@ class ZakenTable
                     ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->options(ZaaktypeRole::class)
                     ->multiple()
+                    // Matched through the effective-role ladder rather than the
+                    // `role` column directly: that column is nullable and only
+                    // written by a koppeling or a catalogus sync, so comparing
+                    // it drops every zaak whose zaaktype has no stored role.
                     ->query(function (Builder $query, array $data): Builder {
                         if (empty($data['values'])) {
                             return $query;
                         }
 
-                        return $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('role', $data['values']));
+                        return $query->whereHas('zaaktype', function (Builder $zaaktypen) use ($data): Builder {
+                            /** @var Builder<Zaaktype> $zaaktypen */
+                            return $zaaktypen->withEffectiveRoleIn($data['values']);
+                        });
                     }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
