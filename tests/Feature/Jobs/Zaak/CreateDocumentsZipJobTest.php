@@ -281,10 +281,19 @@ test('buildZip keeps a refused download out of the archive and names it', functi
         ->and($names)->not->toContain('plattegrond.pdf')
         ->and($entry)->toBe('%PDF-1.4 the other document')
         ->and($notice)->toBeString()
+        ->and($notice)->toContain(__('shared/actions.download_documents.missing.unretrievable.heading'))
         ->and($notice)->toContain('plattegrond.pdf')
-        ->and($notice)->not->toContain('draaiboek.pdf');
+        ->and($notice)->not->toContain('draaiboek.pdf')
+        // A document that could not be fetched is still on the zaak, so it may
+        // not be listed as one that is gone from it.
+        ->and($notice)->not->toContain(__('shared/actions.download_documents.missing.gone.heading'));
 });
 
+/**
+ * A document can disappear from the zaak between selecting it and building the
+ * archive. The zaak can no longer name it then, so the name travels along from
+ * the selection: a reader can do nothing with an identifier.
+ */
 test('buildZip names a selected document that is no longer on the zaak', function () {
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
 
@@ -301,11 +310,43 @@ test('buildZip names a selected document that is no longer on the zaak', functio
         $doc->inhoud.'*' => Http::response('%PDF-1.4 the real document', 200),
     ]);
 
-    $token = CreateDocumentsZipJob::buildZip($zaak, ['present-doc-uuid', 'gone-doc-uuid'], $this->user->id);
+    $token = CreateDocumentsZipJob::buildZip(
+        $zaak,
+        ['present-doc-uuid', 'gone-doc-uuid'],
+        $this->user->id,
+        ['present-doc-uuid' => 'plattegrond.pdf', 'gone-doc-uuid' => 'draaiboek.pdf'],
+    );
 
     [$names, , $notice] = zipEntries($token, 'plattegrond.pdf');
 
     expect($names)->toContain('plattegrond.pdf')
         ->and($notice)->toBeString()
-        ->and($notice)->toContain('gone-doc-uuid');
+        ->and($notice)->toContain(__('shared/actions.download_documents.missing.gone.heading'))
+        ->and($notice)->toContain('draaiboek.pdf')
+        ->and($notice)->not->toContain('gone-doc-uuid')
+        ->and($notice)->not->toContain(__('shared/actions.download_documents.missing.unretrievable.heading'));
+});
+
+test('buildZip falls back to a readable description when a gone document has no name', function () {
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+    ]);
+
+    $doc = zipContentDocument('kept-doc-uuid', 'plattegrond.pdf', 'Plattegrond');
+
+    Cache::put("zaak.{$zaak->id}.documenten", collect([$doc]));
+
+    Http::fake([
+        $doc->inhoud.'*' => Http::response('%PDF-1.4 the real document', 200),
+    ]);
+
+    $token = CreateDocumentsZipJob::buildZip($zaak, ['kept-doc-uuid', 'nameless-doc-uuid'], $this->user->id);
+
+    [, , $notice] = zipEntries($token, 'plattegrond.pdf');
+
+    expect($notice)->toContain(__('shared/actions.download_documents.missing.unnamed'))
+        ->and($notice)->not->toContain('nameless-doc-uuid');
 });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Jobs\Zaak\CreateDocumentsZipJob;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Municipality;
 use App\Models\Organisation;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\ValueObjects\ZGW\Informatieobject;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
@@ -209,4 +211,41 @@ test('an empty table explains itself when every document is filtered out', funct
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->assertSee('Geen bestanden om te tonen')
         ->assertDontSee('Een ogenblik geduld');
+});
+
+/**
+ * The archive is built from uuids, and a document can be gone from the zaak by
+ * the time it is built. The file names of the selection therefore travel along
+ * with the request, so the archive can still name such a document instead of
+ * only identifying it.
+ */
+test('the bulk download takes the file names of the selection along', function () {
+    Bus::fake();
+
+    ZgwHttpFake::wildcardFake();
+    $this->zaak->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/1']);
+
+    $documents = collect(['een', 'twee', 'drie', 'vier'])
+        ->map(fn (string $naam): Informatieobject => tableDocument($naam.'-uuid', $naam));
+
+    Cache::forever("zaak.{$this->zaak->id}.documenten", $documents);
+
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $this->municipality->users()->attach($reviewer);
+    $this->actingAs($reviewer);
+
+    // Four documents is over the threshold for building the archive in the
+    // request, so the selection goes to the queue and can be inspected there.
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->callTableBulkAction('download-documents', $documents->pluck('uuid')->all());
+
+    Bus::assertDispatched(
+        CreateDocumentsZipJob::class,
+        fn (CreateDocumentsZipJob $job): bool => $job->selectedNames === [
+            'een-uuid' => 'een.pdf',
+            'twee-uuid' => 'twee.pdf',
+            'drie-uuid' => 'drie.pdf',
+            'vier-uuid' => 'vier.pdf',
+        ],
+    );
 });

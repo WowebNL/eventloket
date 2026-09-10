@@ -29,14 +29,25 @@ class DownloadDocumentsAction
             ))
             ->modalSubmitActionLabel(__('Downloaden'))
             ->action(function (Collection $records, BulkAction $action) use ($zaak): void {
-                $uuids = $records->pluck('uuid')->filter()->values()->all();
+                $selected = $records->filter(fn (array $record): bool => filled($record['uuid'] ?? null));
+                $uuids = $selected->pluck('uuid')->values()->all();
+
+                // The file names are taken along from the selection, so a document
+                // that is gone from the zaak by the time the archive is built can
+                // still be named in it rather than only identified.
+                $names = $selected
+                    ->mapWithKeys(fn (array $record): array => [
+                        $record['uuid'] => (string) ($record['bestandsnaam'] ?: $record['titel'] ?? ''),
+                    ])
+                    ->filter()
+                    ->all();
 
                 if (empty($uuids)) {
                     return;
                 }
 
                 if (count($uuids) <= self::ASYNC_THRESHOLD) {
-                    $token = CreateDocumentsZipJob::buildZip($zaak, $uuids, (int) auth()->id());
+                    $token = CreateDocumentsZipJob::buildZip($zaak, $uuids, (int) auth()->id(), $names);
 
                     if ($token !== null) {
                         $action->getLivewire()->js(
@@ -54,7 +65,7 @@ class DownloadDocumentsAction
                     }
                 }
 
-                CreateDocumentsZipJob::dispatch($zaak, $uuids, (int) auth()->id());
+                CreateDocumentsZipJob::dispatch($zaak, $uuids, (int) auth()->id(), $names);
 
                 Notification::make()
                     ->title(__('Download wordt voorbereid'))

@@ -21,19 +21,37 @@ final class CreateDocumentsZipJob implements ShouldQueue
     use Queueable;
 
     /**
+     * The file names of the selected documents, keyed by uuid, as they were
+     * shown when the selection was made.
+     *
+     * A document that is no longer on the zaak by the time the archive is built
+     * cannot be named from the zaak any more, and it has to be named: a reader
+     * can do nothing with an identifier. The name therefore travels along from
+     * the selection. Declared with a default instead of promoted, so a job that
+     * was queued before this property existed still unserializes.
+     *
+     * @var array<string, string>
+     */
+    public array $selectedNames = [];
+
+    /**
      * @param  array<int, string>  $documentUuids
+     * @param  array<string, string>  $selectedNames
      */
     public function __construct(
         public readonly Zaak $zaak,
         public readonly array $documentUuids,
         public readonly int $userId,
-    ) {}
+        array $selectedNames = [],
+    ) {
+        $this->selectedNames = $selectedNames;
+    }
 
     public function handle(): void
     {
         $user = User::find($this->userId);
 
-        $token = self::buildZip($this->zaak, $this->documentUuids, $this->userId);
+        $token = self::buildZip($this->zaak, $this->documentUuids, $this->userId, $this->selectedNames);
 
         if ($token === null) {
             Log::error('CreateDocumentsZipJob: zip aanmaken mislukt', [
@@ -59,8 +77,9 @@ final class CreateDocumentsZipJob implements ShouldQueue
      * Returns the token on success, or null on failure.
      *
      * @param  array<int, string>  $documentUuids
+     * @param  array<string, string>  $selectedNames  file names keyed by uuid, from the selection
      */
-    public static function buildZip(Zaak $zaak, array $documentUuids, int $userId): ?string
+    public static function buildZip(Zaak $zaak, array $documentUuids, int $userId, array $selectedNames = []): ?string
     {
         $connectionName = $zaak->zgwConnectionName();
         $token = (string) Str::uuid();
@@ -76,7 +95,8 @@ final class CreateDocumentsZipJob implements ShouldQueue
         }
 
         $usedNames = [];
-        $missing = [];
+        $unretrievable = [];
+        $gone = [];
 
         foreach ($documentUuids as $uuid) {
             $document = $zaak->documenten->where('uuid', $uuid)->first();
@@ -87,7 +107,8 @@ final class CreateDocumentsZipJob implements ShouldQueue
                     'uuid' => $uuid,
                 ]);
 
-                $missing[] = $uuid;
+                $gone[] = $selectedNames[$uuid]
+                    ?? (string) __('shared/actions.download_documents.missing.unnamed');
 
                 continue;
             }
@@ -101,7 +122,7 @@ final class CreateDocumentsZipJob implements ShouldQueue
                     'error' => $e->getMessage(),
                 ]);
 
-                $missing[] = $document->bestandsnaam ?: $document->titel;
+                $unretrievable[] = $document->bestandsnaam ?: $document->titel;
 
                 continue;
             }
@@ -122,10 +143,10 @@ final class CreateDocumentsZipJob implements ShouldQueue
             $zip->addFromString($candidate, $content);
         }
 
-        if ($missing !== []) {
+        if ($unretrievable !== [] || $gone !== []) {
             $zip->addFromString(
                 self::uniqueName((string) __('shared/actions.download_documents.missing.file_name'), $usedNames),
-                self::missingDocumentsNotice($missing),
+                self::missingDocumentsNotice($unretrievable, $gone),
             );
         }
 
@@ -170,20 +191,33 @@ final class CreateDocumentsZipJob implements ShouldQueue
      * The text file that names the documents that could not be put in the archive.
      *
      * An archive that silently holds fewer files than were selected looks complete, so it
-     * says which ones are missing instead. The names come from whoever uploaded the
-     * document, so line breaks are folded into spaces to keep one name per line.
+     * says which ones are missing instead. The two causes are listed apart, because what
+     * the reader can do about them differs: a document that could not be fetched is still
+     * on the zaak and trying again can help, one that is no longer on the zaak will not
+     * come back. A cause without any documents is left out entirely.
      *
-     * @param  array<int, string>  $missing
+     * @param  array<int, string>  $unretrievable
+     * @param  array<int, string>  $gone
      */
-    private static function missingDocumentsNotice(array $missing): string
+    private static function missingDocumentsNotice(array $unretrievable, array $gone): string
     {
-        $names = array_map(
-            static fn (string $name): string => '- '.str_replace(["\r", "\n"], ' ', $name),
-            $missing,
-        );
+        $notice = (string) __('shared/actions.download_documents.missing.intro')."\n";
 
-        return (string) __('shared/actions.download_documents.missing.intro')."\n\n"
-            .implode("\n", $names)."\n\n"
-            .(string) __('shared/actions.download_documents.missing.outro', ['app_name' => config('app.name')])."\n";
+        foreach (['unretrievable' => $unretrievable, 'gone' => $gone] as $cause => $names) {
+            if ($names === []) {
+                continue;
+            }
+
+            $notice .= "\n".(string) __("shared/actions.download_documents.missing.{$cause}.heading")."\n"
+                .implode("\n", array_map(
+                    // The names come from whoever uploaded the document, so line
+                    // breaks are folded into spaces to keep one name per line.
+                    static fn (string $name): string => '- '.str_replace(["\r", "\n"], ' ', $name),
+                    $names,
+                ))."\n\n"
+                .(string) __("shared/actions.download_documents.missing.{$cause}.outro", ['app_name' => config('app.name')])."\n";
+        }
+
+        return $notice;
     }
 }
