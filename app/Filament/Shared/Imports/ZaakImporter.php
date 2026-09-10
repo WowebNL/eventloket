@@ -224,6 +224,9 @@ class ZaakImporter extends Importer
 
         $this->record = new Zaak([
             'zaaktype_id' => $zaaktype->id,
+            // Filled explicitly because saveRecord() writes without model
+            // events, so the observer that normally derives this never runs.
+            'zgw_connection' => $zaaktype->zgwConnectionName(),
             'reference_data' => new ZaakReferenceData(
                 start_evenement: self::parseDate($this->data['start_date']),
                 eind_evenement: self::parseDate($this->data['end_date'], true),

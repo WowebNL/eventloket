@@ -46,6 +46,7 @@ use Woweb\Zgw\Facades\Zgw;
 
 /**
  * @property ZaakReferenceData $reference_data
+ * @property string $zgw_connection
  * @property array<string, mixed> $form_state_snapshot
  * @property array<string, mixed>|null $imported_data
  * @property-read ?Organisation                $organisation
@@ -74,6 +75,7 @@ class Zaak extends Model implements Eventable
 
     protected $fillable = [
         'public_id',
+        'zgw_connection',
         'zgw_zaak_url',
         'zaaktype_id',
         'zgw_zaaktype_url',
@@ -127,6 +129,11 @@ class Zaak extends Model implements Eventable
 
     /**
      * The ZGW connection name to use for calls about this zaak.
+     *
+     * Deliberately resolved rather than read from the `zgw_connection` column.
+     * The column is a record of which instance issued this zaak's number, kept
+     * so the uniqueness of `public_id` can be scoped to it; where the zaak is
+     * read from today follows its zaaktype and stays the resolver's answer.
      */
     public function zgwConnectionName(): string
     {
