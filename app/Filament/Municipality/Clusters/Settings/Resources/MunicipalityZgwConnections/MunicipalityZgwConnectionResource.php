@@ -490,10 +490,23 @@ class MunicipalityZgwConnectionResource extends Resource
                 TextColumn::make('activated_at')
                     ->label(__('municipality/resources/zgw_connection.columns.activated_at.label'))
                     ->badge()
-                    ->color(fn ($state): string => $state ? 'success' : 'gray')
-                    ->formatStateUsing(fn ($state): string => $state
-                        ? __('municipality/resources/zgw_connection.columns.activated_at.active')
-                        : __('municipality/resources/zgw_connection.columns.activated_at.inactive')),
+                    // An activated connection whose config cannot be built is
+                    // routed to the main connection by the resolver, so showing
+                    // it as plain "Actief" would hide the one state that looks
+                    // healthy and is not.
+                    ->color(fn ($state, MunicipalityZgwConnection $record): string => match (true) {
+                        ! $state => 'gray',
+                        ! $record->hasUsableConfig() => 'danger',
+                        default => 'success',
+                    })
+                    ->formatStateUsing(fn ($state, MunicipalityZgwConnection $record): string => match (true) {
+                        ! $state => __('municipality/resources/zgw_connection.columns.activated_at.inactive'),
+                        ! $record->hasUsableConfig() => __('municipality/resources/zgw_connection.columns.activated_at.misconfigured'),
+                        default => __('municipality/resources/zgw_connection.columns.activated_at.active'),
+                    })
+                    ->tooltip(fn ($state, MunicipalityZgwConnection $record): ?string => $state && ! $record->hasUsableConfig()
+                        ? __('municipality/resources/zgw_connection.columns.activated_at.misconfigured_tooltip')
+                        : null),
                 TextColumn::make('last_verified_at')
                     ->label(__('municipality/resources/zgw_connection.columns.last_verified_at.label'))
                     ->dateTime(config('app.date_format'))

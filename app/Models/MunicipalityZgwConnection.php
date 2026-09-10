@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 use RuntimeException;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Throwable;
 
 /**
  * A municipality's own ZGW connection (its own OpenZaak / RX Mission / etc.).
@@ -145,6 +146,25 @@ class MunicipalityZgwConnection extends Model
     public function isActive(): bool
     {
         return $this->activated_at !== null;
+    }
+
+    /**
+     * Whether the runtime config of this connection can be built at all.
+     *
+     * An activated connection whose config throws is silently routed to "main"
+     * by the {@see ZgwConnectionResolver}, while the row keeps presenting itself
+     * as live. Management surfaces use this to show that difference instead of
+     * letting an unusable connection look healthy.
+     */
+    public function hasUsableConfig(): bool
+    {
+        try {
+            $this->buildConfig();
+        } catch (Throwable) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

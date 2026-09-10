@@ -86,6 +86,49 @@ it('fails fast when the connection is unreachable', function () {
         ->assertSet('success', false);
 });
 
+it('refuses a connection that mixes its own instance with the main one', function () {
+    // Its catalogi API is its own, its zaken API is left empty and therefore
+    // inherited from the main connection. Zaaktypen are then read on one
+    // instance while zaken are created on the other, which the receiving
+    // instance rejects. The per-API reads cannot see this: a query on the
+    // inherited instance answers 200 with no results.
+    $this->connection->updateQuietly(['zaken_url' => null]);
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('steps.urls.status', 'fail')
+        ->assertSee(__('municipality/resources/zgw_connection.actions.verify.urls.names.zaken'))
+        ->assertSet('steps.connection.status', 'skipped')
+        ->assertSet('success', false);
+
+    expect($this->connection->refresh()->last_verified_at)->toBeNull();
+    Http::assertNothingSent();
+});
+
+it('accepts a connection that inherits every url from the main connection', function () {
+    // A municipality on the same instance as the main connection, overriding
+    // only its credentials: nothing is mixed, so the coherence check passes.
+    $this->connection->updateQuietly([
+        'zaken_url' => null,
+        'catalogi_url' => null,
+        'documenten_url' => null,
+        'besluiten_url' => null,
+        'notificaties_url' => null,
+    ]);
+
+    Http::fake([
+        rtrim((string) config('zgw.connections.main.urls.catalogi'), '/').'/catalogussen*' => Http::response(
+            ['count' => 0, 'next' => null, 'previous' => null, 'results' => []],
+            200,
+        ),
+        '*' => Http::response(['count' => 0, 'next' => null, 'previous' => null, 'results' => []], 200),
+    ]);
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('steps.urls.status', 'success');
+});
+
 it('completes and stamps the connection when the abonnement is healthy', function () {
     $aboUrl = healthyAbonnement($this->connection->municipality_id, $this->name);
     Http::fake(array_merge(fakeApiReads(), [

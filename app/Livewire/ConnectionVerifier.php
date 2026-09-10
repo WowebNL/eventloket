@@ -34,10 +34,22 @@ class ConnectionVerifier extends Component
      * @var array<string, array{status: string, message: string}>
      */
     public array $steps = [
+        'urls' => ['status' => 'pending', 'message' => ''],
         'connection' => ['status' => 'pending', 'message' => ''],
         'apis' => ['status' => 'pending', 'message' => ''],
         'abonnement' => ['status' => 'pending', 'message' => ''],
     ];
+
+    /**
+     * The URL fields whose instance must agree: the zaaktype a zaak references is
+     * read from the catalogi API and sent to the zaken API, so a row that points
+     * these two at different instances produces zaken the receiving instance
+     * cannot resolve. The remaining components are read-only surfaces and are
+     * covered by the per-API reads in the next step.
+     *
+     * @var list<string>
+     */
+    private const COHERENT_URL_FIELDS = ['zaken', 'catalogi'];
 
     /**
      * The APIs checked individually after the base connection check, in the order
@@ -65,6 +77,14 @@ class ConnectionVerifier extends Component
      */
     public function start(): void
     {
+        $this->runUrlsStep();
+
+        if ($this->steps['urls']['status'] !== 'success') {
+            $this->finish(false);
+
+            return;
+        }
+
         $this->runConnectionStep();
 
         if ($this->steps['connection']['status'] !== 'success') {
@@ -113,6 +133,88 @@ class ConnectionVerifier extends Component
     public function render(): View
     {
         return view('filament.zgw.connection-verifier');
+    }
+
+    /**
+     * Check that the zaken and catalogi URLs point at the same instance before
+     * anything is contacted.
+     *
+     * An empty URL field is inherited from the main connection, which is a
+     * feature for a municipality that shares that instance. On a row that does
+     * point at its own instance, however, leaving one of these two blank mixes
+     * the two: zaaktypen are then read on one instance and the zaak created on
+     * the other, which the receiving instance rejects. That never shows up in
+     * the per-API reads, because a query on the inherited instance answers
+     * HTTP 200 with no results.
+     */
+    private function runUrlsStep(): void
+    {
+        $this->steps['urls'] = ['status' => 'running', 'message' => ''];
+
+        $inherited = $this->inheritedUrlFieldsOnOwnInstance();
+
+        $this->steps['urls'] = $inherited === []
+            ? ['status' => 'success', 'message' => $this->trans('urls.success')]
+            : ['status' => 'fail', 'message' => __('municipality/resources/zgw_connection.actions.verify.urls.error', [
+                'fields' => implode(', ', array_map(
+                    static fn (string $field): string => __("municipality/resources/zgw_connection.actions.verify.urls.names.{$field}"),
+                    $inherited,
+                )),
+            ])];
+    }
+
+    /**
+     * The coherence-critical URL fields that this connection leaves empty while
+     * its other URLs do point at an instance of its own. Empty when the row is
+     * coherent: either it inherits everything, or it fills both fields in.
+     *
+     * @return list<string>
+     */
+    private function inheritedUrlFieldsOnOwnInstance(): array
+    {
+        $connection = $this->connection();
+
+        $mainHosts = $this->hosts((array) config('zgw.connections.main.urls', []));
+
+        $own = [];
+        $inherited = [];
+
+        foreach (self::COHERENT_URL_FIELDS as $field) {
+            $url = $connection->{$field.'_url'};
+
+            if (! is_string($url) || $url === '') {
+                $inherited[] = $field;
+
+                continue;
+            }
+
+            $own[] = $url;
+        }
+
+        $ownHosts = array_diff($this->hosts($own), $mainHosts);
+
+        return $ownHosts === [] ? [] : $inherited;
+    }
+
+    /**
+     * The distinct lowercase hosts of a list of URLs.
+     *
+     * @param  array<int|string, mixed>  $urls
+     * @return list<string>
+     */
+    private function hosts(array $urls): array
+    {
+        $hosts = [];
+
+        foreach ($urls as $url) {
+            $host = is_string($url) ? parse_url($url, PHP_URL_HOST) : null;
+
+            if (is_string($host) && $host !== '') {
+                $hosts[strtolower($host)] = true;
+            }
+        }
+
+        return array_keys($hosts);
     }
 
     private function runConnectionStep(): void
