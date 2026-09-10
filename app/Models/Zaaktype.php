@@ -130,6 +130,41 @@ class Zaaktype extends Model
     }
 
     /**
+     * Zaaktypen whose effective role is any of $roles, for the multi-select
+     * role filters. It ORs {@see withEffectiveRole()} per role rather than
+     * repeating the ladder with an `in`, so there is one implementation of the
+     * ladder and the singular and plural forms cannot drift apart.
+     *
+     * Accepts backing values as well as enum cases, because filter state
+     * arrives from the request as strings.
+     *
+     * @param  Builder<Zaaktype>  $query
+     * @param  array<int, ZaaktypeRole|string|null>  $roles
+     * @return Builder<Zaaktype>
+     */
+    #[Scope]
+    protected function withEffectiveRoleIn(Builder $query, array $roles): Builder
+    {
+        $roles = array_filter(array_map(
+            fn ($role): ?ZaaktypeRole => $role instanceof ZaaktypeRole ? $role : ZaaktypeRole::tryFrom((string) $role),
+            $roles
+        ));
+
+        if ($roles === []) {
+            // Nothing recognisable was asked for. Match no row, the way an `in`
+            // over an empty set would, instead of adding an empty condition
+            // group that would silently widen the result.
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $any) use ($roles): void {
+            foreach ($roles as $role) {
+                $any->orWhere(fn (Builder $ladder) => $ladder->withEffectiveRole($role));
+            }
+        });
+    }
+
+    /**
      * Correlated subquery over the koppelingen of the zaaktype row in the outer
      * query. A null municipality_id or identificatie matches nothing, which is
      * what the ladder needs: no koppeling, so fall through to the next step.
