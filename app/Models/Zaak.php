@@ -78,16 +78,37 @@ class Zaak extends Model implements Eventable
     private const ZGW_READ_CACHE_TTL = 300;
 
     /**
-     * How long an *incomplete* read from ZGW is cached.
+     * How long a read from ZGW is cached when a resource was *temporarily*
+     * unavailable: a server error, a timeout, anything that may pass on its own.
      *
      * A screen that shows an incomplete list polls itself, so not caching the
      * gap at all would turn every poll into a fresh round of API calls for as
-     * long as the refusal lasts, and a refusal can be a permission setting
-     * rather than a passing outage. A short window bounds that traffic and the
-     * log volume that comes with it, while keeping the screen's recovery inside
-     * a minute once the API hands the resource over again.
+     * long as the failure lasts. A short window bounds that traffic and the log
+     * volume that comes with it, while keeping the screen's recovery inside a
+     * minute once the API hands the resource over again.
      */
-    private const ZGW_DEGRADED_READ_CACHE_TTL = 60;
+    private const ZGW_UNAVAILABLE_READ_CACHE_TTL = 60;
+
+    /**
+     * How long a read from ZGW is cached when the API is *not authorised* to hand
+     * a resource over, which it answers with a 403.
+     *
+     * This is not an outage but a setting on the other side, so it gives the same
+     * answer on every call: the minute-long window of
+     * self::ZGW_UNAVAILABLE_READ_CACHE_TTL would mean repeating a call that is
+     * refused by design, every minute, for as long as the screen is open. A
+     * longer window is therefore the right trade, and the cost of it is that a
+     * widened authorisation takes up to this long to become visible. It stays
+     * well inside a working session, and {@see clearZgwCache()} clears it at
+     * once.
+     */
+    private const ZGW_FORBIDDEN_READ_CACHE_TTL = 900;
+
+    /**
+     * How often a single zaak reports that the API is not authorised to hand a
+     * resource over, see {@see reportSkippedResource()}.
+     */
+    private const FORBIDDEN_REPORT_WINDOW = 60 * 60 * 24;
 
     protected $table = 'zaken';
 
@@ -543,9 +564,9 @@ class Zaak extends Model implements Eventable
      * The documents to show on a zaak detail screen.
      *
      * Unlike the {@see documenten} attribute this leaves out a document the
-     * documents API refuses instead of failing, and reports how many were left
-     * out, so the screen can show the documents it does have and still say that
-     * something is missing.
+     * documents API does not hand over instead of failing, and says why, so the
+     * screen can show the documents it does have and still tell the reader what is
+     * missing and whether waiting will help.
      */
     public function documentenForDisplay(): ZaakDocumentSet
     {
@@ -813,7 +834,8 @@ class Zaak extends Model implements Eventable
         $besluiten = $connection->besluiten()->besluiten()->index(['zaak' => $this->zgw_zaak_url]);
 
         $collection = collect();
-        $unreadable = 0;
+        $unavailable = 0;
+        $forbidden = 0;
 
         foreach ($besluiten as $besluit) {
             $besluitDocumentenCollection = collect();
@@ -833,7 +855,12 @@ class Zaak extends Model implements Eventable
                         throw $e;
                     }
 
-                    $unreadable++;
+                    if ($this->isNotAuthorised($e)) {
+                        $forbidden++;
+                    } else {
+                        $unavailable++;
+                    }
+
                     $this->reportSkippedResource('besluit document', $connectionName, $documentUrl, $e);
                 }
             }
@@ -844,14 +871,14 @@ class Zaak extends Model implements Eventable
             ])));
         }
 
-        if ($unreadable === 0) {
+        if ($unavailable === 0 && $forbidden === 0) {
             Cache::put($cacheKey, $collection, self::ZGW_READ_CACHE_TTL);
 
             return new ZaakBesluitSet($collection);
         }
 
-        $set = new ZaakBesluitSet($collection, $unreadable);
-        Cache::put($cacheKey, $set, self::ZGW_DEGRADED_READ_CACHE_TTL);
+        $set = new ZaakBesluitSet($collection, $unavailable, $forbidden);
+        Cache::put($cacheKey, $set, $this->incompleteReadCacheTtl($unavailable));
 
         return $set;
     }
@@ -877,13 +904,13 @@ class Zaak extends Model implements Eventable
      * with it; without it the failure propagates, which is what a caller that
      * needs every document wants.
      *
-     * An incomplete read is cached with a shorter TTL than a complete one, see
-     * self::ZGW_DEGRADED_READ_CACHE_TTL. The screens that accept a gap refresh
-     * themselves every few seconds, so not caching it at all would put a fresh
-     * round of API calls behind every refresh for as long as the refusal lasts,
-     * while caching it for the normal window would leave the screen reporting
-     * missing documents long after the API started handing them over again. The
-     * short window bounds both.
+     * A document that was left out is counted in one of two buckets, because the
+     * two mean different things to the reader: one the API is not authorised to
+     * hand over is refused on every call however long anyone waits, while a server
+     * error or a timeout is the case that may pass on its own. That split decides
+     * what the screen says, how the read is cached and how often it is reported;
+     * see {@see isNotAuthorised()}, {@see incompleteReadCacheTtl()} and
+     * {@see reportSkippedResource()}.
      */
     private function readDocuments(bool $skipUnreadable): ZaakDocumentSet
     {
@@ -912,7 +939,8 @@ class Zaak extends Model implements Eventable
         $zaakinformatieobjecten = $connection->zaken()->zaakinformatieobjecten()->index(['zaak' => $this->zgw_zaak_url]);
 
         $collection = collect();
-        $unreadable = 0;
+        $unavailable = 0;
+        $forbidden = 0;
 
         foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
             $documentUrl = $zaakinformatieobject['informatieobject'];
@@ -931,21 +959,55 @@ class Zaak extends Model implements Eventable
                     throw $e;
                 }
 
-                $unreadable++;
+                if ($this->isNotAuthorised($e)) {
+                    $forbidden++;
+                } else {
+                    $unavailable++;
+                }
+
                 $this->reportSkippedResource('document', $connectionName, $documentUrl, $e);
             }
         }
 
-        if ($unreadable === 0) {
+        if ($unavailable === 0 && $forbidden === 0) {
             Cache::put($cacheKey, $collection, self::ZGW_READ_CACHE_TTL);
 
             return new ZaakDocumentSet($collection, $collection->count());
         }
 
-        $set = new ZaakDocumentSet($collection, $collection->count(), $unreadable);
-        Cache::put($cacheKey, $set, self::ZGW_DEGRADED_READ_CACHE_TTL);
+        $set = new ZaakDocumentSet($collection, $collection->count(), $unavailable, $forbidden);
+        Cache::put($cacheKey, $set, $this->incompleteReadCacheTtl($unavailable));
 
         return $set;
+    }
+
+    /**
+     * Whether the API turned a resource down because it is not authorised to hand
+     * it over, rather than failing to produce it.
+     *
+     * The documents API answers that with a 403. It is a setting on the other
+     * side of the connection and not a fault, which is why it reads the status
+     * and not the exception type: the same exception carries both cases.
+     */
+    private function isNotAuthorised(Throwable $e): bool
+    {
+        return $e instanceof ApiRequestException
+            && $e->getResponse()->status() === 403;
+    }
+
+    /**
+     * How long to cache a read that left a resource out.
+     *
+     * A read in which nothing was merely unavailable was refused by design and
+     * keeps its longer window; as soon as one resource failed for a reason that
+     * may pass, the short window wins, because that is the half that still has to
+     * recover quickly.
+     */
+    private function incompleteReadCacheTtl(int $unavailable): int
+    {
+        return $unavailable > 0
+            ? self::ZGW_UNAVAILABLE_READ_CACHE_TTL
+            : self::ZGW_FORBIDDEN_READ_CACHE_TTL;
     }
 
     /**
@@ -962,6 +1024,15 @@ class Zaak extends Model implements Eventable
      * it. Going through report() also reuses the handler that attaches the ZGW
      * response as context, which is the detail that makes such a refusal
      * diagnosable at all.
+     *
+     * For a resource the API is not authorised to hand over that reasoning only
+     * half holds. It is not a fault but a setting, and it answers the same on
+     * every call, so reporting each read fills error reporting with something
+     * that is working as configured and drowns out the failures that are not.
+     * It is not dropped either, because a narrowed authorisation is a change
+     * someone has to be able to notice: it is reported once per zaak per day,
+     * {@see self::FORBIDDEN_REPORT_WINDOW}, while the log line below keeps every
+     * occurrence.
      *
      * @param  string  $kind  what was skipped, for the log line
      */
@@ -981,7 +1052,29 @@ class Zaak extends Model implements Eventable
             'exception' => $e::class,
         ]);
 
+        if ($this->isNotAuthorised($e) && ! $this->claimForbiddenReport()) {
+            return;
+        }
+
         report($e);
+    }
+
+    /**
+     * Claim the one report this zaak gets for an unauthorised resource inside the
+     * current window, returning whether the claim succeeded.
+     *
+     * Cache::add is the whole mechanism: it only writes when the key is absent,
+     * so the first read of the window reports and every read after it does not.
+     * Losing the claim to a cache that was flushed means one extra report, which
+     * is the right way round for a damper.
+     */
+    private function claimForbiddenReport(): bool
+    {
+        return Cache::add(
+            "zaak.{$this->id}.forbidden-resource-reported",
+            true,
+            self::FORBIDDEN_REPORT_WINDOW,
+        );
     }
 
     /** @return Attribute<StatusTypeData|null, void> */

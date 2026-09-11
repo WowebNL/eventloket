@@ -6,13 +6,15 @@ declare(strict_types=1);
  * The besluiten half of the same gap. A besluit's documents are fetched one by
  * one on exactly the endpoint the zaak documents use, with the same absence of
  * containment, and the besluiten tab resolves that during the page render. One
- * refused besluit document therefore used to take the whole zaak detail screen
- * with it, just like a refused zaak document did.
+ * besluit document the API would not hand over therefore used to take the whole
+ * zaak detail screen with it, just like a zaak document did.
  *
  * It differs in one way that matters: a besluit is only shown once it carries an
- * established document, so a refused document can make the besluit disappear
+ * established document, so a missing document can make the besluit disappear
  * altogether rather than merely shorten its file list. These tests pin that the
- * reader is told about that instead of being shown a screen without besluiten.
+ * reader is told about that instead of being shown a screen without besluiten,
+ * and that the same 403-versus-everything-else distinction the documents tab
+ * makes is made here too.
  */
 
 use App\Livewire\Zaken\BesluitenInfolist;
@@ -32,8 +34,9 @@ beforeEach(function () {
 
 /**
  * A zaak with one besluit whose documents are read one by one. Each spec is
- * either `['titel' => ...]` for a document that can be read or
- * `['refused' => true]` for one the documents API turns down.
+ * one of `['titel' => ...]` for a document that can be read,
+ * `['refused' => true]` for one the API is not authorised to hand over, or
+ * `['unavailable' => true]` for one it fails to produce.
  *
  * @param  list<array<string, mixed>>  $documents
  */
@@ -51,6 +54,8 @@ function zaakWithBesluitDocumentReads(array $documents): Zaak
 
         if ($document['refused'] ?? false) {
             Http::fake([$docUrl => Http::response(besluitRefusalBody(), 403)]);
+        } elseif ($document['unavailable'] ?? false) {
+            Http::fake([$docUrl => Http::response(besluitOutageBody(), 500)]);
         } else {
             ZgwHttpFake::fakeSingleDocument($uuid, ['titel' => $document['titel'] ?? 'Besluitdocument '.$uuid]);
         }
@@ -94,6 +99,8 @@ function zaakWithBesluitDocumentReads(array $documents): Zaak
 }
 
 /**
+ * The answer when the API is not authorised to hand the document over.
+ *
  * @return array<string, mixed>
  */
 function besluitRefusalBody(): array
@@ -106,10 +113,26 @@ function besluitRefusalBody(): array
     ];
 }
 
+/**
+ * The answer when the API fails to produce a document it would otherwise hand
+ * over: the case that may pass on its own.
+ *
+ * @return array<string, mixed>
+ */
+function besluitOutageBody(): array
+{
+    return [
+        'code' => 'error',
+        'title' => 'Er is een serverfout opgetreden.',
+        'status' => 500,
+        'detail' => '',
+    ];
+}
+
 test('the besluiten list keeps rendering when one besluit document cannot be read', function () {
     $zaak = zaakWithBesluitDocumentReads([
         ['titel' => 'Vergunning'],
-        ['refused' => true],
+        ['unavailable' => true],
     ]);
 
     livewire(BesluitenInfolist::class, ['zaak' => $zaak])
@@ -117,20 +140,64 @@ test('the besluiten list keeps rendering when one besluit document cannot be rea
         ->assertSee('Eén bestand bij een besluit kan nu niet worden getoond');
 });
 
-test('a besluit that fell away because its only document was refused is not left unmentioned', function () {
+test('a besluit document the API may not hand over is reported without a promise that waiting helps', function () {
+    $zaak = zaakWithBesluitDocumentReads([
+        ['titel' => 'Vergunning'],
+        ['refused' => true],
+    ]);
+
+    livewire(BesluitenInfolist::class, ['zaak' => $zaak])
+        ->assertSee('Vergunning')
+        ->assertSee('Niet beschikbaar via deze koppeling')
+        ->assertDontSee('Probeer het later opnieuw')
+        ->assertDontSee('kan nu niet worden getoond');
+});
+
+test('the besluiten notice for documents the API may not hand over carries no number', function () {
+    $zaak = zaakWithBesluitDocumentReads([
+        ['refused' => true],
+        ['refused' => true],
+    ]);
+
+    livewire(BesluitenInfolist::class, ['zaak' => $zaak])
+        ->assertSee('Niet beschikbaar via deze koppeling')
+        ->assertDontSee('2 bestanden')
+        ->assertDontSee('kunnen nu niet worden getoond');
+});
+
+test('a besluit that fell away because its only document is missing is not left unmentioned', function () {
     // A besluit is only shown once it carries an established document, so this
     // besluit is gone from the list. Without the notice the screen would simply
     // show no besluiten, which is the untrue empty state.
+    $zaak = zaakWithBesluitDocumentReads([['unavailable' => true]]);
+
+    $set = $zaak->besluitenForDisplay();
+
+    expect($set->besluiten)->toHaveCount(0)
+        ->and($set->unavailableDocumentCount)->toBe(1)
+        ->and($set->forbiddenDocumentCount)->toBe(0)
+        ->and($set->hasSomethingToShow())->toBeTrue();
+
+    livewire(BesluitenInfolist::class, ['zaak' => $zaak])
+        ->assertSee('Eén bestand bij een besluit kan nu niet worden getoond');
+});
+
+test('a besluit that fell away because the API may not hand its document over is not left unmentioned either', function () {
+    // The tab has to stay visible for this reason too, or the reader never learns
+    // the besluit exists at all.
     $zaak = zaakWithBesluitDocumentReads([['refused' => true]]);
 
     $set = $zaak->besluitenForDisplay();
 
     expect($set->besluiten)->toHaveCount(0)
-        ->and($set->unreadableDocumentCount)->toBe(1)
+        ->and($set->forbiddenDocumentCount)->toBe(1)
+        ->and($set->unavailableDocumentCount)->toBe(0)
+        ->and($set->hasForbiddenDocuments())->toBeTrue()
+        ->and($set->hasUnavailableDocuments())->toBeFalse()
         ->and($set->hasSomethingToShow())->toBeTrue();
 
     livewire(BesluitenInfolist::class, ['zaak' => $zaak])
-        ->assertSee('Eén bestand bij een besluit kan nu niet worden getoond');
+        ->assertSee('Niet beschikbaar via deze koppeling');
 });
 
 test('the readable besluit documents are still listed', function () {
@@ -143,7 +210,7 @@ test('the readable besluit documents are still listed', function () {
 
     expect($set->besluiten)->toHaveCount(1)
         ->and($set->besluiten->first()->besluitDocumenten)->toHaveCount(1)
-        ->and($set->unreadableDocumentCount)->toBe(1);
+        ->and($set->forbiddenDocumentCount)->toBe(1);
 });
 
 test('the besluiten attribute still fails when a besluit document cannot be read', function () {
@@ -157,7 +224,7 @@ test('the besluiten attribute still fails when a besluit document cannot be read
     expect(fn () => $zaak->besluiten)->toThrow(ApiRequestException::class);
 });
 
-test('an incomplete besluit read is cached briefly and kept away from the strict path', function () {
+test('an incomplete besluit read is cached and kept away from the strict path', function () {
     $zaak = zaakWithBesluitDocumentReads([
         ['titel' => 'Vergunning'],
         ['refused' => true],
@@ -166,7 +233,7 @@ test('an incomplete besluit read is cached briefly and kept away from the strict
     $zaak->besluitenForDisplay();
     $callsAfterFirstRead = count(Http::recorded());
 
-    expect($zaak->besluitenForDisplay()->unreadableDocumentCount)->toBe(1)
+    expect($zaak->besluitenForDisplay()->forbiddenDocumentCount)->toBe(1)
         ->and(count(Http::recorded()))->toBe($callsAfterFirstRead)
         ->and(fn () => $zaak->besluiten)->toThrow(ApiRequestException::class);
 });

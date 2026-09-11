@@ -23,11 +23,19 @@ class BesluitenInfolist extends Component implements HasSchemas
     public Zaak $zaak;
 
     /**
-     * How many besluit documents could not be read. Drives the notice above the
-     * list, so a besluit that fell away because its document is missing is never
-     * simply absent from the screen.
+     * How many besluit documents were not handed over for a reason that may pass
+     * on its own. Drives the notice above the list, so a besluit that fell away
+     * because its document is missing is never simply absent from the screen.
      */
-    public int $unreadableDocumentCount = 0;
+    public int $unavailableDocumentCount = 0;
+
+    /**
+     * Whether a besluit document was left out because the documents API is not
+     * authorised to hand it over. A flag and not a count, for the same reason as
+     * on the documents tab: the number would describe documents this reader is not
+     * shown.
+     */
+    public bool $hasForbiddenDocuments = false;
 
     private ?ZaakBesluitSet $besluitSet = null;
 
@@ -114,7 +122,8 @@ class BesluitenInfolist extends Component implements HasSchemas
 
     public function render()
     {
-        $this->unreadableDocumentCount = $this->besluiten()->unreadableDocumentCount;
+        $this->unavailableDocumentCount = $this->besluiten()->unavailableDocumentCount;
+        $this->hasForbiddenDocuments = $this->besluiten()->hasForbiddenDocuments();
 
         return view('livewire.zaken.besluiten-infolist');
     }
