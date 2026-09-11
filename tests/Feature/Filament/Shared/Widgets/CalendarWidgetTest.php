@@ -13,6 +13,7 @@ use App\Filament\Organiser\Pages\Calendar as OrganiserCalendarPage;
 use App\Filament\Organiser\Widgets\OrganiserCalendarWidget;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -384,6 +385,90 @@ test('admin calendar widget applies zaaktype filter in table view', function () 
         ])
         ->assertCanSeeTableRecords([$this->zaak])
         ->assertCanNotSeeTableRecords([$otherZaak]);
+});
+
+test('admin calendar widget applies zaaktype filter to a zaaktype without a stored role', function () {
+    // `zaaktypen.role` is nullable and is only written by a koppeling or by the
+    // catalogus sync, so a row that predates the column keeps a null role. The
+    // test above fills the column first and therefore covers only the happy
+    // state; this one leaves it null, as the factory and an upgraded database
+    // do, and the zaak still has to be findable through the naming convention.
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    $vergunningZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'name' => 'Evenementenvergunning Testgemeente',
+        'role' => null,
+    ]);
+    $vergunningZaak = Zaak::factory()->create([
+        'zaaktype_id' => $vergunningZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $meldingZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'name' => 'Melding klein evenement Testgemeente',
+        'role' => null,
+    ]);
+    $meldingZaak = Zaak::factory()->create([
+        'zaaktype_id' => $meldingZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
+        ])
+        ->assertCanSeeTableRecords([$vergunningZaak])
+        // $this->zaak hangs on a factory name that follows no convention, so it
+        // resolves to no role and stays out just like the melding.
+        ->assertCanNotSeeTableRecords([$meldingZaak, $this->zaak]);
+});
+
+test('admin calendar widget applies zaaktype filter to a koppeld zaaktype without a stored role', function () {
+    // First rung of the ladder: the local row carries the external
+    // omschrijving, so only the koppeling can tell the role.
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'EXT-1',
+    ]);
+
+    $gekoppeldZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'identificatie' => 'EXT-1',
+        'name' => 'Activiteit behandelen',
+        'role' => null,
+    ]);
+    $gekoppeldZaak = Zaak::factory()->create([
+        'zaaktype_id' => $gekoppeldZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
+        ])
+        ->assertCanSeeTableRecords([$gekoppeldZaak])
+        ->assertCanNotSeeTableRecords([$this->zaak]);
 });
 
 test('admin calendar widget applies organisations filter in table view', function () {

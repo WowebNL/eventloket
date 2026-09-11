@@ -9,6 +9,7 @@ use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Zaak;
 use App\Services\Zgw\SubmissionDocumentDetector;
 use App\ValueObjects\ZGW\Informatieobject;
+use App\ValueObjects\ZGW\ZaakDocumentSet;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -47,6 +48,15 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
 
     public bool $hasDocuments = false;
 
+    /**
+     * How many documents of this zaak could not be read. Drives the notice
+     * above the table, so the reader is never shown a short list as if it were
+     * the whole list.
+     */
+    public int $unreadableDocumentCount = 0;
+
+    private ?ZaakDocumentSet $documentSet = null;
+
     public function mount(Zaak $zaak, bool $submissionOnly = false): void
     {
         $this->zaak = $zaak;
@@ -57,6 +67,18 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     public function refresh(): void {}
 
     /**
+     * The documents read for this zaak, resolved once per request.
+     *
+     * The model caches an incomplete read only briefly, so two calls can give
+     * two different answers; resolving once keeps the table, its empty state and
+     * the notice above them describing one and the same read.
+     */
+    private function documents(): ZaakDocumentSet
+    {
+        return $this->documentSet ??= $this->zaak->documentenForDisplay();
+    }
+
+    /**
      * The documents shown in the table. In read-only submission mode only the
      * files the organiser delivered with the application are listed.
      *
@@ -64,7 +86,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
      */
     private function records(): Collection
     {
-        $documenten = $this->zaak->documenten;
+        $documenten = $this->documents()->documenten;
 
         if ($this->submissionOnly) {
             return $documenten->filter(
@@ -179,16 +201,21 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     }
 
     /**
-     * An empty table has three quite different causes, which used to be
+     * An empty table has four quite different causes, which used to be
      * indistinguishable: nothing has arrived from ZGW yet, everything that did
-     * arrive is hidden by the visibility rules, or (in submission mode) the zaak
-     * only holds documents that were not part of the application. Saying "hold
-     * on, the files are coming" in the latter two cases sends the reader waiting
-     * for something that is never going to appear.
+     * arrive is hidden by the visibility rules, (in submission mode) the zaak
+     * only holds documents that were not part of the application, or the
+     * documents API refused every document there is. Saying "hold on, the files
+     * are coming" in the other three cases sends the reader waiting for
+     * something that is never going to appear.
      */
     private function emptyStateHeading(): string
     {
-        if ($this->zaak->documenten->isNotEmpty()) {
+        if ($this->nothingCouldBeRead()) {
+            return __('resources/zaak.documents.unreadable.empty_state_heading');
+        }
+
+        if ($this->documents()->documenten->isNotEmpty()) {
             return __('Geen bestanden om te tonen');
         }
 
@@ -199,7 +226,13 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
 
     private function emptyStateDescription(): ?string
     {
-        if ($this->zaak->documenten->isNotEmpty()) {
+        if ($this->nothingCouldBeRead()) {
+            // The notice above the table already explains this one; repeating it
+            // here would only say the same thing twice.
+            return null;
+        }
+
+        if ($this->documents()->documenten->isNotEmpty()) {
             // Documents exist and are visible, but none of them belong to the
             // application itself.
             return __('Bij deze aanvraag zijn geen aanvraagdocumenten ingediend.');
@@ -211,18 +244,32 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     }
 
     /**
-     * Whether ZGW holds any document for this zaak at all, before the status and
-     * role filters are applied. Distinguishes "nothing there yet" from
-     * "everything filtered out".
+     * Whether every document of this zaak was refused. Blocks the two empty
+     * states that would then be untrue: "the files are still coming" (they are
+     * already there) and "not visible with your rights" (rights are not what
+     * went wrong here).
+     */
+    private function nothingCouldBeRead(): bool
+    {
+        return $this->documents()->isIncomplete() && $this->documents()->documenten->isEmpty();
+    }
+
+    /**
+     * Whether the zaak holds any document at all, before the status and role
+     * filters are applied. Distinguishes "nothing there yet" from "everything
+     * filtered out".
      */
     private function zaakHasDocumentsInZgw(): bool
     {
-        return $this->zaak->allDocumentsCount() > 0;
+        return $this->documents()->totalCount() > 0;
     }
 
     public function render(): View
     {
-        $this->hasDocuments = $this->zaak->documenten->isNotEmpty();
+        $documents = $this->documents();
+
+        $this->hasDocuments = $documents->documenten->isNotEmpty();
+        $this->unreadableDocumentCount = $documents->unreadableCount;
 
         return view('livewire.zaken.zaak-documents-table');
     }

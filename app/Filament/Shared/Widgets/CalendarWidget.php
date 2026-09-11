@@ -599,7 +599,14 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     protected function applyZaaktypesFilter(Builder $query, array $filters)
     {
         if (! empty($filters['zaaktype_roles'])) {
-            $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('role', $filters['zaaktype_roles']));
+            // Matched through the effective-role ladder rather than the `role`
+            // column directly: that column is nullable and only written by a
+            // koppeling or a catalogus sync, so comparing it drops every zaak
+            // whose zaaktype has no stored role.
+            $query->whereHas('zaaktype', function (Builder $zaaktypen) use ($filters): Builder {
+                /** @var Builder<Zaaktype> $zaaktypen */
+                return $zaaktypen->withEffectiveRoleIn($filters['zaaktype_roles']);
+            });
         }
     }
 }

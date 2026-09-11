@@ -18,6 +18,8 @@ use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\Besluit;
 use App\ValueObjects\ZGW\Informatieobject;
+use App\ValueObjects\ZGW\ZaakBesluitSet;
+use App\ValueObjects\ZGW\ZaakDocumentSet;
 use Guava\Calendar\Contracts\Eventable;
 use Guava\Calendar\ValueObjects\CalendarEvent;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -35,17 +37,22 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Throwable;
 use Woweb\Zgw\Api\Endpoints\DirectEndpoint;
 use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 use Woweb\Zgw\Data\Generated\Catalogi\StatusTypeData;
+use Woweb\Zgw\Exceptions\ApiRequestException;
+use Woweb\Zgw\Exceptions\DisallowedHostException;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
  * @property ZaakReferenceData $reference_data
+ * @property string $zgw_connection
  * @property array<string, mixed> $form_state_snapshot
  * @property array<string, mixed>|null $imported_data
  * @property-read ?Organisation                $organisation
@@ -70,10 +77,23 @@ class Zaak extends Model implements Eventable
      */
     private const ZGW_READ_CACHE_TTL = 300;
 
+    /**
+     * How long an *incomplete* read from ZGW is cached.
+     *
+     * A screen that shows an incomplete list polls itself, so not caching the
+     * gap at all would turn every poll into a fresh round of API calls for as
+     * long as the refusal lasts, and a refusal can be a permission setting
+     * rather than a passing outage. A short window bounds that traffic and the
+     * log volume that comes with it, while keeping the screen's recovery inside
+     * a minute once the API hands the resource over again.
+     */
+    private const ZGW_DEGRADED_READ_CACHE_TTL = 60;
+
     protected $table = 'zaken';
 
     protected $fillable = [
         'public_id',
+        'zgw_connection',
         'zgw_zaak_url',
         'zaaktype_id',
         'zgw_zaaktype_url',
@@ -127,6 +147,11 @@ class Zaak extends Model implements Eventable
 
     /**
      * The ZGW connection name to use for calls about this zaak.
+     *
+     * Deliberately resolved rather than read from the `zgw_connection` column.
+     * The column is a record of which instance issued this zaak's number, kept
+     * so the uniqueness of `public_id` can be scoped to it; where the zaak is
+     * read from today follows its zaaktype and stays the resolver's answer.
      */
     public function zgwConnectionName(): string
     {
@@ -496,35 +521,59 @@ class Zaak extends Model implements Eventable
         );
     }
 
-    /** @return Attribute<Collection<Informatieobject>, void> */
+    /**
+     * The documents of this zaak, filtered to what the caller may see.
+     *
+     * A document the documents API refuses aborts the whole read here. That is
+     * deliberate: this is the attribute that mail attachments and queued jobs
+     * read, and an attachment list that quietly drops a document is worse than
+     * a job that fails. Read-only screens that can tell the reader about the
+     * gap opt in to a skipping read through {@see documentenForDisplay()}.
+     *
+     * @return Attribute<Collection<Informatieobject>, void>
+     */
     protected function documenten(): Attribute
     {
         return Attribute::make(
-            get: function ($value, $attributes) {
-                // Only show established documents; concepts from an external ZGW
-                // backend are hidden (documents without an explicit status, such
-                // as our own uploads, count as established, and so do archived
-                // ones). See Informatieobject::isVastgesteld().
-                $documenten = $this->getDocuments()->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld());
-
-                if (app()->runningInConsole()) {
-                    // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
-                    return $documenten->values();
-                }
-
-                return $this->filterDocumentenForRole($documenten, auth()->user()->role);
-            },
+            get: fn () => $this->visibleDocuments($this->getDocuments()),
         );
     }
 
     /**
-     * How many documents ZGW holds for this zaak, before the status and role
-     * filters run. Lets a view tell "nothing has arrived yet" apart from
-     * "everything is filtered out", which otherwise look identical.
+     * The documents to show on a zaak detail screen.
+     *
+     * Unlike the {@see documenten} attribute this leaves out a document the
+     * documents API refuses instead of failing, and reports how many were left
+     * out, so the screen can show the documents it does have and still say that
+     * something is missing.
      */
-    public function allDocumentsCount(): int
+    public function documentenForDisplay(): ZaakDocumentSet
     {
-        return $this->getDocuments()->count();
+        $set = $this->readDocuments(skipUnreadable: true);
+
+        return $set->withDocumenten($this->visibleDocuments($set->documenten));
+    }
+
+    /**
+     * Narrow a raw document list to what the caller may see.
+     *
+     * @param  Collection<int, Informatieobject>  $documenten
+     * @return Collection<int, Informatieobject>
+     */
+    private function visibleDocuments(Collection $documenten): Collection
+    {
+        // Only show established documents; concepts from an external ZGW
+        // backend are hidden (documents without an explicit status, such
+        // as our own uploads, count as established, and so do archived
+        // ones). See Informatieobject::isVastgesteld().
+        $documenten = $documenten->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld());
+
+        if (app()->runningInConsole()) {
+            // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
+            return $documenten->values();
+        }
+
+        return $this->filterDocumentenForRole($documenten, auth()->user()->role);
     }
 
     /**
@@ -590,40 +639,74 @@ class Zaak extends Model implements Eventable
         );
     }
 
-    /** @return Attribute<Collection<Besluit>, void> */
+    /**
+     * The besluiten of this zaak, filtered to what the caller may see.
+     *
+     * As with {@see documenten}, a besluit document the documents API refuses
+     * aborts the whole read here, so a caller that needs every document is never
+     * quietly handed a shorter list. Read-only screens opt in to a skipping read
+     * through {@see besluitenForDisplay()}.
+     *
+     * @return Attribute<Collection<Besluit>, void>
+     */
     protected function besluiten(): Attribute
     {
         return Attribute::make(
-            get: function ($value, $attributes) {
-                // Only show a besluit once its send date has been reached. See
-                // besluitIsPubliceerbaar(). This is a publication rule, not a role
-                // rule, so it also applies in console context.
-                $besluiten = $this->getBesluiten()
-                    ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
-                    ->values();
-
-                if (app()->runningInConsole()) {
-                    // Queue and console have no authenticated user; the role filter
-                    // is applied before the job is queued, mirroring documenten().
-                    return $besluiten;
-                }
-
-                // The besluitdocumenten are filtered to what the current role may
-                // see on this connection: map(), not each(), because the value
-                // object is readonly and a rebuilt besluit has to replace the
-                // original one. each() returns the collection unchanged, which
-                // would leave every role with all besluitdocumenten.
-                $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role);
-
-                return $besluiten
-                    ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
-                        'besluitDocumenten' => $besluit->besluitDocumenten
-                            ?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, $allowed))
-                            ->values(),
-                    ])))
-                    ->values();
-            },
+            get: fn () => $this->visibleBesluiten($this->getBesluiten()),
         );
+    }
+
+    /**
+     * The besluiten to show on a zaak detail screen, with the number of besluit
+     * documents that could not be read.
+     *
+     * That number matters more here than it does for the documents tab: a
+     * besluit is only publishable once it carries an established document, so a
+     * refused document can make the besluit vanish entirely rather than merely
+     * shorten its file list.
+     */
+    public function besluitenForDisplay(): ZaakBesluitSet
+    {
+        $set = $this->readBesluiten(skipUnreadable: true);
+
+        return $set->withBesluiten($this->visibleBesluiten($set->besluiten));
+    }
+
+    /**
+     * Narrow a raw besluit list to what the caller may see.
+     *
+     * @param  Collection<int, Besluit>  $besluiten
+     * @return Collection<int, Besluit>
+     */
+    private function visibleBesluiten(Collection $besluiten): Collection
+    {
+        // Only show a besluit once its send date has been reached. See
+        // besluitIsPubliceerbaar(). This is a publication rule, not a role
+        // rule, so it also applies in console context.
+        $besluiten = $besluiten
+            ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
+            ->values();
+
+        if (app()->runningInConsole()) {
+            // Queue and console have no authenticated user; the role filter
+            // is applied before the job is queued, mirroring documenten().
+            return $besluiten;
+        }
+
+        // The besluitdocumenten are filtered to what the current role may
+        // see on this connection: map(), not each(), because the value
+        // object is readonly and a rebuilt besluit has to replace the
+        // original one. each() returns the collection unchanged, which
+        // would leave every role with all besluitdocumenten.
+        $allowed = ZgwConnectionConfig::documentVisibilityForRole($this->zgwConnectionName(), auth()->user()->role);
+
+        return $besluiten
+            ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                'besluitDocumenten' => $besluit->besluitDocumenten
+                    ?->filter(fn (Informatieobject $informatieobject) => in_array($informatieobject->vertrouwelijkheidaanduiding, $allowed))
+                    ->values(),
+            ])))
+            ->values();
     }
 
     /**
@@ -654,7 +737,7 @@ class Zaak extends Model implements Eventable
             return Carbon::parse($verzenddatum, 'Europe/Amsterdam')
                 ->startOfDay()
                 ->lessThanOrEqualTo(Carbon::now('Europe/Amsterdam')->startOfDay());
-        } catch (\Throwable) {
+        } catch (Throwable) {
             return false;
         }
     }
@@ -682,50 +765,223 @@ class Zaak extends Model implements Eventable
         return is_string($publicatiedatum) && $publicatiedatum !== '' ? $publicatiedatum : null;
     }
 
+    /**
+     * Every besluit of the zaak, unfiltered, failing on the first document that
+     * cannot be read.
+     *
+     * @return Collection<int, Besluit>
+     */
     private function getBesluiten(): Collection
     {
-        if (! $this->zgw_zaak_url) {
-            return collect();
-        }
-
-        return Cache::remember("zaak.{$this->id}.besluiten", self::ZGW_READ_CACHE_TTL, function () {
-            $connection = Zgw::connection($this->zgwConnectionName());
-            $direct = new DirectEndpoint($connection);
-            $besluiten = $connection->besluiten()->besluiten()->index(['zaak' => $this->zgw_zaak_url]);
-            $collection = collect();
-            foreach ($besluiten as $besluit) {
-                $besluitDocumentenCollection = collect();
-                $besluitInformatieObjecten = $connection->besluiten()->besluitinformatieobjecten()->index(['besluit' => $besluit['url']]);
-                foreach ($besluitInformatieObjecten as $besluitInformatieObject) {
-                    $besluitDocumentenCollection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($besluitInformatieObject['informatieobject']))));
-                }
-                $collection->push(new Besluit(...array_merge($besluit, [
-                    'besluittypeObject' => BesluitTypeData::from($direct->getByUrl($besluit['besluittype'])),
-                    'besluitDocumenten' => $besluitDocumentenCollection,
-                ])));
-            }
-
-            return $collection;
-        });
+        return $this->readBesluiten(skipUnreadable: false)->besluiten;
     }
 
-    private function getDocuments()
+    /**
+     * Read the besluiten of this zaak, with their documents.
+     *
+     * The per-document step is the same call on the same endpoint as in
+     * {@see readDocuments()}, so it carries the same containment: with
+     * $skipUnreadable a document the API refuses is counted and left out instead
+     * of aborting the read.
+     *
+     * Two reads around it deliberately stay strict, because skipping them means
+     * something else than "one file is missing". The besluittype is not a
+     * document but the definition the besluit is built from, so a besluit
+     * without it cannot be constructed at all; and a failing list call means the
+     * besluiten are unknown rather than incomplete.
+     */
+    private function readBesluiten(bool $skipUnreadable): ZaakBesluitSet
     {
         if (! $this->zgw_zaak_url) {
-            return collect();
+            return new ZaakBesluitSet(collect());
         }
 
-        return Cache::remember("zaak.{$this->id}.documenten", self::ZGW_READ_CACHE_TTL, function () {
-            $connection = Zgw::connection($this->zgwConnectionName());
-            $direct = new DirectEndpoint($connection);
-            $zaakinformatieobjecten = $connection->zaken()->zaakinformatieobjecten()->index(['zaak' => $this->zgw_zaak_url]);
-            $collection = collect();
-            foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
-                $collection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($zaakinformatieobject['informatieobject']))));
+        $cacheKey = "zaak.{$this->id}.besluiten";
+        $cached = Cache::get($cacheKey);
+
+        if ($cached instanceof Collection) {
+            return new ZaakBesluitSet($cached);
+        }
+
+        if ($cached instanceof ZaakBesluitSet && $skipUnreadable) {
+            return $cached;
+        }
+
+        $connectionName = $this->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
+        $direct = new DirectEndpoint($connection);
+        $besluiten = $connection->besluiten()->besluiten()->index(['zaak' => $this->zgw_zaak_url]);
+
+        $collection = collect();
+        $unreadable = 0;
+
+        foreach ($besluiten as $besluit) {
+            $besluitDocumentenCollection = collect();
+            $besluitInformatieObjecten = $connection->besluiten()->besluitinformatieobjecten()->index(['besluit' => $besluit['url']]);
+
+            foreach ($besluitInformatieObjecten as $besluitInformatieObject) {
+                $documentUrl = $besluitInformatieObject['informatieobject'];
+
+                try {
+                    $besluitDocumentenCollection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($documentUrl))));
+                } catch (DisallowedHostException $e) {
+                    // See readDocuments(): an origin the connection does not trust
+                    // is a trust boundary and stays loud.
+                    throw $e;
+                } catch (Throwable $e) {
+                    if (! $skipUnreadable) {
+                        throw $e;
+                    }
+
+                    $unreadable++;
+                    $this->reportSkippedResource('besluit document', $connectionName, $documentUrl, $e);
+                }
             }
 
-            return $collection;
-        });
+            $collection->push(new Besluit(...array_merge($besluit, [
+                'besluittypeObject' => BesluitTypeData::from($direct->getByUrl($besluit['besluittype'])),
+                'besluitDocumenten' => $besluitDocumentenCollection,
+            ])));
+        }
+
+        if ($unreadable === 0) {
+            Cache::put($cacheKey, $collection, self::ZGW_READ_CACHE_TTL);
+
+            return new ZaakBesluitSet($collection);
+        }
+
+        $set = new ZaakBesluitSet($collection, $unreadable);
+        Cache::put($cacheKey, $set, self::ZGW_DEGRADED_READ_CACHE_TTL);
+
+        return $set;
+    }
+
+    /**
+     * Every document the zaak holds, unfiltered, failing on the first one that
+     * cannot be read.
+     *
+     * @return Collection<int, Informatieobject>
+     */
+    private function getDocuments(): Collection
+    {
+        return $this->readDocuments(skipUnreadable: false)->documenten;
+    }
+
+    /**
+     * Read the documents of this zaak from the documents API.
+     *
+     * Documents are listed in one call and then fetched one by one, and a
+     * documents API may well hand over the list while refusing an individual
+     * document. With $skipUnreadable such a document is counted and left out
+     * instead of aborting the read, so one document cannot take a whole screen
+     * with it; without it the failure propagates, which is what a caller that
+     * needs every document wants.
+     *
+     * An incomplete read is cached with a shorter TTL than a complete one, see
+     * self::ZGW_DEGRADED_READ_CACHE_TTL. The screens that accept a gap refresh
+     * themselves every few seconds, so not caching it at all would put a fresh
+     * round of API calls behind every refresh for as long as the refusal lasts,
+     * while caching it for the normal window would leave the screen reporting
+     * missing documents long after the API started handing them over again. The
+     * short window bounds both.
+     */
+    private function readDocuments(bool $skipUnreadable): ZaakDocumentSet
+    {
+        if (! $this->zgw_zaak_url) {
+            return new ZaakDocumentSet(collect());
+        }
+
+        $cacheKey = "zaak.{$this->id}.documenten";
+        $cached = Cache::get($cacheKey);
+
+        if ($cached instanceof Collection) {
+            return new ZaakDocumentSet($cached, $cached->count());
+        }
+
+        // An incomplete read is cached as the set itself rather than as a plain
+        // collection, so the type says what it is. A caller that needs every
+        // document therefore reads straight past it and fails on the API, which
+        // is what it asked for; only a caller that accepts a gap may have it.
+        if ($cached instanceof ZaakDocumentSet && $skipUnreadable) {
+            return $cached;
+        }
+
+        $connectionName = $this->zgwConnectionName();
+        $connection = Zgw::connection($connectionName);
+        $direct = new DirectEndpoint($connection);
+        $zaakinformatieobjecten = $connection->zaken()->zaakinformatieobjecten()->index(['zaak' => $this->zgw_zaak_url]);
+
+        $collection = collect();
+        $unreadable = 0;
+
+        foreach ($zaakinformatieobjecten as $zaakinformatieobject) {
+            $documentUrl = $zaakinformatieobject['informatieobject'];
+
+            try {
+                $collection->push(new Informatieobject(...ZgwResource::ensureUuid($direct->getByUrl($documentUrl))));
+            } catch (DisallowedHostException $e) {
+                // Not a document we could not read but a url we refuse to call:
+                // the connection's allowlist rejected the origin the list points
+                // at. That is a trust boundary, not an availability problem
+                // outside our control, so it keeps the loud failure the guard was
+                // built to produce instead of being softened into a notice.
+                throw $e;
+            } catch (Throwable $e) {
+                if (! $skipUnreadable) {
+                    throw $e;
+                }
+
+                $unreadable++;
+                $this->reportSkippedResource('document', $connectionName, $documentUrl, $e);
+            }
+        }
+
+        if ($unreadable === 0) {
+            Cache::put($cacheKey, $collection, self::ZGW_READ_CACHE_TTL);
+
+            return new ZaakDocumentSet($collection, $collection->count());
+        }
+
+        $set = new ZaakDocumentSet($collection, $collection->count(), $unreadable);
+        Cache::put($cacheKey, $set, self::ZGW_DEGRADED_READ_CACHE_TTL);
+
+        return $set;
+    }
+
+    /**
+     * Record a resource that was skipped, twice over.
+     *
+     * The log line carries enough to tell a refusal apart from an outage: which
+     * resource, the HTTP status and the error code the API returned. The
+     * response body stays out of it on purpose, because a documents API answer
+     * can carry the resource's own metadata.
+     *
+     * Reporting it as well is what keeps the degradation visible. Before the
+     * containment the failure surfaced as an error report on its own; a log line
+     * would not replace that, because the log stack has no reporting channel in
+     * it. Going through report() also reuses the handler that attaches the ZGW
+     * response as context, which is the detail that makes such a refusal
+     * diagnosable at all.
+     *
+     * @param  string  $kind  what was skipped, for the log line
+     */
+    private function reportSkippedResource(string $kind, string $connectionName, string $url, Throwable $e): void
+    {
+        $response = $e instanceof ApiRequestException ? $e->getResponse() : null;
+        $body = $response?->json();
+        $code = is_array($body) ? ($body['code'] ?? null) : null;
+
+        Log::warning("A zaak {$kind} could not be read and was left out of the list.", [
+            'zaak_id' => $this->id,
+            'connection' => $connectionName,
+            'kind' => $kind,
+            'url' => $url,
+            'status' => $response?->status(),
+            'code' => is_scalar($code) ? (string) $code : null,
+            'exception' => $e::class,
+        ]);
+
+        report($e);
     }
 
     /** @return Attribute<StatusTypeData|null, void> */

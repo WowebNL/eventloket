@@ -1,5 +1,6 @@
 @php
     $stepLabels = [
+        'urls' => __('municipality/resources/zgw_connection.actions.verify.steps.urls'),
         'connection' => __('municipality/resources/zgw_connection.actions.verify.steps.connection'),
         'apis' => __('municipality/resources/zgw_connection.actions.verify.steps.apis'),
         'abonnement' => __('municipality/resources/zgw_connection.actions.verify.steps.abonnement'),

@@ -107,6 +107,19 @@ it('audits a secret rotation as a redacted marker without the value', function (
     expect(json_encode($activity->toArray()))->not->toContain('a-rotated-secret-at-least-32-bytes-long');
 });
 
+it('reports whether its runtime config can be built at all', function () {
+    // An activated connection whose config throws is routed to the main
+    // connection by the resolver while it keeps presenting itself as live, so
+    // the management surfaces have to be able to tell the two apart.
+    $usable = MunicipalityZgwConnection::factory()->active()->create();
+    $unusable = MunicipalityZgwConnection::factory()->active()->create(['client_secret' => 'te-kort']);
+
+    expect($usable->hasUsableConfig())->toBeTrue()
+        ->and($unusable->hasUsableConfig())->toBeFalse()
+        // Both are activated: the difference is invisible in that stamp alone.
+        ->and($unusable->isActive())->toBeTrue();
+});
+
 it('reports its active state from activated_at', function () {
     $inactive = MunicipalityZgwConnection::factory()->create();
     $active = MunicipalityZgwConnection::factory()->active()->create();

@@ -469,7 +469,34 @@ class ViewZaak extends ViewRecord
                             </x-filament::button>
                         BLADE))),
                 ])
-                ->action(function (Zaak $record, array $data) {
+                ->action(function (Zaak $record, array $data, Action $action) {
+                    // The result mail is built in a queued job, so a document that cannot
+                    // be downloaded there would fail where nobody sees it, after the zaak
+                    // has already been finished. Checking the selected attachments here
+                    // keeps that decision with the handler: nothing is sent and nothing is
+                    // finished until every selected document can actually be handed over.
+                    $unretrievable = Result::unretrievableAttachments($record, $data['message_documenten'] ?? null);
+
+                    if ($unretrievable !== []) {
+                        Notification::make()
+                            ->title(__('municipality/resources/zaak.header_actions.finish_zaak.unretrievable_attachments.title'))
+                            ->body(new HtmlString(
+                                '<p>'.e(__('municipality/resources/zaak.header_actions.finish_zaak.unretrievable_attachments.intro')).'</p>'
+                                .'<ul class="list-disc ps-4">'
+                                .implode('', array_map(
+                                    static fn (string $titel): string => '<li>'.e($titel).'</li>',
+                                    $unretrievable,
+                                ))
+                                .'</ul>'
+                                .'<p>'.e(__('municipality/resources/zaak.header_actions.finish_zaak.unretrievable_attachments.outro')).'</p>'
+                            ))
+                            ->danger()
+                            ->persistent()
+                            ->send();
+
+                        $action->halt();
+                    }
+
                     /** @var MunicipalityUser $user */
                     $user = auth()->user();
                     $finishZaakObject = new FinishZaakObject(

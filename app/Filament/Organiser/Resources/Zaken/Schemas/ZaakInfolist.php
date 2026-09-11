@@ -41,7 +41,9 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(BesluitenInfolist::class, ['zaak' => $schema->model])->key('besluiten-table-'.($schema->model->id ?? 'new')),
                                     ])
-                                    ->visible(fn (Zaak $record) => $record->showsTab('besluiten') && $record->besluiten->count() > 0),
+                                    // See the shared infolist: the tab stays reachable when a
+                                    // besluit fell away because its document could not be read.
+                                    ->visible(fn (Zaak $record) => $record->showsTab('besluiten') && $record->besluitenForDisplay()->hasSomethingToShow()),
                                 Tab::make('documents')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.documents.label'))
                                     ->icon('heroicon-o-document')

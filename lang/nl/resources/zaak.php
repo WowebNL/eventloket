@@ -108,6 +108,28 @@ return [
             'label' => 'Opgevolgd door',
         ],
     ],
+    'documents' => [
+        // Shown when the documents API hands over the list of a zaak but
+        // refuses one or more of the documents themselves. Deliberately says
+        // nothing technical: the reader can do nothing with a status code, only
+        // with the fact that something is missing and that it is not their doing.
+        'unreadable' => [
+            'title' => '{1} Eén bestand kan nu niet worden getoond|[2,*] :count bestanden kunnen nu niet worden getoond',
+            'description' => 'Dit ligt niet aan uw aanvraag. Probeer het later opnieuw, of neem contact op met de beheerder als u een bestand nu nodig heeft.',
+            'empty_state_heading' => 'De bestanden kunnen nu niet worden getoond',
+        ],
+    ],
+    'besluiten' => [
+        // Shown when a document belonging to a besluit cannot be fetched. Has
+        // its own wording on purpose: a besluit is only shown once it carries an
+        // established document, so a missing file can mean the besluit itself is
+        // not on screen, which is a different thing to a reader than a file
+        // missing from the file list.
+        'unreadable' => [
+            'title' => '{1} Eén bestand bij een besluit kan nu niet worden getoond|[2,*] :count bestanden bij besluiten kunnen nu niet worden getoond',
+            'description' => 'Dit ligt niet aan uw aanvraag. Een besluit kan hierdoor onvolledig zijn of nog niet zichtbaar. Probeer het later opnieuw, of neem contact op met de beheerder.',
+        ],
+    ],
     'filters' => [
         'workingstock' => [
             'label' => 'Snelfilter werkvoorraad',
