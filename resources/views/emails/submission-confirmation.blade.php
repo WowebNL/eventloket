@@ -57,7 +57,7 @@
 
     <p style="margin-top: 32px; color: #888; font-size: 12px;">
         Met vriendelijke groet,<br>
-        Eventloket — Veiligheidsregio Zuid-Limburg
+        Eventloket
     </p>
 </body>
 </html>
