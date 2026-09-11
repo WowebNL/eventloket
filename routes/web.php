@@ -13,6 +13,8 @@ use App\Models\Zaaktype;
 use App\Settings\WelcomeSettings;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Route;
 
 // service-register version probe. The register signs a "timestamp\npath" message
@@ -75,6 +77,53 @@ Route::get('/__version', function (Request $request) {
         if (! empty($osRelease['ID']) && ! empty($osRelease['VERSION_ID'])) {
             $runtimes[$osRelease['ID']] = $osRelease['VERSION_ID'];
         }
+    }
+
+    // The database and cache engines, so the register sees patches that land
+    // outside a deploy. These run only after the signature check above, so the
+    // register is the only caller (once a day), and they are read only config
+    // lookups: no table access, and the response carries bare version numbers, no
+    // host, user, schema or extension list. Each engine is wrapped separately so
+    // one that is down, absent or not configured drops out of the payload instead
+    // of failing the endpoint, because a 500 here would hide the whole version
+    // picture behind a single engine outage. Anything not detected is omitted.
+    $versionNumber = static function ($raw): ?string {
+        return is_string($raw) && preg_match('/\d+(\.\d+)*/', $raw, $m) ? $m[0] : null;
+    };
+
+    // PostgreSQL: SHOW server_version returns something like
+    // "16.15 (Debian 16.15-1.pgdg120+1)", of which we keep 16.15. Only the default
+    // connection is asked, and only when it actually runs on pgsql.
+    try {
+        $connection = DB::connection();
+        if ($connection->getDriverName() === 'pgsql') {
+            $row = (array) $connection->selectOne('SHOW server_version');
+            $postgres = $versionNumber($row['server_version'] ?? null);
+            if ($postgres !== null) {
+                $runtimes['postgresql'] = $postgres;
+            }
+        }
+    } catch (Throwable) {
+        // No usable database connection: report no engine rather than a 500.
+    }
+
+    // Redis or Valkey: INFO server carries the version. Valkey also reports a
+    // redis_version, but that is a protocol compatibility number; mapping it onto
+    // the redis cycles would produce a wrong end of life verdict, so valkey_version
+    // wins and decides which slug is reported. phpredis returns the section flat,
+    // predis nests it under "Server".
+    try {
+        $info = Redis::connection()->info('server');
+        $info = is_array($info) ? ($info['Server'] ?? $info) : [];
+        $valkey = $versionNumber($info['valkey_version'] ?? null);
+        $redis = $versionNumber($info['redis_version'] ?? null);
+        if ($valkey !== null) {
+            $runtimes['valkey'] = $valkey;
+        } elseif ($redis !== null) {
+            $runtimes['redis'] = $redis;
+        }
+    } catch (Throwable) {
+        // Same: an unreachable cache yields no redis or valkey runtime.
     }
 
     return response()->json([
