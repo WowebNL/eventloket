@@ -14,6 +14,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use App\Models\Users\ReviewerUser;
 use App\Observers\MunicipalityObserver;
+use App\Services\Zgw\ZaaktypeConnectionFallback;
 use App\Services\Zgw\ZgwConnectionResolver;
 use Brick\Geo\Geometry;
 use Database\Factories\MunicipalityFactory;
@@ -187,8 +188,29 @@ class Municipality extends Model implements HasGeometry
      * Own-instance municipalities are skipped by SyncZaaktypen's name-link (which
      * sets doorkomst_zaaktype_id), so the blueprint/role steps are what give them
      * a doorkomst zaaktype.
+     *
+     * The row that comes out of those steps is then put through the same
+     * connection fallback the aanvraag path uses ({@see ZaaktypeConnectionFallback}).
+     * Without it this resolution mirrored only the lookup and not the fallback, so
+     * a municipality whose own connection cannot be used got a deelzaak on main
+     * carrying a zaaktype url of its own catalogus, which main does not host.
      */
     public function resolveDoorkomstZaaktype(): ?Zaaktype
+    {
+        $zaaktype = $this->findDoorkomstZaaktype();
+
+        if ($zaaktype === null) {
+            return null;
+        }
+
+        return app(ZaaktypeConnectionFallback::class)->follow($this, ZaaktypeRole::Doorkomst, $zaaktype);
+    }
+
+    /**
+     * The configured doorkomst zaaktype row for this municipality, before the
+     * connection fallback is applied.
+     */
+    private function findDoorkomstZaaktype(): ?Zaaktype
     {
         $mapping = MunicipalityZaaktypeMapping::forMunicipalityRole($this, ZaaktypeRole::Doorkomst);
 
@@ -204,10 +226,15 @@ class Municipality extends Model implements HasGeometry
             }
         }
 
+        // Own connection first. A main row linked to this municipality is an
+        // (active or historical) fallback, so once the own row is usable again it
+        // has to win deterministically -- the same ordering ResolveZaaktype applies
+        // for the aanvraag roles.
         $byRole = Zaaktype::query()
             ->where('municipality_id', $this->id)
             ->where('is_active', true)
             ->where('role', ZaaktypeRole::Doorkomst->value)
+            ->orderByRaw("case when connection = 'main' then 1 else 0 end")
             ->first();
 
         if ($byRole) {

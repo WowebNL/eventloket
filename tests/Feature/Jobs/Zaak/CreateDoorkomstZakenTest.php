@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
+use App\Exceptions\ZaaktypeConnectionMismatchException;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
@@ -13,6 +14,7 @@ use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
 
@@ -1386,4 +1388,130 @@ test('creates a deelzaak for every passing gemeente even when the hoofdzaak has 
 
     expect($deel->reference_data->naam_evenement)->toBeNull()
         ->and($deel->public_id)->toBe('DEEL-1');
+});
+
+/**
+ * ---------------------------------------------------------------------------
+ * The doorkomst zaaktype and the connection it is sent to
+ * ---------------------------------------------------------------------------
+ *
+ * A doorkomst zaaktype url is only resolvable by the instance whose catalogus
+ * holds it. The runtime connection of a municipality routes to main whenever its
+ * own connection cannot be used, so without the fallback the deelzaak was created
+ * on main while the payload carried a url from the municipality's own catalogus,
+ * which main rejects because it does not know that service. The same url is used
+ * for the catalogi lookups that follow the create, so the whole deelzaak fails.
+ */
+
+/**
+ * The passing municipality runs its own connection that cannot be used (never
+ * activated) and keeps its doorkomst zaaktype in its own catalogus. The main
+ * catalogus optionally holds the counterpart the fallback can move to.
+ *
+ * @return array{hoofd: Municipality, passing: Municipality, hoofdzaak: Zaak, own: Zaaktype, main: ?Zaaktype}
+ */
+function doorkomstUnusableKoppelingScenario(bool $withMainCounterpart): array
+{
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+
+    MunicipalityZgwConnection::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'activated_at' => null,
+    ]);
+
+    $own = Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => "gemeente_{$scenario['passing']->id}",
+        'zgw_zaaktype_url' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-own',
+        'is_active' => true,
+    ]);
+
+    $main = $withMainCounterpart ? Zaaktype::factory()->create([
+        'name' => 'Doorkomst gemeente '.$scenario['passing']->name,
+        'municipality_id' => null,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-main',
+        'is_active' => true,
+    ]) : null;
+
+    return array_merge($scenario, ['own' => $own, 'main' => $main]);
+}
+
+test('creates the deelzaak with a main zaaktype when the doorkomst gemeente cannot use its own instance', function () {
+    fakeDoorkomstZgw();
+    $scenario = doorkomstUnusableKoppelingScenario(withMainCounterpart: true);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    // The payload carries a zaaktype of the instance it is posted to.
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken')
+        && $request['zaaktype'] === ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-main');
+
+    // And the local deelzaak records the zaaktype that was actually used.
+    expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->value('zaaktype_id'))
+        ->toBe($scenario['main']->id);
+});
+
+test('refuses to send a doorkomst zaaktype url to an instance that does not host it', function () {
+    Exceptions::fake();
+    fakeDoorkomstZgw();
+    $scenario = doorkomstUnusableKoppelingScenario(withMainCounterpart: false);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    // Nothing is created anywhere, and the failure names both configurations
+    // instead of arriving as a validation error from the receiving side.
+    Http::assertNotSent(fn ($request) => $request->method() === 'POST');
+    Exceptions::assertReported(ZaaktypeConnectionMismatchException::class);
+
+    expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->exists())->toBeFalse();
+});
+
+/**
+ * A second passing municipality in the same state: a koppeling it cannot use, a
+ * doorkomst zaaktype only its own catalogus holds, and nothing on main to fall
+ * back to.
+ */
+function secondPassingMunicipalityWithUnusableKoppeling(): Municipality
+{
+    $municipality = Municipality::factory()->create([
+        'name' => 'Tweede doorkomstgemeente',
+        'geometry' => multipolygon([[1.5, -2.5], [1.5, -1.5], [2.5, -1.5], [2.5, -2.5], [1.5, -2.5]]),
+    ]);
+
+    MunicipalityZgwConnection::factory()->create([
+        'municipality_id' => $municipality->id,
+        'activated_at' => null,
+    ]);
+
+    Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => "gemeente_{$municipality->id}",
+        'zgw_zaaktype_url' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-m2-own',
+        'is_active' => true,
+    ]);
+
+    return $municipality;
+}
+
+test('one municipality with an unusable koppeling does not keep the others from getting a deelzaak', function () {
+    Exceptions::fake();
+    fakeDoorkomstZgwOnMain();
+    secondPassingMunicipalityWithUnusableKoppeling();
+
+    // Route 1 crosses the healthy doorkomst municipality, route 2 the one whose
+    // koppeling cannot be used.
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+        lineGeometry([[0.5, -2.0], [3.5, -2.0]]),
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+
+    expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m')]);
+    Exceptions::assertReported(ZaaktypeConnectionMismatchException::class);
 });
