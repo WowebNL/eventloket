@@ -19,21 +19,77 @@
 
 use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
-use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaaktype;
-use App\Services\Zgw\ZaaktypeMainFallback;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->resolve = new ResolveZaaktype(new DetermineAanvraagType, new ZaaktypeMainFallback);
+    // Resolved from the container: the resolver also needs the (singleton)
+    // ZgwConnectionResolver to keep the zaaktype on the connection the zaak
+    // will be created on.
+    $this->resolve = app(ResolveZaaktype::class);
 });
+
+/**
+ * A municipality that runs its own ZGW instance, with an own-instance zaaktype
+ * for the Vergunning role and the matching main-catalogus row available as a
+ * fallback. Returns both rows.
+ *
+ * @return array{0: Municipality, 1: Zaaktype, 2: Zaaktype}
+ */
+function fallbackSetup(array $connectionAttributes = [], bool $withMainRow = true): array
+{
+    $municipality = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
+
+    MunicipalityZgwConnection::factory()->create(array_merge(
+        ['municipality_id' => $municipality->id],
+        $connectionAttributes,
+    ));
+
+    MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'OWN-1',
+    ]));
+
+    $own = Zaaktype::factory()->create([
+        'name' => 'Eigen evenementenvergunning',
+        'identificatie' => 'OWN-1',
+        'connection' => "gemeente_{$municipality->id}",
+        'zgw_zaaktype_url' => 'https://gemeente.example.com/catalogi/api/v1/zaaktypen/own',
+        'role' => ZaaktypeRole::Vergunning,
+        'municipality_id' => $municipality->id,
+        'is_active' => true,
+    ]);
+
+    $main = $withMainRow
+        ? Zaaktype::factory()->create([
+            'name' => 'Evenementenvergunning gemeente Heerlen',
+            'identificatie' => 'MAIN-1',
+            'connection' => 'main',
+            'zgw_zaaktype_url' => 'https://zgw.example.com/catalogi/api/v1/zaaktypen/main',
+            'role' => ZaaktypeRole::Vergunning,
+            'municipality_id' => null,
+            'is_active' => true,
+        ])
+        : $own;
+
+    return [$municipality, $own, $main];
+}
+
+function fallbackVergunningState(): FormState
+{
+    return new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917'],
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+    ]);
+}
 
 test('vergunning voor Heerlen → Evenementenvergunning-zaaktype van Heerlen', function () {
     $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
@@ -170,6 +226,10 @@ test('valt terug op de gekoppelde main-rij als het eigen zaaktype inactief is', 
 test('een weer actief eigen zaaktype wint van een nog gekoppelde main-fallback', function () {
     $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
 
+    // The own-instance row only wins while the connection it names is usable;
+    // an own-instance row without a live connection deliberately falls back.
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $heerlen->id]);
+
     MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
         'municipality_id' => $heerlen->id,
         'role' => ZaaktypeRole::Vergunning,
@@ -266,6 +326,8 @@ test('een main-gemeente zonder gekoppeld type valt niet terug via de main-fallba
 test('eigen-connectie-rij wint ook op de role-route als beide gekoppeld en actief zijn', function () {
     $heerlen = Municipality::factory()->create(['name' => 'Heerlen', 'brk_identification' => 'GM0917']);
 
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $heerlen->id]);
+
     // No mapping: resolution goes through the role column for both rows.
     Zaaktype::factory()->create([
         'name' => 'Evenementenvergunning gemeente Heerlen',
@@ -335,4 +397,53 @@ test('gemeente die wel bij de gevonden locatie hoort wordt gewoon gebruikt', fun
     ]);
 
     expect($this->resolve->forState($state)->id)->toBe($verwacht->id);
+});
+
+/**
+ * The crossing this whole change is about: an own-instance zaaktype row while
+ * the runtime connection of that municipality falls back to main. The three
+ * triggers below are the three ways the resolver reaches that fallback.
+ *
+ * Without the fallback the zaak is created on main with a zaaktype url from the
+ * municipality's own catalogus, which the main instance cannot resolve.
+ */
+test('een nooit geactiveerde koppeling laat het zaaktype meevallen naar main', function () {
+    // Trigger (b): the koppeling is configured (which already creates an active
+    // own-instance zaaktype row) but was never activated.
+    [, , $main] = fallbackSetup(['activated_at' => null]);
+
+    expect($this->resolve->forState(fallbackVergunningState())->id)->toBe($main->id);
+});
+
+test('een gedeactiveerde koppeling laat het zaaktype meevallen naar main', function () {
+    // Trigger (a): the koppeling was live and has been switched off, by hand or
+    // by a change to one of the critical fields.
+    [, , $main] = fallbackSetup();
+
+    MunicipalityZgwConnection::query()->firstOrFail()->update(['activated_at' => null]);
+
+    expect($this->resolve->forState(fallbackVergunningState())->id)->toBe($main->id);
+});
+
+test('een actieve koppeling met onbruikbare config laat het zaaktype meevallen naar main', function () {
+    // Trigger (c): the row presents itself as live, but its config cannot be
+    // built, so the resolver routes the zaak to main anyway.
+    [, , $main] = fallbackSetup(['activated_at' => now(), 'client_secret' => 'te-kort']);
+
+    expect($this->resolve->forState(fallbackVergunningState())->id)->toBe($main->id);
+});
+
+test('een bruikbare actieve koppeling houdt het eigen zaaktype', function () {
+    [, $own] = fallbackSetup(['activated_at' => now()]);
+
+    expect($this->resolve->forState(fallbackVergunningState())->id)->toBe($own->id);
+});
+
+test('zonder main-tegenhanger blijft de eigen rij staan, zodat de zaak-stap luid faalt', function () {
+    // Nothing to fall back to: keeping the own row lets CreateZaakInZGW refuse
+    // the submit with a readable error instead of posting a zaaktype the main
+    // instance does not know.
+    [, $own] = fallbackSetup(['activated_at' => null], withMainRow: false);
+
+    expect($this->resolve->forState(fallbackVergunningState())->id)->toBe($own->id);
 });

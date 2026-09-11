@@ -9,19 +9,20 @@ declare(strict_types=1);
 
 use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
-use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
-use App\Services\Zgw\ZaaktypeMainFallback;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->resolve = new ResolveZaaktype(new DetermineAanvraagType, new ZaaktypeMainFallback);
+    // Resolved from the container: the resolver also needs the (singleton)
+    // ZgwConnectionResolver to keep the zaaktype on the connection the zaak
+    // will be created on.
+    $this->resolve = app(ResolveZaaktype::class);
 });
 
 test('ResolveZaaktype picks the zaaktype by the blueprint identificatie, ignoring the name prefix', function () {

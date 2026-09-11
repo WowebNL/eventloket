@@ -143,6 +143,8 @@ return [
             'label' => 'Status',
             'active' => 'Actief',
             'inactive' => 'Inactief',
+            'misconfigured' => 'Actief, niet bruikbaar',
+            'misconfigured_tooltip' => 'Deze koppeling staat op actief, maar de instellingen zijn niet bruikbaar. Zaken van deze gemeente worden daardoor in de standaard ZGW-instantie aangemaakt. Test de verbinding om te zien wat er misgaat.',
         ],
         'updated_at' => ['label' => 'Laatst gewijzigd'],
     ],
@@ -153,9 +155,18 @@ return [
             'modal_heading' => 'Verbinding controleren',
             'close' => 'Sluiten',
             'steps' => [
+                'urls' => 'Samenhang van de endpoints',
                 'connection' => 'Verbinding met de ZGW-instantie',
                 'apis' => 'Toegang tot de losse APIs',
                 'abonnement' => 'Notificatie-abonnement',
+            ],
+            'urls' => [
+                'success' => 'De Zaken API en de Catalogi API wijzen naar dezelfde instantie.',
+                'error' => 'Deze velden zijn leeg terwijl de koppeling wel een eigen instantie gebruikt: :fields. Een leeg veld neemt de URL van de hoofdkoppeling over, waardoor zaaktypen bij de ene instantie worden opgehaald en zaken bij de andere worden aangemaakt. Vul de URL in, of maak de koppeling volledig leeg zodat alles via de hoofdkoppeling loopt.',
+                'names' => [
+                    'zaken' => 'Zaken API base-URL',
+                    'catalogi' => 'Catalogi API base-URL',
+                ],
             ],
             'connection' => [
                 'success' => 'Eventloket kan deze ZGW-instantie bereiken.',
@@ -194,13 +205,13 @@ return [
         'deactivate' => [
             'label' => 'Deactiveren',
             'modal_heading' => 'Koppeling deactiveren',
-            'modal_description' => 'Zaken van deze gemeente vallen terug op de standaard ZGW-instantie tot de koppeling opnieuw wordt geactiveerd.',
+            'modal_description' => 'Nieuwe aanvragen van deze gemeente worden vanaf nu in de standaard ZGW-instantie aangemaakt, met het bijbehorende zaaktype uit die instantie, tot de koppeling opnieuw wordt geactiveerd. Is daar voor deze gemeente geen zaaktype beschikbaar, dan kan een aanvraag niet worden ingediend.',
             'confirm' => 'Deactiveren',
             'success' => 'De koppeling is gedeactiveerd.',
         ],
         'save_critical_change' => [
             'modal_heading' => 'Kritieke instelling wijzigen',
-            'modal_description' => 'Je wijzigt een cruciale instelling van deze ZGW-koppeling. Daardoor wordt de koppeling automatisch op inactief gezet en moet je de verbinding eerst opnieuw testen en daarna opnieuw activeren. Zolang de ZGW-instantie inactief is, worden zaken van deze gemeente aangemaakt in de gezamenlijke Open Zaak-verbinding. Wil je doorgaan?',
+            'modal_description' => 'Je wijzigt een cruciale instelling van deze ZGW-koppeling. Daardoor wordt de koppeling automatisch op inactief gezet en moet je de verbinding eerst opnieuw testen en daarna opnieuw activeren. Zolang de koppeling inactief is, worden nieuwe aanvragen van deze gemeente in de gezamenlijke ZGW-instantie aangemaakt, met het bijbehorende zaaktype uit die instantie. Wil je doorgaan?',
             'confirm' => 'Opslaan en deactiveren',
         ],
     ],

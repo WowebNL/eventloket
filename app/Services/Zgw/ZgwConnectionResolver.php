@@ -31,6 +31,26 @@ class ZgwConnectionResolver
     public const DEFAULT_CONNECTION = 'main';
 
     /**
+     * The municipality has no own connection row at all, so "main" is its normal
+     * home rather than a fallback.
+     */
+    public const FALLBACK_NO_CONNECTION = 'no_connection';
+
+    /**
+     * The connection exists but is not activated. Never activated, deactivated by
+     * hand, and deactivated automatically after a change to one of the
+     * {@see MunicipalityZgwConnection::CONNECTION_CRITICAL_FIELDS} all leave the
+     * same runtime state and are therefore one reason.
+     */
+    public const FALLBACK_NOT_ACTIVATED = 'not_activated';
+
+    /**
+     * The connection is activated but its runtime config cannot be built, so it
+     * cannot be used even though the row presents itself as live.
+     */
+    public const FALLBACK_INVALID_CONFIG = 'invalid_config';
+
+    /**
      * Cache key for the host => municipality_id index used by forUrl(). The
      * MunicipalityZgwConnectionObserver forgets it whenever a connection changes.
      */
@@ -132,6 +152,61 @@ class ZgwConnectionResolver
         }
 
         return $this->resolvedForManagement[$municipality->id] ??= $this->register($municipality);
+    }
+
+    /**
+     * Why the runtime path routes this municipality to "main" instead of to its
+     * own connection, or null when it does not fall back at all.
+     *
+     * The fallback itself is deliberate and keeps submissions working, but it is
+     * invisible from the outside: the municipality's own rows (its zaaktypen
+     * above all) keep pointing at its own instance while the zaak is created
+     * somewhere else. Callers use this both to keep those rows consistent with
+     * the connection actually used, and to say in the log why that happened.
+     *
+     * @return self::FALLBACK_*|null
+     */
+    public function mainFallbackReason(?Municipality $municipality): ?string
+    {
+        if ($municipality === null) {
+            return self::FALLBACK_NO_CONNECTION;
+        }
+
+        if ($this->forMunicipality($municipality) !== self::DEFAULT_CONNECTION) {
+            return null;
+        }
+
+        $connection = $municipality->zgwConnection;
+
+        return match (true) {
+            $connection === null => self::FALLBACK_NO_CONNECTION,
+            ! $connection->isActive() => self::FALLBACK_NOT_ACTIVATED,
+            default => self::FALLBACK_INVALID_CONFIG,
+        };
+    }
+
+    /**
+     * Whether a ZGW resource url is hosted by the given connection, i.e. whether
+     * its host is one of the hosts that connection is configured for.
+     *
+     * Used to keep a url that is sent *to* a ZGW instance (a zaaktype url in a
+     * zaak payload) on the instance that has to resolve it. A url on another host
+     * is not a service the receiving instance knows, and it would either be
+     * rejected or, worse, silently match something else.
+     *
+     * A connection without any configured host has nothing to compare against and
+     * is not second-guessed here; the same goes for a value that carries no host.
+     */
+    public function connectionServesUrl(string $connectionName, string $url): bool
+    {
+        $hosts = $this->configHosts((array) config("zgw.connections.{$connectionName}", []));
+        $host = $this->host($url);
+
+        if ($hosts === [] || $host === null) {
+            return true;
+        }
+
+        return in_array($host, $hosts, true);
     }
 
     /**
