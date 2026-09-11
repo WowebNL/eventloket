@@ -9,6 +9,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Exceptions\ZaaktypeConnectionMismatchException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
@@ -17,6 +18,7 @@ use App\Services\Zgw\InitiatorRolBuilder;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
+use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Brick\Geo\Curve;
@@ -102,7 +104,16 @@ class CreateDoorkomstZaken implements ShouldQueue
         $initiator = $map->buildInitiator($state);
 
         foreach ($passing as $muniRef) {
-            $this->createDeelzaakFor($hoofdConnectionName, $ozZaak, $muniRef, $state, $initiator);
+            try {
+                $this->createDeelzaakFor($hoofdConnectionName, $ozZaak, $muniRef, $state, $initiator);
+            } catch (ZaaktypeConnectionMismatchException $e) {
+                // One municipality's koppeling being inconsistent must not keep the
+                // other municipalities on the route from getting their deelzaak, so
+                // this is reported and skipped rather than failing the whole job.
+                // Creating a deelzaak is idempotent per (hoofdzaak x zaaktype), so a
+                // rerun after the koppeling is corrected still creates the missing one.
+                report($e);
+            }
         }
     }
 
@@ -187,6 +198,45 @@ class CreateDoorkomstZaken implements ShouldQueue
     }
 
     /**
+     * Last guard before anything is sent to the target connection: the doorkomst
+     * zaaktype url must be hosted by the connection the deelzaak is created on.
+     *
+     * It sits after the connection fallback in
+     * {@see Municipality::resolveDoorkomstZaaktype()}, which keeps zaaktype and
+     * connection together whenever it can, so this only fires where that could not
+     * resolve it. Every call it precedes uses this one url -- the create payload
+     * and the catalogi lookups for eigenschappen, roltypen, informatieobjecttypen
+     * and statustypen -- so refusing here keeps all of them off an instance that
+     * cannot resolve it. Sending it anyway produces a validation error from the
+     * receiving side that names neither of the two configurations involved.
+     *
+     * @throws ZaaktypeConnectionMismatchException
+     */
+    private function assertZaaktypeBelongsToConnection(string $connectionName, Zaaktype $doorkomstZaaktype): void
+    {
+        $zaaktypeUrl = (string) $doorkomstZaaktype->zgw_zaaktype_url;
+
+        if (app(ZgwConnectionResolver::class)->connectionServesUrl($connectionName, $zaaktypeUrl)) {
+            return;
+        }
+
+        Log::error('CreateDoorkomstZaken: doorkomst zaaktype url does not belong to the connection the deelzaak is created on; not creating it.', [
+            'municipality_id' => $doorkomstZaaktype->municipality_id,
+            'connection' => $connectionName,
+            'zaaktype_connection' => $doorkomstZaaktype->getAttribute('connection'),
+            'zaaktype_id' => $doorkomstZaaktype->id,
+            'zaaktype_url' => $zaaktypeUrl,
+        ]);
+
+        throw new ZaaktypeConnectionMismatchException(
+            zaaktypeUrl: $zaaktypeUrl,
+            connectionName: $connectionName,
+            zaaktypeId: $doorkomstZaaktype->id,
+            municipalityId: $doorkomstZaaktype->municipality_id,
+        );
+    }
+
+    /**
      * @param  array<string, mixed>  $initiator  output of ZaakeigenschappenMap::buildInitiator()
      */
     private function createDeelzaakFor(string $hoofdConnectionName, ZaakReadModel $hoofdZaak, Municipality $muniRef, FormState $state, array $initiator): void
@@ -223,6 +273,9 @@ class CreateDoorkomstZaken implements ShouldQueue
         // deelzaak and its zaaktype in the same instance. Reads from the hoofdzaak
         // keep using the hoofdzaak connection.
         $deelConnectionName = $doorkomstZaaktype->zgwConnectionName();
+
+        $this->assertZaaktypeBelongsToConnection($deelConnectionName, $doorkomstZaaktype);
+
         $deelConnection = Zgw::connection($deelConnectionName);
 
         // The koppeling of the doorkomst zaaktype decides how its catalogus names

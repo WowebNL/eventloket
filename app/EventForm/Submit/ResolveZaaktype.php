@@ -6,15 +6,13 @@ namespace App\EventForm\Submit;
 
 use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
-use App\EventForm\Submit\Steps\CreateZaakInZGW;
 use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaaktype;
+use App\Services\Zgw\ZaaktypeConnectionFallback;
 use App\Services\Zgw\ZaaktypeMainFallback;
-use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 /**
@@ -41,14 +39,14 @@ use RuntimeException;
  * Over al deze routes heen geldt tot slot dat het gekozen zaaktype op dezelfde
  * ZGW-koppeling moet liggen als de zaak die ermee wordt aangemaakt. Valt die
  * koppeling terug op main, dan valt het zaaktype mee terug; zie
- * {@see followConnectionFallback}.
+ * {@see ZaaktypeConnectionFallback}.
  */
 final class ResolveZaaktype
 {
     public function __construct(
         private readonly DetermineAanvraagType $determineAanvraagType,
         private readonly ZaaktypeMainFallback $mainFallback,
-        private readonly ZgwConnectionResolver $connections,
+        private readonly ZaaktypeConnectionFallback $connectionFallback,
     ) {}
 
     public function forState(FormState $state): Zaaktype
@@ -69,59 +67,11 @@ final class ResolveZaaktype
             ));
         }
 
-        return $this->followConnectionFallback($municipality, $role, $zaaktype);
-    }
-
-    /**
-     * Keep the zaaktype on the connection the zaak will actually be created on.
-     *
-     * The runtime connection of a municipality falls back to the main connection
-     * whenever its own connection cannot be used: it is not activated, or its
-     * config cannot be built. That fallback moves the zaak but not the zaaktype:
-     * the resolved row keeps pointing at a zaaktype in the municipality's own
-     * catalogus, which the main instance does not know, so the submit fails on
-     * the receiving side instead of landing on main.
-     *
-     * So when the connection falls back, the zaaktype falls back with it. That is
-     * also exactly what deactivating a connection promises, and what the
-     * per-zaaktype fallback in {@see ZaaktypeMainFallback} already does for a
-     * zaaktype that lost its valid version.
-     *
-     * When the main catalogus has no counterpart for this role the own row is
-     * kept: the submit then fails loudly and traceably on the guard in
-     * {@see CreateZaakInZGW} instead of creating a
-     * zaak against a zaaktype of another instance.
-     */
-    private function followConnectionFallback(Municipality $municipality, ZaaktypeRole $role, Zaaktype $zaaktype): Zaaktype
-    {
-        // Read via getAttribute(): the column name collides with Eloquent's own
-        // $connection property when accessed from model scope.
-        $rowConnection = (string) $zaaktype->getAttribute('connection');
-
-        if ($rowConnection === ZgwConnectionResolver::DEFAULT_CONNECTION) {
-            return $zaaktype;
-        }
-
-        $reason = $this->connections->mainFallbackReason($municipality);
-
-        if ($reason === null) {
-            return $zaaktype;
-        }
-
-        $fallback = $this->mainFallback->activateForRole($municipality, $role);
-
-        Log::warning('ZGW connection falls back to main, so the zaaktype falls back with it.', [
-            'municipality_id' => $municipality->id,
-            'municipality' => $municipality->name,
-            'intended_connection' => $rowConnection,
-            'connection' => ZgwConnectionResolver::DEFAULT_CONNECTION,
-            'reason' => $reason,
-            'role' => $role->value,
-            'zaaktype_id' => $zaaktype->id,
-            'fallback_zaaktype_id' => $fallback?->id,
-        ]);
-
-        return $fallback ?? $zaaktype;
+        // Keep the zaaktype on the connection the zaak will actually be created
+        // on. Shared with the route-passage deelzaken: the same question asked in
+        // two places has to get the same answer, or one of the two sends a
+        // zaaktype url to an instance that does not host it.
+        return $this->connectionFallback->follow($municipality, $role, $zaaktype);
     }
 
     private function resolveByMapping(Municipality $municipality, ZaaktypeRole $role): ?Zaaktype
