@@ -24,6 +24,7 @@ declare(strict_types=1);
 use App\Enums\Role;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Municipality;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
@@ -116,6 +117,35 @@ function zaakWithDocumentReads(array $documents): Zaak
     return Zaak::factory()->create([
         'zgw_zaak_url' => $zaakUrl,
         'zaaktype_id' => Zaaktype::factory()->for(Municipality::factory())->create()->id,
+    ]);
+}
+
+/**
+ * A zaak that reads through its own ZGW connection instead of the default one.
+ * The connection is pointed at the same faked instance on purpose: the reads it
+ * performs are then identical to those of a zaak on the default connection, so
+ * the connection name is the only thing that differs.
+ */
+function zaakOnOwnZgwConnection(string $zaakUuid): Zaak
+{
+    $municipality = Municipality::factory()->create();
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $municipality->id,
+        'zaken_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/',
+        'catalogi_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/',
+        'documenten_url' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/',
+        'besluiten_url' => ZgwHttpFake::$baseUrl.'/besluiten/api/v1/',
+        'autorisaties_url' => ZgwHttpFake::$baseUrl.'/autorisaties/api/v1/',
+        'notificaties_url' => ZgwHttpFake::$baseUrl.'/notificaties/api/v1/',
+    ]);
+
+    return Zaak::factory()->create([
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/'.$zaakUuid,
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'municipality_id' => $municipality->id,
+            'connection' => "gemeente_{$municipality->id}",
+        ])->id,
     ]);
 }
 
@@ -460,13 +490,20 @@ test('a document the API may not hand over is reported once and then damped', fu
     Exceptions::assertReportedCount(1);
 });
 
-test('the damper does not stop a second zaak from reporting', function () {
-    // Damping per zaak and not globally: a second zaak hitting the same boundary
-    // is a separate fact, and one zaak must not be able to silence the rest.
+test('the damper covers every zaak on one ZGW connection and stops at the next connection', function () {
+    // An authorisation is configured on the connection, so the answer is the same
+    // for every zaak that connection serves: one report describes the setting and
+    // a report per zaak would only multiply it by how many zaken happen to hold
+    // such a document. A second connection is a second setting, so it has to be
+    // able to report for itself; damping globally would let one connection
+    // silence the rest.
     Exceptions::fake();
 
     $first = zaakWithDocumentReads([['refused' => true]]);
     $first->documentenForDisplay();
+
+    Exceptions::assertReported(ApiRequestException::class);
+    Exceptions::assertReportedCount(1);
 
     // A second zaak on the same connection, reading the same refused document
     // through the list endpoint the fake answers for any zaak.
@@ -475,6 +512,15 @@ test('the damper does not stop a second zaak from reporting', function () {
         'zaaktype_id' => $first->zaaktype_id,
     ]);
     $second->documentenForDisplay();
+
+    expect($second->zgwConnectionName())->toBe($first->zgwConnectionName());
+
+    Exceptions::assertReportedCount(1);
+
+    $onOwnConnection = zaakOnOwnZgwConnection('3');
+    $onOwnConnection->documentenForDisplay();
+
+    expect($onOwnConnection->zgwConnectionName())->not->toBe($first->zgwConnectionName());
 
     Exceptions::assertReportedCount(2);
 });

@@ -105,8 +105,8 @@ class Zaak extends Model implements Eventable
     private const ZGW_FORBIDDEN_READ_CACHE_TTL = 900;
 
     /**
-     * How often a single zaak reports that the API is not authorised to hand a
-     * resource over, see {@see reportSkippedResource()}.
+     * How often one ZGW connection reports that the API is not authorised to
+     * hand a resource over, see {@see reportSkippedResource()}.
      */
     private const FORBIDDEN_REPORT_WINDOW = 60 * 60 * 24;
 
@@ -1030,9 +1030,14 @@ class Zaak extends Model implements Eventable
      * every call, so reporting each read fills error reporting with something
      * that is working as configured and drowns out the failures that are not.
      * It is not dropped either, because a narrowed authorisation is a change
-     * someone has to be able to notice: it is reported once per zaak per day,
-     * {@see self::FORBIDDEN_REPORT_WINDOW}, while the log line below keeps every
-     * occurrence.
+     * someone has to be able to notice: it is reported once per ZGW connection
+     * per day, {@see self::FORBIDDEN_REPORT_WINDOW}, while the log line below
+     * keeps every occurrence.
+     *
+     * The connection is the scope, and not the zaak, because the authorisation
+     * is configured there: the same setting answers the same way for every zaak
+     * that connection serves, so a report per zaak would multiply one fact by
+     * the number of zaken that happen to hold such a resource.
      *
      * @param  string  $kind  what was skipped, for the log line
      */
@@ -1052,7 +1057,7 @@ class Zaak extends Model implements Eventable
             'exception' => $e::class,
         ]);
 
-        if ($this->isNotAuthorised($e) && ! $this->claimForbiddenReport()) {
+        if ($this->isNotAuthorised($e) && ! $this->claimForbiddenReport($connectionName)) {
             return;
         }
 
@@ -1060,18 +1065,18 @@ class Zaak extends Model implements Eventable
     }
 
     /**
-     * Claim the one report this zaak gets for an unauthorised resource inside the
-     * current window, returning whether the claim succeeded.
+     * Claim the one report this ZGW connection gets for an unauthorised resource
+     * inside the current window, returning whether the claim succeeded.
      *
      * Cache::add is the whole mechanism: it only writes when the key is absent,
      * so the first read of the window reports and every read after it does not.
      * Losing the claim to a cache that was flushed means one extra report, which
      * is the right way round for a damper.
      */
-    private function claimForbiddenReport(): bool
+    private function claimForbiddenReport(string $connectionName): bool
     {
         return Cache::add(
-            "zaak.{$this->id}.forbidden-resource-reported",
+            "zgw.{$connectionName}.forbidden-resource-reported",
             true,
             self::FORBIDDEN_REPORT_WINDOW,
         );
