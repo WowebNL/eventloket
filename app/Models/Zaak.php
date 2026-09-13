@@ -96,13 +96,16 @@ class Zaak extends Model implements Eventable
      * This is not an outage but a setting on the other side, so it gives the same
      * answer on every call: the minute-long window of
      * self::ZGW_UNAVAILABLE_READ_CACHE_TTL would mean repeating a call that is
-     * refused by design, every minute, for as long as the screen is open. A
-     * longer window is therefore the right trade, and the cost of it is that a
-     * widened authorisation takes up to this long to become visible. It stays
-     * well inside a working session, and {@see clearZgwCache()} clears it at
+     * refused by design, every minute, for as long as the screen is open. It
+     * therefore belongs in the window a read gets when nothing went wrong, and
+     * not in a longer one: a read that is missing part of its content must never
+     * outlive a complete read, and a widened authorisation on the other side
+     * should become visible as quickly as any other change there. Equal to
+     * self::ZGW_READ_CACHE_TTL for that reason, which still covers a screen that
+     * refreshes itself every few seconds, and {@see clearZgwCache()} clears it at
      * once.
      */
-    private const ZGW_FORBIDDEN_READ_CACHE_TTL = 900;
+    private const ZGW_FORBIDDEN_READ_CACHE_TTL = 300;
 
     /**
      * How often one ZGW connection reports that the API is not authorised to

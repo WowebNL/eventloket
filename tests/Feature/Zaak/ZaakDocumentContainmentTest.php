@@ -16,9 +16,10 @@ declare(strict_types=1);
  *
  * And they pin the distinction inside it. A document the API is not authorised
  * to hand over is answered with a 403 and refused on every call, so it gets a
- * message without a "try again later", no number on screen, a longer cache
- * window and a damped report. A server error or a timeout keeps all four of the
- * originals, because for that one waiting is the right advice.
+ * message without a "try again later", no number on screen, a cache window that
+ * is not the short one a failure gets, and a damped report. A server error or a
+ * timeout keeps all four of the originals, because for that one waiting is the
+ * right advice.
  */
 
 use App\Enums\Role;
@@ -28,6 +29,7 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
@@ -78,8 +80,9 @@ function outageBody(): array
 /**
  * A zaak whose document list resolves, with one entry per spec. A spec is one of
  * `['titel' => ...]` for a document that can be read, `['refused' => true]` for
- * one the API is not authorised to hand over, or `['unavailable' => true]` for
- * one it fails to produce.
+ * one the API is not authorised to hand over, `['unavailable' => true]` for one
+ * it fails to produce, or `['timeout' => true]` for one the API never answers at
+ * all.
  *
  * @param  list<array<string, mixed>>  $documents
  */
@@ -96,6 +99,10 @@ function zaakWithDocumentReads(array $documents): Zaak
             Http::fake([$docUrl => Http::response(refusalBody(), 403)]);
         } elseif ($document['unavailable'] ?? false) {
             Http::fake([$docUrl => Http::response(outageBody(), 500)]);
+        } elseif ($document['timeout'] ?? false) {
+            Http::fake([$docUrl => function (): never {
+                throw new ConnectionException('cURL error 28: Operation timed out');
+            }]);
         } else {
             ZgwHttpFake::fakeSingleDocument($uuid, ['titel' => $document['titel'] ?? 'Document '.$uuid]);
         }
@@ -409,14 +416,20 @@ test('the list is whole again once the short cache window has passed and the doc
         ->and($recovered->documenten)->toHaveCount(1);
 });
 
-test('a read the API refused on authorisation is cached for longer than one that merely failed', function () {
-    // Repeating a call that is refused by design, every minute, for as long as a
-    // screen is open, buys nothing. The window is therefore longer than the one
-    // above, and the cost of that is the delay before a widened authorisation
-    // shows up.
+test('a read the API refused on authorisation is kept out of the window a temporary failure gets', function (array $document, bool $expectNewCalls) {
+    // Which of the two windows a degraded read lands in follows from what went
+    // wrong, and this is the test for that choice. A refusal answers the same on
+    // every call, so repeating it every minute buys nothing and it is kept out of
+    // the short window; a server error and a timeout may both have passed by now,
+    // so they go in it and are retried.
+    //
+    // Deliberately not written as a comparison between the two lengths: that
+    // stops saying anything as soon as two of them are set to the same number,
+    // while the question of which read belongs in which window stays exactly as
+    // load-bearing as it was.
     $zaak = zaakWithDocumentReads([
         ['titel' => 'Aanvraagformulier'],
-        ['refused' => true],
+        $document,
     ]);
 
     $zaak->documentenForDisplay();
@@ -424,10 +437,32 @@ test('a read the API refused on authorisation is cached for longer than one that
 
     $this->travel(61)->seconds();
 
-    expect($zaak->documentenForDisplay()->forbiddenCount)->toBe(1)
-        ->and(count(Http::recorded()))->toBe($callsAfterFirstRead);
+    $zaak->documentenForDisplay();
 
-    $this->travel(900)->seconds();
+    $expectNewCalls
+        ? expect(count(Http::recorded()))->toBeGreaterThan($callsAfterFirstRead)
+        : expect(count(Http::recorded()))->toBe($callsAfterFirstRead);
+})->with([
+    'refused on authorisation' => [['refused' => true], false],
+    'a server error' => [['unavailable' => true], true],
+    'a timeout' => [['timeout' => true], true],
+]);
+
+test('a read the API refused on authorisation never outlives a complete read', function () {
+    // The other half of the window rule for a refusal: it is bounded by what a
+    // complete read gets. A list that is missing part of itself must not be
+    // served for longer than a whole one, and an authorisation widened on the
+    // other side has to show up as quickly as any other change there.
+    $zaak = zaakWithDocumentReads([
+        ['titel' => 'Aanvraagformulier'],
+        ['refused' => true],
+    ]);
+
+    expect($zaak->documentenForDisplay()->forbiddenCount)->toBe(1);
+
+    $callsAfterFirstRead = count(Http::recorded());
+
+    $this->travel(301)->seconds();
 
     $zaak->documentenForDisplay();
 
