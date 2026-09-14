@@ -49,11 +49,19 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     public bool $hasDocuments = false;
 
     /**
-     * How many documents of this zaak could not be read. Drives the notice
-     * above the table, so the reader is never shown a short list as if it were
-     * the whole list.
+     * How many documents of this zaak were not handed over for a reason that may
+     * pass on its own. Drives the notice above the table, so the reader is never
+     * shown a short list as if it were the whole list.
      */
-    public int $unreadableDocumentCount = 0;
+    public int $unavailableDocumentCount = 0;
+
+    /**
+     * Whether a document of this zaak was left out because the documents API is
+     * not authorised to hand it over. A flag and not a count on purpose: those
+     * documents are not shown to this reader, so a number would tell them how many
+     * documents exist that they are not going to see.
+     */
+    public bool $hasForbiddenDocuments = false;
 
     private ?ZaakDocumentSet $documentSet = null;
 
@@ -212,7 +220,13 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     private function emptyStateHeading(): string
     {
         if ($this->nothingCouldBeRead()) {
-            return __('resources/zaak.documents.unreadable.empty_state_heading');
+            // A heading that says "not right now" would be wrong when nothing was
+            // withheld "right now": if no document failed for a reason that may
+            // pass, every one of them is refused by design and will be tomorrow
+            // too.
+            return $this->documents()->hasUnavailable()
+                ? __('resources/zaak.documents.unavailable.empty_state_heading')
+                : __('resources/zaak.documents.forbidden.empty_state_heading');
         }
 
         if ($this->documents()->documenten->isNotEmpty()) {
@@ -244,10 +258,10 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     }
 
     /**
-     * Whether every document of this zaak was refused. Blocks the two empty
+     * Whether every document of this zaak was left out. Blocks the two empty
      * states that would then be untrue: "the files are still coming" (they are
-     * already there) and "not visible with your rights" (rights are not what
-     * went wrong here).
+     * already there) and "not visible with your rights" (the visibility rules are
+     * not what kept them off the screen).
      */
     private function nothingCouldBeRead(): bool
     {
@@ -269,7 +283,8 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
         $documents = $this->documents();
 
         $this->hasDocuments = $documents->documenten->isNotEmpty();
-        $this->unreadableDocumentCount = $documents->unreadableCount;
+        $this->unavailableDocumentCount = $documents->unavailableCount;
+        $this->hasForbiddenDocuments = $documents->hasForbidden();
 
         return view('livewire.zaken.zaak-documents-table');
     }

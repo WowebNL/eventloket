@@ -109,25 +109,42 @@ return [
         ],
     ],
     'documents' => [
-        // Shown when the documents API hands over the list of a zaak but
-        // refuses one or more of the documents themselves. Deliberately says
-        // nothing technical: the reader can do nothing with a status code, only
-        // with the fact that something is missing and that it is not their doing.
-        'unreadable' => [
+        // Shown when the documents API hands over the list of a zaak but does not
+        // hand over one or more of the documents themselves, for a reason that may
+        // pass on its own: a server error, a timeout. Deliberately says nothing
+        // technical: the reader can do nothing with a status code, only with the
+        // fact that something is missing, that it is not their doing, and that
+        // trying again later is worth it.
+        'unavailable' => [
             'title' => '{1} Eén bestand kan nu niet worden getoond|[2,*] :count bestanden kunnen nu niet worden getoond',
             'description' => 'Dit ligt niet aan uw aanvraag. Probeer het later opnieuw, of neem contact op met de beheerder als u een bestand nu nodig heeft.',
             'empty_state_heading' => 'De bestanden kunnen nu niet worden getoond',
         ],
+        // Shown when the documents API is not authorised to hand a document over.
+        // Two things set this apart from the wording above, and both are the point
+        // of it. There is no "try again later", because the answer will be the same
+        // tomorrow. And there is no number, because the reader is not shown the
+        // documents the authorisation excludes and a count would tell them how many
+        // of those exist.
+        'forbidden' => [
+            'title' => 'Niet beschikbaar via deze koppeling',
+            'description' => 'Deze zaak bevat bestanden die niet via Eventloket opgehaald mogen worden. Neem contact op met de beheerder als u een van deze bestanden nodig heeft.',
+            'empty_state_heading' => 'De bestanden zijn niet beschikbaar via deze koppeling',
+        ],
     ],
     'besluiten' => [
-        // Shown when a document belonging to a besluit cannot be fetched. Has
-        // its own wording on purpose: a besluit is only shown once it carries an
+        // The besluiten halves of the same two messages. They have their own
+        // wording on purpose: a besluit is only shown once it carries an
         // established document, so a missing file can mean the besluit itself is
         // not on screen, which is a different thing to a reader than a file
         // missing from the file list.
-        'unreadable' => [
+        'unavailable' => [
             'title' => '{1} Eén bestand bij een besluit kan nu niet worden getoond|[2,*] :count bestanden bij besluiten kunnen nu niet worden getoond',
             'description' => 'Dit ligt niet aan uw aanvraag. Een besluit kan hierdoor onvolledig zijn of nog niet zichtbaar. Probeer het later opnieuw, of neem contact op met de beheerder.',
+        ],
+        'forbidden' => [
+            'title' => 'Niet beschikbaar via deze koppeling',
+            'description' => 'Bij een besluit van deze zaak horen bestanden die niet via Eventloket opgehaald mogen worden. Een besluit kan daardoor onvolledig zijn of niet zichtbaar. Neem contact op met de beheerder als u deze bestanden nodig heeft.',
         ],
     ],
     'filters' => [

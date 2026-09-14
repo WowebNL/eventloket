@@ -9,12 +9,17 @@ use Illuminate\Support\Collection;
 
 /**
  * The besluiten read for a zaak, together with how many of their documents the
- * documents API refused to hand over.
+ * documents API did not hand over, split by whether that is expected to pass.
  *
- * A besluit is only shown once it carries an established document, so a refused
- * document can make the besluit itself disappear rather than merely shorten its
- * file list. That is exactly the silent gap a reader cannot spot, which is why
- * the count travels with the result instead of being dropped on the floor.
+ * A besluit is only shown once it carries an established document, so a document
+ * that was not handed over can make the besluit itself disappear rather than
+ * merely shorten its file list. That is exactly the silent gap a reader cannot
+ * spot, which is why the counts travel with the result instead of being dropped
+ * on the floor.
+ *
+ * The split is the same one {@see ZaakDocumentSet} makes: a document the API is
+ * not authorised to return stays refused however long the reader waits, while a
+ * server error or a timeout is the case where waiting helps.
  *
  * @see Zaak::besluitenForDisplay()
  */
@@ -22,16 +27,37 @@ final readonly class ZaakBesluitSet
 {
     /**
      * @param  Collection<int, Besluit>  $besluiten  the besluiten the caller may see
-     * @param  int  $unreadableDocumentCount  besluit documents the documents API refused
+     * @param  int  $unavailableDocumentCount  besluit documents the API failed to return for a reason that may pass
+     * @param  int  $forbiddenDocumentCount  besluit documents the API is not authorised to return
      */
     public function __construct(
         public Collection $besluiten,
-        public int $unreadableDocumentCount = 0,
+        public int $unavailableDocumentCount = 0,
+        public int $forbiddenDocumentCount = 0,
     ) {}
 
     public function isIncomplete(): bool
     {
-        return $this->unreadableDocumentCount > 0;
+        return $this->unavailableDocumentCount > 0 || $this->forbiddenDocumentCount > 0;
+    }
+
+    /**
+     * Whether a besluit document was left out for a reason that may pass. The
+     * only one of the two counts that may reach the screen.
+     */
+    public function hasUnavailableDocuments(): bool
+    {
+        return $this->unavailableDocumentCount > 0;
+    }
+
+    /**
+     * Whether a besluit document was left out because the API is not authorised
+     * to hand it over. A yes-or-no on purpose, see {@see Zaak} on why the number
+     * must not reach the screen.
+     */
+    public function hasForbiddenDocuments(): bool
+    {
+        return $this->forbiddenDocumentCount > 0;
     }
 
     /**
@@ -46,13 +72,13 @@ final readonly class ZaakBesluitSet
     }
 
     /**
-     * The same read, narrowed to the besluiten this caller may see. The count
-     * describes the read itself and therefore stays as it is.
+     * The same read, narrowed to the besluiten this caller may see. The counts
+     * describe the read itself and therefore stay as they are.
      *
      * @param  Collection<int, Besluit>  $besluiten
      */
     public function withBesluiten(Collection $besluiten): self
     {
-        return new self($besluiten, $this->unreadableDocumentCount);
+        return new self($besluiten, $this->unavailableDocumentCount, $this->forbiddenDocumentCount);
     }
 }
