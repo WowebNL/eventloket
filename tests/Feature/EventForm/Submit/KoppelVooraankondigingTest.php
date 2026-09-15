@@ -12,10 +12,12 @@
  */
 
 use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\Steps\KoppelVooraankondiging;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\Zaak;
 use App\Models\ZaakRelatie;
@@ -214,4 +216,48 @@ test('koppelt wél opnieuw wanneer de eerdere opvolger soft-deleted is', functio
     );
 
     expect(ZaakRelatie::where('zaak_id', $sc['aanvraag']->id)->count())->toBe(1);
+});
+
+test('koppelt aan een bron die alleen via de koppeling een vooraankondiging is', function () {
+    // A municipality on its own ZGW instance: the local zaaktype row carries
+    // the omschrijving of the external zaaktype, so the naming convention says
+    // nothing and only the koppeling identifies the role.
+    $organisation = Organisation::factory()->create();
+    $municipality = Municipality::factory()->create();
+
+    MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Vooraankondiging,
+        'zaaktype_identificatie' => 'EXT-1',
+    ]);
+
+    $bron = Zaak::factory()->create([
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'municipality_id' => $municipality->id,
+            'identificatie' => 'EXT-1',
+            'name' => 'Activiteit behandelen',
+            'role' => ZaaktypeRole::Vooraankondiging,
+            'is_active' => true,
+        ])->id,
+        'organisation_id' => $organisation->id,
+    ]);
+
+    $aanvraag = Zaak::factory()->create([
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'municipality_id' => $municipality->id,
+            'identificatie' => 'EXT-2',
+            'name' => 'Vergunning behandelen',
+            'role' => ZaaktypeRole::Vergunning,
+            'is_active' => true,
+        ])->id,
+        'organisation_id' => $organisation->id,
+    ]);
+
+    app(KoppelVooraankondiging::class)->execute(
+        vergunningStateMetKoppeling($bron->id),
+        $aanvraag,
+        $organisation,
+    );
+
+    expect(ZaakRelatie::sole()->gerelateerde_zaak_id)->toBe($bron->id);
 });

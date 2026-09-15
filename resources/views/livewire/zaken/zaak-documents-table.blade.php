@@ -17,5 +17,20 @@
         }
     }"
 >
+    @if ($unavailableDocumentCount > 0)
+        <x-incomplete-read-notice
+            :title="trans_choice('resources/zaak.documents.unavailable.title', $unavailableDocumentCount, ['count' => $unavailableDocumentCount])"
+            :description="__('resources/zaak.documents.unavailable.description')"
+        />
+    @endif
+
+    {{-- No count here, deliberately: see ZaakDocumentsTable::$hasForbiddenDocuments. --}}
+    @if ($hasForbiddenDocuments)
+        <x-incomplete-read-notice
+            :title="__('resources/zaak.documents.forbidden.title')"
+            :description="__('resources/zaak.documents.forbidden.description')"
+        />
+    @endif
+
     {{ $this->table }}
 </div>

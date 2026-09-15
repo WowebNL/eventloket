@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Submit\Steps;
 
 use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
@@ -42,7 +43,7 @@ final class KoppelVooraankondiging
 
         // Only a vergunningaanvraag replaces a vooraankondiging; a melding
         // or another vooraankondiging never gets the link (answer 8).
-        if ($this->determineAanvraagType->forState($state) !== DetermineAanvraagType::VERGUNNING) {
+        if ($this->determineAanvraagType->forState($state) !== ZaaktypeRole::Vergunning) {
             return;
         }
 

@@ -3,10 +3,13 @@
 namespace App\Filament\Shared\Resources\Zaken\Tables;
 
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use App\Models\Advisory;
+use App\Models\Municipality;
 use App\Models\Zaak;
+use App\Models\Zaaktype;
 use App\Support\RisicoClassificatie;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
@@ -140,7 +143,11 @@ class ZakenTable
                         fn (Builder $q) => $q->where('municipalities.name', 'like', "%{$search}%")
                     ))
                     ->toggleable()
-                    ->visible($isCalendarView),
+                    // The calendar spans municipalities, and so does the
+                    // platform administrator's list: they are the only views in
+                    // which a zaak's municipality is not already implied by the
+                    // panel's tenant.
+                    ->visible(fn (): bool => $isCalendarView || auth()->user()->role === Role::Admin),
                 TextColumn::make('advisors')
                     ->label(__('resources/zaak.columns.advisors.label'))
                     ->visible(fn () => Filament::getCurrentPanel()->getId() === 'advisor')
@@ -196,6 +203,40 @@ class ZakenTable
                     ->searchable()
                     ->multiple()
                     ->hidden(fn () => auth()->user()->role == Role::Organiser),
+                SelectFilter::make('municipality')
+                    ->label(__('resources/zaak.columns.municipality.label'))
+                    ->options(fn (): array => Municipality::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->multiple()
+                    // A zaak reaches its municipality through its zaaktype, so
+                    // the filter is a query rather than a relationship: there is
+                    // no municipality_id on the zaak itself to filter on.
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['values'])) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('municipality_id', $data['values']));
+                    })
+                    ->visible(fn (): bool => auth()->user()->role === Role::Admin),
+                SelectFilter::make('role')
+                    ->label(__('resources/zaak.columns.zaaktype.label'))
+                    ->options(ZaaktypeRole::class)
+                    ->multiple()
+                    // Matched through the effective-role ladder rather than the
+                    // `role` column directly: that column is nullable and only
+                    // written by a koppeling or a catalogus sync, so comparing
+                    // it drops every zaak whose zaaktype has no stored role.
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['values'])) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('zaaktype', function (Builder $zaaktypen) use ($data): Builder {
+                            /** @var Builder<Zaaktype> $zaaktypen */
+                            return $zaaktypen->withEffectiveRoleIn($data['values']);
+                        });
+                    }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([

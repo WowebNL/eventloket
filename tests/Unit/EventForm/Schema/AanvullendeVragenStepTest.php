@@ -7,9 +7,9 @@ declare(strict_types=1);
  * ingestelde vragenlijst in de FormState, niet uit een vaste schema-array.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Schema\Steps\AanvullendeVragenStep;
 use App\EventForm\State\FormState;
-use App\EventForm\Submit\DetermineAanvraagType;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Textarea;
@@ -73,7 +73,7 @@ test('het padfilter geldt ook bij het bouwen van de componenten', function () {
             'type' => 'text',
             'label' => 'Alleen bij melding',
             'options' => [],
-            'show_for_aanvraag_types' => [DetermineAanvraagType::MELDING],
+            'show_for_aanvraag_types' => [ZaaktypeRole::Melding->value],
         ],
         ['id' => 2, 'type' => 'text', 'label' => 'Altijd', 'options' => []],
     ]);

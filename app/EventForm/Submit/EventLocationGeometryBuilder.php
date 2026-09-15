@@ -145,17 +145,18 @@ final class EventLocationGeometryBuilder
     /**
      * Shared parser for lines and polygons: both arrive as identically
      * shaped Map state, only the normalizer and the Repeater row key
-     * differ. Two shapes are supported:
+     * differ. Three shapes are supported:
      *
      *  1. Current: one Map state object with several features in
      *     `geojson.features[]`. Since the Repeater was dropped, a single
      *     map can hold several routes/polygons.
      *  2. Old (Repeater rows): `[{<candidateKey>: {...}}, ...]` —
      *     backward compatibility for existing drafts.
+     *  3. Old (pre-Map): the state is a bare GeoJSON geometry.
      *
-     * In both cases `features[].geometry` is taken; if that is missing we
-     * fall back to a recursive search for `coordinates` (pre-Map state
-     * shapes from the old OF flow).
+     * In the first two cases `features[].geometry` is taken; if that is
+     * missing we fall back to a recursive search for `coordinates` (pre-Map
+     * state shapes from the old OF flow).
      *
      * @param  callable(string): ?string  $normalizer  turns a raw string payload into valid JSON
      * @param  string  $candidateKey  Repeater row key for the old shape
@@ -169,8 +170,15 @@ final class EventLocationGeometryBuilder
             return [];
         }
 
-        // Verzamel alle Map-states die we tegenkomen (één in nieuwe shape,
-        // N in de oude shape).
+        // A state that is itself a bare geometry is one geometry, not a list of
+        // map states: it has to be recognised before the split below, which
+        // would otherwise walk into its `coordinates` member and lose the type.
+        if (isset($decoded['type'], $decoded['coordinates'])) {
+            return [(new GeoJsonReader)->read((string) json_encode($decoded))];
+        }
+
+        // Collect every Map state present (one in the current shape, N in the
+        // old one).
         $mapStates = isset($decoded['geojson'])
             ? [$decoded]
             : array_values(array_filter($decoded, static fn ($row) => is_array($row)));
@@ -183,8 +191,8 @@ final class EventLocationGeometryBuilder
             }
             $features = $candidate['geojson']['features'] ?? null;
             if (! is_array($features)) {
-                // Fallback voor pre-Map state-shapes (bv. wanneer OF nog
-                // een platte geometrie in de FormState had staan).
+                // Fallback for pre-Map state shapes (for example a bare
+                // geometry inside an old repeater row).
                 $array = ArrayHelper::findElementWithKey($candidate, 'coordinates');
                 if ($array) {
                     $out[] = (new GeoJsonReader)->read((string) json_encode($array));

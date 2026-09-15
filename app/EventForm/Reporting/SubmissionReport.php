@@ -728,7 +728,7 @@ final class SubmissionReport
         return Cache::remember($cacheKey, 3600, function () use ($url): ?string {
             try {
                 $response = Http::withHeaders([
-                    'User-Agent' => 'Eventloket/1.0 (PDF-render; admin@veiligheidsregiozl.nl)',
+                    'User-Agent' => 'Eventloket/1.0 (PDF-render)',
                 ])->timeout(8)->get($url);
 
                 if ($response->successful()) {

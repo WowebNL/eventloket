@@ -86,6 +86,15 @@ return [
         ],
         'finish_zaak' => [
             'label' => 'Zaak afronden',
+            // Shown when a document selected as a mail attachment cannot be
+            // downloaded. The zaak is deliberately not finished: an incomplete
+            // set of attachments is invisible to both the handler and the
+            // recipient, so the handler decides what happens instead.
+            'unretrievable_attachments' => [
+                'title' => 'Zaak niet afgerond',
+                'intro' => 'Deze bestanden konden zojuist niet worden opgehaald, dus de e-mail zou onvolledig bij de organisator aankomen:',
+                'outro' => 'Er is niets verstuurd en de zaak is niet afgerond. Probeer het later opnieuw of kies andere bijlagen.',
+            ],
             'steps' => [
                 'result' => [
                     'label' => 'Resultaat',
@@ -177,6 +186,12 @@ return [
                         'fields' => [
                             'intern_zaaknummer' => [
                                 'label' => 'Intern zaaknummer',
+                            ],
+                        ],
+                        'notifications' => [
+                            'saved_locally' => [
+                                'title' => 'Intern zaaknummer is opgeslagen in Eventloket',
+                                'body' => 'Het zaaksysteem kent geen eigenschap voor het interne zaaknummer, dus daar is niets weggeschreven.',
                             ],
                         ],
                     ],

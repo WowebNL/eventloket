@@ -233,3 +233,27 @@ test('notification uses different texts and links based on user type', function 
     expect($reviewerDatabase['title'])->toBe('Nieuwe zaak voor "Test Event"');
     expect($reviewerDatabase['body'])->toBe('Er is een nieuwe zaak ontvangen voor "Test Event" bij Test Municipality.');
 });
+
+test('a zaak without an event name still notifies, with a placeholder instead of the missing name', function () {
+    // naam_evenement is optional on the reference data: a zaak built straight
+    // from the ZGW eigenschappen can arrive without one. The notification is
+    // raised synchronously from the zaak observer, so a missing name used to
+    // abort whatever was creating the zaak instead of only spoiling a message.
+    $zaak = Zaak::factory()->create([
+        'organisation_id' => $this->organisation->id,
+        'zaaktype_id' => $this->zaaktype->id,
+        'reference_data' => new ZaakReferenceData(
+            registratiedatum: now(),
+            status_name: 'Ontvangen',
+            statustype_url: '',
+            naam_evenement: null,
+        ),
+    ]);
+
+    Notification::assertSentTo([$this->reviewer], NewZaak::class);
+
+    $mail = (new NewZaak($zaak))->toMail($this->reviewer);
+
+    expect($mail->viewData['event'])->toBe('onbekend evenement')
+        ->and($mail->subject)->toBe('Nieuwe zaak "onbekend evenement" beschikbaar');
+});

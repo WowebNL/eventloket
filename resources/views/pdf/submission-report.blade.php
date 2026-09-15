@@ -177,7 +177,7 @@
     </section>
 
     <div class="footer">
-        Eventloket — Veiligheidsregio Zuid-Limburg · Gegenereerd op {{ now()->timezone('Europe/Amsterdam')->translatedFormat('j F Y H:i') }}
+        Eventloket · Gegenereerd op {{ now()->timezone('Europe/Amsterdam')->translatedFormat('j F Y H:i') }}
     </div>
 </body>
 </html>

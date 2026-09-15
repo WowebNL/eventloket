@@ -31,3 +31,4 @@ test-results/
 .mcp.json
 boost.json
 /database/openforms_migrations
+input/

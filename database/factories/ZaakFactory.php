@@ -24,14 +24,14 @@ class ZaakFactory extends Factory
             'zgw_zaak_url' => fake()->unique()->url,
             'data_object_url' => fake()->url,
             'reference_data' => new ZaakReferenceData(
-                now(),
-                now()->addDay(),
-                now(),
-                'Ontvangen',
-                ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
-                'A',
-                'Test locatie',
-                'Test event'
+                registratiedatum: now(),
+                status_name: 'Ontvangen',
+                statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+                start_evenement: now(),
+                eind_evenement: now()->addDay(),
+                risico_classificatie: 'A',
+                naam_locatie_eveneme: 'Test locatie',
+                naam_evenement: 'Test event',
             ),
         ];
     }

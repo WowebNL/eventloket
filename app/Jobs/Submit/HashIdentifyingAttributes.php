@@ -33,7 +33,12 @@ final class HashIdentifyingAttributes implements ShouldQueue
 {
     use Queueable;
 
-    private const HASH_PREFIX = 'hash:';
+    /**
+     * Marker for an already-hashed value. Public so consumers of the snapshot
+     * can recognise a hashed value instead of sending it onward as if it were
+     * the original (see InitiatorRolBuilder).
+     */
+    public const HASH_PREFIX = 'hash:';
 
     private const GEVOELIGE_SNAPSHOT_KEYS = [
         'watIsHetKamerVanKoophandelNummerVanUwOrganisatie',

@@ -6,6 +6,8 @@ namespace App\Jobs\Zaak;
 
 use App\Models\User;
 use App\Models\Zaak;
+use App\Services\Zgw\UploadDocumentTypeResolver;
+use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,7 +15,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 final class UploadDocumentsJob implements ShouldQueue
 {
@@ -32,9 +34,15 @@ final class UploadDocumentsJob implements ShouldQueue
     public function handle(): void
     {
         $user = User::find($this->userId);
-        $oz = new Openzaak;
+        $connection = Zgw::connection($this->zaak->zgwConnectionName());
         $count = count($this->files);
         $uploaded = [];
+
+        // Roles that do not pick a documenttype get the one the koppeling
+        // configures, whatever the queued payload carries.
+        $defaultInformatieobjecttype = UploadDocumentTypeResolver::isChosenByUser($user?->role)
+            ? null
+            : UploadDocumentTypeResolver::defaultFor($this->zaak);
 
         foreach ($this->files as $file) {
             $path = (string) ($file['path'] ?? '');
@@ -51,7 +59,7 @@ final class UploadDocumentsJob implements ShouldQueue
             $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($file['original_name'] ?? '', $formaat);
             $titel = ($file['titel'] ?? '') !== '' ? $file['titel'] : pathinfo($bestandsnaam, PATHINFO_FILENAME);
 
-            $informatieobject = new Informatieobject(...$oz->documenten()->enkelvoudiginformatieobjecten()->store([
+            $informatieobject = new Informatieobject(...ZgwResource::ensureUuid($connection->documenten()->enkelvoudiginformatieobjecten()->store([
                 'bronorganisatie' => $this->zaak->openzaak->bronorganisatie,
                 'creatiedatum' => now()->format('Y-m-d'),
                 'vertrouwelijkheidaanduiding' => $this->vertrouwelijkheidaanduiding,
@@ -62,11 +70,12 @@ final class UploadDocumentsJob implements ShouldQueue
                 'bestandsomvang' => Storage::size($path),
                 'formaat' => $formaat,
                 'inhoud' => base64_encode((string) Storage::get($path)),
-                'informatieobjecttype' => $file['informatieobjecttype'],
+                'informatieobjecttype' => $defaultInformatieobjecttype ?? $file['informatieobjecttype'],
                 'indicatieGebruiksrecht' => false,
-            ]));
+                'status' => Informatieobject::STATUS_DEFINITIEF,
+            ])));
 
-            $oz->zaken()->zaakinformatieobjecten()->store([
+            $connection->zaken()->zaakinformatieobjecten()->store([
                 'zaak' => $this->zaak->openzaak->url,
                 'informatieobject' => $informatieobject->url,
             ]);

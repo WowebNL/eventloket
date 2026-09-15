@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Submit;
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 
 /**
@@ -29,16 +30,10 @@ use App\EventForm\State\FormState;
  */
 final class DetermineAanvraagType
 {
-    public const VOORAANKONDIGING = 'vooraankondiging';
-
-    public const VERGUNNING = 'vergunning';
-
-    public const MELDING = 'melding';
-
-    public function forState(FormState $state): string
+    public function forState(FormState $state): ZaaktypeRole
     {
         if ($state->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging') {
-            return self::VOORAANKONDIGING;
+            return ZaaktypeRole::Vooraankondiging;
         }
 
         if ($state->get('gemeenteVariabelen.use_new_report_questions') === true) {
@@ -46,10 +41,10 @@ final class DetermineAanvraagType
         }
 
         if ($state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee') {
-            return self::MELDING;
+            return ZaaktypeRole::Melding;
         }
 
-        return self::VERGUNNING;
+        return ZaaktypeRole::Vergunning;
     }
 
     /**
@@ -60,11 +55,11 @@ final class DetermineAanvraagType
      *   - mix met onbeantwoorde slots → vergunning (default — scan
      *     niet doorlopen)
      */
-    private function fromReportQuestions(FormState $state): string
+    private function fromReportQuestions(FormState $state): ZaaktypeRole
     {
         $questions = $state->get('gemeenteVariabelen.report_questions');
         if (! is_array($questions) || $questions === []) {
-            return self::VERGUNNING;
+            return ZaaktypeRole::Vergunning;
         }
 
         $alleJa = true;
@@ -73,13 +68,13 @@ final class DetermineAanvraagType
             $antwoord = $state->get(sprintf('reportQuestion_%d', $position));
 
             if ($antwoord === 'Nee') {
-                return self::VERGUNNING;
+                return ZaaktypeRole::Vergunning;
             }
             if ($antwoord !== 'Ja') {
                 $alleJa = false;
             }
         }
 
-        return $alleJa ? self::MELDING : self::VERGUNNING;
+        return $alleJa ? ZaaktypeRole::Melding : ZaaktypeRole::Vergunning;
     }
 }
