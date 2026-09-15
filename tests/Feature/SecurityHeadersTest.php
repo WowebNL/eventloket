@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Support\Maps\Basemap;
 use Illuminate\Support\Facades\Config;
 
 beforeEach(function () {
@@ -31,7 +32,7 @@ test('CSP contains required directives', function () {
         ->toContain("default-src 'self'")
         ->toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval'")
         ->toContain("style-src 'self' 'unsafe-inline'")
-        ->toContain("img-src 'self' data: blob: https://tile.openstreetmap.org")
+        ->toContain("img-src 'self' data: blob: ".Basemap::origin())
         ->toContain("font-src 'self'")
         ->toContain("connect-src 'self' https://api.pdok.nl")
         ->toContain("frame-ancestors 'none'")

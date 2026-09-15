@@ -14,6 +14,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Support\ExtraQuestions;
 use App\EventForm\Support\LocationKinds;
 use App\EventForm\Support\TijdenOverzicht;
+use App\Support\Maps\Basemap;
 use Carbon\Carbon;
 use Closure;
 use Filament\Forms\Components\CheckboxList;
@@ -62,11 +63,22 @@ final class SubmissionReport
     ];
 
     /**
+     * Basemap tiles actually downloaded while building the current report.
+     *
+     * Fetching a grid of tiles per map is bulk traffic, and a report can
+     * contain an unbounded number of maps because geometry answers may sit
+     * inside repeaters. The counter bounds that per report; tiles served
+     * from the cache cost no request and are therefore not counted.
+     */
+    private int $tileRequests = 0;
+
+    /**
      * @param  list<Step>  $steps
      * @return list<array{title: string, entries: list<array{label: string, value: string}>}>
      */
     public function build(FormState $state, array $steps): array
     {
+        $this->tileRequests = 0;
         $sections = [];
 
         foreach ($steps as $step) {
@@ -558,10 +570,10 @@ final class SubmissionReport
     }
 
     /**
-     * Render een GeoJSON FeatureCollection als compact SVG voor in de PDF.
-     * Tegels van OpenStreetMap als achtergrond + polygon/lijn/point in
-     * Mercator-projectie erbovenop. SVG wordt als data-URI in een `<img>`
-     * gewrapt zodat dompdf 'm rendert (inline `<svg>` werkt niet in dompdf).
+     * Render a GeoJSON FeatureCollection as a compact SVG for the PDF.
+     * Basemap tiles form the background, with the polygons, lines and points
+     * projected in Web Mercator on top. The SVG is wrapped in an `<img>` as a
+     * data URI because dompdf does not render inline `<svg>`.
      *
      * @param  array<string, mixed>  $geojson
      */
@@ -602,7 +614,7 @@ final class SubmissionReport
         $centerLng = ($minLng + $maxLng) / 2;
         $zoom = $this->estimateZoom($maxLng - $minLng, $maxLat - $minLat);
 
-        // 2×2 tile-grid → 512×512px canvas
+        // A 512x512 canvas, drawn from 256x256 tiles.
         $canvas = 512;
         [$tilesPng, $originPx] = $this->fetchTileMosaic($centerLat, $centerLng, $zoom, $canvas);
 
@@ -639,49 +651,58 @@ final class SubmissionReport
     }
 
     /**
-     * Schat een passend zoom-niveau bij gegeven bbox-grootte (graden).
-     * Per zoom-niveau halveert de zichtbare extent. Bij 256px-tile en
-     * een 512px-canvas willen we de bbox ongeveer in 70% van het
-     * canvas hebben.
+     * Estimate a suitable zoom level for a bounding box size in degrees.
+     * Each zoom level halves the visible extent; with 256px tiles on a 512px
+     * canvas the aim is to fill roughly 70% of the canvas with the box.
      */
     private function estimateZoom(float $rangeLng, float $rangeLat): int
     {
         $extent = max($rangeLng, $rangeLat / cos(deg2rad(0))) ?: 0.001;
-        // Empirisch: zoom 16 ≈ 0.005°, zoom 15 ≈ 0.011°, zoom 14 ≈ 0.022° etc.
+        // Empirical: zoom 16 is about 0.005 degrees, 15 about 0.011, 14 about 0.022.
         $zoom = (int) floor(log(360 / max($extent * 1.4, 0.0005), 2));
 
         return max(8, min(18, $zoom));
     }
 
     /**
-     * Haal 2×2 tegels op (256×256 elk) gecentreerd op (lat, lng) bij
-     * gegeven zoom. Stitch ze samen tot één PNG. Returnt het PNG-blob
-     * + de pixel-origin van de linkerbovenhoek (in OSM Mercator-pixels)
-     * zodat polygon/line-coords correct geprojecteerd kunnen worden.
+     * Fetch the tiles covering the canvas, centred on (lat, lng) at the given
+     * zoom, and stitch them into a single PNG. Returns the PNG blob plus the
+     * pixel origin of the top-left corner in Web Mercator pixels, so polygon
+     * and line coordinates can be projected onto it.
      *
-     * Falen we (offline / rate-limit), returnt null voor de PNG —
-     * caller valt dan terug op een effen achtergrond.
+     * Returns null for the PNG whenever no background can be produced, which
+     * covers all three bounded cases as well as an unreachable tile service:
+     * the caller then falls back to a plain background. That fallback is the
+     * graceful degradation, so a report always renders.
      *
      * @return array{0: ?string, 1: array{0: float, 1: float}}
      */
     private function fetchTileMosaic(float $lat, float $lng, int $zoom, int $canvas): array
     {
         $centerPx = [$this->lngToPixel($lng, $zoom), $this->latToPixel($lat, $zoom)];
-        // Linkerbovenhoek van 512×512 canvas in wereld-pixel-coords.
+        // Top-left corner of the canvas in world pixel coordinates.
         $originPx = [$centerPx[0] - $canvas / 2, $centerPx[1] - $canvas / 2];
 
-        // Welke tiles dekken deze 2×2 grid? OSM tegels zijn 256×256.
-        $tile00X = (int) floor($originPx[0] / 256);
-        $tile00Y = (int) floor($originPx[1] / 256);
-        $offsetX = (int) ($tile00X * 256 - $originPx[0]);
-        $offsetY = (int) ($tile00Y * 256 - $originPx[1]);
+        // Which tiles cover that canvas? The tile service publishes 256x256.
+        $tileSize = 256;
+        $tile00X = (int) floor($originPx[0] / $tileSize);
+        $tile00Y = (int) floor($originPx[1] / $tileSize);
+        $offsetX = (int) ($tile00X * $tileSize - $originPx[0]);
+        $offsetY = (int) ($tile00Y * $tileSize - $originPx[1]);
 
-        // Hoeveel tegels horizontal/vertical om 't canvas te dekken?
-        $tilesX = (int) ceil(($canvas - $offsetX) / 256);
-        $tilesY = (int) ceil(($canvas - $offsetY) / 256);
+        // How many tiles horizontally and vertically to cover the canvas?
+        $tilesX = (int) ceil(($canvas - $offsetX) / $tileSize);
+        $tilesY = (int) ceil(($canvas - $offsetY) / $tileSize);
 
-        // Als de extension de gd-extensie ondersteunt, kunnen we een
-        // composite maken. Anders skip de stitch en val terug op effen.
+        // A canvas of this size needs a small, known grid. A larger one means
+        // the arithmetic above produced something unexpected, so the mosaic is
+        // abandoned instead of turning into an unbounded download.
+        $maxTilesPerMap = (int) config('maps.tiles.report.max_tiles_per_map');
+        if ($tilesX < 1 || $tilesY < 1 || $tilesX * $tilesY > $maxTilesPerMap) {
+            return [null, $originPx];
+        }
+
+        // Stitching needs the gd extension; without it, fall back to plain.
         if (! function_exists('imagecreatetruecolor')) {
             return [null, $originPx];
         }
@@ -697,8 +718,7 @@ final class SubmissionReport
                 if ($ty < 0 || $ty > $maxTile) {
                     continue;
                 }
-                $url = sprintf('https://tile.openstreetmap.org/%d/%d/%d.png', $zoom, $tx, $ty);
-                $tilePng = $this->fetchTile($url);
+                $tilePng = $this->fetchTile(Basemap::tileUrlFor($zoom, $tx, $ty));
                 if ($tilePng === null) {
                     continue;
                 }
@@ -706,7 +726,7 @@ final class SubmissionReport
                 if ($tile === false) {
                     continue;
                 }
-                imagecopy($mosaic, $tile, $offsetX + $dx * 256, $offsetY + $dy * 256, 0, 0, 256, 256);
+                imagecopy($mosaic, $tile, $offsetX + $dx * $tileSize, $offsetY + $dy * $tileSize, 0, 0, $tileSize, $tileSize);
                 imagedestroy($tile);
             }
         }
@@ -719,27 +739,53 @@ final class SubmissionReport
         return [$stitched, $originPx];
     }
 
+    /**
+     * Fetch a single basemap tile, or null when it cannot be produced.
+     *
+     * Tiles are cached by URL, so a report that shows the same area several
+     * times downloads it once. The per-report budget is checked inside the
+     * cache callback, which means it is spent on network requests only and a
+     * cached tile is always served.
+     */
     private function fetchTile(string $url): ?string
     {
-        // Cache per URL-hash zodat een PDF-render met meerdere geometrieën
-        // op dezelfde tegel niet 2× downloadt.
-        $cacheKey = 'osm-tile:'.sha1($url);
+        $cacheKey = 'map-tile:'.sha1($url);
+        $ttl = (int) config('maps.tiles.report.cache_ttl');
 
-        return Cache::remember($cacheKey, 3600, function () use ($url): ?string {
+        return Cache::remember($cacheKey, $ttl, function () use ($url): ?string {
+            if ($this->tileRequests >= $this->maxTileRequestsPerReport()) {
+                return null;
+            }
+
+            $this->tileRequests++;
+
             try {
                 $response = Http::withHeaders([
-                    'User-Agent' => 'Eventloket/1.0 (PDF-render; admin@veiligheidsregiozl.nl)',
-                ])->timeout(8)->get($url);
+                    'User-Agent' => (string) config('maps.tiles.report.user_agent'),
+                ])->timeout((int) config('maps.tiles.report.timeout'))->get($url);
 
                 if ($response->successful()) {
                     return $response->body();
                 }
             } catch (\Throwable) {
-                // Stille fallback — caller gaat door zonder achtergrond.
+                // Silent fallback: the caller renders without a background.
             }
 
             return null;
         });
+    }
+
+    /**
+     * Tile downloads allowed while building one report.
+     *
+     * Derived rather than picked: it is the grid one map may use times the
+     * number of maps that may carry a full background, so the two limits stay
+     * consistent when either is tuned.
+     */
+    private function maxTileRequestsPerReport(): int
+    {
+        return (int) config('maps.tiles.report.max_tiles_per_map')
+            * (int) config('maps.tiles.report.max_background_maps');
     }
 
     private function lngToPixel(float $lng, int $zoom): float
