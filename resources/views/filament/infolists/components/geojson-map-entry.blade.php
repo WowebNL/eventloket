@@ -3,13 +3,17 @@
         $geoJson = $entry->getGeoJsonData();
         $defLoc  = $entry->getDefaultLocation();
         $mapId   = $getId();
+        $tilesUrl = $entry->getTilesUrl();
+        $tileOptions = $entry->getTileLayerOptions();
     @endphp
 
     {{--
-        Standalone read-only Leaflet-kaart zonder dotswan Alpine-component.
-        window.L is globaal beschikbaar via de dotswan/filament-map-picker UMD-bundel.
-        GeoJSON en fitBounds worden ingesteld vóór de tile layer wordt toegevoegd,
-        zodat tile-loading de SVG-overlay-positionering niet verstoort.
+        Standalone read-only Leaflet map without the map picker's Alpine
+        component. window.L is available globally through the map picker's
+        UMD bundle. GeoJSON and fitBounds are applied before the tile layer
+        is added, so tile loading does not disturb the positioning of the
+        SVG overlay. The tile layer itself comes from config/maps.php, so
+        this map uses the same basemap and attribution as the form fields.
     --}}
     <div
         x-data="{}"
@@ -46,10 +50,7 @@
                 map.setView([{{ $defLoc['lat'] }}, {{ $defLoc['lng'] }}], 13);
             }
 
-            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '\u00a9 OpenStreetMap contributors'
-            }).addTo(map);
+            L.tileLayer(@js($tilesUrl), @js($tileOptions)).addTo(map);
 
             new ResizeObserver(() => map.invalidateSize({ animate: false })).observe($refs.map);
         }"
