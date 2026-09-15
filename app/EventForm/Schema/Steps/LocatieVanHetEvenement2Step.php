@@ -10,8 +10,8 @@ use App\EventForm\Components\InfoText;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\State\FormState;
+use App\Filament\Forms\Components\BasemapMap;
 use App\Models\Organisation;
-use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
@@ -119,7 +119,7 @@ final class LocatieVanHetEvenement2Step
                             ->label('Naam van de locatie')
                             ->required()
                             ->maxLength(1000),
-                        Map::make('buitenLocatieVanHetEvenement')
+                        BasemapMap::make('buitenLocatieVanHetEvenement')
                             ->label('Buiten locatie van het evenement')
                             ->defaultLocation(50.8514, 5.6910)
                             ->zoom(11)
@@ -148,7 +148,7 @@ final class LocatieVanHetEvenement2Step
                             ->label('Route op kaart')
                             ->addActionLabel('Nog een route toevoegen')
                             ->schema([
-                                Map::make('routeVanHetEvenement')
+                                BasemapMap::make('routeVanHetEvenement')
                                     ->label('Route van het evenement')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)

@@ -8,7 +8,7 @@ use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
-use Dotswan\MapPicker\Fields\Map;
+use App\Filament\Forms\Components\BasemapMap;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -190,7 +190,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->label('Op welke locatie of locaties vind er opvang van de kinderen onder 12 jaar plaats?')
                             ->addActionLabel('Nog een locatie toevoegen')
                             ->schema([
-                                Map::make('locatieVanOpvangVanDeKinderenOnder12Jaar')
+                                BasemapMap::make('locatieVanOpvangVanDeKinderenOnder12Jaar')
                                     ->label('Locatie van opvang van de kinderen onder 12 jaar')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)
@@ -234,7 +234,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->label('Op welke locatie of locaties is er sprake van overnachten door publiek/deelnemers?')
                             ->addActionLabel('Nog een locatie toevoegen')
                             ->schema([
-                                Map::make('locatieVanOvernachtenDoorPubliekDeelnemers')
+                                BasemapMap::make('locatieVanOvernachtenDoorPubliekDeelnemers')
                                     ->label('Locatie van overnachten door publiek/deelnemers')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)
@@ -271,7 +271,7 @@ final class VergunningsaanvraagVoorzieningenStep
                             ->label('Op welke locatie of locaties is er sprake van overnachten door personeel/organisatie?')
                             ->addActionLabel('Nog een locatie toevoegen')
                             ->schema([
-                                Map::make('locatieVanOvernachtenDoorPersoneelOrganisatie1')
+                                BasemapMap::make('locatieVanOvernachtenDoorPersoneelOrganisatie1')
                                     ->label('Locatie van overnachten door personeel/organisatie')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)

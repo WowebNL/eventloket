@@ -12,8 +12,8 @@ use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\Support\SafeDateTime;
+use App\Filament\Forms\Components\BasemapMap;
 use App\Models\Organisation;
-use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
@@ -525,7 +525,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Welke doorgangen wilt u afsluiten?')
                             ->addActionLabel('Wilt u nog een afsluiting toevoegen?')
                             ->schema([
-                                Map::make('positieVanDeDoorgang')
+                                BasemapMap::make('positieVanDeDoorgang')
                                     ->label('Positie van de doorgang')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)
