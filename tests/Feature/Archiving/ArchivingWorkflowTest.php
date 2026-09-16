@@ -3,6 +3,7 @@
 use App\Enums\DestructionListStatus;
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Archiving;
+use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\EditDestructionList;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\ListDestructionLists;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\ViewDestructionList;
@@ -13,7 +14,9 @@ use App\Models\Archiving\DestructionList;
 use App\Models\Archiving\DestructionListItem;
 use App\Models\Archiving\DestructionReport;
 use App\Models\Municipality;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
+use App\Models\Zaaktype;
 use App\Notifications\DestructionListReadyForReview;
 use App\Notifications\DestructionListReviewed;
 use Filament\Facades\Filament;
@@ -278,4 +281,62 @@ test('a report whose pdf is gone can be regenerated from the report itself', fun
         ->assertHasNoActionErrors();
 
     Queue::assertPushed(GenerateDestructionReport::class);
+});
+
+test('a coordinator of a municipality on its own zgw instance sees reports but cannot start a destruction', function () {
+    $ownInstanceMunicipality = Municipality::factory()->create();
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $ownInstanceMunicipality->id,
+    ]);
+
+    Zaaktype::factory()->create([
+        'municipality_id' => $ownInstanceMunicipality->id,
+        'connection' => 'gemeente_'.$ownInstanceMunicipality->id,
+    ]);
+
+    $coordinator = User::factory()->create(['role' => Role::ArchiveCoordinator]);
+    $ownInstanceMunicipality->users()->attach($coordinator);
+
+    $report = DestructionReport::factory()->create([
+        'municipality_id' => $ownInstanceMunicipality->id,
+    ]);
+
+    actAsInMunicipality($coordinator, $ownInstanceMunicipality);
+
+    // The cluster stays reachable: the destruction reports are theirs to read,
+    // including the ones Eventloket writes for its own data.
+    expect(Archiving::canAccess())->toBeTrue()
+        ->and(DestructionListResource::canCreate())->toBeFalse()
+        ->and($coordinator->can('createForMunicipality', [DestructionList::class, $ownInstanceMunicipality]))->toBeFalse();
+
+    livewire(ViewDestructionReport::class, ['record' => $report->id])
+        ->assertSuccessful();
+});
+
+test('a coordinator of an own instance municipality can still start a destruction for a main fallback zaaktype', function () {
+    $municipality = Municipality::factory()->create();
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $municipality->id,
+    ]);
+
+    // Synced from the shared catalogus, so its zaken live on our OpenZaak.
+    Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'connection' => 'main',
+    ]);
+
+    $coordinator = User::factory()->create(['role' => Role::ArchiveCoordinator]);
+    $municipality->users()->attach($coordinator);
+
+    actAsInMunicipality($coordinator, $municipality);
+
+    expect(DestructionListResource::canCreate())->toBeTrue();
+});
+
+test('a coordinator of a municipality on our own openzaak can start a destruction', function () {
+    actAsInMunicipality($this->coordinator, $this->municipality);
+
+    expect(DestructionListResource::canCreate())->toBeTrue();
 });

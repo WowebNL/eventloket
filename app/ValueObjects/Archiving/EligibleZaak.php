@@ -48,6 +48,7 @@ class EligibleZaak
         return [
             'zaak_id' => $this->zaak->id,
             'zgw_zaak_url' => $this->zaak->zgw_zaak_url,
+            'zgw_connection' => $this->zaak->zgwConnectionName(),
             'zaaknummer' => $this->zaak->public_id,
             'zaaktype_naam' => $this->zaak->zaaktype?->name,
             'naam_evenement' => $this->zaak->reference_data->naam_evenement ?? null,

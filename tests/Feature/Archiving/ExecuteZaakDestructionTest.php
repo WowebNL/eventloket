@@ -106,23 +106,25 @@ function fakeZgwDestructionApi(string $zaakUrl, array $zaakOverrides = [], array
 
         return match (true) {
             $urlWithoutQuery === $zaakUrl => Http::response(zgwZaakPayload($zaakUrl, $zaakOverrides), 200),
-            str_contains($url, '/besluiten/api/v1/besluiten') => Http::response([
+            str_contains($url, '/besluiten/api/v1/besluiten') => Http::response(ZgwHttpFake::envelope([
                 ['url' => $urls['besluit'], 'besluittype' => 'bt', 'zaak' => $zaakUrl],
-            ], 200),
-            str_contains($url, '/besluiten/api/v1/besluitinformatieobjecten') => Http::response([
+            ]), 200),
+            str_contains($url, '/besluiten/api/v1/besluitinformatieobjecten') => Http::response(ZgwHttpFake::envelope([
                 ['url' => $urls['besluitinformatieobject'], 'informatieobject' => $urls['besluit_document'], 'besluit' => $urls['besluit']],
-            ], 200),
-            str_contains($url, '/zaken/api/v1/zaakinformatieobjecten') => Http::response([
+            ]), 200),
+            str_contains($url, '/zaken/api/v1/zaakinformatieobjecten') => Http::response(ZgwHttpFake::envelope([
                 ['url' => $urls['zaakinformatieobject_1'], 'informatieobject' => $urls['document'], 'zaak' => $zaakUrl],
                 ['url' => $urls['zaakinformatieobject_2'], 'informatieobject' => $urls['shared_document'], 'zaak' => $zaakUrl],
-            ], 200),
+            ]), 200),
             str_contains($url, '/documenten/api/v1/objectinformatieobjecten') => Http::response(
-                ($query['informatieobject'] ?? null) === $urls['shared_document']
-                    ? [['url' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/objectinformatieobjecten/oio-other', 'object' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/other']]
-                    : [],
+                ZgwHttpFake::envelope(
+                    ($query['informatieobject'] ?? null) === $urls['shared_document']
+                        ? [['url' => ZgwHttpFake::$baseUrl.'/documenten/api/v1/objectinformatieobjecten/oio-other', 'object' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/other']]
+                        : []
+                ),
                 200,
             ),
-            default => Http::response([], 200),
+            default => Http::response(ZgwHttpFake::envelope([]), 200),
         };
     });
 

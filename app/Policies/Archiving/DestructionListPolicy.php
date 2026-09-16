@@ -5,6 +5,7 @@ namespace App\Policies\Archiving;
 use App\Enums\DestructionListStatus;
 use App\Enums\Role;
 use App\Models\Archiving\DestructionList;
+use App\Models\Municipality;
 use App\Models\User;
 use App\Models\Users\MunicipalityUser;
 
@@ -33,6 +34,23 @@ class DestructionListPolicy
     public function create(User $user): bool
     {
         return $user->role === Role::ArchiveCoordinator;
+    }
+
+    /**
+     * Determine whether the user can create a list for this municipality.
+     *
+     * A municipality whose zaaktypen all live on its own ZGW instance destroys
+     * in that instance: it is the zorgdrager there, its selectielijst governs,
+     * and the credentials it issues us are not authorised to delete. Such a
+     * municipality keeps the archive cluster to read its destruction reports,
+     * but cannot start a destruction from here.
+     */
+    public function createForMunicipality(User $user, Municipality $municipality): bool
+    {
+        return $this->create($user)
+            && $user instanceof MunicipalityUser
+            && $user->canAccessMunicipality($municipality->id)
+            && $municipality->archivesInEventloket();
     }
 
     /**

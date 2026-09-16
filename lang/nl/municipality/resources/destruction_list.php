@@ -4,6 +4,14 @@ return [
     'label' => 'Vernietigingslijst',
     'plural_label' => 'Vernietigingslijsten',
 
+    'empty' => [
+        'heading' => 'Nog geen vernietigingslijsten',
+        'own_connection_heading' => 'Vernietigen loopt via uw eigen zaaksysteem',
+        'own_connection_description' => 'Uw gemeente werkt met een eigen ZGW-koppeling. De zaakgegevens staan in uw eigen zaaksysteem, '
+            .'en dat systeem is leidend voor bewaren en vernietigen. Vernietig zaken daar; Eventloket ruimt zijn eigen gegevens '
+            .'daarna automatisch op en legt dat vast in een vernietigingsrapport.',
+    ],
+
     'columns' => [
         'name' => [
             'label' => 'Naam',

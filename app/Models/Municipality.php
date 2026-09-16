@@ -123,6 +123,30 @@ class Municipality extends Model implements HasGeometry
     }
 
     /**
+     * Whether Eventloket is the one that destroys this municipality's zaakdata.
+     *
+     * True for every municipality on our own OpenZaak. A municipality that runs
+     * its own ZGW instance is the zorgdrager there and destroys in that system,
+     * so the archive module does not act for it — unless some of its zaaktypen
+     * fall back to main (an uncoupled role, or a connection that is not
+     * activated), because the zaken created on those do live with us.
+     *
+     * Resolved through {@see Zaaktype::zgwConnectionName()} rather than the
+     * `connection` column, so a deactivated connection is accounted for. The
+     * resolver memoises per municipality, so the loop costs one resolution.
+     */
+    public function archivesInEventloket(): bool
+    {
+        if ($this->zgwConnectionName() === ZgwConnectionResolver::DEFAULT_CONNECTION) {
+            return true;
+        }
+
+        return $this->zaaktypen->contains(
+            fn (Zaaktype $zaaktype): bool => $zaaktype->zgwConnectionName() === ZgwConnectionResolver::DEFAULT_CONNECTION
+        );
+    }
+
+    /**
      * The municipality's own ZGW connection, when configured. Its absence means
      * the municipality falls back to the global "main" connection.
      *
@@ -167,6 +191,7 @@ class Municipality extends Model implements HasGeometry
         return $this->belongsToMany(User::class);
     }
 
+    /** @return HasMany<Zaaktype, $this> */
     public function zaaktypen(): HasMany
     {
         return $this->hasMany(Zaaktype::class);

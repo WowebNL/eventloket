@@ -13,6 +13,7 @@ use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResour
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\RelationManagers\ItemsRelationManager;
 use App\Jobs\Archiving\StartDestructionListDeletion;
 use App\Models\Archiving\DestructionList;
+use App\Models\Municipality;
 use App\Models\User;
 use App\Notifications\DestructionListReadyForReview;
 use App\Notifications\DestructionListReviewed;
@@ -20,6 +21,7 @@ use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
@@ -39,6 +41,19 @@ class DestructionListResource extends Resource
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-trash';
 
     protected static ?int $navigationSort = 0;
+
+    /**
+     * Destruction lists only exist for zaken on our own OpenZaak. A municipality
+     * that runs its own ZGW instance destroys there; it keeps the archive
+     * cluster to read its destruction reports, but starts nothing from here.
+     */
+    public static function canCreate(): bool
+    {
+        $municipality = Filament::getTenant();
+
+        return $municipality instanceof Municipality
+            && auth()->user()->can('createForMunicipality', [DestructionList::class, $municipality]);
+    }
 
     public static function getModelLabel(): string
     {
@@ -130,6 +145,12 @@ class DestructionListResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
+            ->emptyStateHeading(fn (): string => static::canCreate()
+                ? __('municipality/resources/destruction_list.empty.heading')
+                : __('municipality/resources/destruction_list.empty.own_connection_heading'))
+            ->emptyStateDescription(fn (): ?string => static::canCreate()
+                ? null
+                : __('municipality/resources/destruction_list.empty.own_connection_description'))
             ->defaultSort('created_at', 'desc')
             ->recordActions([
                 ViewAction::make(),

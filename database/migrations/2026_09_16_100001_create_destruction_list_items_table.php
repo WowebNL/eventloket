@@ -17,6 +17,10 @@ return new class extends Migration
             // Nulled when the zaak is destroyed; the snapshot columns below stay behind.
             $table->foreignUuid('zaak_id')->nullable()->constrained('zaken')->nullOnDelete();
             $table->string('zgw_zaak_url');
+            // The ZGW connection the zaak lived on. Always "main" today — only our
+            // own OpenZaak is destroyed from here — but the report is a permanent
+            // record, so it says which instance the data was removed from.
+            $table->string('zgw_connection')->default('main');
             $table->string('zaaknummer');
             $table->string('zaaktype_naam')->nullable();
             $table->string('naam_evenement')->nullable();
