@@ -67,6 +67,17 @@ test('advisory member is forbidden from the advisor users list page', function (
         ->assertForbidden();
 });
 
+test('advisory member who is an admin of another advisory is forbidden from the advisor users list page', function () {
+    $otherAdvisory = Advisory::factory()->create(['name' => 'Other Advisory']);
+    $otherAdvisory->users()->attach($this->memberAdvisor, ['role' => AdvisoryRole::Admin]);
+
+    $this->actingAs($this->memberAdvisor);
+    Filament::setTenant($this->advisory);
+
+    livewire(ListAdvisorUsers::class)
+        ->assertForbidden();
+});
+
 test('advisor users list shows existing advisory members', function () {
     $this->actingAs($this->adminAdvisor);
     Filament::setTenant($this->advisory);
