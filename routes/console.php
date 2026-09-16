@@ -29,3 +29,5 @@ Schedule::command('zgw:prune-request-logs')->daily();
 
 // Rotate Open Notificaties webhook tokens before they expire
 Schedule::job(new RenewZgwAbonnementen)->daily();
+
+Schedule::command('archiving:anonymise-inactive-organisers')->monthlyOn(1, '03:00');

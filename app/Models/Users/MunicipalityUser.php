@@ -57,6 +57,12 @@ class MunicipalityUser extends User implements FilamentUser, HasTenants
     }
 
     #[Scope]
+    protected function archivists(Builder $query): void
+    {
+        $query->whereIn('role', [Role::ArchiveCoordinator, Role::ArchiveReviewer]);
+    }
+
+    #[Scope]
     protected function coordinators(Builder $query): void
     {
         $query->where('role', Role::Coordinator);

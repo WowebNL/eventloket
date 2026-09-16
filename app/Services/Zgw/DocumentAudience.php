@@ -42,6 +42,15 @@ class DocumentAudience
                     Role::Coordinator,
                     Role::MunicipalityAdmin,
                     Role::ReviewerMunicipalityAdmin,
+                    // The archive roles are gemeente staff too, scoped to their
+                    // own municipality. They follow this group rather than
+                    // getting an unconfigurable scale of their own: deciding
+                    // that a zaak may be destroyed runs on metadata
+                    // (selectielijst, archiefactiedatum), never on document
+                    // content, so there is no case for letting them see more
+                    // than a behandelaar of the same gemeente.
+                    Role::ArchiveCoordinator,
+                    Role::ArchiveReviewer,
                 ],
             ],
             [

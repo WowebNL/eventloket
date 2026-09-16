@@ -6,6 +6,8 @@ use App\Enums\Role;
 use App\Models\Traits\HasUuid;
 use App\Models\Users\AdminUser;
 use App\Models\Users\AdvisorUser;
+use App\Models\Users\ArchiveCoordinatorUser;
+use App\Models\Users\ArchiveReviewerUser;
 use App\Models\Users\CoordinatorUser;
 use App\Models\Users\KoppelingBeheerderUser;
 use App\Models\Users\MunicipalityAdminUser;
@@ -21,12 +23,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * @property array<string>|null $app_authentication_recovery_codes
  * @property Role $role
+ * @property ?Carbon $anonymised_at
  */
 class User extends Authenticatable implements HasAppAuthentication, HasAppAuthenticationRecovery, MustVerifyEmail
 {
@@ -85,6 +89,7 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
     {
         return [
             'email_verified_at' => 'datetime',
+            'anonymised_at' => 'datetime',
             'password' => 'hashed',
             'role' => Role::class,
             'app_authentication_secret' => 'encrypted',
@@ -165,6 +170,8 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
             Role::Advisor => AdvisorUser::class,
             Role::Organiser => OrganiserUser::class,
             Role::KoppelingBeheerder => KoppelingBeheerderUser::class,
+            Role::ArchiveCoordinator => ArchiveCoordinatorUser::class,
+            Role::ArchiveReviewer => ArchiveReviewerUser::class,
         };
     }
 
