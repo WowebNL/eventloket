@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Spatie\Activitylog\Models\Activity;
 use Tests\Fakes\ZgwHttpFake;
 
 beforeEach(function () {
@@ -163,12 +162,10 @@ function createLocalZaakData(Zaak $zaak): array
     return [$thread, $message, $organiser];
 }
 
-test('destroys the zaak in openzaak and locally, keeping shared documents', function () {
+test('destroys the zaakdata in openzaak, keeping shared documents', function () {
     $urls = fakeZgwDestructionApi($this->zaakUrl);
 
     [$thread, $message, $organiser] = createLocalZaakData($this->zaak);
-
-    expect(Activity::where('subject_type', Zaak::class)->where('subject_id', $this->zaak->id)->exists())->toBeTrue();
 
     new ExecuteZaakDestruction($this->item)->handle(app(ZaakDestructionService::class));
 
@@ -177,28 +174,29 @@ test('destroys the zaak in openzaak and locally, keeping shared documents', func
     Http::assertSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $urls['besluit_document']);
     Http::assertSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $urls['document']);
     Http::assertSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $this->zaakUrl);
-    Http::assertSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $this->dataObjectUrl);
 
     // The shared document is kept
     Http::assertNotSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $urls['shared_document']);
 
-    // All local data is gone
-    expect(Zaak::withTrashed()->find($this->zaak->id))->toBeNull()
-        ->and(Thread::find($thread->id))->toBeNull()
-        ->and(Message::find($message->id))->toBeNull()
-        ->and(DB::table('unread_messages')->where('message_id', $message->id)->exists())->toBeFalse()
-        ->and(DB::table('thread_user')->where('thread_id', $thread->id)->exists())->toBeFalse()
-        ->and(DB::table('notifications')->count())->toBe(0)
-        ->and(Activity::where('subject_type', Zaak::class)->where('subject_id', $this->zaak->id)->exists())->toBeFalse();
+    // Eventloket's own data survives this job on purpose: the zaak delete above
+    // makes the zaaksysteem fire a destroy notification, and acting on that is
+    // what clears the local side — the same route an external ZGW instance
+    // takes. The local row has to stay until then, because its zgw_zaak_url is
+    // the only thing that notification can be matched on.
+    expect(Zaak::withTrashed()->find($this->zaak->id))->not->toBeNull()
+        ->and(Thread::find($thread->id))->not->toBeNull()
+        ->and(Message::find($message->id))->not->toBeNull()
+        ->and(User::find($organiser->id))->not->toBeNull();
 
-    // The organiser account itself is untouched
-    expect(User::find($organiser->id))->not->toBeNull();
+    Http::assertNotSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $this->dataObjectUrl);
 
     $this->item->refresh();
 
     expect($this->item->status)->toBe(DestructionItemStatus::Deleted)
-        ->and($this->item->zaak_id)->toBeNull()
-        ->and($this->item->destroyed_at)->not->toBeNull();
+        ->and($this->item->destroyed_at)->not->toBeNull()
+        // Kept, so the reconciliation command can find this zaak again if the
+        // notification never arrives.
+        ->and($this->item->zaak_id)->not->toBeNull();
 });
 
 test('skips a zaak that is no longer eligible according to openzaak', function () {
@@ -212,7 +210,7 @@ test('skips a zaak that is no longer eligible according to openzaak', function (
         ->and(Zaak::withTrashed()->find($this->zaak->id))->not->toBeNull();
 });
 
-test('cleans up local data when the zaak is already gone in openzaak', function () {
+test('marks an item deleted when the zaak is already gone in openzaak', function () {
     Http::fake(function ($request) {
         if ($request->method() === 'DELETE') {
             return Http::response(null, 204);
@@ -223,8 +221,7 @@ test('cleans up local data when the zaak is already gone in openzaak', function 
 
     new ExecuteZaakDestruction($this->item)->handle(app(ZaakDestructionService::class));
 
-    expect($this->item->refresh()->status)->toBe(DestructionItemStatus::Deleted)
-        ->and(Zaak::withTrashed()->find($this->zaak->id))->toBeNull();
+    expect($this->item->refresh()->status)->toBe(DestructionItemStatus::Deleted);
 });
 
 test('a failing item does not stop other items and can be retried', function () {

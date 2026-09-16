@@ -4,26 +4,26 @@ namespace App\Jobs\Archiving;
 
 use App\Enums\DestructionItemStatus;
 use App\Models\Archiving\DestructionListItem;
-use App\Models\Message;
-use App\Models\Thread;
-use App\Models\Threads\AdviceThread;
-use App\Models\Threads\OrganiserThread;
 use App\Models\Zaak;
 use App\Services\Archiving\ZaakDestructionService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Spatie\Activitylog\Models\Activity;
 use Throwable;
 
 /**
- * Destroys a single zaak: first in OpenZaak (besluiten, documents, zaak),
- * then all local Eventloket data (threads, messages, notifications, activity
- * log and the zaak itself). Idempotent: a retry after a partial failure
- * resumes where it left off, steps that already happened are no-ops.
+ * Destroys the zaakdata of a single zaak in OpenZaak: its besluiten, its
+ * documents and the zaak itself.
+ *
+ * Only the ZGW side. Eventloket's own data about the zaak is destroyed by
+ * {@see ZaakDestroyNotificationReceived}, triggered by the
+ * destroy notification this job's zaak delete produces — the same route a
+ * municipality's own ZGW instance takes.
+ *
+ * Idempotent: a retry after a partial failure resumes where it left off, steps
+ * that already happened are no-ops.
  */
 class ExecuteZaakDestruction implements ShouldQueue
 {
@@ -72,18 +72,20 @@ class ExecuteZaakDestruction implements ShouldQueue
                 }
             }
 
-            if ($zaak?->data_object_url) {
-                $service->deleteDataObject($zaak->data_object_url);
-            }
-
-            if ($zaak) {
-                $this->destroyLocalData($zaak);
-            }
-
+            // Eventloket's own data (threads, messages, the form submission
+            // object, the local zaak row) is deliberately left alone here. The
+            // zaak delete above makes OpenZaak fire a destroy notification,
+            // which ZaakDestroyNotificationReceived acts on. That is the same
+            // route a municipality's own instance takes, so both sides are
+            // cleaned up by one code path and recorded once.
+            //
+            // The local row therefore has to survive this job: its
+            // zgw_zaak_url is the only thing the notification can be matched
+            // on. ReconcileDestroyedZaken is the safety net for a notification
+            // that never arrives.
             $item->update([
                 'status' => DestructionItemStatus::Deleted,
                 'destroyed_at' => now(),
-                'zaak_id' => null,
             ]);
         } catch (Throwable $exception) {
             // Do not rethrow: other items in the batch must keep going.
@@ -99,46 +101,5 @@ class ExecuteZaakDestruction implements ShouldQueue
                 'failure_reason' => 'Er is een onverwachte fout opgetreden bij het vernietigen van deze zaak',
             ]);
         }
-    }
-
-    private function destroyLocalData(Zaak $zaak): void
-    {
-        $zaak->clearZgwCache();
-
-        DB::transaction(function () use ($zaak) {
-            $threadIds = Thread::where('zaak_id', $zaak->id)->toBase()->pluck('id');
-            $messageIds = Message::whereIn('thread_id', $threadIds)->toBase()->pluck('id');
-
-            Activity::query()
-                ->where(fn ($query) => $query
-                    ->where(fn ($subQuery) => $subQuery->where('subject_type', Zaak::class)->where('subject_id', $zaak->id))
-                    ->orWhere(fn ($subQuery) => $subQuery->whereIn('subject_type', [Thread::class, AdviceThread::class, OrganiserThread::class])->whereIn('subject_id', $threadIds))
-                    ->orWhere(fn ($subQuery) => $subQuery->where('subject_type', Message::class)->whereIn('subject_id', $messageIds)))
-                ->delete();
-
-            $this->deleteNotificationsReferencing($zaak);
-
-            // threads.zaak_id has no cascade, so threads go first; messages,
-            // unread_messages and thread_user cascade from threads/messages.
-            Thread::whereIn('id', $threadIds)->delete();
-
-            // Without this the delete itself would leave a new activity log
-            // entry referencing the destroyed zaak.
-            $zaak->disableLogging();
-            $zaak->forceDelete();
-        });
-    }
-
-    private function deleteNotificationsReferencing(Zaak $zaak): void
-    {
-        $dataAsText = match (DB::connection()->getDriverName()) {
-            'pgsql' => 'data::text',
-            'mysql', 'mariadb' => 'CAST(data AS CHAR)',
-            default => 'CAST(data AS TEXT)',
-        };
-
-        DB::table('notifications')
-            ->whereRaw("{$dataAsText} LIKE ?", ['%'.$zaak->id.'%'])
-            ->delete();
     }
 }
