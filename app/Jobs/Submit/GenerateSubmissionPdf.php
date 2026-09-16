@@ -53,6 +53,12 @@ final class GenerateSubmissionPdf implements ShouldQueue
 
         $this->zaak->loadMissing(['zaaktype', 'organisation', 'organiserUser']);
 
+        // Issue #10: when this aanvraag replaces a vooraankondiging, the
+        // link is shown in the PDF header right below the zaaknummer. The
+        // relation is written synchronously during submit, before this
+        // job is dispatched, so it is available here.
+        $vervangtVooraankondiging = $this->zaak->vervangtVooraankondiging()->first()?->public_id;
+
         // Een aanvraag op persoonlijke titel hangt aan een organisatie met
         // de placeholder-naam "Mijn omgeving". Er is dan geen organisator
         // om te tonen — de aanvrager staat al op de regel eronder — dus
@@ -64,6 +70,7 @@ final class GenerateSubmissionPdf implements ShouldQueue
 
         $pdf = Pdf::loadView('pdf.submission-report', [
             'zaak' => $this->zaak,
+            'vervangtVooraankondiging' => $vervangtVooraankondiging,
             'organisatorNaam' => $organisatorNaam,
             'state' => $state,
             'sections' => $sections,

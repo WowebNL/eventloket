@@ -12,7 +12,6 @@ use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
 use Closure;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -56,16 +55,23 @@ class MunicipalityAdminUserInviteAction
                     ->label(__('municipality/resources/municipality_admin.actions.invite.form.municipalities.label'))
                     ->preload()
                     ->required(),
-                Checkbox::make('can_review')
-                    ->label(__('municipality/resources/municipality_admin.actions.invite.form.can_review.label'))
-                    ->helperText(__('municipality/resources/municipality_admin.actions.invite.form.can_review.helper_text')),
+                Select::make('role')
+                    ->label(__('municipality/resources/municipality_admin.actions.invite.form.role.label'))
+                    ->options([
+                        Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
+                        Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
+                    ])
+                    ->default(Role::MunicipalityAdmin->value)
+                    ->selectablePlaceholder(false)
+                    ->required(),
             ])
             ->action(function ($data) {
 
                 $municipalityInvite = MunicipalityInvite::create([
                     'name' => $data['name'],
                     'email' => $data['email'],
-                    'role' => $data['can_review'] ? Role::ReviewerMunicipalityAdmin : Role::MunicipalityAdmin,
+                    'role' => Role::from($data['role']),
                     'token' => Str::uuid(),
                 ]);
 

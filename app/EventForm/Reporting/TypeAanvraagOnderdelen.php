@@ -34,20 +34,16 @@ final class TypeAanvraagOnderdelen
         }
 
         // Derive the main item from the same canonical determination that picks
-        // the zaaktype (`ResolveZaaktype`) and drives the summary and PDF
-        // (`SubmissionReport::isMelding`). This method used to hold its own
+        // the zaaktype (`ResolveZaaktype`). This method used to hold its own
         // legacy-only copy of that logic (the road-closure question alone),
         // which made municipalities on the new ReportQuestion system (such as
         // Heerlen) see "Evenementenvergunning" for a melding.
-        $type = app(DetermineAanvraagType::class)->forState($state);
+        $role = app(DetermineAanvraagType::class)->forState($state);
 
-        // The label matches the zaaktype name prefix per type, the convention
-        // the shared catalogus uses.
-        return [match ($type) {
-            DetermineAanvraagType::MELDING => 'Melding',
-            DetermineAanvraagType::VOORAANKONDIGING => 'Vooraankondiging',
-            default => 'Evenementenvergunning',
-        }];
+        // The label text matches the zaaktype name prefix per role
+        // (Vergunning => "Evenementenvergunning", Melding => "Melding",
+        // Vooraankondiging => "Vooraankondiging").
+        return [$role->namePrefix()];
     }
 
     /**

@@ -1,5 +1,7 @@
 <?php
 
+use Filament\Forms\Components\DateTimePicker;
+use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -46,6 +48,53 @@ expect()->extend('toBeOne', function () {
 | global functions to help you to reduce the number of lines of code in your test files.
 |
 */
+
+/**
+ * Walk a wizard step recursively and collect its date time pickers by field
+ * name. The fields are nested inside layout components, and reading them back
+ * needs the raw `childComponents` array: `getChildComponents()` requires a
+ * container, which an isolated test does not have.
+ *
+ * This lives here rather than in a test file because more than one test file
+ * uses it, and a helper defined in a test file only exists in the process that
+ * loaded that file. Under a parallel run the other file lands in a different
+ * worker and the call fails on an undefined function.
+ *
+ * @return array<string, DateTimePicker>
+ */
+function findDateTimePickers(Step $step): array
+{
+    $found = [];
+    $walk = function (object $component) use (&$walk, &$found): void {
+        if ($component instanceof DateTimePicker) {
+            $found[$component->getName()] = $component;
+        }
+
+        // The raw `childComponents` array holds the schema arrays as they were
+        // passed to `->schema([...])`, so each entry is a plain PHP array of
+        // child components.
+        if (! property_exists($component, 'childComponents')) {
+            return;
+        }
+        $reflection = new ReflectionObject($component);
+        $childProp = $reflection->getProperty('childComponents');
+        $childProp->setAccessible(true);
+        $children = $childProp->getValue($component);
+        foreach ($children as $componentList) {
+            if (! is_array($componentList)) {
+                continue;
+            }
+            foreach ($componentList as $child) {
+                if (is_object($child)) {
+                    $walk($child);
+                }
+            }
+        }
+    };
+    $walk($step);
+
+    return $found;
+}
 
 function something()
 {

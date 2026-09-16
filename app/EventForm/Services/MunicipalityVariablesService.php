@@ -88,6 +88,47 @@ class MunicipalityVariablesService
             $map['report_questions'] = [];
         }
 
+        $map['extra_questions'] = $this->extraQuestionsFor($municipality);
+
         return $map;
+    }
+
+    /**
+     * De per-gemeente ingestelde "Aanvullende vragen" (`MunicipalityFormQuestion`),
+     * alleen de actieve, gesorteerd op `order`.
+     *
+     * Deze lijst gaat integraal mee in `gemeenteVariabelen` en daarmee in de
+     * `form_state_snapshot` van de zaak. Daardoor is 'ie bij het indienen
+     * bevroren: wijzigt of verwijdert de gemeente later een vraag, dan blijft
+     * de PDF van een ingediende aanvraag kloppen. Haal deze lijst dus niet
+     * alsnog live uit de database bij het genereren van de PDF — dat breekt
+     * stilletjes alle historische inzendingen.
+     *
+     * @return list<array{id: int, order: int, type: string, label: string, helper_text: string|null, options: list<string>, is_required: bool, show_for_aanvraag_types: list<string>}>
+     */
+    private function extraQuestionsFor(Municipality $municipality): array
+    {
+        return $municipality
+            ->formQuestions()
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->get()
+            ->map(fn ($question): array => [
+                'id' => (int) $question->id,
+                'order' => (int) $question->order,
+                'type' => $question->type->value,
+                'label' => (string) $question->label,
+                'helper_text' => $question->helper_text === null ? null : (string) $question->helper_text,
+                'options' => array_values(array_map(
+                    fn ($option): string => (string) $option,
+                    is_array($question->options) ? $question->options : [],
+                )),
+                'is_required' => (bool) $question->is_required,
+                'show_for_aanvraag_types' => array_values(array_map(
+                    fn ($type): string => (string) $type,
+                    is_array($question->show_for_aanvraag_types) ? $question->show_for_aanvraag_types : [],
+                )),
+            ])
+            ->all();
     }
 }

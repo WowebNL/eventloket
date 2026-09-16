@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Admin\Pages\Calendar as AdminCalendarPage;
 use App\Filament\Admin\Widgets\AdminCalendarWidget;
 use App\Filament\Advisor\Pages\Calendar as AdvisorCalendarPage;
@@ -9,10 +11,13 @@ use App\Filament\Municipality\Pages\Calendar as MunicipalityCalendarPage;
 use App\Filament\Municipality\Widgets\MunicipalityCalendarWidget;
 use App\Filament\Organiser\Pages\Calendar as OrganiserCalendarPage;
 use App\Filament\Organiser\Widgets\OrganiserCalendarWidget;
+use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
+use App\Models\ZaakRelatie;
 use App\Models\Zaaktype;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
@@ -358,7 +363,12 @@ test('admin calendar widget applies zaaktype filter in table view', function () 
         'role' => Role::Admin,
     ]);
 
-    $otherZaaktype = Zaaktype::factory()->create(['municipality_id' => $this->municipality->id]);
+    $this->zaaktype->update(['role' => ZaaktypeRole::Vergunning]);
+
+    $otherZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Melding,
+    ]);
     $otherZaak = Zaak::factory()->create([
         'zaaktype_id' => $otherZaaktype->id,
         'organisation_id' => $this->organisation->id,
@@ -371,10 +381,94 @@ test('admin calendar widget applies zaaktype filter in table view', function () 
         ->callAction('toggleView')
         ->assertSet('viewMode', 'table')
         ->callAction('filter', data: [
-            'zaaktypes' => [$this->zaaktype->id],
+            'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
         ])
         ->assertCanSeeTableRecords([$this->zaak])
         ->assertCanNotSeeTableRecords([$otherZaak]);
+});
+
+test('admin calendar widget applies zaaktype filter to a zaaktype without a stored role', function () {
+    // `zaaktypen.role` is nullable and is only written by a koppeling or by the
+    // catalogus sync, so a row that predates the column keeps a null role. The
+    // test above fills the column first and therefore covers only the happy
+    // state; this one leaves it null, as the factory and an upgraded database
+    // do, and the zaak still has to be findable through the naming convention.
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    $vergunningZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'name' => 'Evenementenvergunning Testgemeente',
+        'role' => null,
+    ]);
+    $vergunningZaak = Zaak::factory()->create([
+        'zaaktype_id' => $vergunningZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $meldingZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'name' => 'Melding klein evenement Testgemeente',
+        'role' => null,
+    ]);
+    $meldingZaak = Zaak::factory()->create([
+        'zaaktype_id' => $meldingZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
+        ])
+        ->assertCanSeeTableRecords([$vergunningZaak])
+        // $this->zaak hangs on a factory name that follows no convention, so it
+        // resolves to no role and stays out just like the melding.
+        ->assertCanNotSeeTableRecords([$meldingZaak, $this->zaak]);
+});
+
+test('admin calendar widget applies zaaktype filter to a koppeld zaaktype without a stored role', function () {
+    // First rung of the ladder: the local row carries the external
+    // omschrijving, so only the koppeling can tell the role.
+    $user = User::factory()->create([
+        'email' => 'admin@example.com',
+        'role' => Role::Admin,
+    ]);
+
+    MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $this->municipality->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'EXT-1',
+    ]);
+
+    $gekoppeldZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'identificatie' => 'EXT-1',
+        'name' => 'Activiteit behandelen',
+        'role' => null,
+    ]);
+    $gekoppeldZaak = Zaak::factory()->create([
+        'zaaktype_id' => $gekoppeldZaaktype->id,
+        'organisation_id' => $this->organisation->id,
+    ]);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'zaaktype_roles' => [ZaaktypeRole::Vergunning->value],
+        ])
+        ->assertCanSeeTableRecords([$gekoppeldZaak])
+        ->assertCanNotSeeTableRecords([$this->zaak]);
 });
 
 test('admin calendar widget applies organisations filter in table view', function () {
@@ -477,4 +571,97 @@ test('calendar widget table view opens the view modal when a row is clicked', fu
     $component->mountTableAction('view', $zaak)->assertOk();
 
     expect($component->instance()->getMountedAction()?->getName())->toBe('view');
+});
+
+/**
+ * Issue #10: a vooraankondiging that has been replaced by a definitive
+ * aanvraag disappears from the calendar; the aanvraag takes its place.
+ * The zaken list itself is untouched by this filter.
+ */
+function omgezetteVooraankondigingScenario(object $context): array
+{
+    $vooraankondigingZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $context->municipality->id,
+        'name' => 'Vooraankondiging gemeente Test',
+        'is_active' => true,
+    ]);
+
+    // Answer 6: the vooraankondiging is typically already closed when the
+    // definitive aanvraag arrives — the filter must ignore its status.
+    $vooraankondiging = Zaak::factory()->create([
+        'zaaktype_id' => $vooraankondigingZaaktype->id,
+        'organisation_id' => $context->organisation->id,
+        'reference_data' => new ZaakReferenceData(
+            start_evenement: now()->toString(),
+            eind_evenement: now()->addDay()->toString(),
+            registratiedatum: now()->toString(),
+            status_name: 'Afgehandeld',
+            statustype_url: 'https://example.com/statustype/1',
+            resultaat: 'Afgehandeld',
+            naam_evenement: 'Omgezette vooraankondiging',
+        ),
+    ]);
+
+    $aanvraag = Zaak::factory()->create([
+        'zaaktype_id' => $context->zaaktype->id,
+        'organisation_id' => $context->organisation->id,
+    ]);
+
+    ZaakRelatie::create([
+        'zaak_id' => $aanvraag->id,
+        'gerelateerde_zaak_id' => $vooraankondiging->id,
+        'type' => ZaakRelatieType::VervangtVooraankondiging,
+    ]);
+
+    return [$vooraankondiging, $aanvraag];
+}
+
+function actAsMunicipalityAdminOnCalendar(object $context): void
+{
+    $user = User::factory()->create([
+        'email' => 'municipality-admin@example.com',
+        'role' => Role::MunicipalityAdmin,
+    ]);
+    $context->municipality->users()->attach($user);
+
+    test()->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($context->municipality);
+}
+
+test('calendar hides a vooraankondiging that was replaced by a definitive aanvraag', function () {
+    [$vooraankondiging, $aanvraag] = omgezetteVooraankondigingScenario($this);
+
+    actAsMunicipalityAdminOnCalendar($this);
+
+    livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$aanvraag])
+        ->assertCanNotSeeTableRecords([$vooraankondiging]);
+});
+
+test('calendar shows the vooraankondiging again when its successor is soft-deleted', function () {
+    [$vooraankondiging, $aanvraag] = omgezetteVooraankondigingScenario($this);
+
+    // Soft delete: the FK cascade does not fire, so the relation row stays
+    // behind — the filter itself must check the successor's deleted_at.
+    $aanvraag->delete();
+
+    actAsMunicipalityAdminOnCalendar($this);
+
+    livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$vooraankondiging]);
+});
+
+test('the zaken list still shows a vooraankondiging that was replaced', function () {
+    [$vooraankondiging, $aanvraag] = omgezetteVooraankondigingScenario($this);
+
+    actAsMunicipalityAdminOnCalendar($this);
+
+    livewire(ListZaken::class)
+        ->filterTable('workingstock', 'all')
+        ->assertCanSeeTableRecords([$vooraankondiging, $aanvraag]);
 });

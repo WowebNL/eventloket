@@ -22,7 +22,8 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaaktype;
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\StatusPhase;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
@@ -30,22 +31,22 @@ use Tests\Fakes\ZgwHttpFake;
 
 uses(RefreshDatabase::class);
 
-function makeOzZaak(): OzZaak
+function makeOzZaak(): ZaakReadModel
 {
-    return new OzZaak(
-        uuid: 'new-1',
-        url: ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/new-1',
-        identificatie: 'ZAAK-2026-0001',
-        zaaktype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
-        omschrijving: 'Test event',
-        startdatum: now()->toDateString(),
-        registratiedatum: now()->toDateString(),
-        einddatum: null,
-        einddatumGepland: null,
-        uiterlijkeEinddatumAfdoening: null,
-        bronorganisatie: '820151130',
-        zaakgeometrie: null,
-    );
+    return ZaakReadModel::fromArray([
+        'uuid' => 'new-1',
+        'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/new-1',
+        'identificatie' => 'ZAAK-2026-0001',
+        'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1',
+        'omschrijving' => 'Test event',
+        'startdatum' => now()->toDateString(),
+        'registratiedatum' => now()->toDateString(),
+        'einddatum' => null,
+        'einddatumGepland' => null,
+        'uiterlijkeEinddatumAfdoening' => null,
+        'bronorganisatie' => '820151130',
+        'zaakgeometrie' => null,
+    ]);
 }
 
 function localZaakContext(): array
@@ -72,10 +73,10 @@ test('sets the initial statustype_url (volgnummer 1) on the local zaak', functio
     $ctx = localZaakContext();
 
     Http::fake([
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'In behandeling', 'volgnummer' => 2, 'isEindstatus' => false],
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'Ontvangen', 'volgnummer' => 1, 'isEindstatus' => false],
-        ], 200),
+        ]), 200),
     ]);
 
     $zaak = app(CreateLocalZaak::class)->execute(
@@ -91,9 +92,9 @@ test('sets the initial statustype_url (volgnummer 1) on the local zaak', functio
         ->toBe(ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1')
         ->and($zaak->reference_data->status_name)->toBe('Ingediend');
 
-    // En de statustype-accessor resolvet daardoor een niet-null OzStatustype.
+    // En de statustype-accessor resolvet daardoor een niet-null StatusTypeData.
     expect($zaak->statustype)->not->toBeNull()
-        ->and($zaak->statustype->isReceived())->toBeTrue();
+        ->and(StatusPhase::isReceived($zaak->statustype))->toBeTrue();
 });
 
 test('falls back to empty statustype_url when the statustype lookup fails', function () {

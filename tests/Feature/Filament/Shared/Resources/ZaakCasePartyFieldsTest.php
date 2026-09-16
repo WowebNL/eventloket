@@ -113,7 +113,7 @@ beforeEach(function () {
 function casePartyLabels(): array
 {
     return [
-        __('municipality/resources/zaak.columns.naam_organisator.label'),
+        __('resources/zaak.columns.naam-organiser.label'),
         __('municipality/resources/zaak.columns.naam_organisatie.label'),
         __('municipality/resources/zaak.columns.adres_evenement.label'),
         __('municipality/resources/zaak.columns.kvk_nummer_organisatie.label'),
@@ -183,17 +183,15 @@ test('admin sees the case party fields in the zaak infolist', function () {
     assertSeesCasePartyFields(livewire(ViewZaak::class, ['record' => $this->zaak->id]));
 });
 
-test('organiser does not see the case party fields in the zaak infolist', function () {
+test('organiser sees the case party fields on a case of their own organisation', function () {
     Filament::setCurrentPanel(Filament::getPanel('organiser'));
 
-    $this->actingAs($this->organiserUser);
+    // Faithful to production auth: the guard resolves the role-specific
+    // OrganiserUser, which the per-organisation visibility check relies on.
+    $this->actingAs(User::find($this->organiserUser->id));
     Filament::setTenant($this->organisation);
 
-    $component = livewire(OrganiserViewZaak::class, ['record' => $this->zaak->id])->assertOk();
-
-    foreach (casePartyLabels() as $label) {
-        $component->assertDontSee($label);
-    }
+    assertSeesCasePartyFields(livewire(OrganiserViewZaak::class, ['record' => $this->zaak->id]));
 });
 
 test('case party fields are hidden when the underlying data is empty', function () {

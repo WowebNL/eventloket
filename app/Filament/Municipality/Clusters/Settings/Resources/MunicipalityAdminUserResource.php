@@ -32,6 +32,13 @@ class MunicipalityAdminUserResource extends Resource
 
     protected static ?string $tenantOwnershipRelationshipName = 'municipalities';
 
+    public static function canAccess(): bool
+    {
+        // The koppeling beheerder shares the Settings cluster but must not manage
+        // users; only the gemeente admins reach this resource.
+        return in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin]);
+    }
+
     public static function getModelLabel(): string
     {
         return __('municipality/resources/municipality_admin.label');
@@ -54,6 +61,7 @@ class MunicipalityAdminUserResource extends Resource
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
+                        Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
                         Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
                         Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
@@ -76,6 +84,7 @@ class MunicipalityAdminUserResource extends Resource
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
                         Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
                         Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
@@ -110,8 +119,14 @@ class MunicipalityAdminUserResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        /** @phpstan-ignore-next-line */
-        return parent::getEloquentQuery()->admins();
+        // The shared admins() scope feeds notifications, so broaden the listing
+        // here instead of widening that scope: gemeente admins plus koppeling
+        // beheerders are managed from this resource.
+        return parent::getEloquentQuery()->whereIn('role', [
+            Role::MunicipalityAdmin->value,
+            Role::ReviewerMunicipalityAdmin->value,
+            Role::KoppelingBeheerder->value,
+        ]);
     }
 
     public static function getPages(): array

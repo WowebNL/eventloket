@@ -9,11 +9,13 @@ use App\EventForm\Persistence\DraftStore;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\Steps\CreateLocalZaak;
 use App\EventForm\Submit\Steps\CreateZaakInZGW;
+use App\EventForm\Submit\Steps\KoppelVooraankondiging;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
+use App\Jobs\Zaak\AddGlobaleLocatieZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\SetInitialStatusZGW;
@@ -45,6 +47,7 @@ use Illuminate\Support\Facades\Log;
  *   - AddEinddatumZGW
  *   - UpdateInitiatorZGW
  *   - AddGeometryZGW
+ *   - AddGlobaleLocatieZGW  (locaties_evenement als zaakobject "GlobaleLocatie")
  *   - CreateDoorkomstZaken  (alleen bij route-events)
  *   - HashIdentifyingAttributes  (laatste in chain; anonimiseert BSN/KvK zodat
  *     alle eerdere jobs bij retry nog de originele data kunnen lezen)
@@ -56,6 +59,7 @@ final class SubmitEventForm
         private readonly ResolveZaaktype $resolveZaaktype,
         private readonly CreateZaakInZGW $createZaakInZGW,
         private readonly CreateLocalZaak $createLocalZaak,
+        private readonly KoppelVooraankondiging $koppelVooraankondiging,
         private readonly DraftStore $draftStore,
     ) {}
 
@@ -80,6 +84,11 @@ final class SubmitEventForm
                 organisation: $organisation,
             );
         });
+
+        // 3b. Vooraankondiging linked in the form? Write the typed
+        //     zaak-relation (issue #10), with server-side re-checks on
+        //     ownership and aard inside the step itself.
+        $this->koppelVooraankondiging->execute($state, $zaak, $organisation);
 
         // 4. Het ingediende concept verwijderen; andere concepten van de
         //    gebruiker (parallelle aanvragen) blijven staan.
@@ -121,6 +130,7 @@ final class SubmitEventForm
             new AddEinddatumZGW($zaak),
             new UpdateInitiatorZGW($zaak),
             new AddGeometryZGW($zaak),
+            new AddGlobaleLocatieZGW($zaak),
             new CreateDoorkomstZaken($zaak),
             new HashIdentifyingAttributes($zaak),
         ])->dispatch();

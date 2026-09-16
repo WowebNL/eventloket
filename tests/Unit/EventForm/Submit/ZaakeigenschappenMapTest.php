@@ -91,6 +91,50 @@ test('initiator-blok bevat KvK en contactpersoon', function () {
         ->and($initiator['contactpersoon']['telefoonnummer'])->toBe('06-1234');
 });
 
+test('the organisation address fieldset is assembled into organisatie_adres', function () {
+    // The organisation address lives in the number-suffixed fields of the
+    // "Organisatie informatie" fieldset, which is the fieldset an aanvrager with
+    // a KvK number fills in. It is assembled here so the rol builder can record
+    // it as the vestiging verblijfsadres.
+    $state = new FormState(values: [
+        'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+        'watIsDeNaamVanUwOrganisatie' => 'Media Tuin',
+        'postcode1' => '6411 CD',
+        'huisnummer1' => '32',
+        'huisletter1' => 'a',
+        'huisnummertoevoeging1' => 'bis',
+        'straatnaam1' => 'Coriovallumstraat',
+        'plaatsnaam1' => 'Heerlen',
+    ]);
+
+    $initiator = $this->map->buildInitiator($state);
+
+    expect($initiator['organisatie_adres'])->toBe([
+        'postcode' => '6411 CD',
+        'huisnummer' => '32',
+        'huisletter' => 'a',
+        'huisnummertoevoeging' => 'bis',
+        'straatnaam' => 'Coriovallumstraat',
+        'plaatsnaam' => 'Heerlen',
+    ])->and($initiator)->not->toHaveKey('natuurlijk_persoon_adres');
+});
+
+test('an initiator without organisation address fields has no organisatie_adres entry', function () {
+    // Only one of the two address fieldsets is shown per aanvrager, so a
+    // private aanvrager's initiator carries no organisation address at all.
+    $state = new FormState(values: [
+        'postcode' => '6411 CD',
+        'huisnummer' => '32',
+        'straatnaam' => 'Coriovallumstraat',
+        'plaatsnaam' => 'Heerlen',
+    ]);
+
+    $initiator = $this->map->buildInitiator($state);
+
+    expect($initiator)->not->toHaveKey('organisatie_adres')
+        ->and($initiator['natuurlijk_persoon_adres']['huisnummer'])->toBe('32');
+});
+
 test('initiator zonder voornaam+achternaam heeft géén lege "naam"-entry', function () {
     $state = new FormState(values: [
         'watIsUwEMailadres' => 'test@example.net',

@@ -9,6 +9,7 @@ use App\Models\Users\AdvisorUser;
 use App\Models\Users\ArchiveCoordinatorUser;
 use App\Models\Users\ArchiveReviewerUser;
 use App\Models\Users\CoordinatorUser;
+use App\Models\Users\KoppelingBeheerderUser;
 use App\Models\Users\MunicipalityAdminUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Users\ReviewerMunicipalityAdminUser;
@@ -168,6 +169,7 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
             Role::Reviewer => ReviewerUser::class,
             Role::Advisor => AdvisorUser::class,
             Role::Organiser => OrganiserUser::class,
+            Role::KoppelingBeheerder => KoppelingBeheerderUser::class,
             Role::ArchiveCoordinator => ArchiveCoordinatorUser::class,
             Role::ArchiveReviewer => ArchiveReviewerUser::class,
         };

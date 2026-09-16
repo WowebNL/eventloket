@@ -12,8 +12,8 @@ use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\Support\SafeDateTime;
+use App\Filament\Forms\Components\BasemapMap;
 use App\Models\Organisation;
-use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
@@ -151,7 +151,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 return ! (in_array('anders', (array) $get('welkeSoortenPopmuziekZijnErTeHorenOpLocatieEvenement'), true));
                             }),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBANorm0103DBVanUwEvenementX')
-                            ->label(Label::render('Wat is de geluidsbelasting in db(A) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Check de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)'))
+                            ->label(Label::render('Wat is de geluidsbelasting in db(A) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbA dat is toegestaan)'))
                             ->numeric()
                             ->required()
                             ->belowContent([
@@ -159,7 +159,7 @@ final class VergunningaanvraagVervolgvragenStep
                                 'Deze geluidssterkte moet gemeten worden op de zogenaamde "Front of House" afstand van maximaal 25 meter. De dB(A) norm meet het geluidsniveau zoals het menselijk oor dat waarneemt. Het kan gemeten worden met een geluidsniveaumeter, die een A-filter toepast. Bij festivals wordt dat gemeten op 25 meter vanaf het podium.',
                             ]),
                         TextInput::make('watIsDeGeluidsbelastingInDecibelDBCNorm0103DBVanUwEvenement')
-                            ->label(Label::render('Wat is de geluidsbelasting in db(C) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Check de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)'))
+                            ->label(Label::render('Wat is de geluidsbelasting in db(C) van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}? (Raadpleeg de APV van de betreffende gemeente voor het maximaal aantal dbC dat is toegestaan)'))
                             ->numeric()
                             ->required()
                             ->belowContent([
@@ -185,6 +185,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->live(),
                         Repeater::make('tenten')
                             ->label('Welke tenten plaatst u?')
+                            ->minItems(1)
                             ->addActionLabel('Wilt u nog een tent toevoegen?')
                             ->schema([
                                 TextInput::make('tentnummer')
@@ -220,6 +221,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->hidden(Hidden::rule('tenten')),
                         Repeater::make('podia')
                             ->label('Welke podia plaatst u?')
+                            ->minItems(1)
                             ->addActionLabel('Wilt u podium toevoegen?')
                             ->schema([
                                 TextInput::make('podiumnummer')
@@ -242,6 +244,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->hidden(Hidden::rule('podia')),
                         Repeater::make('overkappingen')
                             ->label('Welke overkappingen plaatst u?')
+                            ->minItems(1)
                             ->addActionLabel('Nog een overkapping toevoegen')
                             ->schema([
                                 TextInput::make('overkappingnummer')
@@ -525,7 +528,7 @@ final class VergunningaanvraagVervolgvragenStep
                             ->label('Welke doorgangen wilt u afsluiten?')
                             ->addActionLabel('Wilt u nog een afsluiting toevoegen?')
                             ->schema([
-                                Map::make('positieVanDeDoorgang')
+                                BasemapMap::make('positieVanDeDoorgang')
                                     ->label('Positie van de doorgang')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)

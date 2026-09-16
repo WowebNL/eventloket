@@ -2,6 +2,7 @@
 
 namespace App\Filament\Infolists;
 
+use App\Support\Maps\Basemap;
 use Closure;
 use Filament\Infolists\Components\Entry;
 
@@ -61,5 +62,26 @@ class GeoJsonMapEntry extends Entry
     public function getDefaultLocation(): array
     {
         return ['lat' => $this->defaultLat, 'lng' => $this->defaultLng];
+    }
+
+    /**
+     * Tile URL template for the basemap, from config/maps.php.
+     *
+     * Exposed here so the view stays free of any tile service detail and the
+     * basemap of this entry is the same one the form fields use.
+     */
+    public function getTilesUrl(): string
+    {
+        return Basemap::tilesUrl();
+    }
+
+    /**
+     * Tile layer options passed to L.tileLayer, attribution included.
+     *
+     * @return array<string, mixed>
+     */
+    public function getTileLayerOptions(): array
+    {
+        return Basemap::leafletTileOptions();
     }
 }

@@ -42,6 +42,7 @@ use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -53,6 +54,22 @@ use Tests\Feature\EventForm\Pages\FakeSubmitEventForm;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    // Every test in this file runs at one fixed moment instead of on the real
+    // clock, for two reasons.
+    //
+    // The reference data carries a registration timestamp that is read from
+    // the clock while it is being built. One test builds the outputs twice,
+    // once before and once after the prune, and compares them; on the real
+    // clock those two reads land in different seconds whenever a second
+    // boundary falls in the roughly twenty-five milliseconds between them, and
+    // the test then reports a difference the prune did not cause.
+    //
+    // It also pins the answers below that are expressed relative to today, so
+    // a run that crosses midnight cannot move the event to another calendar
+    // day, and it keeps the far-future sentinel values used further down
+    // distinguishable from the dates the fixture itself produces.
+    $this->travelTo(Carbon::parse('2026-06-15 09:30:00', 'Europe/Amsterdam'));
+
     Bus::fake();
     Notification::fake();
 
@@ -89,8 +106,20 @@ function geldigeVooraankondiging(): array
         'soortEvenement' => 'Festival',
 
         'waarVindtHetEvenementPlaats' => ['gebouw'],
+        // The repeater item carries an AddressNL group whose postcode, house
+        // number, street and town have always been required. Server-side
+        // revalidation reaches the fields inside a repeater item, so an item
+        // without an address is not a valid answer.
         'adresVanDeGebouwEn' => [
-            ['naamVanDeLocatieGebouw' => 'Stadhuis Heerlen'],
+            [
+                'naamVanDeLocatieGebouw' => 'Stadhuis Heerlen',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6411CD',
+                    'huisnummer' => '1',
+                    'straatnaam' => 'Teststraat',
+                    'woonplaatsnaam' => 'Heerlen',
+                ],
+            ],
         ],
 
         'EvenementStart' => $morgen.' 10:00',

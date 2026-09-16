@@ -2,13 +2,14 @@
 
 namespace App\Services\Archiving;
 
-use App\ValueObjects\OzZaak;
+use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Woweb\Openzaak\Connection\ObjectsApiConnection;
 use Woweb\Openzaak\Connection\OpenzaakConnection;
 use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefnominatie;
 
 /**
  * Executes the destruction of a single zaak in OpenZaak: its besluiten,
@@ -36,7 +37,7 @@ class ZaakDestructionService
     /**
      * Fetch the zaak fresh (uncached) from OpenZaak, or null when it no longer exists.
      */
-    public function fetchZaak(string $zaakUrl): ?OzZaak
+    public function fetchZaak(string $zaakUrl): ?ZaakReadModel
     {
         $response = Http::withHeaders($this->connection->getHeaders())->get($zaakUrl);
 
@@ -46,14 +47,14 @@ class ZaakDestructionService
 
         $response->throw();
 
-        return new OzZaak(...$response->json());
+        return ZaakReadModel::fromArray($response->json());
     }
 
-    public function isEligibleForDestruction(OzZaak $zaak): bool
+    public function isEligibleForDestruction(ZaakReadModel $zaak): bool
     {
-        return $zaak->archiefnominatie === 'vernietigen'
-            && $zaak->archiefactiedatum_datetime !== null
-            && $zaak->archiefactiedatum_datetime->isPast();
+        return $zaak->archiefnominatie === Archiefnominatie::Vernietigen
+            && $zaak->archiefactiedatum !== null
+            && $zaak->archiefactiedatum->isPast();
     }
 
     /**

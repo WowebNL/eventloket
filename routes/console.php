@@ -3,6 +3,7 @@
 use App\Jobs\CleanupExpiredEventFormDrafts;
 use App\Jobs\CleanupExpiredInvites;
 use App\Jobs\CleanupExports;
+use App\Jobs\Notificaties\RenewZgwAbonnementen;
 use App\Jobs\ProcessSyncGeometryOnMunicipality;
 use App\Jobs\SendAdviceReminders;
 use App\Models\Municipality;
@@ -23,5 +24,10 @@ Schedule::job(new SendAdviceReminders)->dailyAt('12:00');
 Schedule::job(new CleanupExpiredInvites)->daily();
 Schedule::job(new CleanupExports)->daily();
 Schedule::job(new CleanupExpiredEventFormDrafts)->daily();
+
+Schedule::command('zgw:prune-request-logs')->daily();
+
+// Rotate Open Notificaties webhook tokens before they expire
+Schedule::job(new RenewZgwAbonnementen)->daily();
 
 Schedule::command('archiving:anonymise-inactive-organisers')->monthlyOn(1, '03:00');

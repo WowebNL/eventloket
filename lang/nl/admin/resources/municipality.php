@@ -20,5 +20,10 @@ return [
             'label' => 'Doorkomst zaaktype',
             'helper_text' => 'Het zaaktype dat gebruikt wordt voor deelzaken wanneer een evenementenroute door deze gemeente passeert.',
         ],
+        'zgw_instance' => [
+            'label' => 'ZGW-instantie',
+            'shared' => 'Algemeen',
+            'own' => 'Eigen instantie',
+        ],
     ],
 ];

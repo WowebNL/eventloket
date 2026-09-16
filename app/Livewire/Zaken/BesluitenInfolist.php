@@ -3,6 +3,7 @@
 namespace App\Livewire\Zaken;
 
 use App\Models\Zaak;
+use App\ValueObjects\ZGW\ZaakBesluitSet;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\RepeatableEntry\TableColumn;
@@ -10,6 +11,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 
@@ -20,9 +22,34 @@ class BesluitenInfolist extends Component implements HasSchemas
     #[Locked]
     public Zaak $zaak;
 
+    /**
+     * How many besluit documents were not handed over for a reason that may pass
+     * on its own. Drives the notice above the list, so a besluit that fell away
+     * because its document is missing is never simply absent from the screen.
+     */
+    public int $unavailableDocumentCount = 0;
+
+    /**
+     * Whether a besluit document was left out because the documents API is not
+     * authorised to hand it over. A flag and not a count, for the same reason as
+     * on the documents tab: the number would describe documents this reader is not
+     * shown.
+     */
+    public bool $hasForbiddenDocuments = false;
+
+    private ?ZaakBesluitSet $besluitSet = null;
+
     public function mount(Zaak $zaak): void
     {
         $this->zaak = $zaak;
+    }
+
+    /**
+     * The besluiten read for this zaak, resolved once per request.
+     */
+    private function besluiten(): ZaakBesluitSet
+    {
+        return $this->besluitSet ??= $this->zaak->besluitenForDisplay();
     }
 
     public function infolist(Schema $schema): Schema
@@ -31,6 +58,11 @@ class BesluitenInfolist extends Component implements HasSchemas
             ->record($this->zaak)
             ->schema([
                 RepeatableEntry::make('besluiten')
+                    // Read through the component rather than off the record: the
+                    // record's own accessor fails on the first besluit document
+                    // the API refuses, which is right for mail and jobs and wrong
+                    // for a screen.
+                    ->state(fn (): Collection => $this->besluiten()->besluiten)
                     ->schema([
                         TextEntry::make('name')
                             ->label(__('Naam besluit')),
@@ -61,7 +93,7 @@ class BesluitenInfolist extends Component implements HasSchemas
                             ->schema([
                                 TextEntry::make('titel'),
                                 TextEntry::make('informatieobjecttype')
-                                    ->formatStateUsing(fn ($state) => $this->zaak->zaaktype->document_types->firstWhere('url', $state)?->omschrijving),
+                                    ->formatStateUsing(fn ($state) => $this->zaak->document_types->first(fn ($type) => (string) $type->url === $state)?->omschrijving),
                                 TextEntry::make('creatiedatum')
                                     ->date(config('app.date_format')),
                                 TextEntry::make('versie'),
@@ -90,6 +122,9 @@ class BesluitenInfolist extends Component implements HasSchemas
 
     public function render()
     {
-        return view('livewire.shared.infolist');
+        $this->unavailableDocumentCount = $this->besluiten()->unavailableDocumentCount;
+        $this->hasForbiddenDocuments = $this->besluiten()->hasForbiddenDocuments();
+
+        return view('livewire.zaken.besluiten-infolist');
     }
 }

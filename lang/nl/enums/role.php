@@ -22,6 +22,9 @@ return [
     'organiser' => [
         'label' => 'Organisator',
     ],
+    'koppeling_beheerder' => [
+        'label' => 'Koppeling beheerder',
+    ],
     'archive_coordinator' => [
         'label' => 'Archiefcoördinator',
     ],
