@@ -2,6 +2,7 @@
 
 namespace App\Filament\Advisor\Clusters\Settings\Resources\AdvisorUsers;
 
+use App\Enums\AdvisoryRole;
 use App\Filament\Advisor\Clusters\Settings\Resources\AdvisorUsers\Pages\ListAdvisorUsers;
 use App\Filament\Advisor\Clusters\Settings\SettingsCluster;
 use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserInviteAction;
@@ -28,6 +29,20 @@ class AdvisorUserResource extends Resource
     protected static ?string $tenantOwnershipRelationshipName = 'advisories';
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    public static function canAccess(): bool
+    {
+        // The cluster only checks access for navigation, so a resource page
+        // inside it needs the same tenant-bound check of its own: being an
+        // admin of another advisory must not grant access to the current one.
+        /** @var Advisory $tenant */
+        $tenant = Filament::getTenant();
+
+        /** @var AdvisorUser $user */
+        $user = auth()->user();
+
+        return $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
+    }
 
     public static function getModelLabel(): string
     {
