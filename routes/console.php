@@ -31,3 +31,6 @@ Schedule::command('zgw:prune-request-logs')->daily();
 Schedule::job(new RenewZgwAbonnementen)->daily();
 
 Schedule::command('archiving:anonymise-inactive-organisers')->monthlyOn(1, '03:00');
+
+// Roll the previous day's destroyed zaken into one report per municipality
+Schedule::command('archiving:report-eventloket-destructions')->dailyAt('02:00');
