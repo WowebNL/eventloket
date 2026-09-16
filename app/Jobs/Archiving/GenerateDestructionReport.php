@@ -3,6 +3,7 @@
 namespace App\Jobs\Archiving;
 
 use App\Enums\DestructionItemStatus;
+use App\Enums\DestructionReportType;
 use App\Models\Archiving\DestructionList;
 use App\Models\Archiving\DestructionListItem;
 use App\Models\Archiving\DestructionReport;
@@ -77,6 +78,7 @@ class GenerateDestructionReport implements ShouldQueue
         return [
             'municipality_id' => $list->municipality_id,
             'destruction_list_id' => $list->id,
+            'type' => DestructionReportType::Zaakdata,
             'batch_number' => DestructionReport::nextBatchNumber($municipality),
             'coordinator_name' => $list->coordinator_name ?? '',
             'coordinator_function' => $list->coordinator_function,

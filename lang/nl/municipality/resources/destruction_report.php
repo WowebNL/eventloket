@@ -5,6 +5,12 @@ return [
     'plural_label' => 'Vernietigingsrapporten',
 
     'columns' => [
+        'type' => [
+            'label' => 'Soort',
+        ],
+        'source' => [
+            'label' => 'Aanleiding',
+        ],
         'batch_number' => [
             'label' => 'Batchnummer',
         ],
