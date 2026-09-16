@@ -2,6 +2,7 @@
 
 namespace App\Models\Archiving;
 
+use App\Enums\DestructionReportType;
 use App\Models\Municipality;
 use Database\Factories\Archiving\DestructionReportFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,11 @@ use Illuminate\Support\Str;
 /**
  * The legally required proof of destruction. Immutable and kept permanently.
  *
+ * Two kinds, see {@see DestructionReportType}: the zaakdata destroyed in
+ * OpenZaak from a destruction list, and the Eventloket data destroyed after the
+ * zaaksysteem reported a zaak gone.
+ *
+ * @property DestructionReportType $type
  * @property-read Municipality $municipality
  */
 class DestructionReport extends Model
@@ -23,6 +29,7 @@ class DestructionReport extends Model
     protected $fillable = [
         'municipality_id',
         'destruction_list_id',
+        'type',
         'batch_number',
         'coordinator_name',
         'coordinator_function',
@@ -40,6 +47,7 @@ class DestructionReport extends Model
     protected function casts(): array
     {
         return [
+            'type' => DestructionReportType::class,
             'destruction_date' => 'datetime',
             'items' => 'array',
         ];

@@ -16,6 +16,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Eventloket data destruction method
+    |--------------------------------------------------------------------------
+    |
+    | How the data Eventloket itself held about a zaak was destroyed, included
+    | in the automatically generated Eventloket-data report. The zaakdata is
+    | destroyed in the zaaksysteem and accounted for by the other report.
+    |
+    */
+    'eventloket_destruction_method' => 'Permanente verwijdering van de Eventloket-gegevens (threads, berichten, notificaties, logboek en het formulierinzending-object), na melding dat de zaak in het zaaksysteem is vernietigd',
+
+    /*
+    |--------------------------------------------------------------------------
     | Organiser account anonymisation
     |--------------------------------------------------------------------------
     |

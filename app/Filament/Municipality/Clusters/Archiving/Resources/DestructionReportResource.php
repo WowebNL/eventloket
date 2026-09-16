@@ -2,6 +2,7 @@
 
 namespace App\Filament\Municipality\Clusters\Archiving\Resources;
 
+use App\Enums\DestructionReportType;
 use App\Filament\Municipality\Clusters\Archiving;
 use App\Filament\Municipality\Clusters\Archiving\Actions\RegenerateDestructionReportAction;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionReportResource\Pages\ListDestructionReports;
@@ -44,23 +45,31 @@ class DestructionReportResource extends Resource
             ->components([
                 TextEntry::make('batch_number')
                     ->label(__('municipality/resources/destruction_report.columns.batch_number.label')),
+                TextEntry::make('type')
+                    ->label(__('municipality/resources/destruction_report.columns.type.label'))
+                    ->badge(),
                 TextEntry::make('destruction_date')
                     ->label(__('municipality/resources/destruction_report.columns.destruction_date.label'))
                     ->dateTime(),
                 TextEntry::make('destruction_method')
                     ->label(__('municipality/resources/destruction_report.columns.destruction_method.label')),
                 TextEntry::make('coordinator_name')
-                    ->label(__('municipality/resources/destruction_report.columns.coordinator_name.label')),
+                    ->label(__('municipality/resources/destruction_report.columns.coordinator_name.label'))
+                    ->visible(fn (DestructionReport $record): bool => filled($record->coordinator_name)),
                 TextEntry::make('coordinator_function')
-                    ->label(__('municipality/resources/destruction_report.columns.coordinator_function.label')),
+                    ->label(__('municipality/resources/destruction_report.columns.coordinator_function.label'))
+                    ->visible(fn (DestructionReport $record): bool => filled($record->coordinator_function)),
                 TextEntry::make('total_count')
                     ->label(__('municipality/resources/destruction_report.columns.total_count.label')),
                 TextEntry::make('deleted_count')
-                    ->label(__('municipality/resources/destruction_report.columns.deleted_count.label')),
+                    ->label(__('municipality/resources/destruction_report.columns.deleted_count.label'))
+                    ->visible(fn (DestructionReport $record): bool => $record->type === DestructionReportType::Zaakdata),
                 TextEntry::make('skipped_count')
-                    ->label(__('municipality/resources/destruction_report.columns.skipped_count.label')),
+                    ->label(__('municipality/resources/destruction_report.columns.skipped_count.label'))
+                    ->visible(fn (DestructionReport $record): bool => $record->type === DestructionReportType::Zaakdata),
                 TextEntry::make('failed_count')
-                    ->label(__('municipality/resources/destruction_report.columns.failed_count.label')),
+                    ->label(__('municipality/resources/destruction_report.columns.failed_count.label'))
+                    ->visible(fn (DestructionReport $record): bool => $record->type === DestructionReportType::Zaakdata),
                 RepeatableEntry::make('items')
                     ->label(__('municipality/resources/destruction_report.columns.items.label'))
                     ->columnSpanFull()
@@ -74,6 +83,7 @@ class DestructionReportResource extends Resource
                             ->label(__('municipality/resources/destruction_list.items.columns.selectielijst_categorie.label')),
                         TextEntry::make('status')
                             ->label(__('municipality/resources/destruction_list.items.columns.status.label'))
+                            ->visible(fn (?string $state): bool => filled($state))
                             ->formatStateUsing(fn (string $state): string => __("enums/destruction_item_status.{$state}.label")),
                     ]),
             ]);
@@ -86,6 +96,9 @@ class DestructionReportResource extends Resource
                 TextColumn::make('batch_number')
                     ->label(__('municipality/resources/destruction_report.columns.batch_number.label'))
                     ->searchable(),
+                TextColumn::make('type')
+                    ->label(__('municipality/resources/destruction_report.columns.type.label'))
+                    ->badge(),
                 TextColumn::make('destruction_date')
                     ->label(__('municipality/resources/destruction_report.columns.destruction_date.label'))
                     ->dateTime()
