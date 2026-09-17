@@ -83,8 +83,8 @@ return [
             'helper' => 'Het niveau voor automatisch gegenereerde documenten (de aanvraag-PDF en de formulier-bijlagen). Leeg laten valt terug op zaakvertrouwelijk.',
         ],
         'lock_status_for_behandelaar' => [
-            'label' => 'Status niet wijzigbaar door behandelaar',
-            'helper' => 'De behandelaar kan de status niet wijzigen en de zaak niet afronden in Eventloket. Intrekken door de organisator wordt apart geregeld met de instelling hieronder.',
+            'label' => 'Het blok Acties verbergen',
+            'helper' => 'De behandelaar kan de status niet meer wijzigen, de risicoclassificatie niet meer aanpassen en de zaak niet meer afronden via Eventloket. Dit gebeurt dan via het gekoppelde zaaksysteem.',
         ],
         'show_besluiten_tab' => [
             'label' => 'Tabblad besluiten tonen',
