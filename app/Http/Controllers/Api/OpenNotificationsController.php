@@ -7,6 +7,7 @@ use App\Http\Requests\Api\OpenNotificationRequest;
 use App\Jobs\ProcessOpenNotification;
 use App\Listeners\LogZgwRequest;
 use App\Models\ZgwRequestLog;
+use App\Models\ZgwWebhookIngressState;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Support\Facades\Log;
@@ -36,6 +37,12 @@ class OpenNotificationsController extends Controller
         $this->logIncomingNotification($notification);
 
         dispatch(new ProcessOpenNotification($notification));
+
+        // Stamp the ingress as working. This is the counterpart of the rejection
+        // counter the middleware keeps: together they let the scheduled health
+        // check tell a webhook that is simply quiet apart from one that is
+        // refusing every delivery, which from the outside look the same.
+        ZgwWebhookIngressState::recordAccepted();
     }
 
     /**

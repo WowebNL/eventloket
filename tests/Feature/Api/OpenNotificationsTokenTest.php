@@ -2,6 +2,7 @@
 
 use App\Jobs\ProcessOpenNotification;
 use App\Models\Application;
+use App\Models\ZgwWebhookIngressState;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
@@ -115,4 +116,65 @@ test('logs an ssrf host-rule webhook rejection', function () {
         ->withArgs(fn (string $message, array $context = []): bool => $message === 'Rejected Open Notificaties webhook call.'
             && ($context['category'] ?? null) === 'validation')
         ->once();
+});
+
+test('an accepted notification stamps the ingress as working', function () {
+    Queue::fake();
+    Passport::actingAsClient($this->notificationsClient, ['notifications:receive']);
+
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload())
+        ->assertStatus(200);
+
+    expect(ZgwWebhookIngressState::current()->last_accepted_at)->not->toBeNull();
+});
+
+test('a rejection from a caller holding a credential is counted', function () {
+    Passport::actingAsClient($this->notificationsClient, ['api:access']);
+
+    // actingAsClient stubs the resource server rather than the transport, so the
+    // header a real caller always sends has to be stated here: the presence of
+    // that header is what separates a credentialed caller from an anonymous probe.
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+        'Authorization' => 'Bearer stub',
+    ])->assertStatus(403);
+
+    $state = ZgwWebhookIngressState::current();
+
+    expect($state->consecutive_rejections)->toBe(1)
+        ->and($state->last_rejection_status)->toBe(403)
+        ->and($state->rejection_streak_started_at)->not->toBeNull();
+});
+
+test('an unauthenticated probe is logged but not counted', function () {
+    // A public endpoint collects probes as a matter of course. Counting them
+    // would make the health signal fire on background noise.
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload())
+        ->assertStatus(401);
+
+    expect(ZgwWebhookIngressState::current())->toBeNull();
+});
+
+test('a 401 from a caller presenting a credential is counted', function () {
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+        'Authorization' => 'Bearer not-a-valid-token',
+    ])->assertStatus(401);
+
+    expect(ZgwWebhookIngressState::current()->consecutive_rejections)->toBe(1);
+});
+
+test('an accepted notification clears an earlier rejection streak', function () {
+    Queue::fake();
+
+    ZgwWebhookIngressState::recordRejection(403);
+    ZgwWebhookIngressState::recordRejection(403);
+
+    Passport::actingAsClient($this->notificationsClient, ['notifications:receive']);
+
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload())
+        ->assertStatus(200);
+
+    $state = ZgwWebhookIngressState::current();
+
+    expect($state->consecutive_rejections)->toBe(0)
+        ->and($state->rejection_streak_started_at)->toBeNull();
 });

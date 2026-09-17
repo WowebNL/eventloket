@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\ZgwWebhookIngressState;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,6 +22,11 @@ use Symfony\Component\HttpFoundation\Response;
  * and 422 (a host-rule / SSRF-guard or payload validation failure). Only metadata
  * is logged (source IP, user agent, path, status); request bodies and URLs are
  * never logged because ZGW query filters can carry personal data.
+ *
+ * A rejection that arrived with a credential is also counted on the ingress
+ * state, so a standing refusal becomes visible to the scheduled health check. A
+ * log line is a trace, not a signal: without something keeping score, a webhook
+ * that refuses every delivery looks exactly like one that is simply quiet.
  */
 class LogOpenNotificationRejection
 {
@@ -48,8 +54,33 @@ class LogOpenNotificationRejection
                 'user_agent' => $request->userAgent(),
                 'path' => $request->path(),
             ]);
+
+            $this->countAgainstIngress($request, $response->getStatusCode());
         }
 
         return $response;
+    }
+
+    /**
+     * Count a rejection towards the ingress state, but only when the caller
+     * presented a credential.
+     *
+     * A public endpoint collects unauthenticated probes as a matter of course.
+     * Counting those would make the health signal fire on background noise, and a
+     * signal that fires on noise gets ignored, which is the failure this is meant
+     * to prevent. A call that carries an Authorization header is either the
+     * registered sender or something holding a credential; both are worth
+     * knowing about, and neither is routine.
+     *
+     * Whether a credential was presented is read from the header's presence
+     * alone. Its value is never inspected, logged or stored.
+     */
+    private function countAgainstIngress(Request $request, int $status): void
+    {
+        if (! $request->hasHeader('Authorization')) {
+            return;
+        }
+
+        ZgwWebhookIngressState::recordRejection($status);
     }
 }
