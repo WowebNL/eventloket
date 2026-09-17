@@ -133,3 +133,65 @@ it('keeps the streak start on the first rejection while counting the rest', func
         ->and($state->rejection_streak_started_at->toIso8601String())->toBe($started->toIso8601String())
         ->and($state->last_rejection_status)->toBe(401);
 });
+
+/*
+|--------------------------------------------------------------------------
+| The thresholds themselves
+|--------------------------------------------------------------------------
+|
+| The cases above are written against the constants, which documents intent but
+| guards nothing: move a constant and they move with it. These state the numbers
+| outright and bracket each threshold from both sides, so changing one is a
+| visible decision instead of a silent one.
+|
+*/
+
+it('treats two refusals spread over a week as noise', function () {
+    ingressState([
+        'consecutive_rejections' => 2,
+        'rejection_streak_started_at' => now()->subDays(7),
+    ]);
+
+    expect(ingressStatus())->toBe(WebhookIngressStatus::Healthy);
+});
+
+it('treats three refusals spread over a week as a fault', function () {
+    ingressState([
+        'consecutive_rejections' => 3,
+        'rejection_streak_started_at' => now()->subDays(7),
+    ]);
+
+    expect(ingressStatus())->toBe(WebhookIngressStatus::Rejecting);
+});
+
+it('treats a streak that started five hours ago as too young to judge', function () {
+    ingressState([
+        'consecutive_rejections' => 50,
+        'rejection_streak_started_at' => now()->subHours(5),
+    ]);
+
+    expect(ingressStatus())->toBe(WebhookIngressStatus::Healthy);
+});
+
+it('treats a streak that started seven hours ago as old enough', function () {
+    ingressState([
+        'consecutive_rejections' => 3,
+        'rejection_streak_started_at' => now()->subHours(7),
+    ]);
+
+    expect(ingressStatus())->toBe(WebhookIngressStatus::Rejecting);
+});
+
+it('lets the ingress stay quiet through a long weekend', function () {
+    ZgwAbonnement::factory()->create();
+    ingressState(['last_accepted_at' => now()->subHours(60)]);
+
+    expect(ingressStatus())->toBe(WebhookIngressStatus::Healthy);
+});
+
+it('calls the ingress silent after more than three quiet days', function () {
+    ZgwAbonnement::factory()->create();
+    ingressState(['last_accepted_at' => now()->subHours(80)]);
+
+    expect(ingressStatus())->toBe(WebhookIngressStatus::Silent);
+});
