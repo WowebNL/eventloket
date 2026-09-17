@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Services\Notificaties;
 
 use App\Models\ZgwAbonnement;
+use Laravel\Passport\Token;
 use Throwable;
 use Woweb\Zgw\Exceptions\InvalidConfigurationException;
 
 /**
  * Verifies that a connection's Open Notificaties abonnement is correctly
  * registered: a notificaties URL is configured, a local row exists, the remote
- * abonnement is still present, it subscribes to every expected channel and the
+ * abonnement is still present, it subscribes to every expected channel, the
+ * credential it presents on our webhook still satisfies that route, and the
  * webhook token has not (nearly) lapsed.
  */
 class AbonnementHealthCheck
@@ -62,7 +64,45 @@ class AbonnementHealthCheck
             }
         }
 
+        // Judged last, and only outside the renewal window, because a token the
+        // renewal job is about to replace is going to be replaced by a correctly
+        // scoped one anyway. What does not heal itself is a long-lived token that
+        // was minted before the webhook asked for the scope it now requires.
+        if ($this->tokenCannotPassTheWebhook($local)) {
+            return new AbonnementCheckResult(AbonnementCheckStatus::TokenNotUsable, expiresAt: $local->expires_at);
+        }
+
         return new AbonnementCheckResult(AbonnementCheckStatus::Healthy, expiresAt: $local->expires_at);
+    }
+
+    /**
+     * Whether the credential stored for this abonnement would be turned away by
+     * our own webhook route, because it no longer exists, has been revoked, or
+     * does not carry the scope that route requires.
+     *
+     * This is the one branch that reads the requirement rather than waiting for
+     * refused deliveries: a token minted under an earlier contract keeps working
+     * until the route asks for something it was never granted, and by then the
+     * only symptom is a refusal that nobody is watching. The route and the issuer
+     * share one constant, so the requirement cannot drift again, but a credential
+     * issued before that requirement existed still can.
+     *
+     * A record without a stored token id predates token tracking and cannot be
+     * judged either way, so it is left alone instead of reported as a fault.
+     */
+    private function tokenCannotPassTheWebhook(ZgwAbonnement $local): bool
+    {
+        if (! is_string($local->token_id) || $local->token_id === '') {
+            return false;
+        }
+
+        $token = Token::find($local->token_id);
+
+        if (! $token instanceof Token) {
+            return true;
+        }
+
+        return (bool) $token->revoked || $token->cant(WebhookTokenIssuer::SCOPE);
     }
 
     /**

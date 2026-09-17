@@ -6,8 +6,11 @@ use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\AbonnementCheckStatus;
 use App\Services\Notificaties\AbonnementHealthCheck;
 use App\Services\Notificaties\AbonnementRegistrar;
+use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Laravel\Passport\Token;
 
 const ABO_URL = 'https://nc.example.com/api/v1/abonnement/abc';
 
@@ -26,14 +29,39 @@ function fakeRemoteAbonnement(array $kanalen): void
     ]);
 }
 
+/**
+ * The Passport access token an abonnement stores: the credential the remote side
+ * presents back on our webhook.
+ */
+function webhookToken(array $attributes = []): Token
+{
+    return Token::create(array_merge([
+        'id' => (string) Str::uuid(),
+        'user_id' => null,
+        'client_id' => (string) Str::uuid(),
+        'name' => WebhookTokenIssuer::APPLICATION_NAME,
+        'scopes' => [WebhookTokenIssuer::SCOPE],
+        'revoked' => false,
+        'expires_at' => now()->addYear(),
+    ], $attributes));
+}
+
 function abonnement(array $attributes = []): ZgwAbonnement
 {
-    return ZgwAbonnement::factory()->create(array_merge([
+    $attributes = array_merge([
         'connection' => 'main',
         'municipality_id' => null,
         'abonnement_url' => ABO_URL,
         'expires_at' => now()->addYear(),
-    ], $attributes));
+    ], $attributes);
+
+    // A registered abonnement always points at a real token; the factory alone
+    // only invents an id, which is exactly the state this check calls a fault.
+    if (! array_key_exists('token_id', $attributes)) {
+        $attributes['token_id'] = webhookToken()->getKey();
+    }
+
+    return ZgwAbonnement::factory()->create($attributes);
 }
 
 it('reports a healthy abonnement', function () {
@@ -88,4 +116,55 @@ it('reports a token expiring soon', function () {
 
     expect(app(AbonnementHealthCheck::class)->run('main')->status)
         ->toBe(AbonnementCheckStatus::TokenExpiringSoon);
+});
+
+it('reports a token that does not carry the scope the webhook requires', function () {
+    abonnement(['token_id' => webhookToken(['scopes' => ['api:access']])->getKey()]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::TokenNotUsable);
+});
+
+it('reports a token that no longer exists', function () {
+    abonnement(['token_id' => (string) Str::uuid()]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::TokenNotUsable);
+});
+
+it('reports a revoked token', function () {
+    abonnement(['token_id' => webhookToken(['revoked' => true])->getKey()]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::TokenNotUsable);
+});
+
+it('accepts a wildcard-scoped token', function () {
+    abonnement(['token_id' => webhookToken(['scopes' => ['*']])->getKey()]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::Healthy);
+});
+
+it('leaves an abonnement without a stored token id alone', function () {
+    abonnement(['token_id' => null]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::Healthy);
+});
+
+it('reports an expired token before it judges its scope', function () {
+    abonnement([
+        'expires_at' => now()->subDay(),
+        'token_id' => webhookToken(['scopes' => ['api:access']])->getKey(),
+    ]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::TokenExpired);
 });
