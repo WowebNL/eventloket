@@ -13,18 +13,18 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Laravel\Passport\Token;
 
-const HEALTH_ABO_URL = 'https://nc.example.com/api/v1/abonnement/abc';
+const HEALTHCHECK_ABO_URL = 'https://nc.example.com/api/v1/abonnement/abc';
 
 beforeEach(function () {
     Exceptions::fake();
     config()->set('zgw.connections.main.urls.notificaties', 'https://nc.example.com/api/v1/');
 });
 
-function fakeHealthyRemote(): void
+function fakeNotificatiesRemote(): void
 {
     Http::fake([
-        HEALTH_ABO_URL => Http::response([
-            'url' => HEALTH_ABO_URL,
+        HEALTHCHECK_ABO_URL => Http::response([
+            'url' => HEALTHCHECK_ABO_URL,
             'kanalen' => collect(AbonnementRegistrar::KANALEN)
                 ->map(fn (string $naam): array => ['naam' => $naam, 'filters' => []])
                 ->all(),
@@ -32,7 +32,7 @@ function fakeHealthyRemote(): void
     ]);
 }
 
-function healthyAbonnement(array $attributes = []): ZgwAbonnement
+function registeredAbonnement(array $attributes = []): ZgwAbonnement
 {
     $token = Token::create([
         'id' => (string) Str::uuid(),
@@ -47,15 +47,15 @@ function healthyAbonnement(array $attributes = []): ZgwAbonnement
     return ZgwAbonnement::factory()->create(array_merge([
         'connection' => 'main',
         'municipality_id' => null,
-        'abonnement_url' => HEALTH_ABO_URL,
+        'abonnement_url' => HEALTHCHECK_ABO_URL,
         'token_id' => $token->getKey(),
         'expires_at' => now()->addYear(),
     ], $attributes));
 }
 
 it('reports nothing when the koppeling is in order', function () {
-    healthyAbonnement();
-    fakeHealthyRemote();
+    registeredAbonnement();
+    fakeNotificatiesRemote();
 
     $this->artisan('app:check-zgw-notificaties')->assertSuccessful();
 
@@ -92,8 +92,8 @@ it('reports a credential that cannot pass the webhook route', function () {
         'expires_at' => now()->addYear(),
     ]);
 
-    healthyAbonnement(['token_id' => $token->getKey()]);
-    fakeHealthyRemote();
+    registeredAbonnement(['token_id' => $token->getKey()]);
+    fakeNotificatiesRemote();
 
     $this->artisan('app:check-zgw-notificaties')->assertFailed();
 
@@ -105,8 +105,8 @@ it('reports a credential that cannot pass the webhook route', function () {
 it('stays silent about a token inside its renewal window', function () {
     // The renewal job rotates this by itself, so reporting it would be noise, and
     // noise is what taught everyone to ignore the previous signal.
-    healthyAbonnement(['expires_at' => now()->addDays(3)]);
-    fakeHealthyRemote();
+    registeredAbonnement(['expires_at' => now()->addDays(3)]);
+    fakeNotificatiesRemote();
 
     $this->artisan('app:check-zgw-notificaties')->assertSuccessful();
 
@@ -114,8 +114,8 @@ it('stays silent about a token inside its renewal window', function () {
 });
 
 it('reports a webhook that has been refusing deliveries', function () {
-    healthyAbonnement();
-    fakeHealthyRemote();
+    registeredAbonnement();
+    fakeNotificatiesRemote();
 
     $state = new ZgwWebhookIngressState;
     $state->forceFill([
@@ -133,8 +133,8 @@ it('reports a webhook that has been refusing deliveries', function () {
 });
 
 it('reports a registered abonnement that has stopped delivering', function () {
-    healthyAbonnement();
-    fakeHealthyRemote();
+    registeredAbonnement();
+    fakeNotificatiesRemote();
 
     $state = new ZgwWebhookIngressState;
     $state->forceFill([
@@ -148,8 +148,8 @@ it('reports a registered abonnement that has stopped delivering', function () {
 });
 
 it('reports a remote abonnement that can no longer be read', function () {
-    healthyAbonnement();
-    Http::fake([HEALTH_ABO_URL => Http::response(['detail' => 'not found'], 404)]);
+    registeredAbonnement();
+    Http::fake([HEALTHCHECK_ABO_URL => Http::response(['detail' => 'not found'], 404)]);
 
     $this->artisan('app:check-zgw-notificaties')->assertFailed();
 

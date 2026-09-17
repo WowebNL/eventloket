@@ -9,9 +9,12 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\User;
 use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\AbonnementRegistrar;
+use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Laravel\Passport\Token;
 
 use function Pest\Livewire\livewire;
 
@@ -64,10 +67,24 @@ function healthyAbonnement(int $municipalityId, string $name): string
 {
     $aboUrl = GEM.'/notificaties/api/v1/abonnement/abc';
 
+    // A registered abonnement points at a real credential. The factory alone
+    // only invents a token id, and an id without a matching record is exactly
+    // what the health check now reads as a fault.
+    $token = Token::create([
+        'id' => (string) Str::uuid(),
+        'user_id' => null,
+        'client_id' => (string) Str::uuid(),
+        'name' => WebhookTokenIssuer::APPLICATION_NAME,
+        'scopes' => [WebhookTokenIssuer::SCOPE],
+        'revoked' => false,
+        'expires_at' => now()->addYear(),
+    ]);
+
     ZgwAbonnement::factory()->create([
         'connection' => $name,
         'municipality_id' => $municipalityId,
         'abonnement_url' => $aboUrl,
+        'token_id' => $token->getKey(),
         'expires_at' => now()->addYear(),
     ]);
 
