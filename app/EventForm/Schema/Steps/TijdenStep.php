@@ -11,6 +11,7 @@ use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\State\FormState;
+use App\EventForm\Support\Indieningstermijnen;
 use App\EventForm\Support\SafeDateTime;
 use App\EventForm\Support\TijdenOverzicht;
 use App\EventForm\Template\LabelRenderer;
@@ -41,22 +42,28 @@ final class TijdenStep
         return Step::make('Tijden')
             ->key(self::UUID)
             ->schema([
+                // This step comes before the scan that decides between a
+                // permit application and a report, so on first sight
+                // neither outcome is known and every configured deadline
+                // is listed. Once the scan has concluded, only the
+                // deadlines belonging to that path remain.
                 InfoText::warning('content2', function (FormState $state): string {
-                    $a = $state->get('gemeenteVariabelen.indieningstermijn_a');
-                    $b = $state->get('gemeenteVariabelen.indieningstermijn_b');
-                    $c = $state->get('gemeenteVariabelen.indieningstermijn_c');
+                    $termijnen = Indieningstermijnen::forState($state);
                     $gemeente = $state->get('evenementInGemeente');
                     $gemeenteNaam = is_array($gemeente) ? ($gemeente['name'] ?? null) : null;
 
-                    if ($gemeenteNaam && ($a || $b || $c)) {
-                        $termijnen = array_filter([
-                            $a ? 'minimaal <strong>'.((int) $a).' weken</strong> voor een A-evenement (klein)' : null,
-                            $b ? 'minimaal <strong>'.((int) $b).' weken</strong> voor een B-evenement (middelgroot)' : null,
-                            $c ? 'minimaal <strong>'.((int) $c).' weken</strong> voor een C-evenement (groot)' : null,
-                        ]);
+                    if ($gemeenteNaam && $termijnen !== []) {
+                        $regels = array_map(
+                            fn (array $termijn): string => '<li>minimaal <strong>'.$termijn['weeks'].' weken</strong> voor '.self::termijnOmschrijving($termijn).'</li>',
+                            $termijnen,
+                        );
 
                         return '<p>Let op, de gemeente '.e($gemeenteNaam).' hanteert de volgende indieningstermijnen:</p>'
-                            .'<ul>'.implode('', array_map(fn ($t) => '<li>'.$t.'</li>', $termijnen)).'</ul>';
+                            .'<ul>'.implode('', $regels).'</ul>';
+                    }
+
+                    if ($state->get('isMelding') === true) {
+                        return '<p>Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijn voor een melding. Check de exacte termijn bij je gemeente.</p>';
                     }
 
                     return '<p>Let op, gemeenten hanteren niet allemaal dezelfde indieningstermijnen. Gemiddeld geldt minimaal 8 weken voor een klein A-evenement, 13 weken voor een middelgroot B-evenement en 23 weken voor een groot C-evenement. Check voor de exacte termijnen bij je gemeente.</p>';
@@ -317,5 +324,20 @@ final class TijdenStep
             .'<th><strong>Eind</strong></th></tr></thead>'
             .'<tbody>'.$body.'</tbody></table></figure>'
             .'<p><br>Wijzig de velden boven dit overzicht indien de tijden niet correct zijn.</p>';
+    }
+
+    /**
+     * How one deadline is named in the warning above: a permit deadline by
+     * its risk classification, a report deadline by what it is.
+     *
+     * @param  array{key: string, classificatie: string|null, omschrijving: string, weeks: int}  $termijn
+     */
+    private static function termijnOmschrijving(array $termijn): string
+    {
+        if ($termijn['classificatie'] === null) {
+            return 'een '.$termijn['omschrijving'];
+        }
+
+        return 'een '.$termijn['classificatie'].'-evenement ('.$termijn['omschrijving'].')';
     }
 }
