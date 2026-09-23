@@ -10,6 +10,7 @@ use App\EventForm\Components\InfoText;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
 use App\EventForm\State\FormState;
+use App\EventForm\Support\RouteGpxImport;
 use App\Filament\Forms\Components\BasemapMap;
 use App\Models\Organisation;
 use Filament\Forms\Components\CheckboxList;
@@ -34,6 +35,14 @@ use Illuminate\Support\Str;
 final class LocatieVanHetEvenement2Step
 {
     public const UUID = '2186344f-9821-45d1-bd52-9900ae15fcb6';
+
+    /**
+     * Tells the organiser which route the municipality determination is based
+     * on. The map field carries either a hand-drawn route or one loaded from a
+     * GPX file, and both are determined the same way, so the note names the
+     * map rather than the source it came from.
+     */
+    private const ROUTE_SOURCE_NOTE = '<p>Deze bepaling gaat over de route zoals die nu op de kaart staat, of u die nu zelf hebt ingetekend of uit een GPX bestand hebt geladen.</p>';
 
     public static function make(?Organisation $organisation = null): Step
     {
@@ -143,7 +152,7 @@ final class LocatieVanHetEvenement2Step
                     ->hidden(Hidden::rule('locatieSOpKaart')),
                 Fieldset::make('Route')
                     ->schema([
-                        InfoText::info('infoGpx1', '<p>Wanneer het een eenvoudige route betreft (bijvoorbeeld voor een processie), dan kun je hieronder de route intekenen op de kaart.</p><p>Ingeval het een complexe route betreft (bijvoorbeeld een wielertocht), dan wordt aanbevolen om de route op de kaart globaal in te tekenen, zodat de applicatie kan herkennen door welke gemeenten de route gaat (en deze daarover informeren). Voor de detailroute bieden we hieronder de mogelijkheid voor het uploaden van een GPX bestand.</p>'),
+                        InfoText::info('infoGpx1', '<p>Je kunt de route op twee manieren opgeven: teken de route hieronder in op de kaart, of upload een GPX bestand van de route.</p><p>Upload je een GPX bestand, dan zetten we de route meteen op de kaart en hoef je zelf niets in te tekenen. Je kunt de ingeladen route daarna nog aanpassen op de kaart. De applicatie bepaalt aan de hand van de route op de kaart door welke gemeenten de route gaat, en informeert die gemeenten daarover.</p>'),
                         Repeater::make('routesOpKaart')
                             ->label('Route op kaart')
                             ->addActionLabel('Nog een route toevoegen')
@@ -170,7 +179,10 @@ final class LocatieVanHetEvenement2Step
                                     ->required(),
                             ]),
                         EventloketFileUpload::make('gpxBestandVanDeRoute', $organisation)
-                            ->label('GPX bestand van de route'),
+                            ->label('GPX bestand van de route')
+                            ->helperText('De route uit het bestand komt op de kaart hierboven te staan en kan daar nog aangepast worden.')
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set, mixed $state, $livewire) => self::importGpxRoute($set, $state, $livewire)),
                         TextInput::make('naamVanDeRoute')
                             ->label('Naam van de route')
                             ->required()
@@ -306,7 +318,8 @@ final class LocatieVanHetEvenement2Step
         $eindNaam = (string) ($line['end']['name'] ?? '');
 
         if (($line['start_end_equal'] ?? null) === true) {
-            return '<p>De route start en eindigt binnen de gemeente <strong>'.e($startNaam).'</strong>.</p>';
+            return '<p>De route start en eindigt binnen de gemeente <strong>'.e($startNaam).'</strong>.</p>'
+                .self::ROUTE_SOURCE_NOTE;
         }
 
         return '<p>De route start in de gemeente <strong>'.e($startNaam).'</strong> '
@@ -315,6 +328,53 @@ final class LocatieVanHetEvenement2Step
             .'U vult dit formulier helemaal in voor 1 gemeente; als u de aanvraag vervolgens '
             .'heeft gedaan kunt u binnen de aanvraag in Eventloket de knop "Nieuwe aanvraag" '
             .'gebruiken om een nieuwe aanvraag te starten waarbij (een deel van) het formulier '
-            .'al vooraf ingevuld is.</p>';
+            .'al vooraf ingevuld is.</p>'
+            .self::ROUTE_SOURCE_NOTE;
+    }
+
+    /**
+     * Read an uploaded GPX file into the route map field.
+     *
+     * The parsed track becomes the value of the map field, which is the same
+     * state the map renders, the municipality check reads and the case system
+     * receives. Drawing by hand therefore stops being necessary because the
+     * field is filled, not because its `required()` rule was relaxed.
+     *
+     * `EventFormPage::updated()` runs before Filament calls this hook, so the
+     * municipality check for this round trip has already run against the state
+     * as it was before the file arrived; `refreshLocationCheck()` runs it
+     * again against the route that is now there.
+     */
+    private static function importGpxRoute(Set $set, mixed $state, mixed $livewire): void
+    {
+        $file = RouteGpxImport::uploadedFile($state);
+
+        if ($file === null) {
+            return;
+        }
+
+        $mapState = RouteGpxImport::mapStateFrom($file);
+
+        if ($mapState === null) {
+            Notification::make()
+                ->title('Geen route in het GPX bestand')
+                ->body('Uit dit bestand konden we geen route halen. Het bestand blijft als bijlage bewaard; teken de route zelf in op de kaart.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $set(RouteGpxImport::ROUTE_FIELD, $mapState);
+
+        if (method_exists($livewire, 'refreshLocationCheck')) {
+            $livewire->refreshLocationCheck();
+        }
+
+        Notification::make()
+            ->title('Route op de kaart gezet')
+            ->body('De route uit het GPX bestand staat nu op de kaart en vervangt wat daar stond. U kunt de route op de kaart nog aanpassen.')
+            ->success()
+            ->send();
     }
 }
