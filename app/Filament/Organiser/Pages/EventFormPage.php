@@ -476,6 +476,30 @@ class EventFormPage extends Page implements HasForms
         $this->lastDraftSaveAt = time();
     }
 
+    /**
+     * Run the reactive location check again after the route geometry changed
+     * outside the usual field update.
+     *
+     * Livewire calls `updated()` before Filament calls the `afterStateUpdated`
+     * hooks of the schema, so a hook that writes a geometry into a map field
+     * arrives after the fetches for this round trip have already run against
+     * the previous state. The location step's GPX import calls this to bring
+     * the municipality check, the derived state and the stored draft back in
+     * line with what the map now holds.
+     */
+    public function refreshLocationCheck(): void
+    {
+        $this->absorbFormData($this->data ?? []);
+        $this->triggerFetchesFor('data.'.LocationKinds::FIELD_BY_KIND[LocationKinds::ROUTE]);
+        $this->hydrateAanvullendeVragenState();
+        $this->stateSnapshot = $this->serializableSnapshot($this->state);
+
+        // Map state is never deferred: a route cannot wait for the throttle
+        // window, and Next typically follows within it.
+        $this->persistDraft();
+        $this->lastDraftSaveAt = time();
+    }
+
     private function persistDraft(): void
     {
         $draft = $this->activeDraft();
