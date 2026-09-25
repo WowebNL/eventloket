@@ -4,6 +4,7 @@ use App\Enums\DestructionListStatus;
 use App\Enums\Role;
 use App\Filament\Municipality\Clusters\Archiving;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource;
+use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\CreateDestructionList;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\EditDestructionList;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\ListDestructionLists;
 use App\Filament\Municipality\Clusters\Archiving\Resources\DestructionListResource\Pages\ViewDestructionList;
@@ -310,6 +311,18 @@ test('a coordinator of a municipality on its own zgw instance sees reports but c
         ->and(DestructionListResource::canCreate())->toBeFalse()
         ->and($coordinator->can('createForMunicipality', [DestructionList::class, $ownInstanceMunicipality]))->toBeFalse();
 
+    // Asserted on the page, not just on canCreate(): Filament consults that
+    // only when the create page is opened, so the button has to be hidden
+    // explicitly or it is painted for a municipality that may not use it.
+    livewire(ListDestructionLists::class)
+        ->assertActionHidden('create');
+
+    // And the route behind it is shut, so a hand-typed url gets nowhere.
+    // And the route behind it is shut, so a hand-typed url gets nowhere:
+    // CreateRecord::mount() aborts on the resource's canCreate().
+    livewire(CreateDestructionList::class)
+        ->assertForbidden();
+
     livewire(ViewDestructionReport::class, ['record' => $report->id])
         ->assertSuccessful();
 });
@@ -339,4 +352,7 @@ test('a coordinator of a municipality on our own openzaak can start a destructio
     actAsInMunicipality($this->coordinator, $this->municipality);
 
     expect(DestructionListResource::canCreate())->toBeTrue();
+
+    livewire(ListDestructionLists::class)
+        ->assertActionVisible('create');
 });

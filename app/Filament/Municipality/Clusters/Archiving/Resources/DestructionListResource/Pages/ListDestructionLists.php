@@ -13,7 +13,12 @@ class ListDestructionLists extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            CreateAction::make(),
+            // Filament consults the resource's canCreate() only when the create
+            // page itself is opened (CreateRecord::authorizeAccess aborts 403),
+            // never to hide this button. Without this the button is painted for
+            // a municipality that may not start a destruction here.
+            CreateAction::make()
+                ->visible(fn (): bool => DestructionListResource::canCreate()),
         ];
     }
 }
