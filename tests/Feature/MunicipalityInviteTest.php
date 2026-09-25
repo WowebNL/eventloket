@@ -310,3 +310,51 @@ test('invite cannot be accepted by wrong user', function () {
 //        ])
 //        ->assertForbidden();
 // });
+
+test('an invite stores the email address in the same casing an account does', function () {
+    // Arrange & Act
+    $invite = MunicipalityInvite::create([
+        'email' => 'Conny.Keulen@Voerendaal.nl',
+        'role' => Role::Reviewer,
+        'token' => Str::uuid(),
+    ]);
+
+    $user = User::factory()->create([
+        'email' => 'Conny.Keulen@Voerendaal.nl',
+    ]);
+
+    // Assert - both sides lowercase, so they can be matched against each other.
+    // PostgreSQL compares case sensitively, so an invite that kept the address
+    // as typed slipped past the unique check on the accept form and then broke
+    // on users_email_unique when the User mutator lowercased it.
+    expect($invite->refresh()->email)->toBe('conny.keulen@voerendaal.nl')
+        ->and($user->refresh()->email)->toBe('conny.keulen@voerendaal.nl');
+});
+
+test('existing user can accept an invite addressed in different casing', function () {
+    // Arrange
+    $user = User::factory()->create([
+        'email' => 'conny.keulen@voerendaal.nl',
+    ]);
+
+    $invite = MunicipalityInvite::create([
+        'email' => 'Conny.Keulen@Voerendaal.nl',
+        'role' => Role::Reviewer,
+        'token' => Str::uuid(),
+    ]);
+
+    $invite->municipalities()->attach($this->municipality->id);
+
+    // Act
+    $this->actingAs($user);
+
+    // Assert - the invite is no longer read as belonging to a different person
+    livewire(AcceptMunicipalityInvite::class, ['token' => $invite->token])
+        ->call('acceptInvite')
+        ->assertRedirect(route('filament.municipality.pages.dashboard', ['tenant' => $this->municipality->id]));
+
+    $this->assertDatabaseHas('municipality_user', [
+        'municipality_id' => $this->municipality->id,
+        'user_id' => $user->id,
+    ]);
+});
