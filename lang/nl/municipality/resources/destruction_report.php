@@ -5,6 +5,9 @@ return [
     'plural_label' => 'Vernietigingsrapporten',
 
     'columns' => [
+        'type' => [
+            'label' => 'Soort',
+        ],
         'batch_number' => [
             'label' => 'Batchnummer',
         ],
