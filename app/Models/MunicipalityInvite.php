@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Role;
 use App\Models\Traits\Expirable;
+use App\Models\Traits\NormalisesEmail;
 use Database\Factories\MunicipalityInviteFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class MunicipalityInvite extends Model
 {
     /** @use HasFactory<MunicipalityInviteFactory> */
-    use Expirable, HasFactory;
+    use Expirable, HasFactory, NormalisesEmail;
 
     protected $fillable = [
         'name',
