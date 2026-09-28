@@ -410,10 +410,15 @@ class CreateDoorkomstZaken implements ShouldQueue
         // the eigenschappen, both when writing them and when reading them back.
         $deelMapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
 
+        // The deelzaak acts as the organisation of the connection it is created
+        // on, just like the hoofdzaak does in CreateZaakInZGW. On the hoofdzaak's
+        // own connection this is the same RSIN the hoofdzaak carries.
+        $bronorganisatie = ZgwConnectionConfig::bronorganisatie($deelConnectionName);
+
         $payload = [
             'zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url,
-            'bronorganisatie' => $hoofdZaak->bronorganisatie,
-            'verantwoordelijkeOrganisatie' => $hoofdZaak->bronorganisatie,
+            'bronorganisatie' => $bronorganisatie,
+            'verantwoordelijkeOrganisatie' => $bronorganisatie,
             'startdatum' => $hoofdZaak->startdatum,
             'omschrijving' => $hoofdZaak->omschrijving,
             'zaakgeometrie' => $hoofdZaak->zaakgeometrie,

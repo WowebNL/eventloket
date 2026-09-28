@@ -360,6 +360,78 @@ test('registers a vestiging initiator on a deelzaak in the doorkomst gemeente ow
     });
 });
 
+test('creates a deelzaak on another connection as the organisation of that connection', function () {
+    // Hoofdzaak on main, deelzaak on the passing municipality's own connection
+    // with its own RSIN: the deelzaak must not carry the hoofdzaak's RSIN.
+    fakeDoorkomstForInitiatorOnOwnInstance();
+    config(['zgw.connections.main.bronorganisatie_rsin' => '123456789']);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'bronorganisatie_rsin' => '987654321',
+    ]);
+    Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => "gemeente_{$scenario['passing']->id}",
+        'zgw_zaaktype_url' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), OWN_HOST.'/zaken/api/v1/zaken')
+        && ($request->data()['bronorganisatie'] ?? null) === '987654321'
+        && ($request->data()['verantwoordelijkeOrganisatie'] ?? null) === '987654321');
+});
+
+test('creates a deelzaak on the hoofdzaak connection with the RSIN the hoofdzaak carries', function () {
+    // Same connection for both: the connection RSIN equals the hoofdzaak's
+    // bronorganisatie, so the payload is what it was before.
+    config(['zgw.connections.main.bronorganisatie_rsin' => '123456789']);
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+    Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken')
+        && ($request->data()['bronorganisatie'] ?? null) === '123456789'
+        && ($request->data()['verantwoordelijkeOrganisatie'] ?? null) === '123456789');
+});
+
 test('registers the initiator on the deelzaak from the form aanvrager data, not the copied ZGW rol', function () {
     // The initiator is rebuilt from the form (KvK + organisation name), matching
     // the hoofdzaak. The hoofdzaak ZGW rol is not copied: its identificatie is
