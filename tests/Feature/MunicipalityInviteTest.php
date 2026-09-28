@@ -358,3 +358,48 @@ test('existing user can accept an invite addressed in different casing', functio
         'user_id' => $user->id,
     ]);
 });
+
+test('municipality admin cannot invite a reviewer again in different casing', function () {
+    // Arrange
+    $this->actingAs($this->municipalityAdmin);
+    Filament::setTenant($this->municipality);
+
+    MunicipalityInvite::create([
+        'email' => 'jan.fransen@gemeente.nl',
+        'role' => Role::Reviewer,
+        'token' => Str::uuid(),
+    ]);
+
+    // Act & Assert - the check matches the stored lowercase address instead of
+    // letting the insert collide on the unique constraint
+    livewire(ListReviewerUsers::class)
+        ->callAction('invite', [
+            'email' => 'Jan.Fransen@Gemeente.nl',
+        ])
+        ->assertHasActionErrors(['email']);
+
+    expect(MunicipalityInvite::count())->toBe(1);
+});
+
+test('municipality admin cannot invite a municipality admin again in different casing', function () {
+    // Arrange
+    $this->actingAs($this->municipalityAdmin);
+    Filament::setTenant($this->municipality);
+
+    MunicipalityInvite::create([
+        'email' => 'jan.fransen@gemeente.nl',
+        'role' => Role::MunicipalityAdmin,
+        'token' => Str::uuid(),
+    ]);
+
+    // Act & Assert
+    livewire(ListMunicipalityAdminUsers::class)
+        ->callAction('invite', [
+            'email' => 'Jan.Fransen@Gemeente.nl',
+            'role' => Role::MunicipalityAdmin->value,
+            'municipalities' => [$this->municipality->id],
+        ])
+        ->assertHasActionErrors(['email']);
+
+    expect(MunicipalityInvite::count())->toBe(1);
+});

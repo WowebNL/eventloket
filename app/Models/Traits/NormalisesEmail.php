@@ -2,6 +2,8 @@
 
 namespace App\Models\Traits;
 
+use Illuminate\Database\Eloquent\Builder;
+
 /**
  * Stores email addresses in lowercase, the way User does.
  *
@@ -14,5 +16,15 @@ trait NormalisesEmail
     public function setEmailAttribute(?string $value): void
     {
         $this->attributes['email'] = $value === null ? null : strtolower($value);
+    }
+
+    /**
+     * Match an address the way it is stored, whatever case it was typed in.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeWhereEmail(Builder $query, string $email): void
+    {
+        $query->where('email', strtolower($email));
     }
 }
