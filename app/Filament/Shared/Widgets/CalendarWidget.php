@@ -21,6 +21,8 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
+use DateTimeInterface;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Facades\Filament;
@@ -384,7 +386,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
                             ->default(fn () => $this->start)
-                            ->afterStateUpdated(fn ($state) => $this->start = $state ? CarbonImmutable::parse($state) : null),
+                            ->afterStateUpdated(fn ($state) => $this->start = self::parseRangeDate($state)),
                         DatePicker::make('to')
                             ->label(__('shared/widgets/calendar.filters.range.to.label'))
                             ->placeholder(__('shared/widgets/calendar.filters.range.to.placeholder'))
@@ -393,20 +395,57 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
                             ->default(fn () => $this->end)
-                            ->afterStateUpdated(fn ($state) => $this->end = $state ? CarbonImmutable::parse($state) : null),
+                            ->afterStateUpdated(fn ($state) => $this->end = self::parseRangeDate($state)),
                     ])
+                    // The stored start is ISO 8601 text, so the range is applied
+                    // as a lexical comparison on that text, the same way the
+                    // month view bounds its query. Casting the JSON value to a
+                    // date in SQL would fail the whole list as soon as one zaak
+                    // carries a start the database cannot read as a date.
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '>=', $date),
+                                self::parseRangeDate($data['from'] ?? null),
+                                fn (Builder $query, CarbonImmutable $from): Builder => $query->where('reference_data->start_evenement', '>=', $from->toDateString()),
                             )
                             ->when(
-                                $data['to'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '<=', $date),
+                                self::parseRangeDate($data['to'] ?? null),
+                                fn (Builder $query, CarbonImmutable $to): Builder => $query->where('reference_data->start_evenement', '<', $to->addDay()->toDateString()),
                             );
                     }),
             ]);
+    }
+
+    /**
+     * Read a range picker value as a calendar day.
+     *
+     * The picker state arrives as text in more than one shape: the configured
+     * display format once it has passed through the schema state cast, or the
+     * picker's own internal format straight from the client. Neither may reach
+     * the database as-is, because a day-first string is read month-first or
+     * rejected there, so the value is parsed here and formatted by the query.
+     */
+    private static function parseRangeDate(mixed $value): ?CarbonImmutable
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return CarbonImmutable::instance($value)->startOfDay();
+        }
+
+        try {
+            return CarbonImmutable::createFromFormat(config('app.date_format'), (string) $value)->startOfDay();
+        } catch (InvalidFormatException) {
+            // Not in the display format; fall through to the generic parser.
+        }
+
+        try {
+            return CarbonImmutable::parse((string) $value)->startOfDay();
+        } catch (InvalidFormatException) {
+            return null;
+        }
     }
 
     protected function getEvents(?FetchInfo $info = null): Collection|array|Builder
