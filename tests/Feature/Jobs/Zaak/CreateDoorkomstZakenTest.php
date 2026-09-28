@@ -647,7 +647,12 @@ function sourceEioMeta(string $uuid, array $overrides = []): array
     ], $overrides);
 }
 
-test('copies documents cross-instance: downloads from the hoofdzaak and re-creates them in the deelzaak instance', function () {
+/**
+ * Fake a hoofdzaak on its own instance (OWN_HOST) with one document, and a
+ * deelzaak on main, so the document is copied across instances into main.
+ */
+function fakeCrossInstanceDocumentCopy(): void
+{
     Http::fake([
         OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
             'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
@@ -694,6 +699,10 @@ test('copies documents cross-instance: downloads from the hoofdzaak and re-creat
         '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
         '*' => Http::response([], 200),
     ]);
+}
+
+test('copies documents cross-instance: downloads from the hoofdzaak and re-creates them in the deelzaak instance', function () {
+    fakeCrossInstanceDocumentCopy();
 
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
     withPassingDoorkomstZaaktype($scenario['passing']);
@@ -710,7 +719,6 @@ test('copies documents cross-instance: downloads from the hoofdzaak and re-creat
         && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten')
         && $request->data()['inhoud'] === base64_encode('PDFBYTES')
         && $request->data()['informatieobjecttype'] === ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage'
-        && $request->data()['bronorganisatie'] === '123456789'
         && $request->data()['titel'] === 'Situatietekening'
         && $request->data()['auteur'] === 'Jan Jansen'
         // Determined by the target connection (systemUploadDefault → zaakvertrouwelijk),
@@ -729,9 +737,32 @@ test('copies documents cross-instance: downloads from the hoofdzaak and re-creat
         && ($request->data()['informatieobject'] ?? null) === OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1');
 });
 
-test('links the existing document url and does not copy when the deelzaak shares the hoofdzaak instance', function () {
-    // Hoofdzaak on main; doorkomst zaaktype on main too, so both live in one
-    // instance and the document url is directly linkable.
+test('copies a document to another connection as the organisation of that connection', function () {
+    // The hoofdzaak carries RSIN 123456789 on its own instance; the document is
+    // copied into main, whose RSIN differs. The copy must carry main's RSIN.
+    fakeCrossInstanceDocumentCopy();
+    config(['zgw.connections.main.bronorganisatie_rsin' => '987654321']);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && ($request->data()['bronorganisatie'] ?? null) === '987654321');
+
+    Http::assertNotSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && ($request->data()['bronorganisatie'] ?? null) === '123456789');
+});
+
+/**
+ * Fake a hoofdzaak on main with one document, and a deelzaak on main too, so
+ * the document url is linked directly instead of copied.
+ */
+function fakeSameInstanceDocumentLink(): void
+{
     Http::fake([
         ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
             'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
@@ -760,6 +791,12 @@ test('links the existing document url and does not copy when the deelzaak shares
         '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
         '*' => Http::response([], 200),
     ]);
+}
+
+test('links the existing document url and does not copy when the deelzaak shares the hoofdzaak instance', function () {
+    // Hoofdzaak on main; doorkomst zaaktype on main too, so both live in one
+    // instance and the document url is directly linkable.
+    fakeSameInstanceDocumentLink();
 
     $scenario = doorkomstScenario(hoofdOwnInstance: false);
     $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
@@ -776,6 +813,26 @@ test('links the existing document url and does not copy when the deelzaak shares
     Http::assertNotSent(fn ($request) => str_contains($request->url(), '/download'));
     Http::assertNotSent(fn ($request) => $request->method() === 'POST'
         && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten'));
+});
+
+test('leaves a linked document with its own RSIN when the deelzaak shares the hoofdzaak connection', function () {
+    // Same connection: the document is linked, not re-created, so nothing is
+    // written to the documenten API and its bronorganisatie stays as it is.
+    fakeSameInstanceDocumentLink();
+    config(['zgw.connections.main.bronorganisatie_rsin' => '987654321']);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten')
+        && ($request->data()['informatieobject'] ?? null) === ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1');
+
+    Http::assertNotSent(fn ($request) => in_array($request->method(), ['POST', 'PUT', 'PATCH'], true)
+        && str_contains($request->url(), '/documenten/api/v1/'));
 });
 
 test('skips a document cross-instance when no target informatieobjecttype resolves, but still creates the deelzaak and its status', function () {

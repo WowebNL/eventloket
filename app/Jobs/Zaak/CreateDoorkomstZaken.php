@@ -684,7 +684,6 @@ class CreateDoorkomstZaken implements ShouldQueue
                     $deelConnectionName,
                     $deelConnection,
                     (string) $informatieobjectUrl,
-                    $ozZaak->bronorganisatie,
                     $doorkomstZaaktype,
                     $deelMapping,
                     $sourceTypeOmschrijvingen,
@@ -722,7 +721,6 @@ class CreateDoorkomstZaken implements ShouldQueue
         string $deelConnectionName,
         ZgwConnection $deelConnection,
         string $informatieobjectUrl,
-        string $bronorganisatie,
         Zaaktype $doorkomstZaaktype,
         ?MunicipalityZaaktypeMapping $deelMapping,
         array &$sourceTypeOmschrijvingen,
@@ -748,7 +746,9 @@ class CreateDoorkomstZaken implements ShouldQueue
         $content = ZgwResource::downloadDocument($hoofdConnectionName, (string) ($eio['uuid'] ?? ''));
 
         $payload = [
-            'bronorganisatie' => $bronorganisatie,
+            // The copy belongs to the organisation of the connection it is created
+            // on, like the deelzaak itself, not to the hoofdzaak's organisation.
+            'bronorganisatie' => ZgwConnectionConfig::bronorganisatie($deelConnectionName),
             'creatiedatum' => $eio['creatiedatum'] ?? now()->format('Y-m-d'),
             // Determined by the target connection, not copied from the source: the
             // source instance's confidentiality scheme need not match the target's,
