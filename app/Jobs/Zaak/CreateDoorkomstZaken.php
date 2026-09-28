@@ -9,6 +9,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Exceptions\DoorkomstZakenIncompleteException;
 use App\Exceptions\ZaaktypeConnectionMismatchException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
@@ -35,6 +36,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -61,6 +63,20 @@ class CreateDoorkomstZaken implements ShouldQueue
     private ?string $hoofdAanvraagOmschrijving = null;
 
     private bool $hoofdAanvraagResolved = false;
+
+    /**
+     * How far the deelzaak of the municipality in progress got, for the log line
+     * when it fails: the connection it is sent to once that is resolved, and the
+     * url of the ZGW zaak once that is created. Reset for every municipality.
+     *
+     * @var array{connection: ?string, zaak_url: ?string}
+     */
+    private array $attempt = ['connection' => null, 'zaak_url' => null];
+
+    /**
+     * Cap on the error text taken over from a failed response into the log.
+     */
+    private const RESPONSE_TEXT_MAX = 300;
 
     public function __construct(public readonly Zaak $zaak) {}
 
@@ -103,7 +119,12 @@ class CreateDoorkomstZaken implements ShouldQueue
         // across instances.
         $initiator = $map->buildInitiator($state);
 
+        $failed = [];
+        $firstFailure = null;
+
         foreach ($passing as $muniRef) {
+            $this->attempt = ['connection' => null, 'zaak_url' => null];
+
             try {
                 $this->createDeelzaakFor($hoofdConnectionName, $ozZaak, $muniRef, $state, $initiator);
             } catch (ZaaktypeConnectionMismatchException $e) {
@@ -113,8 +134,114 @@ class CreateDoorkomstZaken implements ShouldQueue
                 // Creating a deelzaak is idempotent per (hoofdzaak x zaaktype), so a
                 // rerun after the koppeling is corrected still creates the missing one.
                 report($e);
+            } catch (Throwable $e) {
+                // Any other failure (typically an error response from the receiving
+                // ZGW API) is isolated to this municipality as well, so the ones
+                // after it on the route still get their deelzaak. Unlike a mismatch
+                // it does fail the job once the loop is done, see below.
+                $this->logFailedDeelzaak($muniRef, $e);
+                report($e);
+
+                $failed[] = (string) $muniRef->brk_identification;
+                $firstFailure ??= $e;
             }
         }
+
+        // Failing at the end keeps the missing deelzaken visible as a failed job,
+        // and makes a retry useful: the idempotency check in createDeelzaakFor()
+        // skips every municipality that already has its deelzaak, so a retry only
+        // tries the ones that are still missing.
+        if ($firstFailure !== null) {
+            throw DoorkomstZakenIncompleteException::forHoofdzaak(
+                zaakId: $this->zaak->id,
+                failedMunicipalities: $failed,
+                attempted: $passing->count(),
+                previous: $firstFailure,
+            );
+        }
+    }
+
+    /**
+     * Log a municipality whose deelzaak could not be created.
+     *
+     * The line carries what is needed to tell the cause apart: the municipality,
+     * the connection the deelzaak was sent to, and a summary of the error
+     * response. The request payload is deliberately left out, as it holds the
+     * aanvrager's details, and so is the raw response body; see
+     * {@see self::responseSummary()}.
+     *
+     * zaak_url is set when the deelzaak was already created in ZGW before a later
+     * step failed. The idempotency check is local and the local record is only
+     * written at the very end, so a retry creates that deelzaak a second time;
+     * the url is logged so such a leftover can be found and removed.
+     */
+    private function logFailedDeelzaak(Municipality $muniRef, Throwable $e): void
+    {
+        Log::error('CreateDoorkomstZaken: failed to create the deelzaak for a municipality; continuing with the next one.', [
+            'zaak_id' => $this->zaak->id,
+            'municipality' => $muniRef->brk_identification,
+            'connection' => $this->attempt['connection'],
+            'zaak_url' => $this->attempt['zaak_url'],
+            'exception' => $e::class,
+            'response' => $this->responseSummary($e),
+        ]);
+    }
+
+    /**
+     * A summary of the error response of a failed ZGW call, without anything
+     * that can echo what was sent.
+     *
+     * A ZGW error body ("Fout") is reduced to its generic fields plus the name
+     * and code of every invalid parameter; the reason texts are left out, as a
+     * validator can quote the rejected value in them. A body that is not JSON
+     * (an error page from a proxy or the application server) is reduced to the
+     * start of its text, which is where such a page names the error.
+     *
+     * @return array<string, mixed>
+     */
+    private function responseSummary(Throwable $e): array
+    {
+        if (! $e instanceof ApiRequestException) {
+            return [];
+        }
+
+        $response = $e->getResponse();
+        $body = $response->json();
+
+        if (! is_array($body)) {
+            $text = trim((string) preg_replace('/\s+/', ' ', strip_tags($response->body())));
+
+            return [
+                'status' => $response->status(),
+                'content_type' => $response->header('Content-Type'),
+                'text' => mb_substr($text, 0, self::RESPONSE_TEXT_MAX),
+            ];
+        }
+
+        $invalidParams = [];
+        foreach ((array) ($body['invalidParams'] ?? []) as $param) {
+            if (is_array($param)) {
+                $invalidParams[] = [
+                    'name' => self::scalarOrNull($param['name'] ?? null),
+                    'code' => self::scalarOrNull($param['code'] ?? null),
+                ];
+            }
+        }
+
+        $detail = self::scalarOrNull($body['detail'] ?? null);
+
+        return [
+            'status' => $response->status(),
+            'code' => self::scalarOrNull($body['code'] ?? null),
+            'title' => self::scalarOrNull($body['title'] ?? null),
+            'detail' => $detail === null ? null : mb_substr($detail, 0, self::RESPONSE_TEXT_MAX),
+            'invalid_params' => $invalidParams,
+        ];
+    }
+
+    private static function scalarOrNull(mixed $value): ?string
+    {
+        return is_scalar($value) ? (string) $value : null;
     }
 
     /**
@@ -273,6 +400,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         // deelzaak and its zaaktype in the same instance. Reads from the hoofdzaak
         // keep using the hoofdzaak connection.
         $deelConnectionName = $doorkomstZaaktype->zgwConnectionName();
+        $this->attempt['connection'] = $deelConnectionName;
 
         $this->assertZaaktypeBelongsToConnection($deelConnectionName, $doorkomstZaaktype);
 
@@ -310,6 +438,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
             return;
         }
+        $this->attempt['zaak_url'] = (string) $newZaakUrl;
 
         $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping);
         $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
