@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
+use App\Exceptions\DoorkomstZakenIncompleteException;
 use App\Exceptions\ZaaktypeConnectionMismatchException;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Models\Municipality;
@@ -16,7 +17,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\Fakes\ZgwHttpFake;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 
 uses(RefreshDatabase::class);
 
@@ -357,6 +360,78 @@ test('registers a vestiging initiator on a deelzaak in the doorkomst gemeente ow
     });
 });
 
+test('creates a deelzaak on another connection as the organisation of that connection', function () {
+    // Hoofdzaak on main, deelzaak on the passing municipality's own connection
+    // with its own RSIN: the deelzaak must not carry the hoofdzaak's RSIN.
+    fakeDoorkomstForInitiatorOnOwnInstance();
+    config(['zgw.connections.main.bronorganisatie_rsin' => '123456789']);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+
+    MunicipalityZgwConnection::factory()->active()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'bronorganisatie_rsin' => '987654321',
+    ]);
+    Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => "gemeente_{$scenario['passing']->id}",
+        'zgw_zaaktype_url' => OWN_HOST.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), OWN_HOST.'/zaken/api/v1/zaken')
+        && ($request->data()['bronorganisatie'] ?? null) === '987654321'
+        && ($request->data()['verantwoordelijkeOrganisatie'] ?? null) === '987654321');
+});
+
+test('creates a deelzaak on the hoofdzaak connection with the RSIN the hoofdzaak carries', function () {
+    // Same connection for both: the connection RSIN equals the hoofdzaak's
+    // bronorganisatie, so the payload is what it was before.
+    config(['zgw.connections.main.bronorganisatie_rsin' => '123456789']);
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+    Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken')
+        && ($request->data()['bronorganisatie'] ?? null) === '123456789'
+        && ($request->data()['verantwoordelijkeOrganisatie'] ?? null) === '123456789');
+});
+
 test('registers the initiator on the deelzaak from the form aanvrager data, not the copied ZGW rol', function () {
     // The initiator is rebuilt from the form (KvK + organisation name), matching
     // the hoofdzaak. The hoofdzaak ZGW rol is not copied: its identificatie is
@@ -572,7 +647,12 @@ function sourceEioMeta(string $uuid, array $overrides = []): array
     ], $overrides);
 }
 
-test('copies documents cross-instance: downloads from the hoofdzaak and re-creates them in the deelzaak instance', function () {
+/**
+ * Fake a hoofdzaak on its own instance (OWN_HOST) with one document, and a
+ * deelzaak on main, so the document is copied across instances into main.
+ */
+function fakeCrossInstanceDocumentCopy(): void
+{
     Http::fake([
         OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
             'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
@@ -619,6 +699,10 @@ test('copies documents cross-instance: downloads from the hoofdzaak and re-creat
         '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
         '*' => Http::response([], 200),
     ]);
+}
+
+test('copies documents cross-instance: downloads from the hoofdzaak and re-creates them in the deelzaak instance', function () {
+    fakeCrossInstanceDocumentCopy();
 
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
     withPassingDoorkomstZaaktype($scenario['passing']);
@@ -635,7 +719,6 @@ test('copies documents cross-instance: downloads from the hoofdzaak and re-creat
         && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten')
         && $request->data()['inhoud'] === base64_encode('PDFBYTES')
         && $request->data()['informatieobjecttype'] === ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/tgt-bijlage'
-        && $request->data()['bronorganisatie'] === '123456789'
         && $request->data()['titel'] === 'Situatietekening'
         && $request->data()['auteur'] === 'Jan Jansen'
         // Determined by the target connection (systemUploadDefault → zaakvertrouwelijk),
@@ -654,9 +737,32 @@ test('copies documents cross-instance: downloads from the hoofdzaak and re-creat
         && ($request->data()['informatieobject'] ?? null) === OWN_HOST.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1');
 });
 
-test('links the existing document url and does not copy when the deelzaak shares the hoofdzaak instance', function () {
-    // Hoofdzaak on main; doorkomst zaaktype on main too, so both live in one
-    // instance and the document url is directly linkable.
+test('copies a document to another connection as the organisation of that connection', function () {
+    // The hoofdzaak carries RSIN 123456789 on its own instance; the document is
+    // copied into main, whose RSIN differs. The copy must carry main's RSIN.
+    fakeCrossInstanceDocumentCopy();
+    config(['zgw.connections.main.bronorganisatie_rsin' => '987654321']);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && ($request->data()['bronorganisatie'] ?? null) === '987654321');
+
+    Http::assertNotSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten')
+        && ($request->data()['bronorganisatie'] ?? null) === '123456789');
+});
+
+/**
+ * Fake a hoofdzaak on main with one document, and a deelzaak on main too, so
+ * the document url is linked directly instead of copied.
+ */
+function fakeSameInstanceDocumentLink(): void
+{
     Http::fake([
         ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
             'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
@@ -685,6 +791,12 @@ test('links the existing document url and does not copy when the deelzaak shares
         '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
         '*' => Http::response([], 200),
     ]);
+}
+
+test('links the existing document url and does not copy when the deelzaak shares the hoofdzaak instance', function () {
+    // Hoofdzaak on main; doorkomst zaaktype on main too, so both live in one
+    // instance and the document url is directly linkable.
+    fakeSameInstanceDocumentLink();
 
     $scenario = doorkomstScenario(hoofdOwnInstance: false);
     $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
@@ -701,6 +813,26 @@ test('links the existing document url and does not copy when the deelzaak shares
     Http::assertNotSent(fn ($request) => str_contains($request->url(), '/download'));
     Http::assertNotSent(fn ($request) => $request->method() === 'POST'
         && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten'));
+});
+
+test('leaves a linked document with its own RSIN when the deelzaak shares the hoofdzaak connection', function () {
+    // Same connection: the document is linked, not re-created, so nothing is
+    // written to the documenten API and its bronorganisatie stays as it is.
+    fakeSameInstanceDocumentLink();
+    config(['zgw.connections.main.bronorganisatie_rsin' => '987654321']);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    Http::assertSent(fn ($request) => $request->method() === 'POST'
+        && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten')
+        && ($request->data()['informatieobject'] ?? null) === ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/doc-1');
+
+    Http::assertNotSent(fn ($request) => in_array($request->method(), ['POST', 'PUT', 'PATCH'], true)
+        && str_contains($request->url(), '/documenten/api/v1/'));
 });
 
 test('skips a document cross-instance when no target informatieobjecttype resolves, but still creates the deelzaak and its status', function () {
@@ -1514,4 +1646,212 @@ test('one municipality with an unusable koppeling does not keep the others from 
 
     expect(createdDeelzaakZaaktypen())->toBe([doorkomstZaaktypeUrl('dk-m')]);
     Exceptions::assertReported(ZaaktypeConnectionMismatchException::class);
+});
+
+/**
+ * ---------------------------------------------------------------------------
+ * A deelzaak the receiving ZGW API refuses
+ * ---------------------------------------------------------------------------
+ *
+ * A failing deelzaak must not keep the municipalities after it on the route
+ * from getting theirs. The job still fails at the end so the missing deelzaak
+ * stays visible, and a retry only creates the ones that are still missing.
+ */
+
+/** A third passing municipality, north of the diagonal route, on main. */
+function thirdPassingMunicipality(): Municipality
+{
+    $municipality = Municipality::factory()->create([
+        'name' => 'Derde doorkomstgemeente',
+        'geometry' => multipolygon([[1.5, 5.0], [1.5, 6.0], [2.5, 6.0], [2.5, 5.0], [1.5, 5.0]]),
+    ]);
+
+    Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m3',
+        'is_active' => true,
+    ]);
+
+    return $municipality;
+}
+
+/**
+ * Like fakeDoorkomstZgwOnMain(), except that creating a deelzaak with the given
+ * zaaktype answers with a server error for as long as $failing is true.
+ */
+function fakeDoorkomstZgwOnMainFailingFor(string $zaaktypeUrl, bool &$failing): void
+{
+    $created = 0;
+
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use (&$created, &$failing, $zaaktypeUrl) {
+            if ($request->method() === 'POST') {
+                if ($failing && ($request->data()['zaaktype'] ?? null) === $zaaktypeUrl) {
+                    return Http::response([
+                        'type' => 'https://zgw.example.com/ref/fouten/APIException/',
+                        'code' => 'error',
+                        'title' => 'A server error occurred.',
+                        'status' => 500,
+                        'detail' => 'A server error occurred.',
+                        'instance' => 'urn:uuid:00000000-0000-0000-0000-000000000000',
+                    ], 500);
+                }
+
+                $created++;
+
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-'.$created], 201);
+            }
+
+            $slug = basename((string) parse_url($request->url(), PHP_URL_PATH));
+
+            return Http::response(array_merge(deelZaakReadResponse(), [
+                'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/'.$slug,
+                'identificatie' => strtoupper($slug),
+            ]), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+/** The three routes, each crossing one of the three passing municipalities. */
+function threeRouteHoofdZaak(): Zaak
+{
+    secondPassingMunicipality();
+    thirdPassingMunicipality();
+
+    return multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+        lineGeometry([[0.5, -2.0], [3.5, -2.0]]),
+        lineGeometry([[0.5, 5.5], [3.5, 5.5]]),
+    ]);
+}
+
+/**
+ * The zaaktype url of every deelzaak registered locally for the hoofdzaak,
+ * sorted, so a duplicate shows up as a repeated entry.
+ *
+ * @return list<string>
+ */
+function localDeelzaakZaaktypen(Zaak $hoofdzaak): array
+{
+    $urls = Zaak::query()
+        ->where('hoofdzaak_id', $hoofdzaak->id)
+        ->with('zaaktype')
+        ->get()
+        ->map(fn (Zaak $zaak) => (string) $zaak->zaaktype?->zgw_zaaktype_url)
+        ->all();
+
+    sort($urls);
+
+    return $urls;
+}
+
+test('a server error on the first of three municipalities still creates the other two, fails the job, and a retry adds only the missing one', function () {
+    Exceptions::fake();
+    $failing = true;
+    fakeDoorkomstZgwOnMainFailingFor(doorkomstZaaktypeUrl('dk-m'), $failing);
+    $hoofdzaak = threeRouteHoofdZaak();
+
+    expect(fn () => CreateDoorkomstZaken::dispatchSync($hoofdzaak))
+        ->toThrow(DoorkomstZakenIncompleteException::class);
+
+    // All three were attempted, in route order, and the two after the failing
+    // one got their deelzaak.
+    expect(collect(Http::recorded())
+        ->filter(fn ($pair) => $pair[0]->method() === 'POST'
+            && parse_url($pair[0]->url(), PHP_URL_PATH) === '/zaken/api/v1/zaken')
+        ->map(fn ($pair) => (string) $pair[0]->data()['zaaktype'])
+        ->values()
+        ->all())->toBe([
+            doorkomstZaaktypeUrl('dk-m'),
+            doorkomstZaaktypeUrl('dk-m2'),
+            doorkomstZaaktypeUrl('dk-m3'),
+        ]);
+    expect(localDeelzaakZaaktypen($hoofdzaak))->toBe([
+        doorkomstZaaktypeUrl('dk-m2'),
+        doorkomstZaaktypeUrl('dk-m3'),
+    ]);
+    Exceptions::assertReported(ApiRequestException::class);
+
+    // The receiving side recovers; the retry creates the missing deelzaak and
+    // leaves the two existing ones alone.
+    $failing = false;
+
+    CreateDoorkomstZaken::dispatchSync($hoofdzaak->fresh());
+
+    // One more create request over both runs, and it is for the missing one.
+    expect(createdDeelzaakZaaktypen())->toBe([
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m2'),
+        doorkomstZaaktypeUrl('dk-m3'),
+    ]);
+    expect(localDeelzaakZaaktypen($hoofdzaak))->toBe([
+        doorkomstZaaktypeUrl('dk-m'),
+        doorkomstZaaktypeUrl('dk-m2'),
+        doorkomstZaaktypeUrl('dk-m3'),
+    ]);
+});
+
+test('names the municipalities without a deelzaak in the job failure', function () {
+    Exceptions::fake();
+    $failing = true;
+    fakeDoorkomstZgwOnMainFailingFor(doorkomstZaaktypeUrl('dk-m'), $failing);
+    $hoofdzaak = threeRouteHoofdZaak();
+    $failingBrk = Zaaktype::where('zgw_zaaktype_url', doorkomstZaaktypeUrl('dk-m'))->sole()->municipality->brk_identification;
+
+    try {
+        CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+        $this->fail('Expected the job to fail.');
+    } catch (DoorkomstZakenIncompleteException $e) {
+        expect($e->failedMunicipalities)->toBe([$failingBrk])
+            ->and($e->zaakId)->toBe($hoofdzaak->id)
+            ->and($e->getPrevious())->toBeInstanceOf(ApiRequestException::class);
+    }
+});
+
+test('logs a refused deelzaak with its municipality, connection and error response, and without the request payload', function () {
+    Exceptions::fake();
+    Log::spy();
+    $failing = true;
+    fakeDoorkomstZgwOnMainFailingFor(doorkomstZaaktypeUrl('dk-m'), $failing);
+    $hoofdzaak = threeRouteHoofdZaak();
+    $failingBrk = Zaaktype::where('zgw_zaaktype_url', doorkomstZaaktypeUrl('dk-m'))->sole()->municipality->brk_identification;
+
+    try {
+        CreateDoorkomstZaken::dispatchSync($hoofdzaak);
+    } catch (DoorkomstZakenIncompleteException) {
+        // expected
+    }
+
+    Log::shouldHaveReceived('error')
+        ->withArgs(function (string $message, array $context) use ($hoofdzaak, $failingBrk): bool {
+            if (! str_starts_with($message, 'CreateDoorkomstZaken: failed to create the deelzaak')) {
+                return false;
+            }
+
+            return $context['zaak_id'] === $hoofdzaak->id
+                && $context['municipality'] === $failingBrk
+                && $context['connection'] === 'main'
+                && $context['zaak_url'] === null
+                && $context['exception'] === ApiRequestException::class
+                && $context['response']['status'] === 500
+                && $context['response']['detail'] === 'A server error occurred.'
+                // Nothing of what was sent ends up in the line.
+                && ! str_contains(json_encode($context), 'Hoofdzaak')
+                && ! str_contains(json_encode($context), '123456789');
+        })
+        ->once();
 });

@@ -13,9 +13,12 @@ use Illuminate\Foundation\Queue\Queueable;
  * `form_state_snapshot` en `reference_data` van een Zaak. Vervangt OF's
  * `maybe_hash_identifying_attributes`-task.
  *
- * Draait als laatste in de async-keten — na PDF en email — zodat die
- * eerder nog met de originele waarden kunnen werken. Wat hier overblijft
- * na afloop is: hashes i.p.v. plain BSN/KvK in de DB-snapshot.
+ * Runs last in the async submit chain, after the PDF and the mail, so those
+ * can still work with the original values. When a job earlier in the chain
+ * fails for good, the chain's catch callback dispatches this job instead, so
+ * the snapshot is hashed either way (see SubmitEventForm::dispatchAsyncChain).
+ * What remains afterwards: hashes instead of the plain BSN/KvK in the stored
+ * snapshot.
  *
  * Velden die gehashd worden:
  *   - `watIsHetKamerVanKoophandelNummerVanUwOrganisatie` (KvK)
@@ -66,6 +69,36 @@ final class HashIdentifyingAttributes implements ShouldQueue
         $this->zaak->forceFill([
             'form_state_snapshot' => $snapshot,
         ])->save();
+    }
+
+    /**
+     * Whether a stored snapshot still holds one of the identifying values in
+     * plain form, i.e. whether running this job on it would change anything.
+     * Empty values and values that already carry the hash prefix do not count.
+     *
+     * @param  array<string, mixed>|null  $snapshot
+     */
+    public static function hasUnhashedValues(?array $snapshot): bool
+    {
+        $values = $snapshot['values'] ?? null;
+        if (! is_array($values)) {
+            return false;
+        }
+
+        foreach (self::GEVOELIGE_SNAPSHOT_KEYS as $key) {
+            $value = $values[$key] ?? null;
+
+            if ($value === null || $value === '' || $value === []) {
+                continue;
+            }
+            if (is_string($value) && str_starts_with($value, self::HASH_PREFIX)) {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     /**
