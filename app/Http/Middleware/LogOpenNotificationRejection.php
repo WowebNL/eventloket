@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\ZgwWebhookIngressState;
+use App\Services\Notificaties\WebhookTokenIssuer;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Laravel\Passport\Token;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
@@ -24,10 +26,11 @@ use Throwable;
  * is logged (source IP, user agent, path, status); request bodies and URLs are
  * never logged because ZGW query filters can carry personal data.
  *
- * A rejection that arrived with a credential is also counted on the ingress
- * state, so a standing refusal becomes visible to the scheduled health check. A
- * log line is a trace, not a signal: without something keeping score, a webhook
- * that refuses every delivery looks exactly like one that is simply quiet.
+ * A rejection that arrived with a credential this application issued is also
+ * counted on the ingress state, so a standing refusal becomes visible to the
+ * scheduled health check. A log line is a trace, not a signal: without
+ * something keeping score, a webhook that refuses every delivery looks exactly
+ * like one that is simply quiet.
  */
 class LogOpenNotificationRejection
 {
@@ -64,17 +67,20 @@ class LogOpenNotificationRejection
 
     /**
      * Count a rejection towards the ingress state, but only when the caller
-     * presented a credential.
+     * presented a credential this application issued.
      *
-     * A public endpoint collects unauthenticated probes as a matter of course.
-     * Counting those would make the health signal fire on background noise, and a
-     * signal that fires on noise gets ignored, which is the failure this is meant
-     * to prevent. A call that carries an Authorization header is either the
-     * registered sender or something holding a credential; both are worth
-     * knowing about, and neither is routine.
+     * A public endpoint collects probes as a matter of course, with or without
+     * an Authorization header. Counting those would let the health signal fire on
+     * background noise, and a signal that fires on noise gets ignored, which is
+     * the failure this is meant to prevent. What is worth knowing about is our
+     * own sender being turned away: its credential is a token we minted, and a
+     * refusal of it (expired, revoked, missing a scope) is exactly the standing
+     * fault the health check has to see.
      *
-     * Whether a credential was presented is read from the header's presence
-     * alone. Its value is never inspected, logged or stored.
+     * The token id is read from the bearer token to look it up among the issued
+     * tokens. The signature is not checked here, because this only decides what
+     * to count; authentication happens in the middleware that produced the
+     * rejection. The credential itself is never logged or stored.
      *
      * Keeping score must never change the response: a failure to record is
      * logged, and the caller still gets the rejection it earned rather than a
@@ -82,14 +88,27 @@ class LogOpenNotificationRejection
      */
     private function countAgainstIngress(Request $request, int $status): void
     {
-        if (! $request->hasHeader('Authorization')) {
-            return;
-        }
-
         try {
+            if (! $this->presentsIssuedCredential($request)) {
+                return;
+            }
+
             ZgwWebhookIngressState::recordRejection($status);
         } catch (Throwable $e) {
             Log::warning('Failed to record a rejected call on the webhook ingress state.', ['exception' => $e->getMessage()]);
         }
+    }
+
+    private function presentsIssuedCredential(Request $request): bool
+    {
+        $bearer = $request->bearerToken();
+
+        if (! is_string($bearer) || $bearer === '') {
+            return false;
+        }
+
+        $tokenId = WebhookTokenIssuer::tokenIdFromJwt($bearer);
+
+        return $tokenId !== null && Token::query()->whereKey($tokenId)->exists();
     }
 }

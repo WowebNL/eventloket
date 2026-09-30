@@ -167,14 +167,14 @@ test('an accepted notification stamps the ingress as working', function () {
     expect(ZgwWebhookIngressState::current()->last_accepted_at)->not->toBeNull();
 });
 
-test('a rejection from a caller holding a credential is counted', function () {
+test('a rejection of a credential this application issued is counted', function () {
     Passport::actingAsClient($this->notificationsClient, ['api:access']);
 
     // actingAsClient stubs the resource server rather than the transport, so the
-    // header a real caller always sends has to be stated here: the presence of
-    // that header is what separates a credentialed caller from an anonymous probe.
+    // header a real caller always sends has to be stated here: the token it
+    // carries is what separates our own sender from anything else.
     $this->postJson('/api/open-notifications/listen', validNotificationPayload(), [
-        'Authorization' => 'Bearer stub',
+        'Authorization' => knownIngressCredential(),
     ])->assertStatus(403);
 
     $state = ZgwWebhookIngressState::current();
@@ -193,12 +193,59 @@ test('an unauthenticated probe is logged but not counted', function () {
     expect(ZgwWebhookIngressState::current())->toBeNull();
 });
 
-test('a 401 from a caller presenting a credential is counted', function () {
+test('a 401 for a credential this application issued is counted', function () {
+    // A revoked token of our own is exactly the standing refusal the health
+    // check has to see.
     $this->postJson('/api/open-notifications/listen', validNotificationPayload(), [
-        'Authorization' => 'Bearer not-a-valid-token',
+        'Authorization' => knownIngressCredential(['revoked' => true]),
     ])->assertStatus(401);
 
     expect(ZgwWebhookIngressState::current()->consecutive_rejections)->toBe(1);
+});
+
+test('a 401 for an arbitrary authorization header is not counted', function () {
+    // Presenting some header is not the same as presenting our credential, so
+    // it must not move the health signal.
+    foreach (['Bearer not-a-valid-token', 'Basic dXNlcjpwYXNz', 'Bearer a.b.c'] as $header) {
+        $this->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+            'Authorization' => $header,
+        ])->assertStatus(401);
+    }
+
+    expect(ZgwWebhookIngressState::current())->toBeNull();
+});
+
+test('a 401 for a well-formed token this application never issued is not counted', function () {
+    $segment = fn (array $data): string => rtrim(strtr(base64_encode((string) json_encode($data)), '+/', '-_'), '=');
+    $foreign = $segment(['typ' => 'JWT', 'alg' => 'RS256']).'.'.$segment(['jti' => Str::random(80)]).'.signature';
+
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+        'Authorization' => 'Bearer '.$foreign,
+    ])->assertStatus(401);
+
+    expect(ZgwWebhookIngressState::current())->toBeNull();
+});
+
+test('a single client address is throttled on the listen endpoint', function () {
+    // The limit is stated outright rather than read from the route, so changing
+    // it is a deliberate act.
+    for ($call = 1; $call <= 120; $call++) {
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10'])
+            ->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+                'Authorization' => 'Bearer not-a-valid-token',
+            ])->assertStatus(401);
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10'])
+        ->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+            'Authorization' => 'Bearer not-a-valid-token',
+        ])->assertStatus(429);
+
+    // Another client address has its own allowance.
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.20'])
+        ->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+            'Authorization' => 'Bearer not-a-valid-token',
+        ])->assertStatus(401);
 });
 
 test('a failure to record an accepted notification does not fail the delivery', function () {
