@@ -273,3 +273,27 @@ test('admin can invite a user with admin role', function () {
         ->and($invite->organisation_id)->toBe($this->organisation->id)
         ->and($invite->role)->toBe(OrganisationRole::Admin->value);
 });
+
+test('organisation admin cannot invite an address again in different casing', function () {
+    // Arrange
+    $this->actingAs($this->admin);
+    Filament::setTenant($this->organisation);
+
+    OrganisationInvite::create([
+        'organisation_id' => $this->organisation->id,
+        'email' => 'jan.fransen@gemeente.nl',
+        'role' => OrganisationRole::Member,
+        'token' => Str::uuid(),
+    ]);
+
+    // Act & Assert - the check matches the stored lowercase address instead of
+    // letting the insert collide on the unique constraint
+    livewire(ListOrganiserUsers::class)
+        ->callAction('invite', [
+            'email' => 'Jan.Fransen@Gemeente.nl',
+            'makeAdmin' => false,
+        ])
+        ->assertHasActionErrors(['email']);
+
+    expect(OrganisationInvite::count())->toBe(1);
+});
