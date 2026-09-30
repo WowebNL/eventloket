@@ -14,13 +14,10 @@ use Laravel\Passport\Http\Middleware\EnsureClientIsResourceOwner;
 // `open-notifications/listen` is a ZGW webhook and independent of OF.
 Route::post('/open-notifications/listen', [OpenNotificationsController::class, 'listen'])
     ->middleware([
-        // Bounds how often a single client address can reach this public
-        // endpoint, ahead of anything that touches the database. The limit of
-        // 120 calls per minute is an assumption, not a measurement: legitimate
-        // traffic comes in bursts when many objects change at once, and this is
-        // meant to sit well above such a burst. Revisit it once real delivery
-        // volumes are known.
-        'throttle:120,1',
+        // Runs first, ahead of anything that touches the database. The limit
+        // and the reasoning behind it live with the named limiter in
+        // AppServiceProvider.
+        'throttle:open-notifications',
         // Runs ahead of the scope check so it can observe (and log) auth, scope
         // and host-rule rejections raised by the middleware and validation that
         // follow.

@@ -248,6 +248,29 @@ test('a single client address is throttled on the listen endpoint', function () 
         ])->assertStatus(401);
 });
 
+test('a throttled call on the listen endpoint is logged with only its address and path', function () {
+    Log::spy();
+
+    for ($call = 1; $call <= 120; $call++) {
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.30'])
+            ->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+                'Authorization' => 'Bearer not-a-valid-token',
+            ])->assertStatus(401);
+    }
+
+    $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.30'])
+        ->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+            'Authorization' => 'Bearer not-a-valid-token',
+        ])->assertStatus(429);
+
+    // A limit that turns out too low has to be visible here; the exact context
+    // also pins that no header or credential ends up in the log.
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context = []): bool => $message === 'Throttled Open Notificaties webhook call.'
+            && $context === ['ip' => '203.0.113.30', 'path' => 'api/open-notifications/listen'])
+        ->once();
+});
+
 test('a failure to record an accepted notification does not fail the delivery', function () {
     Queue::fake();
     Log::spy();
