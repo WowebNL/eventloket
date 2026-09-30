@@ -17,8 +17,8 @@ use Throwable;
  * to expiring: issues a fresh token, PATCHes the abonnement's `auth` field via
  * the Notificaties API, updates storage and revokes the previous token.
  *
- * Each abonnement is renewed independently; a failure on one is logged and does
- * not abort the rest, so the scheduled run is safe to retry.
+ * Each abonnement is renewed independently; a failure on one is logged and
+ * reported but does not abort the rest, so the scheduled run is safe to retry.
  */
 class RenewZgwAbonnementen implements ShouldQueue
 {
@@ -45,6 +45,13 @@ class RenewZgwAbonnementen implements ShouldQueue
                         'abonnement_url' => $abonnement->abonnement_url,
                         'exception' => $exception->getMessage(),
                     ]);
+
+                    // A rotation that cannot complete is not self-healing: the
+                    // current token keeps working until it lapses, and then every
+                    // delivery is refused. The health check deliberately stays
+                    // quiet inside the renewal window because this job is meant to
+                    // act there, so a failure here has to be loud on its own.
+                    report($exception);
                 }
             });
     }
