@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Filament\Organiser\Pages;
 
 use App\Enums\MunicipalityFormQuestionType;
+use App\EventForm\Components\AddressNL;
 use App\EventForm\Components\VerticalWizard;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
@@ -432,6 +433,8 @@ class EventFormPage extends Page implements HasForms
             return;
         }
 
+        $this->runAddressLookupForObjectUpdate($propertyName);
+
         $this->absorbFormData($this->data ?? []);
 
         // Service-fetches die voorheen door fetch-rules in de RulesEngine
@@ -459,6 +462,30 @@ class EventFormPage extends Page implements HasForms
         }
         $this->persistDraft();
         $this->lastDraftSaveAt = $now;
+    }
+
+    /**
+     * Runs the address auto-fill when an edit to an address arrives as an
+     * update of the whole address object rather than of one of its fields
+     * (see `AddressNL::lookupFieldPathForObjectUpdate()`). The update is
+     * handed to the schema as an update of the changed lookup field, so the
+     * field's own `afterStateUpdated` callback runs as it would for a
+     * per-field update.
+     */
+    private function runAddressLookupForObjectUpdate(string $propertyName): void
+    {
+        foreach ($this->getCachedSchemas() as $schema) {
+            $lookupFieldPath = AddressNL::lookupFieldPathForObjectUpdate(
+                $schema,
+                $propertyName,
+                $this->getOldSchemaState($propertyName),
+                data_get($this, $propertyName),
+            );
+
+            if ($lookupFieldPath !== null) {
+                $schema->callAfterStateUpdated($lookupFieldPath);
+            }
+        }
     }
 
     /**
