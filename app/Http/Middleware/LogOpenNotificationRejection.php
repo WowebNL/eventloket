@@ -9,6 +9,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Logs rejected calls to the public Open Notificaties webhook so credential
@@ -74,6 +75,10 @@ class LogOpenNotificationRejection
      *
      * Whether a credential was presented is read from the header's presence
      * alone. Its value is never inspected, logged or stored.
+     *
+     * Keeping score must never change the response: a failure to record is
+     * logged, and the caller still gets the rejection it earned rather than a
+     * server error.
      */
     private function countAgainstIngress(Request $request, int $status): void
     {
@@ -81,6 +86,10 @@ class LogOpenNotificationRejection
             return;
         }
 
-        ZgwWebhookIngressState::recordRejection($status);
+        try {
+            ZgwWebhookIngressState::recordRejection($status);
+        } catch (Throwable $e) {
+            Log::warning('Failed to record a rejected call on the webhook ingress state.', ['exception' => $e->getMessage()]);
+        }
     }
 }

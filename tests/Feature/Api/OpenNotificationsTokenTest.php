@@ -3,10 +3,14 @@
 use App\Jobs\ProcessOpenNotification;
 use App\Models\Application;
 use App\Models\ZgwWebhookIngressState;
+use App\Services\Notificaties\WebhookTokenIssuer;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Laravel\Passport\Client;
 use Laravel\Passport\Passport;
+use Laravel\Passport\Token;
 use Tests\Fakes\ZgwHttpFake;
 
 beforeEach(function () {
@@ -37,6 +41,41 @@ function validNotificationPayload(): array
         'resourceUrl' => $object,
         'aanmaakdatum' => now()->toDateTimeString(),
     ];
+}
+
+/**
+ * An Authorization header carrying a JWT whose token id this application issued.
+ * Only the payload matters here; the signature is never checked by the ingress
+ * bookkeeping, and the tests that need authentication stub the resource server.
+ */
+function knownIngressCredential(array $tokenAttributes = []): string
+{
+    $token = Token::create(array_merge([
+        'id' => Str::random(80),
+        'user_id' => null,
+        'client_id' => (string) Str::uuid(),
+        'name' => WebhookTokenIssuer::APPLICATION_NAME,
+        'scopes' => [WebhookTokenIssuer::SCOPE],
+        'revoked' => false,
+        'expires_at' => now()->addYear(),
+    ], $tokenAttributes));
+
+    $segment = fn (array $data): string => rtrim(strtr(base64_encode((string) json_encode($data)), '+/', '-_'), '=');
+
+    return 'Bearer '.$segment(['typ' => 'JWT', 'alg' => 'RS256']).'.'.$segment(['jti' => $token->getKey()]).'.signature';
+}
+
+/**
+ * Make every query against the ingress state fail, as a lock timeout or a
+ * dropped connection would.
+ */
+function failIngressBookkeeping(): void
+{
+    DB::beforeExecuting(function (string $query): void {
+        if (str_contains($query, 'zgw_webhook_ingress_states')) {
+            throw new RuntimeException('Simulated ingress bookkeeping failure.');
+        }
+    });
 }
 
 test('a token with the notifications:receive scope can call the listen endpoint', function () {
@@ -160,6 +199,39 @@ test('a 401 from a caller presenting a credential is counted', function () {
     ])->assertStatus(401);
 
     expect(ZgwWebhookIngressState::current()->consecutive_rejections)->toBe(1);
+});
+
+test('a failure to record an accepted notification does not fail the delivery', function () {
+    Queue::fake();
+    Log::spy();
+    Passport::actingAsClient($this->notificationsClient, ['notifications:receive']);
+    failIngressBookkeeping();
+
+    // The notification is already queued when the bookkeeping runs. Answering
+    // with an error would make the sender deliver it again.
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload())
+        ->assertStatus(200);
+
+    Queue::assertPushed(ProcessOpenNotification::class, 1);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => $message === 'Failed to record an accepted notification on the webhook ingress state.')
+        ->once();
+});
+
+test('a failure to record a rejection does not change the rejection', function () {
+    Log::spy();
+    Passport::actingAsClient($this->notificationsClient, ['api:access']);
+    $credential = knownIngressCredential();
+    failIngressBookkeeping();
+
+    $this->postJson('/api/open-notifications/listen', validNotificationPayload(), [
+        'Authorization' => $credential,
+    ])->assertStatus(403);
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message): bool => $message === 'Failed to record a rejected call on the webhook ingress state.')
+        ->once();
 });
 
 test('an accepted notification clears an earlier rejection streak', function () {
