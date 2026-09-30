@@ -158,6 +158,31 @@ it('leaves an abonnement without a stored token id alone', function () {
         ->toBe(AbonnementCheckStatus::Healthy);
 });
 
+it('never calls an expired token healthy when the stored expiry still lies ahead', function () {
+    // The abonnement's own copy of the expiry says a year to go, while the token
+    // the remote presents lapsed yesterday. The route judges the token, so the
+    // check has to as well.
+    abonnement([
+        'expires_at' => now()->addYear(),
+        'token_id' => webhookToken(['expires_at' => now()->subDay()])->getKey(),
+    ]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::TokenNotUsable);
+});
+
+it('never calls an expired token healthy when no expiry was stored', function () {
+    abonnement([
+        'expires_at' => null,
+        'token_id' => webhookToken(['expires_at' => now()->subDay()])->getKey(),
+    ]);
+    fakeRemoteAbonnement(AbonnementRegistrar::KANALEN);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)
+        ->toBe(AbonnementCheckStatus::TokenNotUsable);
+});
+
 it('reports an expired token before it judges its scope', function () {
     abonnement([
         'expires_at' => now()->subDay(),

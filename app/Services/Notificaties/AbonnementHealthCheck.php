@@ -77,8 +77,14 @@ class AbonnementHealthCheck
 
     /**
      * Whether the credential stored for this abonnement would be turned away by
-     * our own webhook route, because it no longer exists, has been revoked, or
-     * does not carry the scope that route requires.
+     * our own webhook route, because it no longer exists, has been revoked, has
+     * expired, or does not carry the scope that route requires.
+     *
+     * Expiry is read from the token itself, not only from the abonnement's copy
+     * of it. That copy can be empty (the issuer leaves it unset when the grant
+     * response carries no lifetime) and can drift from the token (a restored
+     * backup, a rotation that only half completed), and the route judges the
+     * token, not the copy.
      *
      * This is the one branch that reads the requirement rather than waiting for
      * refused deliveries: a token minted under an earlier contract keeps working
@@ -102,7 +108,9 @@ class AbonnementHealthCheck
             return true;
         }
 
-        return (bool) $token->revoked || $token->cant(WebhookTokenIssuer::SCOPE);
+        return (bool) $token->revoked
+            || ($token->expires_at?->isPast() ?? false)
+            || $token->cant(WebhookTokenIssuer::SCOPE);
     }
 
     /**
