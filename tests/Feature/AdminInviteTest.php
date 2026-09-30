@@ -222,3 +222,41 @@ test('deleted invite shows not found page', function () {
             'subheading' => __('errors/invite-not-found.subheading', ['days' => config('invites.expiration_days')]),
         ]);
 });
+
+test('admin cannot invite an address again in different casing', function () {
+    // Arrange
+    $this->actingAs($this->admin);
+
+    AdminInvite::create([
+        'email' => 'jan.fransen@gemeente.nl',
+        'token' => Str::uuid(),
+    ]);
+
+    // Act & Assert - the check matches the stored lowercase address instead of
+    // letting the insert collide on the unique constraint
+    livewire(ListAdminUsers::class)
+        ->callAction('invite', [
+            'email' => 'Jan.Fransen@Gemeente.nl',
+        ])
+        ->assertHasActionErrors(['email']);
+
+    expect(AdminInvite::count())->toBe(1);
+});
+
+test('admin cannot invite the address of an existing account in different casing', function () {
+    // Arrange
+    $this->actingAs($this->admin);
+
+    User::factory()->create([
+        'email' => 'jan.fransen@gemeente.nl',
+    ]);
+
+    // Act & Assert
+    livewire(ListAdminUsers::class)
+        ->callAction('invite', [
+            'email' => 'Jan.Fransen@Gemeente.nl',
+        ])
+        ->assertHasActionErrors(['email']);
+
+    expect(AdminInvite::count())->toBe(0);
+});
