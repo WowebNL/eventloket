@@ -168,11 +168,11 @@ final class ZaaktypeBlueprintHealth
 
         $findings = [];
 
-        if ($mapping?->aanvraag_informatieobjecttype && ! $omschrijvingen->contains($mapping->aanvraag_informatieobjecttype)) {
+        if ($mapping?->aanvraag_informatieobjecttype && $omschrijvingen->doesntContain($mapping->aanvraag_informatieobjecttype)) {
             $findings[] = new BlueprintFinding('aanvraag_informatieobjecttype', BlueprintFindingType::MappedValueNotFound, $mapping->aanvraag_informatieobjecttype);
         }
 
-        if ($mapping?->bijlage_informatieobjecttype && ! $omschrijvingen->contains($mapping->bijlage_informatieobjecttype)) {
+        if ($mapping?->bijlage_informatieobjecttype && $omschrijvingen->doesntContain($mapping->bijlage_informatieobjecttype)) {
             $findings[] = new BlueprintFinding('bijlage_informatieobjecttype', BlueprintFindingType::MappedValueNotFound, $mapping->bijlage_informatieobjecttype);
         }
 
@@ -207,7 +207,7 @@ final class ZaaktypeBlueprintHealth
         // koppeling explicitly maps has to exist, otherwise the koppeling
         // itself points at something that is gone.
         foreach ($mapping->eigenschap_map ?? [] as $logicalKey => $naam) {
-            if (is_string($naam) && $naam !== '' && ! $namen->contains($naam)) {
+            if (is_string($naam) && $naam !== '' && $namen->doesntContain($naam)) {
                 $findings[] = new BlueprintFinding("eigenschap:{$logicalKey}", BlueprintFindingType::MappedValueNotFound, $naam);
             }
         }
