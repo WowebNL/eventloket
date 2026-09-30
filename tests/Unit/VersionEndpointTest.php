@@ -1,11 +1,16 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Redis;
 
-// The /__version route reads no database. It lives in the Unit suite so it runs
-// without RefreshDatabase (which the Feature suite applies globally): no migrations
-// and no database connection are needed to verify the signature gate and payload.
+// The /__version route touches no application data. It lives in the Unit suite so
+// it runs without RefreshDatabase (which the Feature suite applies globally): no
+// migrations and no database connection are needed to verify the signature gate
+// and payload. The engine version lookups it does after the signature check are
+// read only and wrapped in try/catch, so without a running engine they simply drop
+// out of the payload; the tests below drive them through the facades.
 
 afterEach(function () {
     foreach (glob(sys_get_temp_dir().'/register-version-test-*.json') ?: [] as $file) {
@@ -48,6 +53,38 @@ function signedHeaders(string $secret, ?int $timestamp = null): array
         'X-Register-Timestamp' => (string) $timestamp,
         'X-Register-Signature' => base64_encode($signature),
     ];
+}
+
+/** Let the default connection answer SHOW server_version like a real server does. */
+function fakePostgres(string $serverVersion): void
+{
+    $connection = Mockery::mock();
+    $connection->shouldReceive('getDriverName')->andReturn('pgsql');
+    $connection->shouldReceive('selectOne')->with('SHOW server_version')
+        ->andReturn((object) ['server_version' => $serverVersion]);
+
+    DB::shouldReceive('connection')->andReturn($connection);
+}
+
+/** Let INFO server answer with the given section, in the shape the client returns. */
+function fakeRedisInfo(array $info): void
+{
+    $connection = Mockery::mock();
+    $connection->shouldReceive('info')->with('server')->andReturn($info);
+
+    Redis::shouldReceive('connection')->andReturn($connection);
+}
+
+/** No database at all, as on a host where the engine is down or absent. */
+function unreachableDatabase(): void
+{
+    DB::shouldReceive('connection')->andThrow(new RuntimeException('no database'));
+}
+
+/** Same for the cache: connecting throws instead of returning a client. */
+function unreachableCache(): void
+{
+    Redis::shouldReceive('connection')->andThrow(new RuntimeException('no cache'));
 }
 
 it('returns the version metadata for a valid signed request', function () {
@@ -94,6 +131,74 @@ it('returns null git fields when the version file is missing', function () {
     $this->get('/__version', signedHeaders($secret))
         ->assertOk()
         ->assertJson(['git_tag' => null, 'git_sha' => null, 'branch' => null]);
+});
+
+it('reports the postgresql and redis versions when both engines answer', function () {
+    $secret = registerKeypair();
+    // The Debian packaged suffix is what a managed server actually returns.
+    fakePostgres('17.6 (Debian 17.6-1.pgdg13+1)');
+    fakeRedisInfo(['redis_version' => '7.4.2', 'redis_mode' => 'standalone']);
+
+    $this->get('/__version', signedHeaders($secret))
+        ->assertOk()
+        ->assertJsonPath('runtimes.postgresql', '17.6')
+        ->assertJsonPath('runtimes.redis', '7.4.2');
+});
+
+it('reports valkey on its own slug instead of its redis compatibility version', function () {
+    $secret = registerKeypair();
+    unreachableDatabase();
+    // Valkey reports both; redis_version is a compatibility number that would map
+    // onto the wrong end of life cycles, so it must lose from valkey_version.
+    fakeRedisInfo(['redis_version' => '7.2.4', 'valkey_version' => '8.1.1']);
+
+    $this->get('/__version', signedHeaders($secret))
+        ->assertOk()
+        ->assertJsonPath('runtimes.valkey', '8.1.1')
+        ->assertJsonMissingPath('runtimes.redis');
+});
+
+it('reads the predis shaped INFO response as well as the phpredis one', function () {
+    $secret = registerKeypair();
+    unreachableDatabase();
+    // predis nests the section under its name, phpredis returns it flat.
+    fakeRedisInfo(['Server' => ['redis_version' => '8.0.3']]);
+
+    $this->get('/__version', signedHeaders($secret))
+        ->assertOk()
+        ->assertJsonPath('runtimes.redis', '8.0.3');
+});
+
+it('does not query the database when the default connection is not pgsql', function () {
+    $secret = registerKeypair();
+    unreachableCache();
+    $connection = Mockery::mock();
+    $connection->shouldReceive('getDriverName')->andReturn('sqlite');
+    $connection->shouldNotReceive('selectOne');
+    DB::shouldReceive('connection')->andReturn($connection);
+
+    $this->get('/__version', signedHeaders($secret))
+        ->assertOk()
+        ->assertJsonMissingPath('runtimes.postgresql');
+});
+
+it('answers exactly as before when no engine is reachable', function () {
+    $secret = registerKeypair();
+    useVersionFile(['git_tag' => 'v1.2.3', 'nodejs' => '22.1.0']);
+    unreachableDatabase();
+    unreachableCache();
+
+    $this->get('/__version', signedHeaders($secret))
+        ->assertOk()
+        ->assertJson(['git_tag' => 'v1.2.3'])
+        ->assertJsonPath('runtimes.nodejs', '22.1.0')
+        ->assertJsonStructure([
+            'php', 'framework', 'git_tag', 'git_sha', 'composer_lock_hash',
+            'app_env', 'branch', 'runtimes', 'deployed_at', 'checked_at',
+        ])
+        ->assertJsonMissingPath('runtimes.postgresql')
+        ->assertJsonMissingPath('runtimes.redis')
+        ->assertJsonMissingPath('runtimes.valkey');
 });
 
 it('register:build-version writes the version file from the given options', function () {
