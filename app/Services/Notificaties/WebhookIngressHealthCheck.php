@@ -16,6 +16,14 @@ use App\Models\ZgwWebhookIngressState;
  * registration can look perfect while every delivery bounces, and a registration
  * that was never made produces no traffic at all to judge. This check covers the
  * first case and the tail of the second.
+ *
+ * Limitation: the state it reads is kept for the ingress as a whole, while the
+ * connections behind it are per municipality. Every connection posts to the
+ * same endpoint, so a single connection that keeps delivering resets the
+ * rejection streak and keeps the last accepted delivery fresh for all of them. This check therefore only
+ * fires when every delivery bounces or all of them go quiet. A connection that
+ * fails while others keep working is left to {@see AbonnementHealthCheck},
+ * which runs per connection.
  */
 class WebhookIngressHealthCheck
 {
