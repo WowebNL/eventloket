@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\EventForm\State;
 
+use App\EventForm\Support\Indieningstermijnen;
 use App\EventForm\Support\JsTruthy;
+use App\EventForm\Support\SafeDateTime;
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 
 /**
  * Pure-functions-class voor afgeleide variabelen. Vervangt stuk voor
@@ -40,6 +43,7 @@ final class FormDerivedState
         'evenementInGemeente' => true,
         'alcoholvergunning' => true,
         'isVergunningaanvraag' => true,
+        'isMelding' => true,
         'risicoClassificatie' => true,
         'indieningstermijnStatus' => true,
         'confirmationtext' => true,
@@ -305,6 +309,61 @@ final class FormDerivedState
     }
 
     /**
+     * Whether the scan concluded that a report ("melding") suffices, so
+     * the submission is on the report path instead of the permit path.
+     *
+     * Deliberately not the negation of {@see isVergunningaanvraag()}:
+     * while the scan is still running neither is true, and nothing that
+     * depends on the outcome may act before then. Two systems, same two
+     * answers driving them as in the permit case:
+     *
+     *   - New ReportQuestion system: there is at least one active question
+     *     and every one of them is answered 'Ja'.
+     *   - Legacy: the road-closure question is answered 'Nee'. That is the
+     *     question the outcome texts and the confirmation text already
+     *     keyed on, so it is the established signal for this path. Note
+     *     that its own visibility rule is a disjunction rather than a
+     *     cascade, so it can be answered while an earlier question is
+     *     'Nee'; the permit check above runs first and wins there.
+     *
+     * A vooraankondiging is neither: it registers a preferred date and is
+     * turned into a report or a permit application later on.
+     *
+     * Returns true or null for the same reason as the permit flag: a null
+     * falls through to the values bag in `FormState::get()`.
+     */
+    public function isMelding(): ?bool
+    {
+        if ($this->state->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging') {
+            return null;
+        }
+
+        if ($this->isVergunningaanvraag() === true) {
+            return null;
+        }
+
+        if ($this->state->get('gemeenteVariabelen.use_new_report_questions') === true) {
+            $questions = $this->state->get('gemeenteVariabelen.report_questions');
+            if (! is_array($questions) || $questions === []) {
+                return null;
+            }
+
+            foreach ($questions as $index => $_question) {
+                $position = (int) $index + 1;
+                if ($this->state->get(sprintf('reportQuestion_%d', $position)) !== 'Ja') {
+                    return null;
+                }
+            }
+
+            return true;
+        }
+
+        return $this->state->get('wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer') === 'Nee'
+            ? true
+            : null;
+    }
+
+    /**
      * Risico-classificatie A/B/C op basis van de som van 14 risicoscan-
      * scores. Som ≤ 6 = A, ≤ 9 = B, anders = C. Velden zijn pas
      * "scoorbaar" als ze allemaal een waarde hebben — voorkomt dat
@@ -337,44 +396,124 @@ final class FormDerivedState
     }
 
     /**
-     * Controleert of de aanvraag binnen de indieningstermijn valt.
+     * Whether the submission falls within its deadline.
      *
-     * Retourneert null als er geen termijn is ingesteld of de benodigde
-     * gegevens ontbreken; anders een array met:
+     * Returns null when no deadline is configured or the data needed to
+     * work one out is missing; otherwise an array of:
      *   - `withinDeadline` (bool)
-     *   - `weeks` (int) — de ingestelde termijn in weken
-     *   - `weeksRemaining` (int) — weken tot de start (kan negatief)
+     *   - `weeks` (int) — the configured deadline in weeks
+     *   - `weeksRemaining` (int) — weeks until the start, can be negative
+     *   - `basedOn` (string) — which municipality variable produced the
+     *     number: `classification` on the permit path, `report` on the
+     *     report path. The places that show the deadline therefore do not
+     *     have to work out for themselves what it rests on.
      *
-     * @return array{withinDeadline: bool, weeks: int, weeksRemaining: int}|null
+     * Picking the deadline and doing the date arithmetic are two separate
+     * things: which deadline applies depends on the path, what you then
+     * compute with it does not. See {@see indieningstermijn()} for the
+     * first half.
+     *
+     * @return array{withinDeadline: bool, weeks: int, weeksRemaining: int, basedOn: string}|null
      */
     public function indieningstermijnStatus(): ?array
     {
+        $termijn = $this->indieningstermijn();
+        if ($termijn === null) {
+            return null;
+        }
+
+        [$weeks, $basedOn] = $termijn;
+
+        $start = self::parseStart($this->state->get('EvenementStart'));
+        if ($start === null) {
+            return null;
+        }
+
+        $deadline = $start->copy()->subWeeks($weeks);
+        $weeksRemaining = (int) now()->diffInWeeks($start, false);
+
+        return [
+            'withinDeadline' => now()->lte($deadline),
+            'weeks' => $weeks,
+            'weeksRemaining' => $weeksRemaining,
+            'basedOn' => $basedOn,
+        ];
+    }
+
+    /**
+     * Turn the stored event start into a moment, or null when it is blank
+     * or unusable. Never throws.
+     *
+     * A bare parse used to be unreachable unless all fourteen risk-scan
+     * fields were filled, because the classification was the gate in front
+     * of it. The report path has no classification and reaches this from a
+     * step that re-renders on every keystroke, and from the queued job that
+     * builds the submission PDF, which has no try/catch of its own. A value
+     * this cannot read must therefore mean "no deadline", never an
+     * exception.
+     *
+     * Two shapes arrive here. The picker writes `Y-m-d\TH:i`, which is what
+     * {@see SafeDateTime::parse()} whitelists, and that helper is the
+     * project's answer for this field elsewhere. Prefilling a form from an
+     * existing case writes the stored string straight through instead, and
+     * that one carries a timezone designator the whitelist does not cover,
+     * so falling back on a guarded parse keeps those forms from silently
+     * losing their deadline.
+     */
+    private static function parseStart(mixed $startDatum): ?CarbonInterface
+    {
+        if (is_string($startDatum) && trim($startDatum) === '') {
+            // A blank string is not a date, but a bare parse reads it as
+            // the current moment and would measure the deadline against
+            // today.
+            return null;
+        }
+
+        if ($startDatum === null) {
+            return null;
+        }
+
+        $parsed = SafeDateTime::parse($startDatum);
+        if ($parsed !== null) {
+            return $parsed;
+        }
+
+        try {
+            return Carbon::parse($startDatum);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The deadline that applies, as weeks plus the grounds it rests on.
+     *
+     * The report path is checked first because it is decided by the scan
+     * and never produces a risk classification; a permit application keeps
+     * taking its deadline from that classification, which is why nothing
+     * changes for it.
+     *
+     * @return array{0: int, 1: string}|null
+     */
+    private function indieningstermijn(): ?array
+    {
+        if ($this->isMelding() === true) {
+            $weeks = Indieningstermijnen::weeks($this->state, Indieningstermijnen::MELDING_KEY);
+
+            return $weeks === null ? null : [$weeks, 'report'];
+        }
+
         $classificatie = $this->risicoClassificatie();
         if ($classificatie === null) {
             return null;
         }
 
-        $key = 'indieningstermijn_'.strtolower($classificatie);
-        $weeks = $this->state->get("gemeenteVariabelen.{$key}");
+        $weeks = Indieningstermijnen::weeks(
+            $this->state,
+            Indieningstermijnen::classificatieKey($classificatie),
+        );
 
-        if (empty($weeks)) {
-            return null;
-        }
-
-        $startDatum = $this->state->get('EvenementStart');
-        if (! $startDatum) {
-            return null;
-        }
-
-        $start = Carbon::parse($startDatum);
-        $deadline = $start->copy()->subWeeks((int) $weeks);
-        $weeksRemaining = (int) now()->diffInWeeks($start, false);
-
-        return [
-            'withinDeadline' => now()->lte($deadline),
-            'weeks' => (int) $weeks,
-            'weeksRemaining' => $weeksRemaining,
-        ];
+        return $weeks === null ? null : [$weeks, 'classification'];
     }
 
     /**
@@ -420,6 +559,7 @@ final class FormDerivedState
             'evenementInGemeente' => $this->evenementInGemeente(),
             'alcoholvergunning' => $this->alcoholvergunning(),
             'isVergunningaanvraag' => $this->isVergunningaanvraag(),
+            'isMelding' => $this->isMelding(),
             'risicoClassificatie' => $this->risicoClassificatie(),
             'indieningstermijnStatus' => $this->indieningstermijnStatus(),
             'confirmationtext' => $this->confirmationtext(),

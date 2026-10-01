@@ -27,35 +27,42 @@
 @if (! empty($risicoClassificatie))
     <div style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #f9f9f9; border-left: 3px solid #ccc; font-size: 0.9rem;">
         <strong>Risicoclassificatie:</strong> {{ $risicoClassificatie }}
-        @if (! empty($indieningstermijnStatus))
+        @if (! empty($indieningstermijnStatus) && ($indieningstermijnStatus['basedOn'] ?? 'classification') === 'classification')
             — indieningstermijn: <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong>
         @endif
     </div>
 @endif
 
 @if (! empty($indieningstermijnStatus))
+    @php
+        // A report has no risk classification, so the deadline it was
+        // measured against is named by what was submitted instead.
+        $indiening = ($indieningstermijnStatus['basedOn'] ?? 'classification') === 'report' ? 'melding' : 'aanvraag';
+    @endphp
     @if ($indieningstermijnStatus['withinDeadline'])
         <div style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #f0fdf4; border-left: 3px solid #16a34a; font-size: 0.9rem; color: #15803d;">
-            Uw aanvraag valt binnen de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum.
+            Uw {{ $indiening }} valt binnen de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum.
         </div>
     @else
         <div style="margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #fffbeb; border-left: 3px solid #d97706; font-size: 0.9rem; color: #92400e;">
-            Let op: uw aanvraag valt buiten de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum. U kunt de aanvraag nog steeds indienen, maar de kans op afwijzing is groter.
+            Let op: uw {{ $indiening }} valt buiten de indieningstermijn van <strong>{{ $indieningstermijnStatus['weeks'] }} weken</strong> voor de startdatum. U kunt de {{ $indiening }} nog steeds indienen, maar de kans op afwijzing is groter.
         </div>
     @endif
 @endif
 
-@php
-    $heeftTermijnen = ! empty($gemeenteNaam) && (! empty($indieningstermijnen['a']) || ! empty($indieningstermijnen['b']) || ! empty($indieningstermijnen['c']));
-@endphp
-@if ($heeftTermijnen)
+@if (! empty($gemeenteNaam) && ! empty($indieningstermijnen))
+    @php
+        // Labels and week counts are built here, so the municipality gets
+        // exactly the deadlines it configured for this path and no fixed
+        // list of three.
+        $termijnRegels = array_map(
+            fn (array $termijn): string => e($termijn['classificatie'] ?? ucfirst($termijn['omschrijving'])).': <strong>'.$termijn['weeks'].' weken</strong>',
+            $indieningstermijnen,
+        );
+    @endphp
     <div style="margin-bottom: 1rem; padding: 0.5rem 0.75rem; background: #f9f9f9; border-left: 3px solid #ccc; font-size: 0.85rem; color: #555;">
         Indieningstermijnen {{ $gemeenteNaam }}:
-        @if (! empty($indieningstermijnen['a']))A: <strong>{{ (int) $indieningstermijnen['a'] }} weken</strong>@endif
-        @if (! empty($indieningstermijnen['a']) && (! empty($indieningstermijnen['b']) || ! empty($indieningstermijnen['c']))) · @endif
-        @if (! empty($indieningstermijnen['b']))B: <strong>{{ (int) $indieningstermijnen['b'] }} weken</strong>@endif
-        @if (! empty($indieningstermijnen['b']) && ! empty($indieningstermijnen['c'])) · @endif
-        @if (! empty($indieningstermijnen['c']))C: <strong>{{ (int) $indieningstermijnen['c'] }} weken</strong>@endif
+        {!! implode(' · ', $termijnRegels) !!}
     </div>
 @endif
 
