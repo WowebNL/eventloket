@@ -36,6 +36,17 @@ class ZgwConnectionConfig
     ];
 
     /**
+     * The wire format of each date formaat a catalogus eigenschap can carry,
+     * as PHP date format strings. Both directions use this one table.
+     *
+     * @var array<string, string>
+     */
+    public const EIGENSCHAP_WIRE_FORMATS = [
+        'datum' => 'Ymd',
+        'datum_tijd' => 'YmdHis',
+    ];
+
+    /**
      * Format a scalar zaakeigenschap value for the wire.
      *
      * The catalogus eigenschap's formaat is authoritative: a `datum` wants
@@ -46,11 +57,7 @@ class ZgwConnectionConfig
      */
     public static function formatEigenschapWaarde(string $waarde, ?string $formaat = null): string
     {
-        $format = match ($formaat) {
-            'datum' => 'Ymd',
-            'datum_tijd' => 'YmdHis',
-            default => null,
-        };
+        $format = self::EIGENSCHAP_WIRE_FORMATS[$formaat] ?? null;
 
         if ($format === null || $waarde === '') {
             return $waarde;
@@ -61,6 +68,35 @@ class ZgwConnectionConfig
         } catch (Throwable) {
             return $waarde;
         }
+    }
+
+    /**
+     * Read a scalar zaakeigenschap value back from the wire: the inverse of
+     * {@see self::formatEigenschapWaarde()} for one date formaat.
+     *
+     * Only a value that is exactly in that formaat's wire form is accepted
+     * (digits only, the full length, and a real calendar moment), so an ISO
+     * 8601 value or free text yields null and is left to the caller. The wire
+     * form carries no offset: it is the wall-clock time in the application
+     * timezone, which is also how it was written.
+     */
+    public static function parseEigenschapWaarde(string $waarde, string $formaat): ?CarbonImmutable
+    {
+        $format = self::EIGENSCHAP_WIRE_FORMATS[$formaat] ?? null;
+
+        if ($format === null || preg_match('/^\d+$/', $waarde) !== 1) {
+            return null;
+        }
+
+        try {
+            $parsed = CarbonImmutable::createFromFormat('!'.$format, $waarde, (string) config('app.timezone'));
+        } catch (Throwable) {
+            return null;
+        }
+
+        // createFromFormat rolls an impossible date over (a 13th month becomes
+        // next year's January), so only an exact round trip counts.
+        return $parsed instanceof CarbonImmutable && $parsed->format($format) === $waarde ? $parsed : null;
     }
 
     /**
