@@ -3,17 +3,15 @@
 declare(strict_types=1);
 
 /**
- * Regressie-ankers voor de tekstwijzigingen uit Michel's
- * testbevindingen (Excel `~/projects/woweb/Nieuw formulier Eventloket -
- * testbevindingen.xlsx`). Bewaakt dat:
+ * Regression tests for form label and text fixes. They guard that:
  *
- *   - de exacte teksten die Michel voorschreef in de step-files staan;
- *   - oude/foute teksten (typo's, default-knoplabels) niet terugkeren;
- *   - de Geoman-tooltip-override in de map-picker-blade aanwezig is.
+ *   - the exact prescribed texts are present in the step files;
+ *   - old or incorrect texts (typos, default button labels) do not return;
+ *   - the Geoman tooltip override in the map picker blade is present.
  *
- * File-content asserties zijn bewust gekozen boven reflection: voor
- * label-strings is exact-match precies wat we willen testen, en 't
- * loopt ms-snel.
+ * File content assertions are chosen deliberately over reflection: for
+ * label strings an exact match is precisely what we want to test, and it
+ * runs in milliseconds.
  */
 test('#1 Repeater adresVanDeGebouwEn heeft addActionLabel "Nog een adres toevoegen"', function () {
     $code = file_get_contents(app_path('EventForm/Schema/Steps/LocatieVanHetEvenement2Step.php'));
