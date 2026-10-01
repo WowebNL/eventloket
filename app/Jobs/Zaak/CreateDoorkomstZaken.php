@@ -473,8 +473,13 @@ class CreateDoorkomstZaken implements ShouldQueue
                         // returns its eigenschappen under the namen its own
                         // catalogus uses, and a naam that is not translated back
                         // to its logical key is dropped by ZaakReferenceData.
+                        // Dates come back in the ZGW wire form and are turned
+                        // into the ISO 8601 the reference data stores.
                         $this->withHoofdzaakFallbacks(
-                            ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value)
+                            ZaakReferenceData::normalizeEigenschapDates(
+                                ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value),
+                                $this->zaak->reference_data->toArray(),
+                            )
                         ),
                         [
                             'registratiedatum' => $newOzZaak->registratiedatum,
