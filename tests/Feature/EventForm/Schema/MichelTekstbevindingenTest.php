@@ -21,16 +21,30 @@ test('#1 Repeater adresVanDeGebouwEn heeft addActionLabel "Nog een adres toevoeg
         ->and($code)->toContain("->addActionLabel('Nog een adres toevoegen')");
 });
 
-test('#9 Repeater tenten heeft addActionLabel "Wilt u nog een tent toevoegen?"', function () {
+test('#9 Repeater tenten heeft addActionLabel "Wilt u (nog) een tent toevoegen?"', function () {
     $code = file_get_contents(app_path('EventForm/Schema/Steps/VergunningaanvraagVervolgvragenStep.php'));
     expect($code)->toContain("Repeater::make('tenten')")
-        ->and($code)->toContain("->addActionLabel('Wilt u nog een tent toevoegen?')");
+        ->and($code)->toContain("->addActionLabel('Wilt u (nog) een tent toevoegen?')");
 });
 
-test('#10 Repeater podia heeft addActionLabel "Wilt u podium toevoegen?"', function () {
+test('#10 Repeater podia heeft addActionLabel "Wilt u (nog) een podium toevoegen?"', function () {
     $code = file_get_contents(app_path('EventForm/Schema/Steps/VergunningaanvraagVervolgvragenStep.php'));
     expect($code)->toContain("Repeater::make('podia')")
-        ->and($code)->toContain("->addActionLabel('Wilt u podium toevoegen?')");
+        ->and($code)->toContain("->addActionLabel('Wilt u (nog) een podium toevoegen?')");
+});
+
+test('Repeater overkappingen heeft addActionLabel "Wilt u (nog) een overkapping toevoegen?"', function () {
+    $code = file_get_contents(app_path('EventForm/Schema/Steps/VergunningaanvraagVervolgvragenStep.php'));
+    expect($code)->toContain("Repeater::make('overkappingen')")
+        ->and($code)->toContain("->addActionLabel('Wilt u (nog) een overkapping toevoegen?')");
+});
+
+test('bouwsels-repeaters gebruiken geen inconsistente oude knoplabels meer', function () {
+    $code = file_get_contents(app_path('EventForm/Schema/Steps/VergunningaanvraagVervolgvragenStep.php'));
+    // The previous labels were inconsistent with each other and must not return.
+    expect($code)->not->toContain("->addActionLabel('Wilt u nog een tent toevoegen?')")
+        ->and($code)->not->toContain("->addActionLabel('Wilt u podium toevoegen?')")
+        ->and($code)->not->toContain("->addActionLabel('Nog een overkapping toevoegen')");
 });
 
 test('#12 drank-vraag is positief geformuleerd (geen dubbele ontkenning)', function () {
