@@ -9,6 +9,7 @@ use App\EventForm\Support\LocationKinds;
 use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
+use App\Support\Geo\LineSimplifier;
 
 /**
  * Dispatcher voor de 4 OF `fetch-from-service`-calls. In plaats van HTTP-
@@ -359,6 +360,16 @@ class ServiceFetcher
      * (Geometry, niet de Map-wrapper). We pakken `features[].geometry`
      * eruit zodat `GeoJsonReader::read()` 'm direct kan lezen.
      *
+     * Every line leaves here reduced to a point budget
+     * ({@see LineSimplifier}). This is the only place where that happens, and
+     * it is deliberately on the edge of the check rather than in the state:
+     * both the fetch and its cache hash run through `locationCheckInput()`,
+     * so they see the same reduced line, while everything else that reads
+     * `routesOpKaart` -- the map, the draft, the summary, the case system --
+     * keeps the full one. A route recorded as a track carries thousands of
+     * positions, and the check runs `intersects` over every municipality that
+     * has a geometry, synchronously, on every change to a location field.
+     *
      * @return list<array<string, mixed>>|null
      */
     private function collectLinesFromEditgrid(mixed $value): ?array
@@ -369,7 +380,9 @@ class ServiceFetcher
 
         // Nieuwe shape (sinds Route-Repeater eruit): direct een Map-state.
         if (isset($value['geojson'])) {
-            return $this->extractFeatureGeometries($value, ['LineString', 'MultiLineString']) ?: null;
+            return $this->simplified(
+                $this->extractFeatureGeometries($value, ['LineString', 'MultiLineString'])
+            ) ?: null;
         }
 
         // Oude shape: Repeater-rows. Per rij óf een wrapper-key
@@ -406,6 +419,20 @@ class ServiceFetcher
             }
         }
 
-        return $lines === [] ? null : $lines;
+        return $lines === [] ? null : $this->simplified($lines);
+    }
+
+    /**
+     * Reduce every line to the point budget the municipality check works on.
+     *
+     * @param  list<array<string, mixed>>  $lines
+     * @return list<array<string, mixed>>
+     */
+    private function simplified(array $lines): array
+    {
+        return array_map(
+            static fn (array $line): array => LineSimplifier::simplifyGeometry($line),
+            $lines,
+        );
     }
 }
