@@ -38,6 +38,17 @@ return [
     ],
 
     'actions' => [
+        'detach' => [
+            'skipped_last_advisory' => '{1} 1 gebruiker is overgeslagen omdat deze alleen bij deze organisatie hoort.|[2,*] :count gebruikers zijn overgeslagen omdat zij alleen bij deze organisatie horen.',
+            'notifications' => [
+                'partially_detached' => [
+                    'title' => 'Niet alle gebruikers zijn ontkoppeld',
+                ],
+                'none_detached' => [
+                    'title' => 'Geen gebruikers ontkoppeld',
+                ],
+            ],
+        ],
         'invite' => [
             'label' => 'Gebruiker uitnodigen',
             'modal_submit_action_label' => 'Uitnodiging versturen',
