@@ -616,6 +616,23 @@ test('stores exactly the same reference_data as before when the deelzaak carries
     ]);
 });
 
+test('stores the deelzaak evenement dates as ISO 8601 when they come back in the ZGW wire format', function () {
+    fakeDoorkomstZgw(deelZaakEigenschappen: [
+        ['naam' => 'start_evenement', 'waarde' => '20260701100000'],
+        ['naam' => 'eind_evenement', 'waarde' => '20260701180000'],
+    ]);
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+    $stored = json_decode($deel->getRawOriginal('reference_data'), true);
+
+    expect($stored['start_evenement'])->toBe('2026-07-01T10:00:00+02:00')
+        ->and($stored['eind_evenement'])->toBe('2026-07-01T18:00:00+02:00');
+});
+
 test('does not create a doorkomst zaak when the passing gemeente has no doorkomst zaaktype', function () {
     fakeDoorkomstZgw();
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
