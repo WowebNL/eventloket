@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Zgw;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Arr;
+use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefnominatie;
+use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefstatus;
 use Woweb\Zgw\Data\Generated\Zaken\ZaakData;
 use Woweb\Zgw\Data\Generated\Zaken\ZaakEigenschapData;
 
@@ -44,6 +47,17 @@ final class ZaakReadModel implements Arrayable
     public readonly ?string $uiterlijkeEinddatumAfdoening;
 
     public readonly ?string $bronorganisatie;
+
+    /**
+     * The archiving regime the zaaksysteem holds for this zaak. Read by the
+     * archive module to decide whether a zaak may be destroyed; every other
+     * consumer can ignore these three.
+     */
+    public readonly ?Archiefnominatie $archiefnominatie;
+
+    public readonly ?Archiefstatus $archiefstatus;
+
+    public readonly ?CarbonImmutable $archiefactiedatum;
 
     /** @var array<string, mixed>|null */
     public readonly ?array $zaakgeometrie;
@@ -96,6 +110,12 @@ final class ZaakReadModel implements Arrayable
         $this->uiterlijkeEinddatumAfdoening = isset($raw['uiterlijkeEinddatumAfdoening']) ? (string) $raw['uiterlijkeEinddatumAfdoening'] : null;
         $this->bronorganisatie = isset($raw['bronorganisatie']) ? (string) $raw['bronorganisatie'] : null;
         $this->zaakgeometrie = $dto->zaakgeometrie?->value;
+
+        // Taken from the DTO rather than $raw: the package already casts these
+        // to their enums and to a CarbonImmutable.
+        $this->archiefnominatie = $dto->archiefnominatie;
+        $this->archiefstatus = $dto->archiefstatus;
+        $this->archiefactiedatum = $dto->archiefactiedatum;
 
         $this->status = $expand['status'] ?? null;
         $this->status_name = Arr::get($expand, 'status._expand.statustype.omschrijving');
@@ -185,6 +205,9 @@ final class ZaakReadModel implements Arrayable
             'uiterlijkeEinddatumAfdoening' => $this->uiterlijkeEinddatumAfdoening,
             'resultaat' => $this->resultaat,
             'resultaattype' => $this->resultaattype,
+            'archiefnominatie' => $this->archiefnominatie?->value,
+            'archiefstatus' => $this->archiefstatus?->value,
+            'archiefactiedatum' => $this->archiefactiedatum?->toDateString(),
         ];
     }
 }
