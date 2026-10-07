@@ -509,6 +509,24 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return $this->applyContextFilters($query, $info);
     }
 
+    /**
+     * Resolve a clicked calendar item on the server.
+     *
+     * Every item in this calendar is an Event, so the record is always looked
+     * up as one, within the same query that feeds the calendar. Only Event
+     * records are resolved.
+     */
+    protected function resolveEventRecordRouteBinding(string $model, mixed $key): ?Model
+    {
+        if ($model !== Event::class) {
+            return null;
+        }
+
+        return $this->applyContextFilters(Event::query())
+            ->whereKey($key)
+            ->first();
+    }
+
     // Let child widgets add their own constraints.
     protected function applyContextFilters(Builder $query, ?FetchInfo $info = null): Builder
     {
