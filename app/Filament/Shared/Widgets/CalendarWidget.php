@@ -305,8 +305,12 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Advisor, Role::Admin]))
                         ->label('Exporteer naar GeoJSON')
                         ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->action(function (array $mountedActions) {
-                            $data = $mountedActions[0]->getRawData();
+                        ->action(function () {
+                            // Read the export modal through its schema, so this
+                            // button applies the same validation as the main
+                            // export action (required, ordered dates) instead
+                            // of the raw, unvalidated form data.
+                            $data = $this->getMountedActionSchema(0)->getState();
                             $filters = $data;
                             unset($filters['start_date'], $filters['end_date']);
 
