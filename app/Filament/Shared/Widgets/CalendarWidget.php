@@ -334,7 +334,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                                     return [
                                         'type' => 'Feature',
                                         'geometry' => $geometry,
-                                        'properties' => $zaak->makeHidden(['zgw_zaak_url', 'organiser_user_id', 'imported_data'])->toArray(),
+                                        'properties' => $this->geojsonProperties($zaak),
                                     ];
                                 }
 
@@ -354,6 +354,31 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->color('primary')
                         ->button(),
                 ]),
+        ];
+    }
+
+    /**
+     * Properties of a zaak in the GeoJSON export.
+     *
+     * An explicit list of event fields, all of which the CSV export already
+     * offers to the same roles, instead of the full model. Contact details,
+     * form data, imported source data and internal references stay out.
+     *
+     * @return array<string, string|null>
+     */
+    protected function geojsonProperties(Zaak $zaak): array
+    {
+        return [
+            'public_id' => $zaak->public_id,
+            'naam_evenement' => $zaak->reference_data->naam_evenement,
+            'zaaktype' => $zaak->zaaktype?->name,
+            'gemeente' => $zaak->municipality?->name,
+            'naam_locatie_evenement' => $zaak->reference_data->naam_locatie_evenement,
+            'start_evenement' => $zaak->reference_data->start_evenement,
+            'eind_evenement' => $zaak->reference_data->eind_evenement,
+            'risico_classificatie' => $zaak->reference_data->risico_classificatie,
+            'status_name' => $zaak->reference_data->status_name,
+            'status_color' => $zaak->status_color,
         ];
     }
 

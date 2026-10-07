@@ -189,5 +189,76 @@ test('geojson export skips zaken without zgw data or without a geometry', functi
     expect($geojson['type'])->toBe('FeatureCollection')
         ->and($geojson['features'])->toHaveCount(1)
         ->and($geojson['features'][0]['geometry'])->toBe($geometry)
-        ->and($geojson['features'][0]['properties']['id'])->toBe($withGeometry->id);
+        ->and($geojson['features'][0]['properties']['public_id'])->toBe($withGeometry->public_id);
+});
+
+test('geojson export limits the feature properties to the exported event fields', function () {
+    Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
+
+    $geometry = ['type' => 'Point', 'coordinates' => [5.85, 51.84]];
+    $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak('with-geometry', ['zaakgeometrie' => $geometry]);
+    Http::preventStrayRequests();
+
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'name' => 'Evenementenvergunning',
+    ]);
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    $zaak = Zaak::factory()->create([
+        'public_id' => 'EV-2026-0001',
+        'zaaktype_id' => $zaaktype->id,
+        'organisation_id' => Organisation::factory()->create()->id,
+        'organiser_user_id' => $organiser->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+        'data_object_url' => 'https://objects.example.com/api/v2/objects/1',
+        'imported_data' => ['source' => 'import'],
+        'form_state_snapshot' => ['values' => ['field' => 'value']],
+        'reference_data' => new ZaakReferenceData(
+            registratiedatum: '2026-09-01T09:00:00+02:00',
+            status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            start_evenement: '2026-10-10T10:00:00+02:00',
+            eind_evenement: '2026-10-10T18:00:00+02:00',
+            risico_classificatie: 'B',
+            naam_locatie_eveneme: 'Stadspark',
+            naam_evenement: 'Synthetisch festival',
+            organisator: 'Synthetische organisator',
+        ),
+    ]);
+
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->mountAction('export')
+        ->fillForm([
+            'start_date' => '2026-10-08',
+            'end_date' => '2026-10-12',
+        ])
+        ->callAction('exportToGeojson')
+        ->assertHasNoFormErrors();
+
+    $geojson = json_decode(base64_decode(data_get($component->effects, 'download.content')), true);
+
+    expect($geojson['features'])->toHaveCount(1)
+        ->and($geojson['features'][0]['properties'])->not->toHaveKeys([
+            'form_state_snapshot',
+            'imported_data',
+            'reference_data',
+            'organiser_user_id',
+            'organisation_id',
+            'zgw_zaak_url',
+            'data_object_url',
+            'zaaktype_id',
+        ])
+        ->and(json_encode($geojson))->not->toContain('Synthetische organisator')
+        ->and($geojson['features'][0]['properties'])->toBe([
+            'public_id' => 'EV-2026-0001',
+            'naam_evenement' => 'Synthetisch festival',
+            'zaaktype' => 'Evenementenvergunning',
+            'gemeente' => $this->municipality->name,
+            'naam_locatie_evenement' => 'Stadspark',
+            'start_evenement' => '2026-10-10T10:00:00+02:00',
+            'eind_evenement' => '2026-10-10T18:00:00+02:00',
+            'risico_classificatie' => 'B',
+            'status_name' => 'Ontvangen',
+            'status_color' => $zaak->status_color,
+        ]);
 });
