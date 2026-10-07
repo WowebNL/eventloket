@@ -24,6 +24,27 @@ beforeEach(function (): void {
     Filament::setTenant($this->municipality);
 });
 
+/**
+ * The payload the calendar sends when it shows the month of October 2026,
+ * with the browser two hours ahead of UTC.
+ */
+function octoberMonthDatesSet(): array
+{
+    return [
+        'start' => '2026-09-27T22:00:00.000Z',
+        'end' => '2026-11-07T23:00:00.000Z',
+        'tzOffset' => 120,
+        'view' => [
+            'type' => 'dayGridMonth',
+            'title' => 'October 2026',
+            'currentStart' => '2026-09-30T22:00:00.000Z',
+            'currentEnd' => '2026-10-31T23:00:00.000Z',
+            'activeStart' => '2026-09-27T22:00:00.000Z',
+            'activeEnd' => '2026-11-07T23:00:00.000Z',
+        ],
+    ];
+}
+
 test('geojson export with an empty end date reports a validation error instead of failing', function () {
     livewire(MunicipalityCalendarWidget::class, ['viewtype' => 'table'])
         ->mountAction('export')
@@ -70,4 +91,48 @@ test('geojson export with a valid period downloads a feature collection', functi
         ->callAction('exportToGeojson')
         ->assertHasNoFormErrors()
         ->assertFileDownloaded('export_evenementen_2026-10-07_10-00-00.geojson');
+});
+
+test('export modal in the month view uses the period shown by the calendar', function () {
+    livewire(MunicipalityCalendarWidget::class)
+        ->call('onDatesSetJs', octoberMonthDatesSet())
+        ->mountAction('export')
+        ->assertActionDataSet([
+            'start_date' => '2026-10-01',
+            'end_date' => '2026-11-01',
+        ]);
+});
+
+test('export modal in the list view defaults the end date to one month after the start', function () {
+    livewire(MunicipalityCalendarWidget::class, ['viewtype' => 'table'])
+        ->assertSet('end', null)
+        ->mountAction('export')
+        ->assertActionDataSet([
+            'start_date' => '2026-10-07',
+            'end_date' => '2026-11-07',
+        ]);
+});
+
+test('export modal defaults the end date after switching to the list view', function () {
+    livewire(MunicipalityCalendarWidget::class)
+        ->call('onDatesSetJs', octoberMonthDatesSet())
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertSet('end', null)
+        ->mountAction('export')
+        ->assertActionDataSet([
+            'start_date' => '2026-10-07',
+            'end_date' => '2026-11-07',
+        ]);
+});
+
+test('export modal in the list view keeps the end date of the range filter', function () {
+    livewire(MunicipalityCalendarWidget::class, ['viewtype' => 'table'])
+        ->set('tableFilters.range.to', '20-10-2026')
+        ->assertSet('end', fn ($end) => $end?->toDateString() === '2026-10-20')
+        ->mountAction('export')
+        ->assertActionDataSet([
+            'start_date' => '2026-10-07',
+            'end_date' => '2026-10-20',
+        ]);
 });

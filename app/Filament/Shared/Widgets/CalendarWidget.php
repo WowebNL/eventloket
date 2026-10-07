@@ -270,7 +270,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 ->fillForm(fn () => [
                     ...$this->filters,
                     'start_date' => $this->start?->format('Y-m-d'),
-                    'end_date' => $this->end?->format('Y-m-d'),
+                    'end_date' => $this->defaultExportEndDate()?->format('Y-m-d'),
                 ])
                 ->schema([
                     Section::make('Filters')
@@ -351,6 +351,27 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->button(),
                 ]),
         ];
+    }
+
+    /**
+     * End date to prefill in the export modal.
+     *
+     * The list view starts at today without an end date, so the export
+     * modal would open with an empty, required end date there. In that case
+     * propose a period of one month from the start. An end date that is set,
+     * by the calendar view or by the list range filter, is used as is.
+     */
+    protected function defaultExportEndDate(): ?CarbonImmutable
+    {
+        if ($this->end !== null) {
+            return $this->end;
+        }
+
+        if ($this->viewMode !== 'table' || $this->start === null) {
+            return null;
+        }
+
+        return $this->start->addMonthNoOverflow();
     }
 
     // Let child widgets add their own filters.
