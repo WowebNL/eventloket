@@ -3,9 +3,16 @@
 use App\Enums\Role;
 use App\Filament\Municipality\Widgets\MunicipalityCalendarWidget;
 use App\Models\Municipality;
+use App\Models\Organisation;
 use App\Models\User;
+use App\Models\Zaak;
+use App\Models\Zaaktype;
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Filament\Facades\Filament;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
+use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
 
@@ -135,4 +142,52 @@ test('export modal in the list view keeps the end date of the range filter', fun
             'start_date' => '2026-10-07',
             'end_date' => '2026-10-20',
         ]);
+});
+
+test('geojson export skips zaken without zgw data or without a geometry', function () {
+    Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
+
+    $geometry = ['type' => 'Point', 'coordinates' => [5.85, 51.84]];
+    $withGeometryUrl = ZgwHttpFake::fakeSingleZaak('with-geometry', ['zaakgeometrie' => $geometry]);
+    $withoutGeometryUrl = ZgwHttpFake::fakeSingleZaak('without-geometry');
+    Http::preventStrayRequests();
+
+    $zaaktype = Zaaktype::factory()->create(['municipality_id' => $this->municipality->id]);
+    $organisation = Organisation::factory()->create();
+    $zaakStartingAt = fn (string $name, ?string $zgwZaakUrl, ?array $importedData = null): Zaak => Zaak::factory()->create([
+        'zaaktype_id' => $zaaktype->id,
+        'organisation_id' => $organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+        'imported_data' => $importedData,
+        'reference_data' => new ZaakReferenceData(
+            registratiedatum: '2026-09-01T09:00:00+02:00',
+            status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            start_evenement: '2026-10-10T10:00:00+02:00',
+            eind_evenement: '2026-10-10T18:00:00+02:00',
+            naam_evenement: $name,
+        ),
+    ]);
+
+    // An imported zaak has no ZGW zaak, so it has no zgw data to read.
+    $zaakStartingAt('Imported event', null, ['source' => 'import']);
+    $zaakStartingAt('Event without geometry', $withoutGeometryUrl);
+    $withGeometry = $zaakStartingAt('Event with geometry', $withGeometryUrl);
+
+    $component = livewire(MunicipalityCalendarWidget::class)
+        ->mountAction('export')
+        ->fillForm([
+            'start_date' => '2026-10-08',
+            'end_date' => '2026-10-12',
+        ])
+        ->callAction('exportToGeojson')
+        ->assertHasNoFormErrors()
+        ->assertFileDownloaded('export_evenementen_2026-10-07_10-00-00.geojson');
+
+    $geojson = json_decode(base64_decode(data_get($component->effects, 'download.content')), true);
+
+    expect($geojson['type'])->toBe('FeatureCollection')
+        ->and($geojson['features'])->toHaveCount(1)
+        ->and($geojson['features'][0]['geometry'])->toBe($geometry)
+        ->and($geojson['features'][0]['properties']['id'])->toBe($withGeometry->id);
 });

@@ -325,7 +325,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
                             $features = $events->map(function (Model $zaak) {
                                 /** @var Zaak $zaak */
-                                $geometry = $zaak->openzaak->zaakgeometrie;
+                                // A zaak without a ZGW zaak (for example an
+                                // imported one) has no zgw data, and a zaak
+                                // without a geometry has nothing to map. Skip
+                                // both instead of failing the whole export.
+                                $geometry = $zaak->openzaak?->zaakgeometrie;
                                 if ($geometry) {
                                     return [
                                         'type' => 'Feature',
