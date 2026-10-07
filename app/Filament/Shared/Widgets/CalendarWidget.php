@@ -147,6 +147,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return ViewAction::make()
             ->modelLabel(__('resources/zaak.label'))
             ->pluralModelLabel(__('resources/zaak.plural_label'))
+            // The infolist reads from the record, so the modal state does not
+            // need a copy of the record attributes.
+            ->mutateRecordDataUsing(fn (): array => [])
             ->before(function (Zaak $record) {
                 activity('views')
                     ->event('view')
@@ -418,6 +421,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->recordActions([
                 \Filament\Actions\ViewAction::make()
                     ->schema(fn (Schema $schema) => $this->defaultSchema($schema))
+                    // Same as the calendar view action: the infolist reads
+                    // from the record, not from the modal state.
+                    ->mutateRecordDataUsing(fn (): array => [])
                     ->extraModalFooterActions([
                         $this->viewActionFooterAction(),
                     ]),
