@@ -12,8 +12,8 @@
     of the Leaflet map, and on `pm:edit` of the FeatureGroup that holds the
     drawn shapes (Geoman does not fire `pm:edit` on the map). They write the
     state and call `$wire.$commit()`. That forces an immediate roundtrip to
-    the server, after which `ServiceFetcher::fetchInGemeentenResponse` (from
-    the `AlsBoolEnIsNietGelijkAanNone` rule) runs the drawn shape through the
+    the server, after which `ServiceFetcher::fetchInGemeentenResponse` (via
+    `EventFormPage::triggerFetchesFor`) runs the drawn shape through the
     intersect check and updates `inGemeentenResponse`.
 
     Daarnaast zetten we GeoMan op Nederlands via `map.pm.setLang('nl')`
