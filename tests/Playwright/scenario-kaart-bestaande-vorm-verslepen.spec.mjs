@@ -112,7 +112,7 @@ const scenarios = [
 
 const varianten = [
     { naHerladen: true, titel: (naam) => `map: dragging a vertex of an existing ${naam} is saved` },
-    { naHerladen: false, titel: (naam) => `map: dragging a vertex of a ${naam} drawn in the same session is saved` },
+    { naHerladen: false, titel: (naam) => `map: dragging a vertex of ${naam === 'area' ? 'an' : 'a'} ${naam} drawn in the same session is saved` },
 ];
 
 for (const scenario of scenarios) for (const variant of varianten) {
