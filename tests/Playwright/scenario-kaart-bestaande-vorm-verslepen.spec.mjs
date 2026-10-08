@@ -15,6 +15,11 @@ import { tekenLijnOpKaart, tekenPolygonOpKaart } from './helpers/map-tekenen.mjs
  * The scenario draws a shape, reloads so the shape comes back from the
  * state, drags one vertex with the mouse in edit mode, and then checks both
  * the Livewire state and a second reload for the new geometry.
+ *
+ * A second variant drags the vertex right after drawing, without the first
+ * reload. That path already worked; it guards the sync of shapes drawn in
+ * the current session, which relies on pm:create adding them to the same
+ * FeatureGroup.
  */
 
 /**
@@ -60,14 +65,17 @@ async function versleepEersteHoekpunt(page) {
     const container = page.locator('.leaflet-container').first();
     await container.scrollIntoViewIfNeeded();
 
-    // Zoom out one step so every vertex sits well inside the map, then turn
-    // on edit mode, the same as clicking the edit button in the toolbar.
+    // Fit the map to the shape and zoom out one step, so the vertices are
+    // far enough apart and well inside the map (a freshly drawn shape is not
+    // fitted yet). Then turn on edit mode, the same as clicking the edit
+    // button in the toolbar.
     await page.evaluate(async () => {
         let el = document.querySelector('.leaflet-container');
         while (el && ! el.__leafletMap) {
             el = el.parentElement;
         }
         const map = el.__leafletMap;
+        map.fitBounds(el.__featureGroup.getBounds(), { animate: false });
         await new Promise((resolve) => {
             map.once('zoomend', resolve);
             map.setZoom(map.getZoom() - 1, { animate: false });
@@ -102,8 +110,13 @@ const scenarios = [
     },
 ];
 
-for (const scenario of scenarios) {
-    test(`map: dragging a vertex of an existing ${scenario.naam} is saved`, async ({ page }) => {
+const varianten = [
+    { naHerladen: true, titel: (naam) => `map: dragging a vertex of an existing ${naam} is saved` },
+    { naHerladen: false, titel: (naam) => `map: dragging a vertex of a ${naam} drawn in the same session is saved` },
+];
+
+for (const scenario of scenarios) for (const variant of varianten) {
+    test(variant.titel(scenario.naam), async ({ page }) => {
         test.setTimeout(120_000);
 
         await verseStart(page);
@@ -116,7 +129,7 @@ for (const scenario of scenarios) {
             }
         }
         await stap1Contactgegevens(page);
-        await stap2HetEvenement(page, { naam: `Edit existing ${scenario.naam}` });
+        await stap2HetEvenement(page, { naam: `Edit ${scenario.naam}` });
 
         expect(await huidigeStap(page)).toMatch(/Locatie/i);
         await page.getByRole('checkbox', { name: scenario.keuze }).check();
@@ -127,13 +140,15 @@ for (const scenario of scenarios) {
         expect(tekenResult.ok, `drawing failed: ${tekenResult.reason ?? ''}`).toBe(true);
         await expect.poll(() => geometrieInState(page), { timeout: 10_000 }).not.toBeNull();
 
-        // Reload so the shape is an existing one, loaded from the state.
-        await page.reload({ waitUntil: 'networkidle' });
-        expect(await huidigeStap(page)).toMatch(/Locatie/i);
+        if (variant.naHerladen) {
+            // Reload so the shape is an existing one, loaded from the state.
+            await page.reload({ waitUntil: 'networkidle' });
+            expect(await huidigeStap(page)).toMatch(/Locatie/i);
+        }
         await wachtOpKaart(page);
 
         const origineel = await geometrieInState(page);
-        expect(origineel, 'the drawn shape must be in the state after a reload').not.toBeNull();
+        expect(origineel, 'the drawn shape must be in the state').not.toBeNull();
         expect(await geometrieOpKaart(page)).toEqual(origineel);
 
         await versleepEersteHoekpunt(page);
