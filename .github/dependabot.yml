@@ -1,8 +1,7 @@
-# Version updates: once a month, with all minor and patch updates of an
-# ecosystem grouped into one pull request. Major upgrades are planned
-# separately. There is deliberately no "ignore" rule for major versions,
-# because ignore rules also apply to security updates. Security updates
-# are not grouped and are raised as soon as an alert is published.
+# Version updates: once a month, two pull requests per ecosystem. One
+# combines all minor and patch updates, the other combines all major
+# updates, which serve as input for planning major upgrades.
+# Security updates are not grouped and are raised as soon as an alert is published.
 version: 2
 updates:
   - package-ecosystem: "composer"
@@ -20,6 +19,10 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      composer-major:
+        applies-to: version-updates
+        update-types:
+          - "major"
 
   - package-ecosystem: "npm"
     directory: "/"
@@ -36,6 +39,10 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      npm-major:
+        applies-to: version-updates
+        update-types:
+          - "major"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -52,3 +59,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      github-actions-major:
+        applies-to: version-updates
+        update-types:
+          - "major"
