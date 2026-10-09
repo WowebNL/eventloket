@@ -233,44 +233,39 @@ git branch -d hotfix/critical-bug
 
 ## Automatische Backports met backport.yml
 
-Voor geautomatiseerde backports naar `release/*` branches gebruiken we **backport.yml**, een GitHub Action die automatisch backport-PRs aanmaakt.
+Voor geautomatiseerde backports naar `release/*` branches gebruiken we de workflow [.github/workflows/backport.yml](../.github/workflows/backport.yml). Die maakt met een GitHub Action automatisch backport-PR's aan.
 
 ### Hoe het werkt
 
-1. **Label toevoegen**: Voeg labels toe aan een PR die al naar `main` is gemerged:
-   - `backport release/1.2`: Automatische backport naar `release/1.2`
-   - `backport release/1.1`: Automatische backport naar `release/1.1`
+1. **Label vóór de merge**: Voeg aan de PR naar `main` een label `backport <branch>` toe, bijvoorbeeld:
+   - `backport release/1.2`: backport naar `release/1.2`
+   - `backport release/1.1`: backport naar `release/1.1`
    - Combineer labels als je naar meerdere branches wilt backporten
 
-2. **Comment triggers**: Je kan ook comments gebruiken om backports in gang te zetten:
-   ```
-   @backport-bot backport to release/1.2
-   @backport-bot backport to release/1.1,release/1.0
-   ```
+   Zodra de PR gemerged wordt, maakt de workflow voor elk label een backport-PR aan.
 
-3. **Automatische PR**: backport.yml maakt automatisch een nieuwe PR aan naar de doelbranch met:
-   - Cherry-picked commits
-   - Dezelfde titel + `[backport release/X.Y]` suffix
-   - Link naar originele PR
-   - Automatische labels (bv. `backport`)
+2. **Na de merge**: Is de PR al gemerged zonder label, voeg dan het label toe en reageer met `/backport` op de gemergde PR. Alleen een label toevoegen na de merge start geen backport.
+
+3. **Automatische PR**: de workflow maakt per doelbranch een nieuwe PR aan met de cherry-picked commits en een verwijzing naar de oorspronkelijke PR.
 
 ### Workflow met Backports
 
-**Scenario: Hotfix moet naar meerdere actieve versies**
+**Scenario: Hotfix moet naar meerdere release branches**
 
 ```bash
-# 1. Maak en merge hotfix naar main (trunk)
+# 1. Maak een hotfix branch van main (trunk)
 git checkout main
-git checkout -b hotfix/security-issue
+git checkout -b fix/security-issue
 # ... fix en test ...
-git merge hotfix/security-issue
+git push origin fix/security-issue
 
-# 2. In GitHub UI: Label de PR met `backport release/1.2` en `backport release/1.1`
+# 2. Open een PR naar main en label die met `backport release/1.2` en `backport release/1.1`
+# 3. Merge de PR naar main
 # → backport.yml maakt automatisch PRs naar beide branches
 
-# 3. Review de backport-PRs in GitHub
-# 4. Merge ze als ze klaar zijn
-# 5. Tag en release van elke release branch
+# 4. Review de backport-PRs in GitHub
+# 5. Merge ze als ze klaar zijn
+# 6. Tag en release van elke release branch
 ```
 
 ### Best Practices
@@ -280,7 +275,7 @@ git merge hotfix/security-issue
 - Zorg dat CI/CD tests groen zijn voor elke backport-PR
 - Vermeld in de release notes welke versies de fix krijgen
 
-**Configuratie:** [.github/backport.yml](./.github/backport.yml)
+**Configuratie:** [.github/workflows/backport.yml](../.github/workflows/backport.yml)
 
 ## Changelog Beheer
 
