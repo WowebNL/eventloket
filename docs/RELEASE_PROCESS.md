@@ -37,7 +37,7 @@ Dit project volgt een **eenvoudig lineair workflow** met **automatische release 
 main (stabiel, getest)
 ├── release/1.2 (actieve versie met backports)
 ├── feat/user-authentication (label: changelog: feature)
-├── bugfix/login-issue (label: changelog: bug)
+├── fix/login-issue (label: changelog: bug)
 └── tagged releases (v0.1.0, v0.2.0, etc.)
 ```
 
