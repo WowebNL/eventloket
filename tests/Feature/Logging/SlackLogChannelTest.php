@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Log;
 use Monolog\Handler\SlackWebhookHandler;
 use Monolog\Handler\StreamHandler;
+use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\LogRecord;
 
@@ -135,4 +136,54 @@ test('the file channel in a stack with slack still logs the full message and con
         ->toContain('Could not send the invitation to '.SYNTHETIC_EMAIL)
         ->toContain('"payload":{"email":"'.SYNTHETIC_EMAIL.'"}')
         ->toContain('[stacktrace]');
+});
+
+/**
+ * Resolve the real slack channel, but let its processors feed a test handler so a record can
+ * be logged end to end without an HTTP call. Returns the Slack payload for the last record.
+ */
+function logThroughSlackChannel(callable $log): array
+{
+    $channel = Log::channel('slack');
+    $slack = slackHandler();
+
+    $capture = new TestHandler;
+    foreach (array_reverse((fn () => $this->processors)->call($slack)) as $processor) {
+        $capture->pushProcessor($processor);
+    }
+    $channel->getLogger()->setHandlers([$capture]);
+
+    $log($channel);
+
+    $records = $capture->getRecords();
+
+    return $slack->getSlackRecord()->getSlackData(end($records));
+}
+
+test('a slack record without an exception names the file and line of the logging call', function () {
+    $line = __LINE__ + 1;
+    $payload = logThroughSlackChannel(fn ($channel) => $channel->critical('Upload failed'));
+
+    $fields = collect($payload['attachments'][0]['fields'])->pluck('value', 'title');
+
+    expect($fields['Source'])->toBe('tests/Feature/Logging/SlackLogChannelTest.php:'.$line)
+        ->and($fields['Level'])->toBe('CRITICAL')
+        ->and($fields['Environment'])->toBe('testing')
+        ->and($fields->has('Time'))->toBeTrue()
+        ->and($payload['attachments'][0]['text'])->toContain('logged at tests/Feature/Logging/SlackLogChannelTest.php:'.$line);
+});
+
+test('a slack record without an exception still leaves out placeholder values and context', function () {
+    $payload = logThroughSlackChannel(fn ($channel) => $channel->critical(
+        'Invitation for {email} could not be sent',
+        ['email' => SYNTHETIC_EMAIL, 'payload' => ['name' => 'Synthetic Person']],
+    ));
+
+    $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+
+    expect($json)
+        ->not->toContain(SYNTHETIC_EMAIL)
+        ->not->toContain('Invitation for')
+        ->not->toContain('Synthetic Person')
+        ->not->toContain('payload');
 });
