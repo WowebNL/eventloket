@@ -275,7 +275,7 @@ git merge hotfix/security-issue
 
 ### Best Practices
 
-- Voeg backport-labels **na** merge naar `main` toe (niet daarvoor)
+- Voeg het backport-label `backport release/x.y` toe vóór de merge naar `main`; de merge maakt dan automatisch een backport-PR naar die branch. Is de PR al gemerged, voeg dan het label toe en reageer met `/backport` op de gemergde PR
 - Voor kritieke hotfixes: tagging direct na backport, voor features: batch meerdere changes
 - Zorg dat CI/CD tests groen zijn voor elke backport-PR
 - Vermeld in de release notes welke versies de fix krijgen
