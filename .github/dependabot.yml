@@ -1,0 +1,54 @@
+# Version updates: once a month, with all minor and patch updates of an
+# ecosystem grouped into one pull request. Major upgrades are planned
+# separately. There is deliberately no "ignore" rule for major versions,
+# because ignore rules also apply to security updates. Security updates
+# are not grouped and are raised as soon as an alert is published.
+version: 2
+updates:
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "changelog: dependencies"
+    commit-message:
+      prefix: "dep"
+    groups:
+      composer-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "changelog: dependencies"
+    commit-message:
+      prefix: "dep"
+    groups:
+      npm-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    labels:
+      - "changelog: dependencies"
+    commit-message:
+      prefix: "dep"
+    groups:
+      github-actions-minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - "minor"
+          - "patch"
