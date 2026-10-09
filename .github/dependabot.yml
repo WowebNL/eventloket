@@ -1,7 +1,8 @@
 # Version updates: once a month, two pull requests per ecosystem. One
 # combines all minor and patch updates, the other combines all major
 # updates, which serve as input for planning major upgrades.
-# Security updates are not grouped and are raised as soon as an alert is published.
+# Vulnerable dependencies are reported through Dependabot alerts and are
+# handled outside this schedule.
 version: 2
 updates:
   - package-ecosystem: "composer"
