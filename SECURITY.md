@@ -25,10 +25,9 @@ Reports are handled confidentially, and details of a vulnerability are not made 
 
 ## Supported versions
 
-Security fixes are released for the latest minor version. The previous minor version receives security fixes through its `release/*` branch. Older versions do not receive security fixes; please upgrade to a supported version.
+Security fixes are released for the current minor version only. Older versions do not receive security fixes; please upgrade to the current version.
 
 | Version | Security fixes |
 | --- | --- |
-| Latest minor release | Yes |
-| Previous minor release | Yes, as a backport |
+| Current minor release | Yes |
 | Older releases | No |
