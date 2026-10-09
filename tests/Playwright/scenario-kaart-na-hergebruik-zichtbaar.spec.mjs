@@ -58,6 +58,8 @@ for (const scenario of scenarios) {
 
         const baseUrl = process.env.EF_BASE_URL || 'http://localhost';
         const ctx = await playwrightRequest.newContext({ baseURL: baseUrl });
+        // Every run adds a draft; start empty so the draft limit is never hit.
+        await ctx.post('/_test/reset-draft', { form: { email: 'noah.degraaf@example.net' }, timeout: 10_000 });
         const resp = await ctx.post('/_test/seed-prefill-zaak', {
             form: { email: 'noah.degraaf@example.net', location: scenario.location },
             timeout: 10_000,
