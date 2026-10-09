@@ -23,12 +23,12 @@ Wij volgen [Semantic Versioning 2.0.0](https://semver.org/lang/nl/) voor versien
 
 We hanteren trunk based development: `main` is de trunk, feature- en hotfix-branches zijn kortlevend en worden snel terug naar `main` gemerged. Voor actief ondersteunde versies houden we **`release/*` branches** bij waarop we gericht backport-commits kunnen toepassen en releasen.
 
-Dit project volgt een **eenvoudig lineair workflow** met **automatische release management** via Release Drafter:
+Dit project volgt een **eenvoudig lineair workflow**:
 
 1. **Development** → Feature branches van `main` (label PRs met changelog labels)
 2. **Testing & QA** → Op `main` branch, gemergde PR's worden uitgerold naar de testomgeving
-3. **Automated Release Draft** → Release Drafter genereert automatisch release notes
-4. **Release** → Tag op `main` (trunk) of op de relevante `release/*` branch bij backports
+3. **Release Draft** → Een maintainer zet een release-draft klaar op een vaste, geteste commit
+4. **Release** → Bij het publiceren van de draft maakt GitHub de tag op die commit, op `main` (trunk) of op de relevante `release/*` branch bij backports
 5. **Deploy** → Naar productie via release tag
 
 ### Branch Strategie
@@ -73,7 +73,7 @@ git push origin feat/beschrijving-van-feature
 
 ### Changelog Labels
 
-Label je Pull Requests met één van deze labels zodat Release Drafter weet hoe de versie te verhogen:
+Label je Pull Requests met één van deze labels. De labels bepalen in welke categorie een PR in de release notes komt en hoe de versie wordt verhoogd:
 
 | Label | Versie Impact | Voorbeeld |
 |-------|---------------|-----------|
@@ -86,7 +86,7 @@ Label je Pull Requests met één van deze labels zodat Release Drafter weet hoe 
 | `skip-changelog` | Geen | PR niet in changelog opnemen |
 
 **Tips:**
-- Release Drafter labelt automatisch via branch naam (`feat/...` → feature label, `fix/...` → bug label)
+- PR's worden automatisch gelabeld via de branch naam (`feat/...` → feature label, `fix/...` → bug label) en de titel (zie [.github/release-drafter.yml](../.github/release-drafter.yml); alleen de autolabeler van Release Drafter is actief)
 - Je kan handmatig aanpassingen maken
 - Zorg dat elke PR minimaal één changelog label heeft
 
@@ -100,51 +100,41 @@ Na merge naar `main`:
 4. Bugs? → Maak bugfix branch en merge terug
 5. Alles stabiel en getest? → Release maken
 
-## Release Proces met Automated Release Drafter
+## Release Proces
 
-### Wat is Release Drafter?
+Releases worden niet automatisch klaargezet. Een maintainer zet een release-draft klaar op een vaste commit die getest is, en publiceert die na review. Zo ligt vast welke code er in een release zit, ook als er na het testen nog PR's naar `main` worden gemerged.
 
-**Release Drafter** is een GitHub Action die automatisch release notes genereert op basis van je Pull Requests en labels. Dit gebeurt continu en je kan het als "draft" release zien.
+### Release Stappen
 
-**Configuratie:** [.github/release-drafter.yml](./.github/release-drafter.yml)
+#### Stap 1: Kies de commit en de versie
 
-### Hoe het werkt
+- Kies de commit die op de testomgeving is getest (op `main`, of op de relevante `release/*` branch bij backports)
+- Bepaal de nieuwe versie op basis van de changelog labels van de PR's sinds de vorige release (zie [Versie-berekening](#versie-berekening))
 
-1. **Automatic Draft**: Elke keer dat een PR wordt gemerged naar `main`, wordt een release draft automatisch bijgewerkt
-2. **Version Auto-Calculation**: Bepaalt automatisch of het een MAJOR/MINOR/PATCH release is op basis van PR labels
-3. **Changelog Generation**: Genereert mooie, georganiseerde release notes met categorieën:
+#### Stap 2: Zet de release-draft klaar
+
+Maak in GitHub een draft release aan met:
+- De tag-naam van de nieuwe versie (bijv. `v0.2.0`), nog zonder de tag zelf aan te maken
+- Als target de volledige commit-sha uit stap 1, niet een branch naam
+- Release notes met de gemergde PR's sinds de vorige release, gegroepeerd per categorie:
    - 💥 Breaking changes
    - ✨ New features
+   - 🔒 Security
    - 🐛 Bug Fixes
    - 📝 Documentation
    - ♻️ Refactor
    - ⬆️ Dependency Updates
 
-Release Drafter draait op `main` (trunk); voor `release/*` branches stel je release notes en versies handmatig samen.
+PR's met het label `skip-changelog` laat je weg uit de release notes.
 
-### Release Stappen
-
-#### Stap 1: Check de Draft Release
-
-```bash
-# Ga naar GitHub
-# Actions → Releases → Draft Release
-```
-
-Je ziet automatisch een draft release met:
-- Voorgestelde versie (v0.2.0, v1.0.0, etc.)
-- Automatisch gegenereerde changelog
-- Link naar alle changes
-
-#### Stap 2: Review & Aanpassingen
+#### Stap 3: Review & Aanpassingen
 
 In GitHub:
-- Controleer de gegenereerde release notes
+- Controleer de release notes en de target commit
 - Edit titel, beschrijving, changelog indien nodig
-- Verwijder entries die je niet wil
 - Voeg extra info toe
 
-#### Stap 3: Publish Release
+#### Stap 4: Publish Release
 
 ```bash
 # In GitHub UI:
@@ -152,11 +142,12 @@ In GitHub:
 ```
 
 Dit doet automatisch:
-- Creates git tag (bijv. `v0.2.0`)
+- Creates git tag (bijv. `v0.2.0`) op de target commit van de draft
 - Publiceert de release op GitHub
+- Voegt de release notes toe aan [CHANGELOG.md](../CHANGELOG.md) (via de workflow `update-changelog.yml`)
 - Triggert deployment naar productie (via CI/CD)
 
-#### Stap 4: Deploy naar Productie
+#### Stap 5: Deploy naar Productie
 
 ```bash
 # Via CI/CD (aangrijpen bij release tag):
@@ -171,16 +162,17 @@ Dit doet automatisch:
 PR #42: Feature - User dashboard
 └─ Label: changelog: feature
 └─ Merge naar main
-   └─ Release Drafter update: v0.2.0 draft
-      └─ Review in GitHub
-         └─ Publish Release
-            └─ Git tag: v0.2.0
-               └─ CI/CD deploy triggered
+   └─ Getest op de testomgeving
+      └─ Maintainer zet draft v0.2.0 klaar op de geteste commit
+         └─ Review in GitHub
+            └─ Publish Release
+               └─ Git tag: v0.2.0
+                  └─ CI/CD deploy triggered
 ```
 
-### Versie Auto-Berekening
+### Versie-berekening
 
-Release Drafter berekent automatisch de volgende versie vanaf `main` op basis van labels:
+De volgende versie volgt uit de labels van de PR's sinds de vorige release:
 
 | PR Label | Impact |
 |----------|--------|
