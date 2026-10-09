@@ -121,6 +121,8 @@ dependsOn:
     - name: PostgreSQL
       versionMin: "17"
       optional: true
+    - name: PostGIS
+      optional: true
     - name: MySQL
       versionMin: "8"
       optional: true
