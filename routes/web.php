@@ -189,6 +189,7 @@ if (app()->environment(['local', 'testing'])) {
                 // Step 1 — Contact details
                 'watIsUwVoornaam' => 'PrefillEva',
                 'watIsUwAchternaam' => 'PrefillTest',
+                'watIsUwTelefoonnummer' => '0612345678',
                 'postcode1' => '6411CD',
                 'huisnummer1' => '1',
                 'straatnaam1' => 'Marktplein',
