@@ -22,7 +22,7 @@ Activate the Git hooks of this repository once:
 git config core.hooksPath .githooks
 ```
 
-The pre-commit hook then runs Pint, PHPStan, Rector (dry run) and the Pest test suite before every commit.
+The pre-commit hook then runs Pint, PHPStan, Rector (dry run) and the Pest test suite before every commit (through Sail when Docker is running; without Docker, PHPStan is skipped).
 
 ## Branches
 
