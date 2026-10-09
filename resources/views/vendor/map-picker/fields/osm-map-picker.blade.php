@@ -481,8 +481,39 @@
                 }).addTo(map);
                 mapEl.__featureGroup = fg;
 
-                if (initialGeoJson.features && initialGeoJson.features.length) {
+                // The map can be created while it has no size, for example
+                // when a prefilled draft opens on an earlier wizard step and
+                // the location step is still hidden. Leaflet only measures its
+                // container on a window resize, so it would keep the empty
+                // size after the step is shown: no tiles and a fit at the
+                // minimum zoom. Watch the container instead, tell Leaflet the
+                // new size and fit the shapes once the map can be seen.
+                const hasSize = () => mapEl.clientWidth > 0 && mapEl.clientHeight > 0;
+                const fitToShapes = () => {
+                    if (!fg.getLayers().length) return;
                     try { map.fitBounds(fg.getBounds()); } catch (e) { /* empty bounds */ }
+                };
+                let fitPending = false;
+                if (window.ResizeObserver) {
+                    new ResizeObserver(() => {
+                        if (!hasSize()) return;
+                        const size = map.getSize();
+                        if (size.x !== mapEl.clientWidth || size.y !== mapEl.clientHeight) {
+                            map.invalidateSize();
+                        }
+                        if (fitPending) {
+                            fitPending = false;
+                            fitToShapes();
+                        }
+                    }).observe(mapEl);
+                }
+
+                if (initialGeoJson.features && initialGeoJson.features.length) {
+                    if (hasSize() || !window.ResizeObserver) {
+                        fitToShapes();
+                    } else {
+                        fitPending = true;
+                    }
                 } else {
                     // Nieuw leeg item in een Repeater: overneem center + zoom van het
                     // meest recente sibling-item. Filament gebruikt UUIDs als repeater-keys,
