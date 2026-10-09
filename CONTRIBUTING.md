@@ -89,7 +89,7 @@ When a release is published on GitHub, its release notes are added to [CHANGELOG
 
 ## Dependency updates
 
-The maintainers update dependencies and follow up on the security alerts that GitHub raises for them. To report a vulnerability in a dependency that affects Eventloket, follow [SECURITY.md](SECURITY.md).
+Dependabot opens one pull request per ecosystem (Composer, npm and GitHub Actions) each month that combines the available minor and patch updates. Security updates for vulnerable dependencies are raised separately as soon as an alert is published, and the maintainers follow up on them with priority. Major upgrades are planned separately. To report a vulnerability in a dependency that affects Eventloket, follow [SECURITY.md](SECURITY.md).
 
 ## License
 
