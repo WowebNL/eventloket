@@ -19,4 +19,16 @@ Please include the following information:
 
 ## How reports are handled
 
+We acknowledge receipt of a report within 5 working days. After that, we keep you informed about the assessment and the progress of a fix.
+
 Reports are handled confidentially, and details of a vulnerability are not made public before it has been resolved. Where applicable, a GitHub security advisory is published once a fix is available.
+
+## Supported versions
+
+Security fixes are released for the latest minor version. The previous minor version receives security fixes through its `release/*` branch. Older versions do not receive security fixes; please upgrade to a supported version.
+
+| Version | Security fixes |
+| --- | --- |
+| Latest minor release | Yes |
+| Previous minor release | Yes, as a backport |
+| Older releases | No |
