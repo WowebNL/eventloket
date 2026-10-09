@@ -21,29 +21,29 @@ Wij volgen [Semantic Versioning 2.0.0](https://semver.org/lang/nl/) voor versien
 
 ## Workflow: Trunk based development
 
-We hanteren trunk based development: `main` is de trunk, feature- en hotfix-branches zijn kortlevend en worden snel terug naar `main` gemerged. Oudere versies hebben een eigen **`release/*` branch**. Of een wijziging naar zo'n branch wordt gebackport, bepalen de maintainers per geval. Security fixes worden alleen uitgebracht voor de huidige minor versie (zie [SECURITY.md](../SECURITY.md)).
+We hanteren trunk based development: `main` is de trunk, feature- en hotfix-branches zijn kortlevend en worden snel terug naar `main` gemerged. Voor actief ondersteunde versies houden we **`release/*` branches** bij waarop we gericht backport-commits kunnen toepassen en releasen.
 
-Dit project volgt een **eenvoudig lineair workflow**:
+Dit project volgt een **eenvoudig lineair workflow** met **automatische release management** via Release Drafter:
 
 1. **Development** → Feature branches van `main` (label PRs met changelog labels)
 2. **Testing & QA** → Op `main` branch, gemergde PR's worden uitgerold naar de testomgeving
-3. **Release Draft** → Een maintainer zet een release-draft klaar op een vaste, geteste commit
-4. **Release** → Bij het publiceren van de draft maakt GitHub de tag op die commit, op `main` (trunk) of op de relevante `release/*` branch bij backports
+3. **Automated Release Draft** → Release Drafter genereert automatisch release notes
+4. **Release** → Tag op `main` (trunk) of op de relevante `release/*` branch bij backports
 5. **Deploy** → Naar productie via release tag
 
 ### Branch Strategie
 
 ```
 main (stabiel, getest)
-├── release/1.2 (oudere versie, backports naar eigen inzicht)
-├── feat/user-authentication (label: changelog: feature)
-├── fix/login-issue (label: changelog: bug)
+├── release/1.2 (actieve versie met backports)
+├── feature/user-authentication (label: changelog: feature)
+├── bugfix/login-issue (label: changelog: bug)
 └── tagged releases (v0.1.0, v0.2.0, etc.)
 ```
 
 Voor onderhoud van oudere versies:
 - Nieuwe ontwikkeling gebeurt op `main` (trunk)
-- Backports naar oudere versies gaan, als de maintainers daartoe besluiten, naar de bijbehorende `release/*` branch
+- Backports voor ondersteunde versies gaan naar de bijbehorende `release/*` branch
 - Release tags voor die versies worden vanaf de relevante `release/*` branch aangemaakt
 
 
@@ -57,12 +57,12 @@ git checkout main
 git pull origin main
 
 # Maak feature branch
-git checkout -b feat/beschrijving-van-feature
+git checkout -b feature/beschrijving-van-feature
 
 # Werk eraan, commit regelmatig
 git add .
 git commit -m "description"
-git push origin feat/beschrijving-van-feature
+git push origin feature/beschrijving-van-feature
 
 # Open Pull Request naar main
 # - Code review
@@ -73,7 +73,7 @@ git push origin feat/beschrijving-van-feature
 
 ### Changelog Labels
 
-Label je Pull Requests met één van deze labels. De labels bepalen in welke categorie een PR in de release notes komt en hoe de versie wordt verhoogd:
+Label je Pull Requests met één van deze labels zodat Release Drafter weet hoe de versie te verhogen:
 
 | Label | Versie Impact | Voorbeeld |
 |-------|---------------|-----------|
@@ -86,7 +86,7 @@ Label je Pull Requests met één van deze labels. De labels bepalen in welke cat
 | `skip-changelog` | Geen | PR niet in changelog opnemen |
 
 **Tips:**
-- PR's worden automatisch gelabeld via de branch naam (`feat/...` → feature label, `fix/...` → bug label) en de titel (zie [.github/release-drafter.yml](../.github/release-drafter.yml); alleen de autolabeler van Release Drafter is actief)
+- Release Drafter labelt automatisch via branch naam (`feature/...` → feature label, `fix/...` → bug label)
 - Je kan handmatig aanpassingen maken
 - Zorg dat elke PR minimaal één changelog label heeft
 
@@ -100,41 +100,51 @@ Na merge naar `main`:
 4. Bugs? → Maak bugfix branch en merge terug
 5. Alles stabiel en getest? → Release maken
 
-## Release Proces
+## Release Proces met Automated Release Drafter
 
-Releases worden niet automatisch klaargezet. Een maintainer zet een release-draft klaar op een vaste commit die getest is, en publiceert die na review. Zo ligt vast welke code er in een release zit, ook als er na het testen nog PR's naar `main` worden gemerged.
+### Wat is Release Drafter?
 
-### Release Stappen
+**Release Drafter** is een GitHub Action die automatisch release notes genereert op basis van je Pull Requests en labels. Dit gebeurt continu en je kan het als "draft" release zien.
 
-#### Stap 1: Kies de commit en de versie
+**Configuratie:** [.github/release-drafter.yml](./.github/release-drafter.yml)
 
-- Kies de commit die op de testomgeving is getest (op `main`, of op de relevante `release/*` branch bij backports)
-- Bepaal de nieuwe versie op basis van de changelog labels van de PR's sinds de vorige release (zie [Versie-berekening](#versie-berekening))
+### Hoe het werkt
 
-#### Stap 2: Zet de release-draft klaar
-
-Maak in GitHub een draft release aan met:
-- De tag-naam van de nieuwe versie (bijv. `v0.2.0`), nog zonder de tag zelf aan te maken
-- Als target de volledige commit-sha uit stap 1, niet een branch naam
-- Release notes met de gemergde PR's sinds de vorige release, gegroepeerd per categorie:
+1. **Automatic Draft**: Elke keer dat een PR wordt gemerged naar `main`, wordt een release draft automatisch bijgewerkt
+2. **Version Auto-Calculation**: Bepaalt automatisch of het een MAJOR/MINOR/PATCH release is op basis van PR labels
+3. **Changelog Generation**: Genereert mooie, georganiseerde release notes met categorieën:
    - 💥 Breaking changes
    - ✨ New features
-   - 🔒 Security
    - 🐛 Bug Fixes
    - 📝 Documentation
    - ♻️ Refactor
    - ⬆️ Dependency Updates
 
-PR's met het label `skip-changelog` laat je weg uit de release notes.
+Release Drafter draait op `main` (trunk); voor `release/*` branches stel je release notes en versies handmatig samen.
 
-#### Stap 3: Review & Aanpassingen
+### Release Stappen
+
+#### Stap 1: Check de Draft Release
+
+```bash
+# Ga naar GitHub
+# Actions → Releases → Draft Release
+```
+
+Je ziet automatisch een draft release met:
+- Voorgestelde versie (v0.2.0, v1.0.0, etc.)
+- Automatisch gegenereerde changelog
+- Link naar alle changes
+
+#### Stap 2: Review & Aanpassingen
 
 In GitHub:
-- Controleer de release notes en de target commit
+- Controleer de gegenereerde release notes
 - Edit titel, beschrijving, changelog indien nodig
+- Verwijder entries die je niet wil
 - Voeg extra info toe
 
-#### Stap 4: Publish Release
+#### Stap 3: Publish Release
 
 ```bash
 # In GitHub UI:
@@ -142,11 +152,11 @@ In GitHub:
 ```
 
 Dit doet automatisch:
-- Creates git tag (bijv. `v0.2.0`) op de target commit van de draft
+- Creates git tag (bijv. `v0.2.0`)
 - Publiceert de release op GitHub
 - Triggert deployment naar productie (via CI/CD)
 
-#### Stap 5: Deploy naar Productie
+#### Stap 4: Deploy naar Productie
 
 ```bash
 # Via CI/CD (aangrijpen bij release tag):
@@ -161,17 +171,16 @@ Dit doet automatisch:
 PR #42: Feature - User dashboard
 └─ Label: changelog: feature
 └─ Merge naar main
-   └─ Getest op de testomgeving
-      └─ Maintainer zet draft v0.2.0 klaar op de geteste commit
-         └─ Review in GitHub
-            └─ Publish Release
-               └─ Git tag: v0.2.0
-                  └─ CI/CD deploy triggered
+   └─ Release Drafter update: v0.2.0 draft
+      └─ Review in GitHub
+         └─ Publish Release
+            └─ Git tag: v0.2.0
+               └─ CI/CD deploy triggered
 ```
 
-### Versie-berekening
+### Versie Auto-Berekening
 
-De volgende versie volgt uit de labels van de PR's sinds de vorige release:
+Release Drafter berekent automatisch de volgende versie vanaf `main` op basis van labels:
 
 | PR Label | Impact |
 |----------|--------|
@@ -233,55 +242,83 @@ git branch -d hotfix/critical-bug
 
 ## Automatische Backports met backport.yml
 
-Voor geautomatiseerde backports naar `release/*` branches gebruiken we de workflow [.github/workflows/backport.yml](../.github/workflows/backport.yml). Die maakt met een GitHub Action automatisch backport-PR's aan.
+Voor geautomatiseerde backports naar `release/*` branches gebruiken we **backport.yml**, een GitHub Action die automatisch backport-PRs aanmaakt.
 
 ### Hoe het werkt
 
-1. **Label vóór de merge**: Voeg aan de PR naar `main` een label `backport <branch>` toe, bijvoorbeeld:
-   - `backport release/1.2`: backport naar `release/1.2`
-   - `backport release/1.1`: backport naar `release/1.1`
+1. **Label toevoegen**: Voeg labels toe aan een PR die al naar `main` is gemerged:
+   - `backport release/1.2`: Automatische backport naar `release/1.2`
+   - `backport release/1.1`: Automatische backport naar `release/1.1`
    - Combineer labels als je naar meerdere branches wilt backporten
 
-   Zodra de PR gemerged wordt, maakt de workflow voor elk label een backport-PR aan.
+2. **Comment triggers**: Je kan ook comments gebruiken om backports in gang te zetten:
+   ```
+   @backport-bot backport to release/1.2
+   @backport-bot backport to release/1.1,release/1.0
+   ```
 
-2. **Na de merge**: Is de PR al gemerged zonder label, voeg dan het label toe en reageer met `/backport` op de gemergde PR. Alleen een label toevoegen na de merge start geen backport.
-
-3. **Automatische PR**: de workflow maakt per doelbranch een nieuwe PR aan met de cherry-picked commits en een verwijzing naar de oorspronkelijke PR.
+3. **Automatische PR**: backport.yml maakt automatisch een nieuwe PR aan naar de doelbranch met:
+   - Cherry-picked commits
+   - Dezelfde titel + `[backport release/X.Y]` suffix
+   - Link naar originele PR
+   - Automatische labels (bv. `backport`)
 
 ### Workflow met Backports
 
-**Scenario: Hotfix moet naar meerdere release branches**
+**Scenario: Hotfix moet naar meerdere actieve versies**
 
 ```bash
-# 1. Maak een hotfix branch van main (trunk)
+# 1. Maak en merge hotfix naar main (trunk)
 git checkout main
-git checkout -b fix/security-issue
+git checkout -b hotfix/security-issue
 # ... fix en test ...
-git push origin fix/security-issue
+git merge hotfix/security-issue
 
-# 2. Open een PR naar main en label die met `backport release/1.2` en `backport release/1.1`
-# 3. Merge de PR naar main
+# 2. In GitHub UI: Label de PR met `backport release/1.2` en `backport release/1.1`
 # → backport.yml maakt automatisch PRs naar beide branches
 
-# 4. Review de backport-PRs in GitHub
-# 5. Merge ze als ze klaar zijn
-# 6. Tag en release van elke release branch
+# 3. Review de backport-PRs in GitHub
+# 4. Merge ze als ze klaar zijn
+# 5. Tag en release van elke release branch
 ```
 
 ### Best Practices
 
-- Voeg het backport-label `backport release/x.y` toe vóór de merge naar `main`; de merge maakt dan automatisch een backport-PR naar die branch. Is de PR al gemerged, voeg dan het label toe en reageer met `/backport` op de gemergde PR
+- Voeg backport-labels **na** merge naar `main` toe (niet daarvoor)
 - Voor kritieke hotfixes: tagging direct na backport, voor features: batch meerdere changes
 - Zorg dat CI/CD tests groen zijn voor elke backport-PR
-- Vermeld in de release notes welke versies de fix krijgen
+- Merk in je CHANGELOG aan welke versies de fix krijgen
 
-**Configuratie:** [.github/workflows/backport.yml](../.github/workflows/backport.yml)
+**Configuratie:** [.github/backport.yml](./.github/backport.yml)
 
 ## Changelog Beheer
 
-De release notes op de [GitHub Releases pagina](https://github.com/WowebNL/eventloket/releases) zijn de changelog. Je stelt ze samen in stap 2 van het release proces en publiceert ze met de release.
+Bij elke release:
 
-[CHANGELOG.md](../CHANGELOG.md) bevat de historie tot en met v1.2.0 en wordt niet meer bijgewerkt.
+1. Update [CHANGELOG.md](../CHANGELOG.md) met nieuwe versie
+2. Noteer:
+   - Nieuwe features (MINOR)
+   - Bug fixes (PATCH)
+   - Breaking changes (MAJOR)
+
+**Voorbeeld:**
+```markdown
+## [0.2.0] - 2026-01-09
+
+### Added
+- Nieuwe gebruiker dashboard
+- Export naar CSV functionaliteit
+
+### Fixed
+- Bug in login flow
+- Performance issues in search
+
+### Changed
+- API endpoints gemigreerd naar v2
+
+### Breaking Changes
+- Oude API v1 endpoints verwijderd
+```
 
 ## Release Checklist
 
@@ -290,10 +327,11 @@ Voordat je een release maakt:
 - [ ] Alle features getest in test environment
 - [ ] QA approval ontvangen
 - [ ] Tests groen op de branch waar je de release van maakt
+- [ ] CHANGELOG.md geupdate
 - [ ] Release notes voorbereid
 - [ ] Product Owner approval
 
 
 ---
 
-Vragen over het release process? Contacteer Woweb (security@woweb.nl).
+Vragen over het release process? Contacteer [Michel Verhoeven](michel@woweb.nl).

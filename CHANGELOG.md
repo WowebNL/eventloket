@@ -1,7 +1,5 @@
 # Changelog
 
-Release notes from v1.3.0 onwards are published on the [GitHub Releases page](https://github.com/WowebNL/eventloket/releases). This file keeps the history up to v1.2.0.
-
 ## v1.2.0 - 2026-08-27
 
 ### What's Changed
