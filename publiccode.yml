@@ -1,0 +1,128 @@
+# This file follows the latest version of the publiccode.yml standard.
+# Specification: https://yml.publiccode.tools/
+publiccodeYmlVersion: "0"
+
+name: Eventloket
+url: "https://github.com/WowebNL/eventloket"
+
+platforms:
+  - web
+
+categories:
+  - event-management
+  - workflow-management
+  - geographic-information-systems
+
+developmentStatus: stable
+softwareType: "standalone/web"
+
+intendedAudience:
+  countries:
+    - NL
+  scope:
+    - local-authorities
+    - emergency-services
+
+description:
+  en:
+    localisedName: Eventloket
+    shortDescription: >-
+      Web application that manages permit applications for events, from
+      the organiser's application to the municipality's decision.
+    longDescription: >
+      Eventloket is a web application that manages permit applications for
+      events. It was developed for Veiligheidsregio Zuid-Limburg and serves
+      event organisers, permit processors at municipalities, advisory
+      services and application administrators, each in their own panel.
+
+
+      Organisers submit and follow their applications online. Municipal
+      staff handle the resulting cases, request advice from advisory
+      services and communicate with the organiser in message threads. Event
+      locations and routes are drawn on a map and matched to the
+      municipalities they cross.
+
+
+      The application is developed in line with the Common Ground
+      principles. Cases are registered in external components that
+      implement the Dutch ZGW APIs, such as Open Zaak and the Objects API,
+      and stay synchronised with them through queued jobs and
+      notifications.
+    documentation: "https://github.com/WowebNL/eventloket/blob/main/README.md"
+    features:
+      - Online permit applications for events, including multi-day events
+      - Separate panels for organisers, municipalities, advisory services and administrators
+      - Case handling through ZGW APIs
+      - Advice requests to advisory services
+      - Message threads between municipality, organiser and advisory services
+      - Drawing event locations and routes on a map, with municipality detection
+      - Event calendar for municipalities
+  nl:
+    localisedName: Eventloket
+    shortDescription: >-
+      Webapplicatie voor het afhandelen van vergunningaanvragen voor
+      evenementen, van de aanvraag van de organisator tot het besluit van
+      de gemeente.
+    longDescription: >
+      Eventloket is een webapplicatie voor het afhandelen van
+      vergunningaanvragen voor evenementen. De applicatie is ontwikkeld
+      voor Veiligheidsregio Zuid-Limburg en bedient organisatoren,
+      vergunningverleners bij gemeenten, adviesdiensten en
+      applicatiebeheerders, elk in een eigen omgeving.
+
+
+      Organisatoren dienen hun aanvraag online in en volgen de voortgang.
+      Medewerkers van de gemeente behandelen de zaak, vragen advies aan
+      adviesdiensten en communiceren met de organisator via berichten.
+      Locaties en routes van een evenement worden op een kaart getekend en
+      gekoppeld aan de gemeenten waar ze doorheen lopen.
+
+
+      De applicatie is ontwikkeld volgens de principes van Common Ground.
+      Zaken worden geregistreerd in externe componenten die de ZGW API's
+      implementeren, zoals Open Zaak en de Objects API, en blijven daarmee
+      gesynchroniseerd via achtergrondtaken en notificaties.
+    documentation: "https://github.com/WowebNL/eventloket/blob/main/README.md"
+    features:
+      - Online vergunningaanvragen voor evenementen, ook voor meerdaagse evenementen
+      - Aparte omgevingen voor organisatoren, gemeenten, adviesdiensten en beheerders
+      - Zaakafhandeling via de ZGW API's
+      - Adviesvragen aan adviesdiensten
+      - Berichten tussen gemeente, organisator en adviesdiensten
+      - Locaties en routes op een kaart tekenen, met herkenning van de gemeente
+      - Evenementenkalender voor gemeenten
+
+legal:
+  license: EUPL-1.2
+  mainCopyrightOwner: Veiligheidsregio Zuid-Limburg
+
+maintenance:
+  type: contract
+  contractors:
+    - name: Woweb
+      until: "2030-01-01"
+      website: "https://woweb.nl"
+  contacts:
+    - name: Woweb
+      email: info@woweb.nl
+
+localisation:
+  # Part of the interface text is not yet translatable, so the application
+  # is not marked as localisation ready.
+  localisationReady: false
+  availableLanguages:
+    - nl
+
+dependsOn:
+  open:
+    - name: PHP
+      versionMin: "8.4"
+    - name: Redis
+    - name: PostgreSQL
+      versionMin: "17"
+      optional: true
+    - name: PostGIS
+      optional: true
+    - name: MySQL
+      versionMin: "8"
+      optional: true
