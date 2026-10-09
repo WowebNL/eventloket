@@ -1,6 +1,8 @@
 # Version updates: once a month, two pull requests per ecosystem. One
 # combines all minor and patch updates, the other combines all major
 # updates, which serve as input for planning major upgrades.
+# For Composer and npm, a new release is only proposed once it is at least
+# 7 days old.
 # Vulnerable dependencies are reported through Dependabot alerts and are
 # handled outside this schedule.
 version: 2
@@ -9,6 +11,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     labels:
       - "changelog: dependencies"
@@ -29,6 +33,8 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     labels:
       - "changelog: dependencies"
