@@ -135,10 +135,11 @@ if (app()->environment(['local', 'testing'])) {
         return response()->json(['ok' => true, 'deleted' => $deleted]);
     })->name('test.reset-draft')->withoutMiddleware([PreventRequestForgery::class]);
 
-    // Test-only: maak een Zaak met een form_state_snapshot zoals de
-    // backfill-command die produceert (legacy-gemapte velden + kaart als
-    // geojson), zodat een Playwright-scenario de "herhaal aanvraag"-prefill
-    // in de browser kan verifiëren. Geeft het zaak-id terug.
+    // Test-only: create a Zaak with a form_state_snapshot like the backfill
+    // command produces (legacy mapped fields plus the map as geojson), so a
+    // Playwright scenario can verify the "repeat request" prefill in the
+    // browser. Pass `location=route` for a route instead of an area.
+    // Returns the zaak id.
     Route::post('/_test/seed-prefill-zaak', function (Request $request) {
         $email = (string) $request->input('email', '');
         $user = User::where('email', $email)->first();
@@ -151,27 +152,19 @@ if (app()->environment(['local', 'testing'])) {
         }
         $zaaktype = Zaaktype::query()->first();
 
-        // Realistische snapshot zoals de backfill die produceert: genoeg om
-        // door de wizard te navigeren (stap 1 + 2 gevuld) plus een buiten-
-        // locatie met een getekende polygon, zodat een Playwright-scenario
-        // kan verifiëren of de prefill óók de kaart-tekening rendert.
-        $zaak = Zaak::factory()->create([
-            'organisation_id' => $organisation->id,
-            'organiser_user_id' => $user->id,
-            'zaaktype_id' => $zaaktype?->id,
-            'form_state_snapshot' => ['values' => [
-                // Stap 1 — Contactgegevens
-                'watIsUwVoornaam' => 'PrefillEva',
-                'watIsUwAchternaam' => 'PrefillTest',
-                'postcode1' => '6411CD',
-                'huisnummer1' => '1',
-                'straatnaam1' => 'Marktplein',
-                'plaatsnaam1' => 'Heerlen',
-                // Stap 2 — Het evenement
-                'watIsDeNaamVanHetEvenementVergunning' => 'Hergebruikte Aanvraag',
-                'geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning' => 'Prefill-omschrijving.',
-                'soortEvenement' => 'Sportevenement',
-                // Stap 3 — Locatie: buiten, met een getekende polygon
+        $locationValues = $request->input('location') === 'route'
+            ? [
+                'waarVindtHetEvenementPlaats' => ['route'],
+                'routesOpKaart' => ['geojson' => [
+                    'type' => 'FeatureCollection',
+                    'features' => [[
+                        'type' => 'Feature',
+                        'properties' => new stdClass,
+                        'geometry' => ['type' => 'LineString', 'coordinates' => [[5.80, 50.89], [5.83, 50.90], [5.86, 50.88]]],
+                    ]],
+                ]],
+            ]
+            : [
                 'waarVindtHetEvenementPlaats' => ['buiten'],
                 'naamVanDeLocatieKaart' => 'Festivalweide',
                 'locatieSOpKaart' => ['geojson' => [
@@ -182,6 +175,31 @@ if (app()->environment(['local', 'testing'])) {
                         'geometry' => ['type' => 'Polygon', 'coordinates' => [[[5.84, 50.90], [5.80, 50.89], [5.86, 50.87], [5.84, 50.90]]]],
                     ]],
                 ]],
+            ];
+
+        // Realistic snapshot like the backfill produces: enough to move
+        // through the wizard (steps 1 and 2 filled) plus a location with a
+        // drawn shape, so a Playwright scenario can verify that the prefill
+        // renders the map drawing as well.
+        $zaak = Zaak::factory()->create([
+            'organisation_id' => $organisation->id,
+            'organiser_user_id' => $user->id,
+            'zaaktype_id' => $zaaktype?->id,
+            'form_state_snapshot' => ['values' => [
+                // Step 1 — Contact details
+                'watIsUwVoornaam' => 'PrefillEva',
+                'watIsUwAchternaam' => 'PrefillTest',
+                'postcode1' => '6411CD',
+                'huisnummer1' => '1',
+                'straatnaam1' => 'Marktplein',
+                'plaatsnaam1' => 'Heerlen',
+                // Step 2 — The event
+                'watIsDeNaamVanHetEvenementVergunning' => 'Hergebruikte Aanvraag',
+                'geefEenKorteOmschrijvingVanHetEvenementWatIsDeNaamVanHetEvenementVergunning' => 'Prefill-omschrijving.',
+                'soortEvenement' => 'Sportevenement',
+                // Step 3 — Location: outdoors with a drawn polygon, or
+                // (with `location=route`) on a route with a drawn line.
+                ...$locationValues,
             ]],
         ]);
 
