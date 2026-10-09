@@ -1,6 +1,6 @@
-# This file follows the publiccode.yml standard, version 0.4.
+# This file follows the latest version of the publiccode.yml standard.
 # Specification: https://yml.publiccode.tools/
-publiccodeYmlVersion: "0.4"
+publiccodeYmlVersion: "0"
 
 name: Eventloket
 url: "https://github.com/WowebNL/eventloket"
@@ -97,18 +97,14 @@ legal:
   mainCopyrightOwner: Veiligheidsregio Zuid-Limburg
 
 maintenance:
-  # TODO: confirm the maintenance type and fill in the contractor and the
-  # contact details before merging. With type "contract", publiccode.yml
-  # requires a contractor with the end date of the contract ("until") and
-  # at least one contact.
   type: contract
-  # contractors:
-  #   - name: TODO
-  #     until: "YYYY-MM-DD"
-  #     website: "TODO"
-  # contacts:
-  #   - name: TODO
-  #     email: "TODO"
+  contractors:
+    - name: Woweb
+      until: "2030-01-01"
+      website: "https://woweb.nl"
+  contacts:
+    - name: Woweb
+      email: info@woweb.nl
 
 localisation:
   # Part of the interface text is not yet translatable, so the application
