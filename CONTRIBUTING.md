@@ -89,7 +89,7 @@ Release notes are published with each release on the [GitHub Releases page](http
 
 ## Dependency updates
 
-Dependabot opens one pull request per ecosystem (Composer, npm and GitHub Actions) each month that combines the available minor and patch updates. Dependabot alerts notify the maintainers of vulnerable dependencies. Alerts are triaged every working day and resolved with priority in a separate pull request, ahead of the monthly update. Major upgrades are grouped into a separate monthly pull request per ecosystem and are planned separately. To report a vulnerability in a dependency that affects Eventloket, follow [SECURITY.md](SECURITY.md).
+Dependabot opens one pull request per ecosystem (Composer, npm and GitHub Actions) each month that combines the available minor and patch updates. Dependabot alerts notify the maintainers of vulnerable dependencies. Alerts are triaged regularly and resolved with priority in a separate pull request, ahead of the monthly update. Major upgrades are grouped into a separate monthly pull request per ecosystem and are planned separately. To report a vulnerability in a dependency that affects Eventloket, follow [SECURITY.md](SECURITY.md).
 
 ## License
 
