@@ -1,21 +1,16 @@
 # Contributing to Eventloket
 
-Thank you for your interest in Eventloket. This document describes how issues, pull requests, reviews and releases work in this repository, and which conventions and code standards apply. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Thank you for your interest in Eventloket. This document describes how bug reports, pull requests, reviews and releases work in this repository, and which conventions and code standards apply. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Reporting a security vulnerability
 
-Do not report a vulnerability in a public issue, pull request or discussion. Follow the reporting guidelines in [SECURITY.md](SECURITY.md) instead, so the issue can be handled confidentially until a fix is available.
+Do not report a vulnerability in a pull request or any other public channel. Follow [SECURITY.md](SECURITY.md) instead, so the vulnerability can be handled confidentially until a fix is available.
 
-<!-- TODO: GitHub Issues are currently disabled for this repository. Enable them before this section goes live. -->
 ## Reporting a bug or requesting a change
 
-Open an issue in this repository and include:
+GitHub Issues are not enabled for this repository. Report a bug or request a change through the organisation that commissioned Eventloket (see the [README](README.md)), not through this repository. Bugs and changes that are accepted are resolved through pull requests, as described below.
 
-- what you did, what you expected to happen and what happened instead;
-- the steps to reproduce the problem;
-- the Eventloket version (see the release tags) and, if relevant, the browser you used.
-
-Do not include personal data, credentials or production data in an issue. Use synthetic examples instead.
+Do not include personal data, credentials or production data in a report. Use synthetic examples instead.
 
 ## Setting up a development environment
 
@@ -49,7 +44,7 @@ Supported older versions are maintained on `release/*` branches. Fixes reach tho
 ## Pull requests
 
 1. Open the pull request against `main`.
-2. Describe what changes and why. Link the issue it resolves, if there is one.
+2. Describe what changes and why.
 3. Make sure the required checks pass. These run on every pull request:
    - `phplint`: Laravel Pint with the `laravel` preset, in test mode;
    - `phpstan`: PHPStan static analysis;

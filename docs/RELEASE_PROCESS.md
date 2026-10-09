@@ -36,7 +36,7 @@ Dit project volgt een **eenvoudig lineair workflow** met **automatische release 
 ```
 main (stabiel, getest)
 ├── release/1.2 (actieve versie met backports)
-├── feature/user-authentication (label: changelog: feature)
+├── feat/user-authentication (label: changelog: feature)
 ├── bugfix/login-issue (label: changelog: bug)
 └── tagged releases (v0.1.0, v0.2.0, etc.)
 ```
@@ -57,12 +57,12 @@ git checkout main
 git pull origin main
 
 # Maak feature branch
-git checkout -b feature/beschrijving-van-feature
+git checkout -b feat/beschrijving-van-feature
 
 # Werk eraan, commit regelmatig
 git add .
 git commit -m "description"
-git push origin feature/beschrijving-van-feature
+git push origin feat/beschrijving-van-feature
 
 # Open Pull Request naar main
 # - Code review
@@ -86,7 +86,7 @@ Label je Pull Requests met één van deze labels zodat Release Drafter weet hoe 
 | `skip-changelog` | Geen | PR niet in changelog opnemen |
 
 **Tips:**
-- Release Drafter labelt automatisch via branch naam (`feature/...` → feature label, `fix/...` → bug label)
+- Release Drafter labelt automatisch via branch naam (`feat/...` → feature label, `fix/...` → bug label)
 - Je kan handmatig aanpassingen maken
 - Zorg dat elke PR minimaal één changelog label heeft
 
