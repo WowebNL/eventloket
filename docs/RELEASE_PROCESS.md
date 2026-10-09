@@ -144,7 +144,6 @@ In GitHub:
 Dit doet automatisch:
 - Creates git tag (bijv. `v0.2.0`) op de target commit van de draft
 - Publiceert de release op GitHub
-- Voegt de release notes toe aan [CHANGELOG.md](../CHANGELOG.md) (via de workflow `update-changelog.yml`)
 - Triggert deployment naar productie (via CI/CD)
 
 #### Stap 5: Deploy naar Productie
@@ -279,38 +278,15 @@ git merge hotfix/security-issue
 - Voeg backport-labels **na** merge naar `main` toe (niet daarvoor)
 - Voor kritieke hotfixes: tagging direct na backport, voor features: batch meerdere changes
 - Zorg dat CI/CD tests groen zijn voor elke backport-PR
-- Merk in je CHANGELOG aan welke versies de fix krijgen
+- Vermeld in de release notes welke versies de fix krijgen
 
 **Configuratie:** [.github/backport.yml](./.github/backport.yml)
 
 ## Changelog Beheer
 
-Bij elke release:
+De release notes op de [GitHub Releases pagina](https://github.com/WowebNL/eventloket/releases) zijn de changelog. Je stelt ze samen in stap 2 van het release proces en publiceert ze met de release.
 
-1. Update [CHANGELOG.md](../CHANGELOG.md) met nieuwe versie
-2. Noteer:
-   - Nieuwe features (MINOR)
-   - Bug fixes (PATCH)
-   - Breaking changes (MAJOR)
-
-**Voorbeeld:**
-```markdown
-## [0.2.0] - 2026-01-09
-
-### Added
-- Nieuwe gebruiker dashboard
-- Export naar CSV functionaliteit
-
-### Fixed
-- Bug in login flow
-- Performance issues in search
-
-### Changed
-- API endpoints gemigreerd naar v2
-
-### Breaking Changes
-- Oude API v1 endpoints verwijderd
-```
+[CHANGELOG.md](../CHANGELOG.md) bevat de historie tot en met v1.2.0 en wordt niet meer bijgewerkt.
 
 ## Release Checklist
 
@@ -319,7 +295,6 @@ Voordat je een release maakt:
 - [ ] Alle features getest in test environment
 - [ ] QA approval ontvangen
 - [ ] Tests groen op de branch waar je de release van maakt
-- [ ] CHANGELOG.md geupdate
 - [ ] Release notes voorbereid
 - [ ] Product Owner approval
 

@@ -85,7 +85,7 @@ Eventloket follows [Semantic Versioning](https://semver.org/). A maintainer prep
 | `changelog: bug`, `changelog: refactor`, `changelog: docs`, `changelog: dependencies`, `changelog: security` | Patch |
 | `skip-changelog` | Not included in the release notes |
 
-When a release is published on GitHub, its release notes are added to [CHANGELOG.md](CHANGELOG.md) automatically. The full release process, including hotfixes and backports, is described in [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
+Release notes are published with each release on the [GitHub Releases page](https://github.com/WowebNL/eventloket/releases). The full release process, including hotfixes and backports, is described in [docs/RELEASE_PROCESS.md](docs/RELEASE_PROCESS.md).
 
 ## Dependency updates
 
