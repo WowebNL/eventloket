@@ -1,5 +1,6 @@
 <?php
 
+use App\Logging\StripChatNotificationDetails;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -80,6 +81,9 @@ return [
             'emoji' => env('LOG_SLACK_EMOJI', ':boom:'),
             'level' => env('LOG_LEVEL', 'critical'),
             'replace_placeholders' => true,
+            // Only send a minimal summary (level, exception class, source, environment and
+            // time) to chat. Messages, stack traces and context stay in the other channels.
+            'tap' => [StripChatNotificationDetails::class],
         ],
 
         'papertrail' => [

@@ -2,9 +2,17 @@
 
 namespace App\Listeners;
 
+use App\Logging\ChatSafeRecordProcessor;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Http;
 
+/**
+ * Posts a short notice about a failed queued job to a chat webhook.
+ *
+ * Only the job class, queue, exception class, source location, environment and time are
+ * sent. The exception message, stack trace and job payload are deliberately left out: they
+ * can carry user data and remain available in the regular logs and the error tracker.
+ */
 class NotifySlackOfFailedJob
 {
     public function handle(JobFailed $event): void
@@ -25,8 +33,19 @@ class NotifySlackOfFailedJob
             'text' => "*[{$appName}] Failed job*: `{$jobName}` on queue `{$queue}`",
             'attachments' => [[
                 'color' => 'danger',
-                'title' => $exception->getMessage(),
-                'text' => substr($exception->getTraceAsString(), 0, 2900),
+                'title' => $exception::class,
+                'fields' => [
+                    [
+                        'title' => 'Source',
+                        'value' => ChatSafeRecordProcessor::sourceOf($exception, base_path()),
+                        'short' => false,
+                    ],
+                    [
+                        'title' => 'Environment',
+                        'value' => (string) config('app.env'),
+                        'short' => true,
+                    ],
+                ],
                 'ts' => now()->timestamp,
             ]],
         ]);
