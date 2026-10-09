@@ -301,4 +301,4 @@ Voordat je een release maakt:
 
 ---
 
-Vragen over het release process? Contacteer [Michel Verhoeven](michel@woweb.nl).
+Vragen over het release process? Contacteer Woweb (security@woweb.nl).
