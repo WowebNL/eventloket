@@ -8,7 +8,7 @@ Please do not report a vulnerability in a pull request, discussion or any other 
 You can report a vulnerability confidentially in one of two ways:
 
 - Through GitHub private vulnerability reporting: open the [Security tab](https://github.com/WowebNL/eventloket/security) of this repository and choose "Report a vulnerability". Only you and the maintainers can see the report.
-- By email to michel@woweb.nl.
+- By email to security@woweb.nl.
 
 Please include the following information:
 
