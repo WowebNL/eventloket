@@ -76,7 +76,7 @@ Pull requests are usually squash-merged, so the pull request title becomes the c
 
 ## Releases
 
-Eventloket follows [Semantic Versioning](https://semver.org/). Release Drafter keeps a draft release up to date as pull requests are merged into `main`, and derives the next version number from the changelog labels:
+Eventloket follows [Semantic Versioning](https://semver.org/). A maintainer prepares each release as a draft on a tested commit, and derives the next version number from the changelog labels:
 
 | Label | Version impact |
 | --- | --- |
