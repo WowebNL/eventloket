@@ -8,13 +8,13 @@
     je verwacht dat een ingetekend polygon meteen tot een
     gemeente-detect leidt.
 
-    We voegen daarom een dunne Alpine-listener toe op `pm:create`,
-    `pm:edit` en `pm:remove` van de leaflet-map die — nadat de dotswan-
-    handler zijn deferred set heeft gedaan — `$wire.$commit()` aanroept.
-    Dat dwingt een onmiddellijke roundtrip naar de server af, waarna
-    `ServiceFetcher::fetchInGemeentenResponse` (vanuit
-    `AlsBoolEnIsNietGelijkAanNone` rule) de getekende polygon door de
-    intersect-check haalt en `inGemeentenResponse` bijwerkt.
+    We therefore add thin Alpine listeners on `pm:create` and `pm:remove`
+    of the Leaflet map, and on `pm:edit` of the FeatureGroup that holds the
+    drawn shapes (Geoman does not fire `pm:edit` on the map). They write the
+    state and call `$wire.$commit()`. That forces an immediate roundtrip to
+    the server, after which `ServiceFetcher::fetchInGemeentenResponse` (via
+    `EventFormPage::triggerFetchesFor`) runs the drawn shape through the
+    intersect check and updates `inGemeentenResponse`.
 
     Daarnaast zetten we GeoMan op Nederlands via `map.pm.setLang('nl')`
     zodat de toolbar-tooltips ("Klik om eerste hoekpunt te plaatsen",
@@ -561,10 +561,13 @@
                     if (e.layer.pm) {
                         e.layer.pm.enable({ allowSelfIntersection: false });
                     }
-                    e.layer.on('pm:edit', syncToState);
                     syncToState();
                 });
-                map.on('pm:edit', syncToState);
+                // Geoman fires pm:edit on the edited layer and its parent
+                // groups, never on the map. Listening on the FeatureGroup
+                // covers both the shapes loaded from the state and the ones
+                // drawn in this session (pm:create adds those to fg).
+                fg.on('pm:edit', syncToState);
                 map.on('pm:remove', (e) => {
                     if (e.layer && fg.hasLayer(e.layer)) {
                         fg.removeLayer(e.layer);
