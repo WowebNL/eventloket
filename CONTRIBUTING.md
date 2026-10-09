@@ -39,7 +39,7 @@ Name your branch after the type of change:
 
 Branches starting with `fix/` and `feat/` are labelled automatically for the changelog (see [Releases](#releases)).
 
-Supported older versions are maintained on `release/*` branches. Fixes reach those branches as backports. Add the label `backport release/x.y` to the pull request before it is merged into `main`; the merge then creates a backport pull request to that branch automatically. To backport a pull request that has already been merged, add the label and comment `/backport` on the merged pull request.
+Older versions have their own `release/*` branches. The maintainers decide per change whether it is backported to one of those branches. Security fixes are only released for the current minor version (see [SECURITY.md](SECURITY.md)). To backport a change, add the label `backport release/x.y` to the pull request before it is merged into `main`; the merge then creates a backport pull request to that branch automatically. To backport a pull request that has already been merged, add the label and comment `/backport` on the merged pull request.
 
 ## Pull requests
 

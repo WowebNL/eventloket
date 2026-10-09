@@ -21,7 +21,7 @@ Wij volgen [Semantic Versioning 2.0.0](https://semver.org/lang/nl/) voor versien
 
 ## Workflow: Trunk based development
 
-We hanteren trunk based development: `main` is de trunk, feature- en hotfix-branches zijn kortlevend en worden snel terug naar `main` gemerged. Voor actief ondersteunde versies houden we **`release/*` branches** bij waarop we gericht backport-commits kunnen toepassen en releasen.
+We hanteren trunk based development: `main` is de trunk, feature- en hotfix-branches zijn kortlevend en worden snel terug naar `main` gemerged. Oudere versies hebben een eigen **`release/*` branch**. Of een wijziging naar zo'n branch wordt gebackport, bepalen de maintainers per geval. Security fixes worden alleen uitgebracht voor de huidige minor versie (zie [SECURITY.md](../SECURITY.md)).
 
 Dit project volgt een **eenvoudig lineair workflow**:
 
@@ -35,7 +35,7 @@ Dit project volgt een **eenvoudig lineair workflow**:
 
 ```
 main (stabiel, getest)
-├── release/1.2 (actieve versie met backports)
+├── release/1.2 (oudere versie, backports naar eigen inzicht)
 ├── feat/user-authentication (label: changelog: feature)
 ├── fix/login-issue (label: changelog: bug)
 └── tagged releases (v0.1.0, v0.2.0, etc.)
@@ -43,7 +43,7 @@ main (stabiel, getest)
 
 Voor onderhoud van oudere versies:
 - Nieuwe ontwikkeling gebeurt op `main` (trunk)
-- Backports voor ondersteunde versies gaan naar de bijbehorende `release/*` branch
+- Backports naar oudere versies gaan, als de maintainers daartoe besluiten, naar de bijbehorende `release/*` branch
 - Release tags voor die versies worden vanaf de relevante `release/*` branch aangemaakt
 
 
