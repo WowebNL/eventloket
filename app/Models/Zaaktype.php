@@ -258,7 +258,9 @@ class Zaaktype extends Model
             $rowValue = is_array($zaaktype->hidden_resultaat_types) ? $zaaktype->hidden_resultaat_types : [];
 
             $own = $mappings->filter(fn (MunicipalityZaaktypeMapping $mapping): bool => $zaaktype->identificatie !== null
-                && $mapping->municipality_id === $zaaktype->municipality_id
+                // Cast both sides: the drivers do not agree on whether an
+                // integer column comes back as int or as string.
+                && (int) $mapping->municipality_id === (int) $zaaktype->municipality_id
                 && $mapping->zaaktype_identificatie === $zaaktype->identificatie)->values();
 
             // The ?? has isset semantics, so it also covers a null $mapping.
