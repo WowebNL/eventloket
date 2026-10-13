@@ -1,7 +1,10 @@
 <?php
 
+use App\Enums\AdvisoryRole;
 use App\Enums\Role;
+use App\Filament\Advisor\Widgets\AdvisorCalendarWidget;
 use App\Filament\Municipality\Widgets\MunicipalityCalendarWidget;
+use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\User;
@@ -16,7 +19,7 @@ use Tests\Fakes\ZgwHttpFake;
 
 use function Pest\Livewire\livewire;
 
-covers(MunicipalityCalendarWidget::class);
+covers(MunicipalityCalendarWidget::class, AdvisorCalendarWidget::class);
 
 beforeEach(function (): void {
     Carbon::setTestNow('2026-10-07 10:00:00');
@@ -262,5 +265,76 @@ test('geojson export limits the feature properties to the exported event fields'
             'risico_classificatie' => 'B',
             'status_name' => 'Ontvangen',
             'status_color' => $zaak->status_color,
+            'resultaat' => null,
+            'aantal_aanwezigen' => null,
         ]);
 });
+
+test('geojson export includes the result and the number of attendees of a zaak', function (Role $role) {
+    Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
+
+    $geometry = ['type' => 'Point', 'coordinates' => [5.85, 51.84]];
+    $decidedUrl = ZgwHttpFake::fakeSingleZaak('decided', ['zaakgeometrie' => $geometry]);
+    $openUrl = ZgwHttpFake::fakeSingleZaak('open', ['zaakgeometrie' => $geometry]);
+    Http::preventStrayRequests();
+
+    if ($role === Role::Advisor) {
+        // The advisor export reads events through the event scope, which
+        // selects a fixed list of columns.
+        $advisory = Advisory::factory()->create(['can_view_any_zaak' => true]);
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $advisory->users()->attach($advisor, ['role' => AdvisoryRole::Member]);
+        $this->actingAs($advisor);
+
+        Filament::setCurrentPanel(Filament::getPanel('advisor'));
+        Filament::setTenant($advisory);
+    }
+
+    $zaaktype = Zaaktype::factory()->create(['municipality_id' => $this->municipality->id]);
+    $organisation = Organisation::factory()->create();
+    $zaakWith = fn (string $publicId, string $zgwZaakUrl, ?string $resultaat, ?string $aanwezigen): Zaak => Zaak::factory()->create([
+        'public_id' => $publicId,
+        'zaaktype_id' => $zaaktype->id,
+        'organisation_id' => $organisation->id,
+        'zgw_zaak_url' => $zgwZaakUrl,
+        'reference_data' => new ZaakReferenceData(
+            registratiedatum: '2026-09-01T09:00:00+02:00',
+            status_name: $resultaat === null ? 'Ontvangen' : 'Afgehandeld',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            start_evenement: '2026-10-10T10:00:00+02:00',
+            eind_evenement: '2026-10-10T18:00:00+02:00',
+            naam_evenement: 'Synthetisch evenement '.$publicId,
+            resultaat: $resultaat,
+            aanwezigen: $aanwezigen,
+        ),
+    ]);
+
+    $zaakWith('EV-2026-0001', $decidedUrl, 'Verleend', '2500');
+    $zaakWith('EV-2026-0002', $openUrl, null, '150');
+
+    $widget = $role === Role::Advisor ? AdvisorCalendarWidget::class : MunicipalityCalendarWidget::class;
+    $component = livewire($widget)
+        ->mountAction('export')
+        ->fillForm([
+            'start_date' => '2026-10-08',
+            'end_date' => '2026-10-12',
+        ])
+        ->callAction('exportToGeojson')
+        ->assertHasNoFormErrors();
+
+    $geojson = json_decode(base64_decode(data_get($component->effects, 'download.content')), true);
+    $properties = collect($geojson['features'])->pluck('properties')->keyBy('public_id');
+
+    expect($properties)->toHaveCount(2)
+        ->and($properties['EV-2026-0001'])->toMatchArray([
+            'resultaat' => 'Verleend',
+            'aantal_aanwezigen' => '2500',
+        ])
+        ->and($properties['EV-2026-0002'])->toMatchArray([
+            'resultaat' => null,
+            'aantal_aanwezigen' => '150',
+        ]);
+})->with([
+    'municipality admin' => [Role::MunicipalityAdmin],
+    'advisor' => [Role::Advisor],
+]);
