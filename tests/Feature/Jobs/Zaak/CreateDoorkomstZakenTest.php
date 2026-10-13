@@ -1872,3 +1872,63 @@ test('logs a refused deelzaak with its municipality, connection and error respon
         })
         ->once();
 });
+
+test('records the deelzaak as a route passage and writes that as its aanvraagtype, not the one of the hoofdzaak', function () {
+    $eigenschapUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/aanvraag-type';
+
+    Http::fake([
+        // The hoofdzaak carries the aanvraagtype eigenschap of a vergunning.
+        OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => OWN_HOST.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+            '_expand' => [
+                'eigenschappen' => [[
+                    'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1/zaakeigenschappen/1',
+                    'uuid' => 'eig-1',
+                    'zaak' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
+                    'eigenschap' => OWN_HOST.'/catalogi/api/v1/eigenschappen/aanvraag-type',
+                    'naam' => 'aanvraag_type',
+                    'waarde' => 'Vergunning',
+                ]],
+            ],
+        ], 200),
+        OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+
+        // The catalogus of the doorkomst zaaktype defines the eigenschap too.
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => $eigenschapUrl, 'naam' => 'aanvraag_type'],
+        ]), 200),
+
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+            if ($request->method() === 'POST') {
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
+            }
+
+            return Http::response(deelZaakReadResponse(), 200);
+        },
+
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->update(['role' => ZaaktypeRole::Vergunning]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']->refresh());
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->firstOrFail();
+
+    expect($deel->role)->toBe(ZaaktypeRole::Doorkomst);
+
+    $written = Http::recorded(fn ($request) => $request->method() === 'POST'
+        && str_contains($request->url(), '/zaakeigenschappen')
+        && $request['eigenschap'] === $eigenschapUrl);
+
+    expect($written)->toHaveCount(1)
+        ->and($written->first()[0]['waarde'])->toBe('Doorkomst');
+});

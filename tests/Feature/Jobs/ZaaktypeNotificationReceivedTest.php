@@ -184,7 +184,8 @@ test('a republish re-points the hidden-results selection without a manual re-sav
     // Both the stored selection and the map the calendar and the zaken list
     // filter on now name the current version's url.
     expect($mapping->refresh()->hidden_resultaat_types)->toBe([$newHidden])
-        ->and(Zaaktype::effectiveHiddenResultaatTypesMap())->toBe([$zaaktype->id => [$newHidden]]);
+        ->and(collect(Zaaktype::effectiveHiddenResultaatTypeRules())->where('zaaktype_id', $zaaktype->id)->pluck('hidden')->unique()->values()->all())
+        ->toBe([[$newHidden]]);
 
     Notification::assertNothingSent();
 });

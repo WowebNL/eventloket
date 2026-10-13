@@ -15,6 +15,7 @@
  * jobs precies hetzelfde blijven werken.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 
@@ -293,4 +294,26 @@ test('geen mening: zonder waarVindtHetEvenementPlaats telt elke soort mee (ongew
     ]);
 
     expect($this->map->buildEventLocation($state))->toHaveKeys(['multipolygons', 'line', 'bag_addresses', 'name']);
+});
+
+test('het aanvraagtype gaat mee als eigenschap wanneer de rol van de zaak bekend is', function () {
+    $state = new FormState(values: ['watIsDeNaamVanHetEvenementVergunning' => 'Synthetisch evenement']);
+
+    $plat = collect($this->map->buildEigenschappen($state, ZaaktypeRole::Vooraankondiging))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toMatchArray([
+        ZaakeigenschappenMap::AANVRAAG_TYPE => 'Vooraankondiging',
+        'naam_evenement' => 'Synthetisch evenement',
+    ])
+        // It is a logical key like the others, so a koppeling can map it to a
+        // naam of its own catalogus.
+        ->and(ZaakeigenschappenMap::logicalKeys())->toContain(ZaakeigenschappenMap::AANVRAAG_TYPE);
+});
+
+test('zonder rol blijft het aanvraagtype weg', function () {
+    $state = new FormState(values: ['watIsDeNaamVanHetEvenementVergunning' => 'Synthetisch evenement']);
+
+    $namen = collect($this->map->buildEigenschappen($state))->map(fn ($e) => key($e))->all();
+
+    expect($namen)->not->toContain(ZaakeigenschappenMap::AANVRAAG_TYPE);
 });
