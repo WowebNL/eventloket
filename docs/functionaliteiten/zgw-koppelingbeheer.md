@@ -161,6 +161,8 @@ Eventloket verwacht dat er in de catalogi zaaktypen bestaan voor de verschillend
 | Vooraankondiging | Een vooraankondiging van een evenement. |
 | Doorkomst | Een doorkomst van een route (optocht of wedstrijd) door de gemeente. |
 
+Een gemeente kiest zelf of ze per rol een eigen zaaktype gebruikt, of één zaaktype voor meerdere rollen (tot en met één zaaktype voor alle vier). Eventloket legt bij elke zaak vast om welke rol het gaat, en houdt de rollen daardoor ook op een gedeeld zaaktype uit elkaar. In het zaaksysteem zelf is dat onderscheid bij een gedeeld zaaktype alleen te zien via de eigenschap `aanvraag_type` (zie de tabel hieronder). Een gedeeld zaaktype heeft één set statustypen en resultaattypen, en autorisaties in het zaaksysteem gelden per zaaktype; houd daar rekening mee bij de keuze.
+
 Zorg dat elk zaaktype dat de gemeente wil gebruiken bestaat en gepubliceerd is, en dat het beschikt over:
 
 - De **eigenschappen** die bij een evenement horen (zie de tabel hieronder). In de gedeelde hoofdkoppeling heten deze eigenschappen exact zoals de logische sleutels in Eventloket. In een eigen zaaksysteem mogen ze anders heten; die vertaling leg je later vast in de zaaktype-koppeling (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).
@@ -187,12 +189,14 @@ De onderstaande tabel toont alle eigenschappen die Eventloket bij een zaak kan a
 | `risico_classificatie` | Risicoclassificatie van het evenement | tekst | 255 |
 | `locaties_evenement` | Namen van de locatie(s), kommagescheiden | tekst | 255 |
 | `intern_zaaknummer` | Het interne zaaknummer dat Eventloket aan de zaak toekent | tekst | 255 |
+| `aanvraag_type` | Soort aanvraag: `Vergunning`, `Melding`, `Vooraankondiging` of `Doorkomst` | tekst | 255 |
 
 Toelichting bij de formaten:
 
 - **Datums.** Datumvelden krijgen het formaat datum_tijd; de waarde wordt aangeleverd als `jjjjmmdduummss` (lengte 14).
 - **Getal.** Het aantal aanwezigen wordt als geheel getal aangeleverd; een lengte van 9 cijfers is ruim voldoende.
 - **Tekst.** Voor de tekstvelden is een lengte van 255 karakters de veilige keuze; dit is ook de lengte die Eventloket in de eigen hoofdkoppeling gebruikt.
+- **Soort aanvraag.** `aanvraag_type` krijgt altijd een van de vier waarden uit de tabel, met hoofdletter. Een deelzaak voor een doorkomst krijgt `Doorkomst`, ook als de hoofdzaak een vergunning is. De eigenschap is vooral nuttig als meerdere rollen hetzelfde zaaktype gebruiken: dan kan het zaaksysteem er op filteren en rapporteren.
 
 Alle eigenschappen zijn optioneel; ontbreekt een eigenschap in het zaaktype, dan wordt die waarde overgeslagen (zie ook [sectie 7](#7-zaaktype-koppelingen-instellen)). Gebruik voor elke eigenschap een kardinaliteit van 1.
 
@@ -331,7 +335,7 @@ Maak per gebruikte type in Eventloket (Vergunning, vooraankondiging, melding en 
 1. Klik op de knop om een nieuwe zaaktype-koppeling aan te maken.
 2. Vul de sectie **Zaaktype** in:
    - **Zaaktype Eventloket.** Kies de rol (Vergunning, Melding, Vooraankondiging of Doorkomst). Elke rol kan per gemeente maar één keer gekoppeld worden. Deze keuze kan na aanmaken niet meer gewijzigd worden.
-   - **Zaaktype ZGW.** Kies het bijbehorende zaaktype uit de catalogi van het externe zaaksysteem.
+   - **Zaaktype ZGW.** Kies het bijbehorende zaaktype uit de catalogi van het externe zaaksysteem. Hetzelfde zaaktype mag bij meerdere rollen gekozen worden (zie [sectie 4.4](#44-richt-de-zaaktypecatalogus-in)). Elke rol houdt dan een eigen koppeling, met eigen eigenschappen, flow-blockers en gedrag; Eventloket gebruikt voor een zaak altijd de koppeling van de rol van die zaak.
 
 ![Het formulier Zaaktype-koppeling met de sectie Zaaktype en het geopende menu Zaaktype ZGW](../assets/zgw-koppelingbeheer/zaaktype-koppeling.webp)
 

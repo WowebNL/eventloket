@@ -374,6 +374,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return [
             'public_id' => $zaak->public_id,
             'naam_evenement' => $zaak->reference_data->naam_evenement,
+            'aanvraagtype' => $zaak->effectiveRole()?->getLabel(),
             'zaaktype' => $zaak->zaaktype?->name,
             'gemeente' => $zaak->municipality?->name,
             'naam_locatie_evenement' => $zaak->reference_data->naam_locatie_evenement,
@@ -593,20 +594,24 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected function applyHiddenResultaatTypesFilter(Builder $query)
     {
-        // The effective hidden-resultaattype urls per zaaktype: the admin-managed
-        // row value, overridden by the per-municipality blueprint where a gemeente
-        // runs its own ZGW instance. For each one, exclude zaken that both belong
-        // to that zaaktype AND have their resultaattype_url in the hidden list.
-        // Uses only Laravel abstractions so it works on both MySQL and PostgreSQL.
-        foreach (Zaaktype::effectiveHiddenResultaatTypesMap() as $zaaktypeId => $hiddenUrls) {
-            if (empty($hiddenUrls)) {
-                continue;
-            }
-
-            $query->whereNot(function (Builder $q) use ($zaaktypeId, $hiddenUrls) {
-                $q->where('zaaktype_id', $zaaktypeId)
+        // The effective hidden-resultaattype urls per zaaktype and role: the
+        // admin-managed row value, overridden by the koppeling of the zaak's
+        // role where a gemeente runs its own ZGW instance. For each rule,
+        // exclude the zaken it covers that have their resultaattype_url in the
+        // hidden list. Uses only Laravel abstractions so it works on both
+        // MySQL and PostgreSQL.
+        foreach (Zaaktype::effectiveHiddenResultaatTypeRules() as $rule) {
+            $query->whereNot(function (Builder $q) use ($rule) {
+                $q->where('zaaktype_id', $rule['zaaktype_id'])
+                    ->when(
+                        $rule['role'] !== null,
+                        fn (Builder $byRole) => $byRole->where('zaken.role', $rule['role']),
+                        fn (Builder $otherRoles) => $otherRoles->where(fn (Builder $roles) => $roles
+                            ->whereNull('zaken.role')
+                            ->when($rule['except_roles'] !== [], fn (Builder $except) => $except->orWhereNotIn('zaken.role', $rule['except_roles']))),
+                    )
                     ->whereNotNull('reference_data->resultaattype_url')
-                    ->whereIn('reference_data->resultaattype_url', $hiddenUrls);
+                    ->whereIn('reference_data->resultaattype_url', $rule['hidden']);
             });
         }
     }
@@ -712,7 +717,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         // every municipality has its own concrete zaaktype with the same name, so
         // a name list would show duplicates. The four roles cover all of them.
         return Select::make('zaaktype_roles')
-            ->label(__('resources/zaak.columns.zaaktype.label'))
+            ->label(__('resources/zaak.columns.aanvraag_type.label'))
             ->options(ZaaktypeRole::class)
             ->multiple()
             ->preload();
@@ -721,14 +726,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
     protected function applyZaaktypesFilter(Builder $query, array $filters)
     {
         if (! empty($filters['zaaktype_roles'])) {
-            // Matched through the effective-role ladder rather than the `role`
-            // column directly: that column is nullable and only written by a
-            // koppeling or a catalogus sync, so comparing it drops every zaak
-            // whose zaaktype has no stored role.
-            $query->whereHas('zaaktype', function (Builder $zaaktypen) use ($filters): Builder {
-                /** @var Builder<Zaaktype> $zaaktypen */
-                return $zaaktypen->withEffectiveRoleIn($filters['zaaktype_roles']);
-            });
+            // Matched on the effective role of the zaak: its stored role, or the
+            // role of its zaaktype for a zaak without one. Several roles may
+            // share one zaaktype, so the zaaktype alone cannot answer this.
+            /** @var Builder<Zaak> $query */
+            $query->withEffectiveRoleIn($filters['zaaktype_roles']);
         }
     }
 }

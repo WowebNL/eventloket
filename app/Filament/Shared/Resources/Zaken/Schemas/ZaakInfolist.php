@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\Zaken\Schemas;
 
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Support\DagenRepeater;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
@@ -12,7 +13,6 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserT
 use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\DeelzakenTable;
 use App\Livewire\Zaken\ZaakDocumentsTable;
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
@@ -98,7 +98,7 @@ class ZaakInfolist
     private static function internZaaknummerEigenschapNaam(Zaak $record): string
     {
         return ZaaktypeBlueprint::eigenschapNaam(
-            MunicipalityZaaktypeMapping::forZaaktype($record->zaaktype),
+            $record->zaaktypeMapping(),
             'intern_zaaknummer',
         );
     }
@@ -187,6 +187,12 @@ class ZaakInfolist
             TextEntry::make('public_id')
                 ->icon('heroicon-o-identification')
                 ->label(__('resources/zaak.columns.public_id.label')),
+            TextEntry::make('role')
+                ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                // The effective role: a zaaktype may serve several kinds of
+                // aanvraag, so the zaaktype below does not say which.
+                ->state(fn (Zaak $record): ?ZaaktypeRole => $record->effectiveRole())
+                ->badge(),
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             // Issue #10: show the vooraankondiging link in both directions.
@@ -362,7 +368,7 @@ class ZaakInfolist
                                                     // The catalogus may name these eigenschappen differently;
                                                     // the koppeling holds the translation, so resolve both
                                                     // names once and match on them everywhere below.
-                                                    $mapping = MunicipalityZaaktypeMapping::forZaaktype($record->zaaktype);
+                                                    $mapping = $record->zaaktypeMapping();
                                                     $naam = [
                                                         'risico_classificatie' => ZaaktypeBlueprint::eigenschapNaam($mapping, 'risico_classificatie'),
                                                         'risico_toelichting' => ZaaktypeBlueprint::eigenschapNaam($mapping, 'risico_toelichting'),

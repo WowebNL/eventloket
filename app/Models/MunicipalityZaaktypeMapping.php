@@ -78,8 +78,13 @@ class MunicipalityZaaktypeMapping extends Model
 
     /**
      * The blueprint that owns a given zaaktype, matched by the municipality and
-     * the logical identificatie. Used by call sites that operate on an existing
-     * zaak/zaaktype and do not carry the role explicitly.
+     * the logical identificatie. Used by call sites that operate on a zaaktype
+     * without knowing the role.
+     *
+     * A municipality may map several roles to the same zaaktype, and then this
+     * returns the first of them. Whenever a zaak is at hand, use
+     * {@see self::forZaak()} instead, which picks the koppeling of the zaak's
+     * own role.
      */
     public static function forZaaktype(?Zaaktype $zaaktype): ?self
     {
@@ -90,6 +95,50 @@ class MunicipalityZaaktypeMapping extends Model
         return static::query()
             ->where('municipality_id', $zaaktype->municipality_id)
             ->where('zaaktype_identificatie', $zaaktype->identificatie)
+            ->orderBy('id')
             ->first();
+    }
+
+    /**
+     * The blueprint for a zaaktype in a given role: the koppeling of that role,
+     * provided it points at this very zaaktype.
+     *
+     * The identificatie check matters when a zaak falls back to a zaaktype of
+     * another catalogus: the role's koppeling then names a different zaaktype
+     * and must not be applied. In that case, and when no role is known, this
+     * answers what {@see self::forZaaktype()} answers.
+     */
+    public static function forZaaktypeInRole(?Zaaktype $zaaktype, ?ZaaktypeRole $role): ?self
+    {
+        if (! $zaaktype || $zaaktype->municipality_id === null || ! $zaaktype->identificatie) {
+            return null;
+        }
+
+        if ($role !== null) {
+            $mapping = static::query()
+                ->where('municipality_id', $zaaktype->municipality_id)
+                ->where('role', $role->value)
+                ->where('zaaktype_identificatie', $zaaktype->identificatie)
+                ->first();
+
+            if ($mapping !== null) {
+                return $mapping;
+            }
+        }
+
+        return static::forZaaktype($zaaktype);
+    }
+
+    /**
+     * The blueprint that applies to a zaak: the koppeling of its own role on
+     * its zaaktype. A zaak without a stored role falls back to the zaaktype.
+     */
+    public static function forZaak(?Zaak $zaak): ?self
+    {
+        if (! $zaak) {
+            return null;
+        }
+
+        return static::forZaaktypeInRole($zaak->zaaktype, $zaak->role);
     }
 }
