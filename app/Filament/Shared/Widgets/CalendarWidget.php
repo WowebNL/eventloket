@@ -374,6 +374,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return [
             'public_id' => $zaak->public_id,
             'naam_evenement' => $zaak->reference_data->naam_evenement,
+            'aanvraagtype' => $zaak->effectiveRole()?->getLabel(),
             'zaaktype' => $zaak->zaaktype?->name,
             'gemeente' => $zaak->municipality?->name,
             'naam_locatie_evenement' => $zaak->reference_data->naam_locatie_evenement,
