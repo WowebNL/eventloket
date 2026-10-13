@@ -382,6 +382,11 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             'risico_classificatie' => $zaak->reference_data->risico_classificatie,
             'status_name' => $zaak->reference_data->status_name,
             'status_color' => $zaak->status_color,
+            // The stored description of the resultaattype, as shown on the
+            // zaak page; null while the zaak has no result.
+            'resultaat' => $zaak->reference_data->resultaat,
+            // Kept as the stored text, which is not guaranteed to be a number.
+            'aantal_aanwezigen' => $zaak->reference_data->aanwezigen,
         ];
     }
 
