@@ -91,6 +91,31 @@ test('copied application: take-down start can move into the new period after the
     expect($max === null || $max >= '2027-03-01 17:00:00')->toBeTrue("AfbouwStart max is {$max}");
 });
 
+test('copied application: build-up and take-down ends can move into the new period after the event moves earlier', function () {
+    $component = Livewire::test(EventFormPage::class, ['draft' => kopieVanEerdereAanvraag($this->user, $this->organisation)->id]);
+
+    // The event moves from 11 January 2027 to 1 December 2026, before the
+    // copied build-up and take-down periods.
+    $component->set('data.EvenementStart', '2026-12-01 15:00:00');
+    $component->set('data.EvenementEind', '2026-12-01 16:00:00');
+
+    $html = $component->html();
+
+    // The organiser wants to build up until 30 November 18:00.
+    $opbouwMin = grensVan($html, 'OpbouwEind', 'min');
+    $opbouwMax = grensVan($html, 'OpbouwEind', 'max');
+    expect($opbouwMin === null || $opbouwMin <= '2026-11-30 18:00:00')->toBeTrue("OpbouwEind min is {$opbouwMin}");
+    expect($opbouwMin === null || $opbouwMax === null || $opbouwMin <= $opbouwMax)
+        ->toBeTrue("OpbouwEind min {$opbouwMin}, max {$opbouwMax}");
+
+    // And to take down until 2 December 12:00.
+    $afbouwMin = grensVan($html, 'AfbouwEind', 'min');
+    $afbouwMax = grensVan($html, 'AfbouwEind', 'max');
+    expect($afbouwMin === null || $afbouwMin <= '2026-12-02 12:00:00')->toBeTrue("AfbouwEind min is {$afbouwMin}");
+    expect($afbouwMin === null || $afbouwMax === null || $afbouwMin <= $afbouwMax)
+        ->toBeTrue("AfbouwEind min {$afbouwMin}, max {$afbouwMax}");
+});
+
 test('new application: build-up start can move along when the event is moved later', function () {
     $draft = Draft::create([
         'user_id' => $this->user->id,
