@@ -59,7 +59,7 @@ function overzichtZakenOpGedeeldZaaktype(Municipality $municipality, Organisatio
     ]);
 
     $zaken = [];
-    foreach ($roles as $role) {
+    foreach ($roles as $index => $role) {
         $zaken[$role->value] = Zaak::factory()->create([
             'zaaktype_id' => $zaaktype->id,
             'role' => $role,
@@ -70,7 +70,9 @@ function overzichtZakenOpGedeeldZaaktype(Municipality $municipality, Organisatio
                 statustype_url: '',
                 start_evenement: now()->addDay()->toIso8601String(),
                 eind_evenement: now()->addDays(2)->toIso8601String(),
-                naam_evenement: "Synthetisch {$role->value}",
+                // Deliberately free of the role, so a search on the
+                // aanvraagtype cannot match the event name instead.
+                naam_evenement: 'Synthetisch evenement '.($index + 1),
             ),
         ]);
     }
@@ -117,7 +119,9 @@ it('sorts the zaken list on the aanvraagtype', function () {
 
     livewire(ListZaken::class)
         ->sortTable('role')
-        ->assertCanSeeTableRecords([$this->zaken['melding'], $this->zaken['vergunning']], inOrder: true);
+        ->assertCanSeeTableRecords([$this->zaken['melding'], $this->zaken['vergunning']], inOrder: true)
+        ->sortTable('role', 'desc')
+        ->assertCanSeeTableRecords([$this->zaken['vergunning'], $this->zaken['melding']], inOrder: true);
 });
 
 it('labels the role filter as the aanvraagtype', function () {
