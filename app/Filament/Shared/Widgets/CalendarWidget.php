@@ -147,6 +147,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return ViewAction::make()
             ->modelLabel(__('resources/zaak.label'))
             ->pluralModelLabel(__('resources/zaak.plural_label'))
+            // The infolist reads from the record, so the modal state does not
+            // need a copy of the record attributes.
+            ->mutateRecordDataUsing(fn (): array => [])
             ->before(function (Zaak $record) {
                 activity('views')
                     ->event('view')
@@ -270,7 +273,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 ->fillForm(fn () => [
                     ...$this->filters,
                     'start_date' => $this->start?->format('Y-m-d'),
-                    'end_date' => $this->end?->format('Y-m-d'),
+                    'end_date' => $this->defaultExportEndDate()?->format('Y-m-d'),
                 ])
                 ->schema([
                     Section::make('Filters')
@@ -305,8 +308,12 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Advisor, Role::Admin]))
                         ->label('Exporteer naar GeoJSON')
                         ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->action(function (array $mountedActions) {
-                            $data = $mountedActions[0]->getRawData();
+                        ->action(function () {
+                            // Read the export modal through its schema, so this
+                            // button applies the same validation as the main
+                            // export action (required, ordered dates) instead
+                            // of the raw, unvalidated form data.
+                            $data = $this->getMountedActionSchema(0)->getState();
                             $filters = $data;
                             unset($filters['start_date'], $filters['end_date']);
 
@@ -321,12 +328,16 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
                             $features = $events->map(function (Model $zaak) {
                                 /** @var Zaak $zaak */
-                                $geometry = $zaak->openzaak->zaakgeometrie;
+                                // A zaak without a ZGW zaak (for example an
+                                // imported one) has no zgw data, and a zaak
+                                // without a geometry has nothing to map. Skip
+                                // both instead of failing the whole export.
+                                $geometry = $zaak->openzaak?->zaakgeometrie;
                                 if ($geometry) {
                                     return [
                                         'type' => 'Feature',
                                         'geometry' => $geometry,
-                                        'properties' => $zaak->makeHidden(['zgw_zaak_url', 'organiser_user_id', 'imported_data'])->toArray(),
+                                        'properties' => $this->geojsonProperties($zaak),
                                     ];
                                 }
 
@@ -349,6 +360,52 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         ];
     }
 
+    /**
+     * Properties of a zaak in the GeoJSON export.
+     *
+     * An explicit list of event fields, all of which the CSV export already
+     * offers to the same roles, instead of the full model. Contact details,
+     * form data, imported source data and internal references stay out.
+     *
+     * @return array<string, string|null>
+     */
+    protected function geojsonProperties(Zaak $zaak): array
+    {
+        return [
+            'public_id' => $zaak->public_id,
+            'naam_evenement' => $zaak->reference_data->naam_evenement,
+            'zaaktype' => $zaak->zaaktype?->name,
+            'gemeente' => $zaak->municipality?->name,
+            'naam_locatie_evenement' => $zaak->reference_data->naam_locatie_evenement,
+            'start_evenement' => $zaak->reference_data->start_evenement,
+            'eind_evenement' => $zaak->reference_data->eind_evenement,
+            'risico_classificatie' => $zaak->reference_data->risico_classificatie,
+            'status_name' => $zaak->reference_data->status_name,
+            'status_color' => $zaak->status_color,
+        ];
+    }
+
+    /**
+     * End date to prefill in the export modal.
+     *
+     * The list view starts at today without an end date, so the export
+     * modal would open with an empty, required end date there. In that case
+     * propose a period of one month from the start. An end date that is set,
+     * by the calendar view or by the list range filter, is used as is.
+     */
+    protected function defaultExportEndDate(): ?CarbonImmutable
+    {
+        if ($this->end !== null) {
+            return $this->end;
+        }
+
+        if ($this->viewMode !== 'table' || $this->start === null) {
+            return null;
+        }
+
+        return $this->start->addMonthNoOverflow();
+    }
+
     // Let child widgets add their own filters.
     protected function getFilterSchema(): array
     {
@@ -364,6 +421,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->recordActions([
                 \Filament\Actions\ViewAction::make()
                     ->schema(fn (Schema $schema) => $this->defaultSchema($schema))
+                    // Same as the calendar view action: the infolist reads
+                    // from the record, not from the modal state.
+                    ->mutateRecordDataUsing(fn (): array => [])
                     ->extraModalFooterActions([
                         $this->viewActionFooterAction(),
                     ]),
@@ -453,6 +513,24 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         $query = Event::query();
 
         return $this->applyContextFilters($query, $info);
+    }
+
+    /**
+     * Resolve a clicked calendar item on the server.
+     *
+     * Every item in this calendar is an Event, so the record is always looked
+     * up as one, within the same query that feeds the calendar. Only Event
+     * records are resolved.
+     */
+    protected function resolveEventRecordRouteBinding(string $model, mixed $key): ?Model
+    {
+        if ($model !== Event::class) {
+            return null;
+        }
+
+        return $this->applyContextFilters(Event::query())
+            ->whereKey($key)
+            ->first();
     }
 
     // Let child widgets add their own constraints.
