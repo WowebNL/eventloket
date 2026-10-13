@@ -25,6 +25,7 @@
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
@@ -40,6 +41,7 @@ use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\SetInitialStatusZGW;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
@@ -286,4 +288,36 @@ test('een gekoppelde vooraankondiging krijgt bij submit de vervangt-relatie (iss
         ->and($relatie->gerelateerde_zaak_id)->toBe($vooraankondiging->id)
         ->and($relatie->type)->toBe(ZaakRelatieType::VervangtVooraankondiging)
         ->and($zaak->vervangtVooraankondiging()->pluck('zaken.id')->all())->toBe([$vooraankondiging->id]);
+});
+
+test('legt het aanvraagtype vast op de zaak wanneer aanvraagtypen één zaaktype delen', function () {
+    $sc = scenarioBuurtfeestInHeerlen();
+    $sc['zaaktype']->update(['identificatie' => 'SYN-GEDEELD']);
+
+    // Vergunning first: a role derived from the zaaktype alone would say
+    // vergunning for every zaak on it.
+    foreach ([ZaaktypeRole::Vergunning, ZaaktypeRole::Vooraankondiging] as $rol) {
+        MunicipalityZaaktypeMapping::create([
+            'municipality_id' => $sc['heerlen']->id,
+            'role' => $rol,
+            'zaaktype_identificatie' => 'SYN-GEDEELD',
+        ]);
+    }
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'watIsDeNaamVanHetEvenementVergunning' => 'Synthetische vooraankondiging',
+        'EvenementStart' => '2026-06-14T14:00',
+        'EvenementEind' => '2026-06-14T18:00',
+    ]);
+
+    fakeOpenzaakZaakCreate();
+    Bus::fake();
+
+    $zaak = app(SubmitEventForm::class)->execute($state, $sc['user'], $sc['organisation']);
+
+    expect($zaak->zaaktype_id)->toBe($sc['zaaktype']->id)
+        ->and($zaak->refresh()->role)->toBe(ZaaktypeRole::Vooraankondiging)
+        ->and($zaak->isVooraankondiging())->toBeTrue();
 });

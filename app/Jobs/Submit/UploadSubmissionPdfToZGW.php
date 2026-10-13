@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Jobs\Submit;
 
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
@@ -99,7 +98,7 @@ final class UploadSubmissionPdfToZGW implements ShouldQueue
     {
         // The aanvraagformulier PDF uses its own blueprint slot, falling back
         // to the historical "first type" when none is configured.
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $mapping = $this->zaak->zaaktypeMapping();
         $chosen = ZaaktypeBlueprint::aanvraagInformatieobjecttype($mapping, $this->zaak->document_types);
 
         if (! $chosen || ! $chosen->url) {

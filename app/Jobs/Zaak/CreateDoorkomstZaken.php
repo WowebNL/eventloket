@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Zaak;
 
 use App\Actions\Geospatial\CheckIntersects;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\MapFormStateToReferenceData;
@@ -85,7 +86,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         if (! $this->zaak->zgw_zaak_url || ! $this->zaak->zaaktype) {
             return;
         }
-        if (! $this->zaak->zaaktype->effectiveTriggersRouteCheck()) {
+        if (! $this->zaak->triggersRouteCheck()) {
             return;
         }
 
@@ -408,7 +409,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
         // The koppeling of the doorkomst zaaktype decides how its catalogus names
         // the eigenschappen, both when writing them and when reading them back.
-        $deelMapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $deelMapping = MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
 
         // The deelzaak acts as the organisation of the connection it is created
         // on, just like the hoofdzaak does in CreateZaakInZGW. On the hoofdzaak's
@@ -462,6 +463,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             [
                 'public_id' => $newOzZaak->identificatie,
                 'zaaktype_id' => $doorkomstZaaktype->id,
+                'role' => ZaaktypeRole::Doorkomst,
                 'hoofdzaak_id' => $this->zaak->id, // local hoofdzaak link (works cross-instance)
                 'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
                 'data_object_url' => null, // the Objects API is no longer part of the new flow
@@ -591,8 +593,12 @@ class CreateDoorkomstZaken implements ShouldQueue
             ->collect()
             ->map(fn ($e) => EigenschapData::from($e));
 
-        $hoofdMapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $hoofdMapping = $this->zaak->zaaktypeMapping();
         $eigenschappen = ZaaktypeBlueprint::logicalEigenschappen($hoofdMapping, $ozZaak->eigenschappen_key_value);
+
+        // The deelzaak is a route passage, whatever kind of aanvraag the
+        // hoofdzaak is, so its aanvraagtype is not copied over.
+        $eigenschappen[ZaakeigenschappenMap::AANVRAAG_TYPE] = ZaakeigenschappenMap::aanvraagTypeWaarde(ZaaktypeRole::Doorkomst);
 
         foreach ($eigenschappen as $logicalKey => $waarde) {
             if (! $waarde) {
@@ -625,7 +631,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
 
         $roltypen = $deelConnection->catalogi()->roltypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url]);
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $mapping = MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
         $roltype = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
         if (! $roltype) {
             Log::warning('CreateDoorkomstZaken: no initiator roltype', ['zaak' => $newZaakUrl]);
@@ -659,7 +665,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         // Resolving a target informatieobjecttype is only needed cross-instance; the
         // source type url is not portable and must be re-mapped by omschrijving. The
         // mapping and the source-type omschrijvingen are resolved at most once here.
-        $deelMapping = $sameInstance ? null : MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $deelMapping = $sameInstance ? null : MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
         $sourceTypeOmschrijvingen = [];
 
         $zios = Zgw::connection($hoofdConnectionName)->zaken()->zaakinformatieobjecten()->index(['zaak' => $ozZaak->url]);
@@ -870,7 +876,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             return $this->hoofdAanvraagOmschrijving = null;
         }
 
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($zaaktype);
+        $mapping = $this->zaak->zaaktypeMapping();
         $aanvraag = ZaaktypeBlueprint::aanvraagInformatieobjecttype($mapping, $zaaktype->documentTypesForUser());
 
         return $this->hoofdAanvraagOmschrijving = ($aanvraag && property_exists($aanvraag, 'omschrijving'))
@@ -881,7 +887,7 @@ class CreateDoorkomstZaken implements ShouldQueue
     private function createInitieleStatus(ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
         $statustypen = $deelConnection->catalogi()->statustypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])->collect();
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $mapping = MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
         $initieel = ZaaktypeBlueprint::initialStatustype($mapping, $statustypen);
         if (! $initieel) {
             Log::warning('CreateDoorkomstZaken: no statustype', ['zaak' => $newZaakUrl]);

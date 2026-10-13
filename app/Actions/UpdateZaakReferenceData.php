@@ -2,7 +2,6 @@
 
 namespace App\Actions;
 
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
@@ -24,7 +23,7 @@ class UpdateZaakReferenceData
                 // koppeling renames them, translate back to the logical keys the
                 // reference data is built from, otherwise a value changed in the
                 // zaaksysteem lands under an unknown key and is dropped.
-                MunicipalityZaaktypeMapping::forZaaktype($zaak->zaaktype),
+                $zaak->zaaktypeMapping(),
                 $zaak->openzaak->eigenschappen_key_value,
             ),
             // Dates come back in the ZGW wire form; the reference data keeps
