@@ -66,7 +66,10 @@ class ZakenTable
                     ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->sortable()
                     ->searchable()
-                    ->toggleable(),
+                    // Hidden by default: a zaaktype may serve several kinds of
+                    // aanvraag, so the aanvraagtype column is the one that tells
+                    // them apart. Still available through the column toggle.
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))

@@ -135,3 +135,13 @@ it('lets the organiser filter the calendar on the aanvraagtype', function () {
         ->assertCanSeeTableRecords([$this->zaken['melding']])
         ->assertCanNotSeeTableRecords([$this->zaken['vergunning']]);
 });
+
+it('hides the zaaktype column by default but keeps it available', function () {
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+
+    livewire(ListZaken::class)
+        ->assertTableColumnExists('zaaktype.name')
+        ->assertCanNotRenderTableColumn('zaaktype.name')
+        ->assertCanRenderTableColumn('role');
+});
