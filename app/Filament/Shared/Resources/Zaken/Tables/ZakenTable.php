@@ -53,6 +53,15 @@ class ZakenTable
                         ->orderBy($query->qualifyColumn('public_id'), $direction))
                     ->searchable()
                     ->toggleable(),
+                TextColumn::make('role')
+                    ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                    // The effective role, so a zaak without a stored role still
+                    // shows the role it derives from its zaaktype.
+                    ->state(fn (Zaak $record): ?ZaaktypeRole => $record->effectiveRole())
+                    ->badge()
+                    ->sortable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => self::whereRoleLabelMatches($query, $search))
+                    ->toggleable(),
                 TextColumn::make('zaaktype.name')
                     ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->sortable()
@@ -220,7 +229,7 @@ class ZakenTable
                     })
                     ->visible(fn (): bool => auth()->user()->role === Role::Admin),
                 SelectFilter::make('role')
-                    ->label(__('resources/zaak.columns.zaaktype.label'))
+                    ->label(__('resources/zaak.columns.aanvraag_type.label'))
                     ->options(ZaaktypeRole::class)
                     ->multiple()
                     // Matched on the effective role of the zaak: its stored
@@ -249,5 +258,25 @@ class ZakenTable
             ])
             ->defaultSort('created_at', direction: 'desc')
             ->poll(); // default 10s
+    }
+
+    /**
+     * Search on the aanvraagtype by its label: the role is stored as a code, so
+     * the search term is matched against the labels first and the zaken are
+     * then selected on their effective role.
+     *
+     * @param  Builder<Zaak>  $query
+     * @return Builder<Zaak>
+     */
+    private static function whereRoleLabelMatches(Builder $query, string $search): Builder
+    {
+        $needle = mb_strtolower(trim($search));
+
+        $roles = array_values(array_filter(
+            ZaaktypeRole::cases(),
+            fn (ZaaktypeRole $role): bool => $needle !== '' && str_contains(mb_strtolower($role->getLabel()), $needle),
+        ));
+
+        return $query->withEffectiveRoleIn($roles);
     }
 }

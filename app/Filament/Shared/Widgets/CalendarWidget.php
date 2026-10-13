@@ -711,7 +711,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         // every municipality has its own concrete zaaktype with the same name, so
         // a name list would show duplicates. The four roles cover all of them.
         return Select::make('zaaktype_roles')
-            ->label(__('resources/zaak.columns.zaaktype.label'))
+            ->label(__('resources/zaak.columns.aanvraag_type.label'))
             ->options(ZaaktypeRole::class)
             ->multiple()
             ->preload();

@@ -23,6 +23,9 @@ return [
         'zaaktype' => [
             'label' => 'Zaaktype',
         ],
+        'aanvraag_type' => [
+            'label' => 'Aanvraagtype',
+        ],
         'risico_classificatie' => [
             'label' => 'Risicoclassificatie',
         ],
