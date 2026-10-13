@@ -19,8 +19,10 @@ use App\Enums\ZaaktypeRole;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
 use App\Filament\Advisor\Widgets\AdviceThreadInboxWidget;
 use App\Filament\Organiser\Resources\Zaken\Pages\ListZaken as OrganiserListZaken;
+use App\Filament\Organiser\Resources\Zaken\Pages\ViewZaak as OrganiserViewZaak;
 use App\Filament\Organiser\Widgets\OrganiserCalendarWidget;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
+use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
@@ -231,3 +233,52 @@ it('shows the aanvraagtype in the advisor inbox', function () {
         ->assertCanSeeTableRecords([$thread])
         ->assertTableColumnStateSet('zaak.role', ZaaktypeRole::Melding, $thread);
 });
+
+it('shows the aanvraagtype on the zaak page of every panel', function (string $panel) {
+    // No ZGW zaak behind it, so the page renders from local data only.
+    $melding = $this->zaken['melding'];
+    $melding->update(['zgw_zaak_url' => null, 'form_state_snapshot' => ['values' => [], 'system' => []]]);
+
+    Filament::setCurrentPanel(Filament::getPanel($panel));
+
+    $page = match ($panel) {
+        'organiser' => function () use ($melding) {
+            $organiser = User::factory()->create(['role' => Role::Organiser]);
+            $this->organisation->users()->attach($organiser, ['role' => OrganisationRole::Admin]);
+            $melding->update(['organiser_user_id' => $organiser->id]);
+            $this->actingAs($organiser);
+            Filament::setTenant($this->organisation);
+
+            return OrganiserViewZaak::class;
+        },
+        'municipality' => function () {
+            $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+            $coordinator->municipalities()->attach($this->municipality);
+            $this->actingAs($coordinator);
+            Filament::setTenant($this->municipality);
+
+            return ViewZaak::class;
+        },
+        'advisor' => function () {
+            $advisory = Advisory::factory()->create(['can_view_any_zaak' => true]);
+            $advisor = User::factory()->create(['role' => Role::Advisor]);
+            $advisory->users()->attach($advisor, ['role' => AdvisoryRole::Member]);
+            $this->actingAs($advisor);
+            Filament::setTenant($advisory);
+
+            return ViewZaak::class;
+        },
+        'admin' => function () {
+            $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+
+            return ViewZaak::class;
+        },
+    };
+
+    // Vergunning is the first koppeling of the shared zaaktype, so the page
+    // can only say "Melding" when it reads the role of the zaak itself.
+    livewire($page(), ['record' => $melding->id])
+        ->assertOk()
+        ->assertSeeText('Aanvraagtype')
+        ->assertSeeText(ZaaktypeRole::Melding->getLabel());
+})->with(['organiser', 'municipality', 'advisor', 'admin']);

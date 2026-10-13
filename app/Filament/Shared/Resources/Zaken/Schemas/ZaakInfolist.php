@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\Zaken\Schemas;
 
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Support\DagenRepeater;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
 use App\Filament\Shared\Resources\Zaken\Schemas\Components\LocationsTab;
@@ -186,6 +187,12 @@ class ZaakInfolist
             TextEntry::make('public_id')
                 ->icon('heroicon-o-identification')
                 ->label(__('resources/zaak.columns.public_id.label')),
+            TextEntry::make('role')
+                ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                // The effective role: a zaaktype may serve several kinds of
+                // aanvraag, so the zaaktype below does not say which.
+                ->state(fn (Zaak $record): ?ZaaktypeRole => $record->effectiveRole())
+                ->badge(),
             TextEntry::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             // Issue #10: show the vooraankondiging link in both directions.
