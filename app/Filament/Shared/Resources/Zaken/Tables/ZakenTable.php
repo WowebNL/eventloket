@@ -223,19 +223,17 @@ class ZakenTable
                     ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->options(ZaaktypeRole::class)
                     ->multiple()
-                    // Matched through the effective-role ladder rather than the
-                    // `role` column directly: that column is nullable and only
-                    // written by a koppeling or a catalogus sync, so comparing
-                    // it drops every zaak whose zaaktype has no stored role.
+                    // Matched on the effective role of the zaak: its stored
+                    // role, or the role of its zaaktype for a zaak without one.
+                    // Several roles may share one zaaktype, so the zaaktype
+                    // alone cannot answer this.
                     ->query(function (Builder $query, array $data): Builder {
                         if (empty($data['values'])) {
                             return $query;
                         }
 
-                        return $query->whereHas('zaaktype', function (Builder $zaaktypen) use ($data): Builder {
-                            /** @var Builder<Zaaktype> $zaaktypen */
-                            return $zaaktypen->withEffectiveRoleIn($data['values']);
-                        });
+                        /** @var Builder<Zaak> $query */
+                        return $query->withEffectiveRoleIn($data['values']);
                     }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)

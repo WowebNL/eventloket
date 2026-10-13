@@ -212,54 +212,76 @@ class Zaaktype extends Model
     }
 
     /**
-     * The effective hidden-resultaattype urls per zaaktype id, used by the
-     * calendar bulk filter. The admin-managed row value is the base; a
-     * per-municipality blueprint value (own-instance gemeenten) overrides it.
-     * An explicit empty blueprint value clears the row value for that zaaktype.
+     * The effective hidden-resultaattype urls for the calendar bulk filter, as
+     * rules per zaaktype and role.
      *
-     * @return array<string, array<int, string>>
+     * The admin-managed row value is the base; a per-municipality koppeling
+     * (own-instance gemeenten) overrides it, and an explicit empty koppeling
+     * value clears it. Several roles may share one zaaktype, each with its own
+     * koppeling, so the value is resolved per zaak the same way
+     * {@see MunicipalityZaaktypeMapping::forZaak()} resolves the koppeling:
+     *
+     * - a zaak whose role has a koppeling on the zaaktype gets that one;
+     * - any other zaak (no stored role, or a role without a koppeling here)
+     *   gets the first koppeling of the zaaktype, or the row value.
+     *
+     * Each rule matches the zaken of `zaaktype_id` with `role` when that is
+     * set, and otherwise those whose role is null or not in `except_roles`.
+     * Rules with an empty list are left out.
+     *
+     * @return list<array{zaaktype_id: string, role: string|null, except_roles: list<string>, hidden: array<int, string>}>
      */
-    public static function effectiveHiddenResultaatTypesMap(): array
+    public static function effectiveHiddenResultaatTypeRules(): array
     {
-        $map = [];
-
-        $rows = static::query()
-            ->whereNotNull('hidden_resultaat_types')
-            ->whereJsonLength('hidden_resultaat_types', '>', 0)
-            ->get(['id', 'hidden_resultaat_types']);
-
-        foreach ($rows as $zaaktype) {
-            $map[$zaaktype->id] = $zaaktype->hidden_resultaat_types;
-        }
-
         $mappings = MunicipalityZaaktypeMapping::query()
-            ->whereNotNull('hidden_resultaat_types')
-            ->get();
+            ->whereNotNull('zaaktype_identificatie')
+            ->orderBy('id')
+            ->get(['id', 'municipality_id', 'role', 'zaaktype_identificatie', 'hidden_resultaat_types']);
 
-        foreach ($mappings as $mapping) {
-            if (! $mapping->zaaktype_identificatie) {
-                continue;
+        $zaaktypen = static::query()
+            ->where(function (Builder $query) use ($mappings): void {
+                $query->where(fn (Builder $withRowValue) => $withRowValue
+                    ->whereNotNull('hidden_resultaat_types')
+                    ->whereJsonLength('hidden_resultaat_types', '>', 0));
+
+                foreach ($mappings->whereNotNull('hidden_resultaat_types') as $mapping) {
+                    $query->orWhere(fn (Builder $mapped) => $mapped
+                        ->where('municipality_id', $mapping->municipality_id)
+                        ->where('identificatie', $mapping->zaaktype_identificatie));
+                }
+            })
+            ->get(['id', 'municipality_id', 'identificatie', 'hidden_resultaat_types']);
+
+        $rules = [];
+
+        foreach ($zaaktypen as $zaaktype) {
+            $rowValue = is_array($zaaktype->hidden_resultaat_types) ? $zaaktype->hidden_resultaat_types : [];
+
+            $own = $mappings->filter(fn (MunicipalityZaaktypeMapping $mapping): bool => $zaaktype->identificatie !== null
+                && $mapping->municipality_id === $zaaktype->municipality_id
+                && $mapping->zaaktype_identificatie === $zaaktype->identificatie)->values();
+
+            // The ?? has isset semantics, so it also covers a null $mapping.
+            $effective = fn (?MunicipalityZaaktypeMapping $mapping): array => $mapping->hidden_resultaat_types ?? $rowValue;
+
+            foreach ($own as $mapping) {
+                $rules[] = [
+                    'zaaktype_id' => $zaaktype->id,
+                    'role' => $mapping->role->value,
+                    'except_roles' => [],
+                    'hidden' => $effective($mapping),
+                ];
             }
 
-            $zaaktype = static::query()
-                ->where('municipality_id', $mapping->municipality_id)
-                ->where('identificatie', $mapping->zaaktype_identificatie)
-                ->first(['id']);
-
-            if ($zaaktype === null) {
-                continue;
-            }
-
-            $hidden = $mapping->hidden_resultaat_types;
-
-            if (is_array($hidden) && $hidden !== []) {
-                $map[$zaaktype->id] = $hidden;
-            } else {
-                unset($map[$zaaktype->id]);
-            }
+            $rules[] = [
+                'zaaktype_id' => $zaaktype->id,
+                'role' => null,
+                'except_roles' => $own->map(fn (MunicipalityZaaktypeMapping $mapping): string => $mapping->role->value)->all(),
+                'hidden' => $effective($own->first()),
+            ];
         }
 
-        return $map;
+        return array_values(array_filter($rules, fn (array $rule): bool => $rule['hidden'] !== []));
     }
 
     /** @return Attribute<Collection<InformatieObjectTypeData>|null, void> */
@@ -320,11 +342,17 @@ class Zaaktype extends Model
     /**
      * The "Ingetrokken" resultaattype for a specific zaaktype version.
      *
+     * Pass the koppeling of the zaak when there is one: a zaaktype shared by
+     * several roles has a koppeling per role. Without it the koppeling of the
+     * zaaktype is used. Passing null is the same as not passing it, because
+     * {@see MunicipalityZaaktypeMapping::forZaak()} only returns null when the
+     * zaaktype has no koppeling either.
+     *
      * @return array<string, mixed>|null
      */
-    public function intrekkenResultaatTypeForVersion(?string $versionUrl = null): ?array
+    public function intrekkenResultaatTypeForVersion(?string $versionUrl = null, ?MunicipalityZaaktypeMapping $mapping = null): ?array
     {
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this);
+        $mapping ??= MunicipalityZaaktypeMapping::forZaaktype($this);
 
         return ZaaktypeBlueprint::ingetrokkenResultaattype($mapping, $this->getResultaatTypen($versionUrl));
     }

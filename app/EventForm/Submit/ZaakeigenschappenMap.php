@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Submit;
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\LocationKinds;
 
@@ -26,6 +27,14 @@ use App\EventForm\Support\LocationKinds;
  */
 final class ZaakeigenschappenMap
 {
+    /**
+     * Optional eigenschap carrying the kind of aanvraag (vergunning, melding,
+     * vooraankondiging, doorkomst). Lets a zaaksysteem tell the kinds apart
+     * when several of them share one zaaktype. Like every eigenschap it is
+     * only written when the catalogus of the zaaktype defines it.
+     */
+    public const AANVRAAG_TYPE = 'aanvraag_type';
+
     /**
      * @var array<string, string> eigenschap-naam → FormState-veld-key
      */
@@ -51,7 +60,7 @@ final class ZaakeigenschappenMap
      */
     public static function logicalKeys(): array
     {
-        return [...array_keys(self::EIGENSCHAPPEN), 'locaties_evenement'];
+        return [...array_keys(self::EIGENSCHAPPEN), 'locaties_evenement', self::AANVRAAG_TYPE];
     }
 
     /**
@@ -71,9 +80,11 @@ final class ZaakeigenschappenMap
      * Entries met lege waarde worden weggelaten — OF's `AddZaakeigenschappenZGW`
      * sloeg lege waarden al over op regel 50-51 van de oude job.
      *
+     * The aanvraagtype is added when the role of the zaak is passed.
+     *
      * @return list<array<string, scalar|array<int|string, mixed>>>
      */
-    public function buildEigenschappen(FormState $state): array
+    public function buildEigenschappen(FormState $state, ?ZaaktypeRole $role = null): array
     {
         $out = [];
         foreach (self::EIGENSCHAPPEN as $eigenschap => $key) {
@@ -89,7 +100,21 @@ final class ZaakeigenschappenMap
             $out[] = ['locaties_evenement' => $locaties];
         }
 
+        if ($role !== null) {
+            $out[] = [self::AANVRAAG_TYPE => self::aanvraagTypeWaarde($role)];
+        }
+
         return $out;
+    }
+
+    /**
+     * The value written to the aanvraagtype eigenschap: the Dutch label of the
+     * role. Fixed to Dutch so the stored value does not depend on the locale
+     * of the process that happens to write it.
+     */
+    public static function aanvraagTypeWaarde(ZaaktypeRole $role): string
+    {
+        return (string) __("enums/zaaktype_role.{$role->value}", [], 'nl');
     }
 
     private function buildLocatiesEvenement(FormState $state): ?string

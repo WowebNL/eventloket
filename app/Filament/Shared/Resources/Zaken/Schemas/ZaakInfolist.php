@@ -12,7 +12,6 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserT
 use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\DeelzakenTable;
 use App\Livewire\Zaken\ZaakDocumentsTable;
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
@@ -98,7 +97,7 @@ class ZaakInfolist
     private static function internZaaknummerEigenschapNaam(Zaak $record): string
     {
         return ZaaktypeBlueprint::eigenschapNaam(
-            MunicipalityZaaktypeMapping::forZaaktype($record->zaaktype),
+            $record->zaaktypeMapping(),
             'intern_zaaknummer',
         );
     }
@@ -362,7 +361,7 @@ class ZaakInfolist
                                                     // The catalogus may name these eigenschappen differently;
                                                     // the koppeling holds the translation, so resolve both
                                                     // names once and match on them everywhere below.
-                                                    $mapping = MunicipalityZaaktypeMapping::forZaaktype($record->zaaktype);
+                                                    $mapping = $record->zaaktypeMapping();
                                                     $naam = [
                                                         'risico_classificatie' => ZaaktypeBlueprint::eigenschapNaam($mapping, 'risico_classificatie'),
                                                         'risico_toelichting' => ZaaktypeBlueprint::eigenschapNaam($mapping, 'risico_toelichting'),
