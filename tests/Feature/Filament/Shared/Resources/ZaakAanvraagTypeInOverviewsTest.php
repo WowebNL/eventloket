@@ -10,11 +10,14 @@ declare(strict_types=1);
  * the role of the zaak itself, labelled as the aanvraagtype.
  */
 
+use App\Enums\AdviceStatus;
 use App\Enums\AdvisoryRole;
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Enums\ThreadType;
 use App\Enums\ZaaktypeRole;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
+use App\Filament\Advisor\Widgets\AdviceThreadInboxWidget;
 use App\Filament\Organiser\Resources\Zaken\Pages\ListZaken as OrganiserListZaken;
 use App\Filament\Organiser\Widgets\OrganiserCalendarWidget;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
@@ -22,6 +25,7 @@ use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
+use App\Models\Threads\AdviceThread;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
@@ -194,4 +198,32 @@ it('leaves the gemeente out of the municipality panel, whose tenant is the gemee
     livewire(ListZaken::class)
         ->assertCanNotRenderTableColumn('municipality.name')
         ->assertTableFilterHidden('municipality');
+});
+
+it('shows the aanvraagtype in the advisor inbox', function () {
+    $advisory = Advisory::factory()->create();
+    $advisor = User::factory()->create(['role' => Role::Advisor]);
+    $advisory->users()->attach($advisor, ['role' => AdvisoryRole::Member]);
+
+    $thread = AdviceThread::forceCreate([
+        'zaak_id' => $this->zaken['melding']->id,
+        'type' => ThreadType::Advice,
+        'advisory_id' => $advisory->id,
+        'advice_status' => AdviceStatus::Asked,
+        'advice_due_at' => now()->addDays(7),
+        'created_by' => null,
+        'title' => 'Synthetische adviesvraag',
+    ]);
+
+    $this->actingAs($advisor);
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    Filament::setTenant($advisory);
+
+    // The inbox loads its table lazily and starts on the unread and
+    // unassigned filters; neither is what this test is about.
+    livewire(AdviceThreadInboxWidget::class)
+        ->loadTable()
+        ->removeTableFilters()
+        ->assertCanSeeTableRecords([$thread])
+        ->assertTableColumnStateSet('zaak.role', ZaaktypeRole::Melding, $thread);
 });

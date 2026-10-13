@@ -3,6 +3,7 @@
 namespace App\Filament\Advisor\Widgets;
 
 use App\Enums\AdviceStatus;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Advisor\Resources\Zaken\ZaakResource;
 use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
 use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
@@ -53,6 +54,12 @@ class AdviceThreadInboxWidget extends TableWidget
                 TextColumn::make('zaak.zaaktype.municipality.name')
                     ->label(__('resources/advice_thread.columns.municipality.label'))
                     ->sortable(),
+                TextColumn::make('zaak.role')
+                    ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                    // The effective role of the zaak: a zaaktype may serve
+                    // several kinds of aanvraag, so its name does not say which.
+                    ->state(fn (AdviceThread $record): ?ZaaktypeRole => $record->zaak?->effectiveRole())
+                    ->badge(),
                 TextColumn::make('title')
                     ->label(__('resources/advice_thread.columns.title.label'))
                     ->searchable(),
