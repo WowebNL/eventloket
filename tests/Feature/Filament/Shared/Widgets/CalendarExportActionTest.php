@@ -252,6 +252,8 @@ test('geojson export limits the feature properties to the exported event fields'
         ->and($geojson['features'][0]['properties'])->toBe([
             'public_id' => 'EV-2026-0001',
             'naam_evenement' => 'Synthetisch festival',
+            // No stored role: derived from the zaaktype name.
+            'aanvraagtype' => 'Vergunning',
             'zaaktype' => 'Evenementenvergunning',
             'gemeente' => $this->municipality->name,
             'naam_locatie_evenement' => 'Stadspark',

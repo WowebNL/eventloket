@@ -6,7 +6,6 @@ namespace App\Jobs\Zaak;
 
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\InitiatorRolBuilder;
 use App\Services\Zgw\ZaakReadModel;
@@ -79,7 +78,7 @@ class UpdateInitiatorZGW implements ShouldQueue
     private function findInitiatorRoltype(ZgwConnection $connection, string $zaaktypeUrl): ?string
     {
         $roltypen = $connection->catalogi()->roltypen()->index(['zaaktype' => $zaaktypeUrl]);
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $mapping = $this->zaak->zaaktypeMapping();
         $initiator = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
 
         return $initiator['url'] ?? null;
