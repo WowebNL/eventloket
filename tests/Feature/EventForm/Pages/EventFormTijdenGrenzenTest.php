@@ -14,6 +14,8 @@ use App\EventForm\Persistence\Draft;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Organisation;
 use App\Models\User;
+use Filament\Forms\Components\Field;
+use Illuminate\Support\Facades\Validator;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -129,4 +131,45 @@ test('the build-up day rows follow the build-up period, not the event', function
 
     expect(array_keys($component->get('data.OpbouwDagen')))
         ->toBe(['2027-02-27', '2027-02-28']);
+});
+
+/**
+ * Runs the field rules the form registers for the given Tijden fields against
+ * the current state, and returns the error bag.
+ *
+ * @return array<string, list<string>>
+ */
+function tijdenFouten(EventFormPage $page, string ...$velden): array
+{
+    $rules = [];
+    foreach ($velden as $veld) {
+        $field = $page->form->getComponent(
+            fn ($component): bool => $component instanceof Field && $component->getName() === $veld,
+            withHidden: true,
+        );
+        $rules["data.{$veld}"] = $field->getValidationRules();
+    }
+
+    return Validator::make(['data' => $page->data], $rules)->errors()->toArray();
+}
+
+test('the order within the build-up and take-down periods is still enforced', function () {
+    $component = Livewire::test(EventFormPage::class, ['draft' => kopieVanEerdereAanvraag($this->user, $this->organisation)->id]);
+
+    $component->set('data.EvenementStart', '2027-03-01 15:00:00');
+    $component->set('data.EvenementEind', '2027-03-01 16:00:00');
+
+    // Both starts move into the new period while the ends still hold the old dates.
+    $component->set('data.OpbouwStart', '2027-02-27 08:00:00');
+    $component->set('data.AfbouwStart', '2027-03-01 17:00:00');
+
+    expect(tijdenFouten($component->instance(), 'OpbouwStart', 'AfbouwEind'))
+        ->toHaveKeys(['data.OpbouwStart', 'data.AfbouwEind']);
+
+    // Once the ends follow, both periods are valid again.
+    $component->set('data.OpbouwEind', '2027-02-28 18:00:00');
+    $component->set('data.AfbouwEind', '2027-03-02 12:00:00');
+
+    expect(tijdenFouten($component->instance(), 'OpbouwStart', 'OpbouwEind', 'AfbouwStart', 'AfbouwEind'))
+        ->toBe([]);
 });
