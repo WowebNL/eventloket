@@ -155,11 +155,10 @@ class ZakenTable
                         fn (Builder $q) => $q->where('municipalities.name', 'like', "%{$search}%")
                     ))
                     ->toggleable()
-                    // The calendar spans municipalities, and so does the
-                    // platform administrator's list: they are the only views in
-                    // which a zaak's municipality is not already implied by the
-                    // panel's tenant.
-                    ->visible(fn (): bool => $isCalendarView || auth()->user()->role === Role::Admin),
+                    // Only the municipality panel is scoped to a single
+                    // municipality. The organiser, advisor and platform
+                    // administrator lists, and the calendar, span several.
+                    ->visible(fn (): bool => $isCalendarView || ! self::isMunicipalityPanel()),
                 TextColumn::make('advisors')
                     ->label(__('resources/zaak.columns.advisors.label'))
                     ->visible(fn () => Filament::getCurrentPanel()->getId() === 'advisor')
@@ -230,7 +229,7 @@ class ZakenTable
 
                         return $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('municipality_id', $data['values']));
                     })
-                    ->visible(fn (): bool => auth()->user()->role === Role::Admin),
+                    ->visible(fn (): bool => ! self::isMunicipalityPanel()),
                 SelectFilter::make('role')
                     ->label(__('resources/zaak.columns.aanvraag_type.label'))
                     ->options(ZaaktypeRole::class)
@@ -281,5 +280,14 @@ class ZakenTable
         ));
 
         return $query->withEffectiveRoleIn($roles);
+    }
+
+    /**
+     * Whether the list is shown in the municipality panel, whose tenant is a
+     * single municipality, so the municipality of a zaak goes without saying.
+     */
+    private static function isMunicipalityPanel(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'municipality';
     }
 }

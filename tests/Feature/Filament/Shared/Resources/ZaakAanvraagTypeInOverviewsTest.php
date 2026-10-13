@@ -10,11 +10,15 @@ declare(strict_types=1);
  * the role of the zaak itself, labelled as the aanvraagtype.
  */
 
+use App\Enums\AdvisoryRole;
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
+use App\Filament\Advisor\Resources\Zaken\ZaakResource\Pages\ListAllZaken;
+use App\Filament\Organiser\Resources\Zaken\Pages\ListZaken as OrganiserListZaken;
 use App\Filament\Organiser\Widgets\OrganiserCalendarWidget;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
+use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
@@ -144,4 +148,50 @@ it('hides the zaaktype column by default but keeps it available', function () {
         ->assertTableColumnExists('zaaktype.name')
         ->assertCanNotRenderTableColumn('zaaktype.name')
         ->assertCanRenderTableColumn('role');
+});
+
+it('shows and filters the gemeente in the organiser list, which spans municipalities', function () {
+    $andereGemeente = Municipality::factory()->create(['name' => 'Andere synthetische gemeente']);
+    $elders = overzichtZakenOpGedeeldZaaktype($andereGemeente, $this->organisation, [ZaaktypeRole::Melding]);
+
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    $this->organisation->users()->attach($organiser, ['role' => OrganisationRole::Admin]);
+
+    $this->actingAs($organiser);
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    Filament::setTenant($this->organisation);
+
+    livewire(OrganiserListZaken::class)
+        ->assertCanRenderTableColumn('municipality.name')
+        ->assertTableColumnStateSet('municipality.name', 'Andere synthetische gemeente', $elders['melding'])
+        ->filterTable('municipality', [$andereGemeente->id])
+        ->assertCanSeeTableRecords([$elders['melding']])
+        ->assertCanNotSeeTableRecords([$this->zaken['melding']]);
+});
+
+it('shows the gemeente in the advisor list of all zaken', function () {
+    $advisory = Advisory::factory()->create(['can_view_any_zaak' => true]);
+    $advisor = User::factory()->create(['role' => Role::Advisor]);
+    $advisory->users()->attach($advisor, ['role' => AdvisoryRole::Member]);
+
+    $this->actingAs($advisor);
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    Filament::setTenant($advisory);
+
+    livewire(ListAllZaken::class)
+        ->assertCanRenderTableColumn('municipality.name')
+        ->assertTableFilterVisible('municipality');
+});
+
+it('leaves the gemeente out of the municipality panel, whose tenant is the gemeente', function () {
+    $coordinator = User::factory()->create(['role' => Role::Coordinator]);
+    $coordinator->municipalities()->attach($this->municipality);
+
+    $this->actingAs($coordinator);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    livewire(ListZaken::class)
+        ->assertCanNotRenderTableColumn('municipality.name')
+        ->assertTableFilterHidden('municipality');
 });
