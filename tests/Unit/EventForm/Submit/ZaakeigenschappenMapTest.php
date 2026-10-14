@@ -17,6 +17,7 @@
 
 use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 
 beforeEach(function () {
@@ -33,7 +34,8 @@ test('de 11 OF-eigenschappen worden als {naam: waarde}-entries geëmitteerd', fu
         'AfbouwEind' => '2026-06-14T19:30',
         'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest Testlaan',
         'soortEvenement' => 'Buurtfeest',
-        'aantalVerwachteAanwezigen' => 80,
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '80',
         'risicoClassificatie' => 'A',
     ]);
 
@@ -51,7 +53,7 @@ test('de 11 OF-eigenschappen worden als {naam: waarde}-entries geëmitteerd', fu
         'eind_afbouw' => '2026-06-14T19:30',
         'naam_evenement' => 'Buurtfeest Testlaan',
         'types_evenement' => 'Buurtfeest',
-        'aanwezigen' => 80,
+        'aanwezigen' => '80',
         'risico_classificatie' => 'A',
     ]);
 });
@@ -316,4 +318,65 @@ test('zonder rol blijft het aanvraagtype weg', function () {
     $namen = collect($this->map->buildEigenschappen($state))->map(fn ($e) => key($e))->all();
 
     expect($namen)->not->toContain(ZaakeigenschappenMap::AANVRAAG_TYPE);
+});
+
+/**
+ * The aanwezigen eigenschap carries the maximum number of people present at
+ * any one time, the same number Eventloket keeps in its reference data. A
+ * full aanvraag asks for it in the event questions, a vooraankondiging on the
+ * first step.
+ *
+ * @return array{eigenschap: mixed, reference: ?string}
+ */
+function aanwezigenVoor(array $values): array
+{
+    $state = new FormState(values: $values);
+    $plat = collect((new ZaakeigenschappenMap)->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+    $reference = (new MapFormStateToReferenceData)->build($state, 'Ontvangen', 'https://example.invalid/statustypen/1');
+
+    return ['eigenschap' => $plat['aanwezigen'] ?? null, 'reference' => $reference->aanwezigen];
+}
+
+test('a full aanvraag sends the maximum number present as aanwezigen', function () {
+    $result = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '1500',
+    ]);
+
+    expect($result['eigenschap'])->toBe('1500')
+        ->and($result['reference'])->toBe('1500');
+});
+
+test('a vooraankondiging sends the number asked on the first step as aanwezigen', function () {
+    $result = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'aantalVerwachteAanwezigen' => '300',
+    ]);
+
+    expect($result['eigenschap'])->toBe('300')
+        ->and($result['reference'])->toBe('300');
+});
+
+test('a value left in the field of the other path does not count', function () {
+    // A request prefilled from an earlier zaak fills the maximum field, and a
+    // hidden field keeps its value; only the field of the chosen path counts.
+    $vooraankondiging = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'aantalVerwachteAanwezigen' => '300',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '1500',
+    ]);
+    $vergunning = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'aantalVerwachteAanwezigen' => '300',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '1500',
+    ]);
+
+    expect($vooraankondiging)->toBe(['eigenschap' => '300', 'reference' => '300'])
+        ->and($vergunning)->toBe(['eigenschap' => '1500', 'reference' => '1500']);
+});
+
+test('without any number the aanwezigen eigenschap is left out', function () {
+    $result = aanwezigenVoor(['waarvoorWiltUEventloketGebruiken' => 'evenement']);
+
+    expect($result)->toBe(['eigenschap' => null, 'reference' => null]);
 });

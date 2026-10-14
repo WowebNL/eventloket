@@ -185,10 +185,9 @@ De onderstaande tabel toont alle eigenschappen die Eventloket bij een zaak kan a
 | `eind_afbouw` | Einddatum en -tijd van de afbouw | datum_tijd | 14 |
 | `naam_evenement` | Naam van het evenement | tekst | 255 |
 | `types_evenement` | Soort(en) evenement | tekst | 255 |
-| `aanwezigen` | Aantal verwachte aanwezigen | getal | 9 |
+| `aanwezigen` | Maximum aantal personen dat op enig moment tegelijk aanwezig is (bij een vooraankondiging het opgegeven aantal verwachte aanwezigen) | getal | 9 |
 | `risico_classificatie` | Risicoclassificatie van het evenement | tekst | 255 |
 | `locaties_evenement` | Namen van de locatie(s), kommagescheiden | tekst | 255 |
-| `intern_zaaknummer` | Het interne zaaknummer dat Eventloket aan de zaak toekent | tekst | 255 |
 | `aanvraag_type` | Soort aanvraag: `Vergunning`, `Melding`, `Vooraankondiging` of `Doorkomst` | tekst | 255 |
 
 Toelichting bij de formaten:

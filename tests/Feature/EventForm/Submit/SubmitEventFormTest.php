@@ -85,7 +85,7 @@ function scenarioBuurtfeestInHeerlen(): array
         'soortEvenement' => 'Buurtfeest',
         'EvenementStart' => '2026-06-14T14:00',
         'EvenementEind' => '2026-06-14T18:00',
-        'aantalVerwachteAanwezigen' => 80,
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '80',
         'risicoClassificatie' => 'A',
     ]);
 
@@ -171,6 +171,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     // 2. ReferenceData-VO bevat de FormState-waarden.
     expect($zaak->reference_data->naam_evenement)->toBe('Buurtfeest Testlaan')
         ->and($zaak->reference_data->types_evenement)->toBe('Buurtfeest')
+        ->and($zaak->reference_data->aanwezigen)->toBe('80')
         ->and($zaak->reference_data->status_name)->toBe('Ingediend');
 
     // 2b. De initiële statustype_url (volgnummer 1) is al bij aanmaak gezet,
