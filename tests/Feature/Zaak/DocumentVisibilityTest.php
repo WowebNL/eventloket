@@ -78,3 +78,19 @@ test('a closed OneGround zaak keeps showing its documents', function () {
 
     expect($zaak->documenten)->toHaveCount(2);
 });
+
+test('a definitief document whose content has expired stays hidden', function () {
+    $zaak = zaakMetDocumenten([
+        ['status' => 'definitief', 'inhoudIsVervallen' => true, 'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk'],
+    ]);
+
+    expect($zaak->documenten)->toHaveCount(0);
+});
+
+test('a definitief document whose content has not expired stays visible', function () {
+    $zaak = zaakMetDocumenten([
+        ['status' => 'definitief', 'inhoudIsVervallen' => false, 'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk'],
+    ]);
+
+    expect($zaak->documenten)->toHaveCount(1);
+});

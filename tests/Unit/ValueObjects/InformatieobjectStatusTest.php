@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use App\ValueObjects\ZGW\Informatieobject;
 
-function informatieobjectWithStatus(?string $status): Informatieobject
+function informatieobjectWithStatus(?string $status, ?bool $inhoudIsVervallen = null): Informatieobject
 {
     return new Informatieobject(
         uuid: '1',
@@ -21,6 +21,7 @@ function informatieobjectWithStatus(?string $status): Informatieobject
         formaat: 'application/pdf',
         locked: false,
         status: $status,
+        inhoudIsVervallen: $inhoudIsVervallen,
     );
 }
 
@@ -47,6 +48,32 @@ test('draft and unknown statuses are not shown (strict allowlist)', function (st
     // Anything outside the allowlist is hidden, not just the known drafts.
     'unknown status' => 'iets_onbekends',
 ]);
+
+test('a document whose content has expired is not shown, whatever its status', function (?string $status) {
+    // inhoudIsVervallen (Documenten API 1.5.0) is independent of the status: a
+    // definitief document can carry it too. It is hidden like a draft.
+    expect(informatieobjectWithStatus($status, inhoudIsVervallen: true)->isVastgesteld())->toBeFalse();
+})->with([
+    'definitief' => 'definitief',
+    'gearchiveerd' => 'gearchiveerd',
+    'null (own upload)' => null,
+]);
+
+test('a document whose content has not expired follows its status', function (?bool $inhoudIsVervallen) {
+    expect(informatieobjectWithStatus('definitief', $inhoudIsVervallen)->isVastgesteld())->toBeTrue()
+        ->and(informatieobjectWithStatus('in_bewerking', $inhoudIsVervallen)->isVastgesteld())->toBeFalse();
+})->with([
+    'false' => false,
+    'not sent (API before 1.5.0)' => null,
+]);
+
+test('inhoudIsVervallen survives a round trip through toArray()', function () {
+    // Besluit documents are rebuilt from toArray(); the flag must not get lost.
+    $document = new Informatieobject(...informatieobjectWithStatus('definitief', inhoudIsVervallen: true)->toArray());
+
+    expect($document->inhoudIsVervallen)->toBeTrue()
+        ->and($document->isVastgesteld())->toBeFalse();
+});
 
 test('a null beschrijving is accepted (some ZGW backends omit it)', function () {
     // RX Mission returns beschrijving = null where OpenZaak returns an empty

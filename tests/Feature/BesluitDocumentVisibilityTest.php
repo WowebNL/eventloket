@@ -54,7 +54,7 @@ beforeEach(function () {
 /**
  * Builds a besluitdocument value object at the given vertrouwelijkheid.
  */
-function besluitDocument(string $uuid, string $titel, string $vertrouwelijkheid, ?string $status = null): Informatieobject
+function besluitDocument(string $uuid, string $titel, string $vertrouwelijkheid, ?string $status = null, ?bool $inhoudIsVervallen = null): Informatieobject
 {
     return new Informatieobject(
         uuid: $uuid,
@@ -71,6 +71,7 @@ function besluitDocument(string $uuid, string $titel, string $vertrouwelijkheid,
         formaat: 'application/pdf',
         locked: false,
         status: $status,
+        inhoudIsVervallen: $inhoudIsVervallen,
     );
 }
 
@@ -176,6 +177,22 @@ test('a besluitdocument that is still in_bewerking is left out of a shown beslui
 
     expect($this->zaak->besluiten)->toHaveCount(1)
         ->and($this->zaak->besluiten->first()->besluitDocumenten->pluck('uuid')->all())->toBe(['final-doc']);
+});
+
+test('a definitief besluitdocument whose content has expired is left out', function () {
+    seedBesluitWithDocuments($this->zaak, [
+        besluitDocument('final-doc', 'Definitief besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief'),
+        besluitDocument('expired-doc', 'Vervallen besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief', inhoudIsVervallen: true),
+    ]);
+
+    $this->actingAs($this->reviewer);
+
+    expect($this->zaak->besluiten->first()->besluitDocumenten->pluck('uuid')->all())->toBe(['final-doc']);
+
+    livewire(BesluitenInfolist::class, ['zaak' => $this->zaak])
+        ->assertOk()
+        ->assertSee('Definitief besluitdocument')
+        ->assertDontSee('Vervallen besluitdocument');
 });
 
 test('the status rule for besluitdocumenten also applies in console context', function () {
