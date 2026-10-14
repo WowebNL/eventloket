@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Support\Maps\Basemap;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,6 +41,13 @@ class SecurityHeaders
         // server on a separate origin, so it must be whitelisted for script-src,
         // style-src and connect-src (the latter also for the HMR WebSocket).
         $connectSrc = "'self' https://api.pdok.nl";
+
+        // Basemap tiles are fetched from whatever host config/maps.php points
+        // at. An unparsable tile URL yields an empty origin, which widens
+        // nothing rather than falling back to a permissive wildcard.
+        $basemapOrigin = Basemap::origin();
+        $imgSrc = $basemapOrigin === '' ? '' : ' '.$basemapOrigin;
+
         $viteScriptSrc = '';
         $viteStyleSrc = '';
         if (config('app.debug')) {
@@ -58,8 +66,12 @@ class SecurityHeaders
             // Alpine generates inline style attributes at runtime.
             "style-src 'self' 'unsafe-inline'{$viteStyleSrc}",
             // data: for locally-generated SVG avatar data URIs; blob: for
-            // any canvas/object-URL created by UI components.
-            "img-src 'self' data: blob: https://tile.openstreetmap.org",
+            // any canvas/object-URL created by UI components. The basemap
+            // origin is derived from the configured tile URL, so repointing
+            // the maps cannot leave the browser blocking their tiles. Tiles
+            // are loaded as images by Leaflet, so img-src is the only
+            // directive they need; connect-src is not involved.
+            "img-src 'self' data: blob:{$imgSrc}",
             "font-src 'self'",
             "connect-src {$connectSrc}",
             // Prevent this application from being embedded anywhere.

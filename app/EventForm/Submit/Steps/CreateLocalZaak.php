@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\EventForm\Submit\Steps;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\DetermineAanvraagType;
 use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
@@ -28,6 +29,7 @@ final class CreateLocalZaak
 {
     public function __construct(
         private readonly MapFormStateToReferenceData $mapReferenceData,
+        private readonly DetermineAanvraagType $determineAanvraagType,
     ) {}
 
     public function execute(
@@ -47,6 +49,9 @@ final class CreateLocalZaak
             'public_id' => $ozZaak->identificatie,
             'zgw_zaak_url' => $ozZaak->url,
             'zaaktype_id' => $zaaktype->id,
+            // The same role the zaaktype was resolved for. Recorded on the zaak
+            // because several roles may share one zaaktype.
+            'role' => $this->determineAanvraagType->forState($state),
             'zgw_zaaktype_url' => $ozZaak->zaaktype, // snapshot of the exact version used
             'data_object_url' => null, // Objects API is weg in nieuwe flow
             'organisation_id' => $organisation->id,

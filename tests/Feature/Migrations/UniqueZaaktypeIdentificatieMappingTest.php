@@ -36,6 +36,16 @@ function uniqueMappingMigration(): Migration
     return require database_path('migrations/2026_09_01_120000_add_unique_zaaktype_identificatie_to_municipality_zaaktype_mappings.php');
 }
 
+/**
+ * The later migration that drops this index again. These tests exercise the
+ * schema as it stood between the two, so they roll it back first and replay
+ * it afterwards.
+ */
+function sharedZaaktypeMigration(): Migration
+{
+    return require database_path('migrations/2026_10_13_090100_allow_shared_zaaktype_across_municipality_zaaktype_mappings.php');
+}
+
 function uniqueMappingIndexExists(): bool
 {
     return collect(Schema::getIndexes('municipality_zaaktype_mappings'))
@@ -54,6 +64,10 @@ function koppelingRow(Municipality $municipality, ZaaktypeRole $role, ?string $i
     ]);
 }
 
+beforeEach(function () {
+    sharedZaaktypeMigration()->down();
+});
+
 afterEach(function () {
     // These tests add and drop an index. MySQL implicitly commits on DDL, so the
     // transaction RefreshDatabase wraps around a test cannot be relied on here:
@@ -64,6 +78,8 @@ afterEach(function () {
     if (! uniqueMappingIndexExists()) {
         uniqueMappingMigration()->up();
     }
+
+    sharedZaaktypeMigration()->up();
 });
 
 it('adds the index when no zaaktype is mapped twice', function () {

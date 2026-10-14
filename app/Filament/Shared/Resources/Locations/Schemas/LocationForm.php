@@ -2,8 +2,8 @@
 
 namespace App\Filament\Shared\Resources\Locations\Schemas;
 
+use App\Filament\Forms\Components\BasemapMap;
 use Closure;
-use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
@@ -68,7 +68,7 @@ class LocationForm
                     ->default(true)
                     ->required(),
 
-                Map::make('geometry')
+                BasemapMap::make('geometry')
                     ->label(__('resources/location.form.geometry.label'))
                     ->columnSpanFull()
                     ->defaultLocation(latitude: 52.144559, longitude: 5.173777)

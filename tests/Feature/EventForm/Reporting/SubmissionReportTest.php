@@ -35,10 +35,13 @@ use App\Models\Municipality;
 use App\Models\Organisation;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\Support\Maps\Basemap;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Http;
 
 test('lege state → geen secties (alle stappen worden overgeslagen)', function () {
     $sections = app(SubmissionReport::class)->build(
@@ -425,6 +428,9 @@ test('a non-location repeater keeps the generic "rij" label', function () {
 });
 
 test('Map-state met geojson levert een SVG mee in de entry', function () {
+    // The basemap is faked: a test must never reach out to the tile service.
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
     // locatieSOpKaart is een Repeater met `buitenLocatieVanHetEvenement`
     // als Map-state per rij. SubmissionReport moet de polygon-geojson
     // herkennen en een SVG meeleveren in de sub-entry.
@@ -726,4 +732,167 @@ test('vooraankondiging-koppeling: alleen de select-regel, met opgelost label, zo
     expect($labels)->not->toContain('Zaaknummer van de vooraankondiging')
         ->and(implode(' ', $values))->toContain('ZAAK-VA-9')
         ->and(implode(' ', $values))->not->toContain($vooraankondiging->id);
+});
+
+/**
+ * A minimal valid PNG, so the stitcher has something real to work with
+ * without any test ever reaching the tile service.
+ */
+function fakeTilePng(): string
+{
+    $image = imagecreatetruecolor(256, 256);
+    imagefill($image, 0, 0, imagecolorallocate($image, 200, 220, 240));
+
+    ob_start();
+    imagepng($image);
+    $png = (string) ob_get_clean();
+    imagedestroy($image);
+
+    return $png;
+}
+
+/**
+ * A form state with one map per row, each on its own patch of the world so no
+ * two rows share a tile and the cache cannot mask the number of requests.
+ */
+function stateWithDistinctMaps(int $rows): FormState
+{
+    $locaties = [];
+
+    for ($i = 0; $i < $rows; $i++) {
+        // Roughly a degree apart in both directions, which is far enough that
+        // no two of these bounding boxes touch the same tile at any zoom.
+        $lng = 4.0 + $i * 1.1;
+        $lat = 50.0 + $i * 0.7;
+
+        $locaties[] = [
+            'naamVanDeLocatieKaart' => 'Locatie '.$i,
+            'buitenLocatieVanHetEvenement' => [
+                'lat' => $lat,
+                'lng' => $lng,
+                'geojson' => [
+                    'type' => 'FeatureCollection',
+                    'features' => [[
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'type' => 'Polygon',
+                            'coordinates' => [[
+                                [$lng, $lat],
+                                [$lng + 0.002, $lat],
+                                [$lng + 0.002, $lat + 0.002],
+                                [$lng, $lat + 0.002],
+                                [$lng, $lat],
+                            ]],
+                        ],
+                    ]],
+                ],
+            ],
+        ];
+    }
+
+    return new FormState(values: ['locatieSOpKaart' => $locaties]);
+}
+
+test('de PDF-render haalt tegels van de geconfigureerde bron', function () {
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
+    app(SubmissionReport::class)->build(
+        stateWithDistinctMaps(1),
+        [LocatieVanHetEvenement2Step::make()],
+    );
+
+    $requests = Http::recorded();
+
+    expect($requests)->not->toBeEmpty('no tiles were requested, so this test proves nothing');
+
+    $origin = Basemap::origin();
+
+    foreach ($requests as [$request]) {
+        expect($request->url())->toStartWith($origin);
+    }
+});
+
+test('de PDF-render identificeert zichzelf met de geconfigureerde user agent', function () {
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
+    app(SubmissionReport::class)->build(
+        stateWithDistinctMaps(1),
+        [LocatieVanHetEvenement2Step::make()],
+    );
+
+    $requests = Http::recorded();
+    expect($requests)->not->toBeEmpty();
+
+    foreach ($requests as [$request]) {
+        expect($request->header('User-Agent')[0] ?? '')
+            ->toBe((string) config('maps.tiles.report.user_agent'));
+    }
+});
+
+test('een rapport met veel kaarten downloadt niet onbeperkt tegels', function () {
+    // Geometry answers can sit inside a repeater, so the number of maps in one
+    // report is unbounded. Systematically downloading a tile grid per map is
+    // exactly the bulk traffic a tile service is entitled to refuse, so the
+    // report has a budget and degrades to a plain background beyond it.
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
+    $budget = (int) config('maps.tiles.report.max_tiles_per_map')
+        * (int) config('maps.tiles.report.max_background_maps');
+
+    $sections = app(SubmissionReport::class)->build(
+        stateWithDistinctMaps(12),
+        [LocatieVanHetEvenement2Step::make()],
+    );
+
+    expect(count(Http::recorded()))->toBeLessThanOrEqual($budget);
+
+    // Degrading means rendering without a background, never failing: the maps
+    // beyond the budget still appear in the report.
+    $svgs = [];
+    foreach ($sections as $section) {
+        foreach ($section['entries'] as $entry) {
+            foreach ($entry['sub'] ?? [] as $sub) {
+                if (! empty($sub['svg'])) {
+                    $svgs[] = $sub['svg'];
+                }
+            }
+            if (! empty($entry['svg'])) {
+                $svgs[] = $entry['svg'];
+            }
+        }
+    }
+
+    expect(count($svgs))->toBe(12);
+});
+
+test('het tegelbudget geldt per rapport en niet per proces', function () {
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
+    $report = app(SubmissionReport::class);
+
+    $report->build(stateWithDistinctMaps(12), [LocatieVanHetEvenement2Step::make()]);
+    $afterFirst = count(Http::recorded());
+
+    // A second report on the same instance gets its own budget, so a queue
+    // worker that reuses the service does not slowly starve later reports of
+    // their background.
+    $report->build(stateWithDistinctMaps(12), [LocatieVanHetEvenement2Step::make()]);
+    $afterSecond = count(Http::recorded());
+
+    expect($afterSecond - $afterFirst)->toBeGreaterThan(0);
+});
+
+test('een kaart met een onverwacht groot tegelraster wordt niet opgehaald', function () {
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
+    // With no grid allowed at all, every map must fall back to a plain
+    // background without issuing a single request.
+    Config::set('maps.tiles.report.max_tiles_per_map', 0);
+
+    app(SubmissionReport::class)->build(
+        stateWithDistinctMaps(3),
+        [LocatieVanHetEvenement2Step::make()],
+    );
+
+    expect(Http::recorded())->toBeEmpty();
 });

@@ -53,11 +53,23 @@ class ZakenTable
                         ->orderBy($query->qualifyColumn('public_id'), $direction))
                     ->searchable()
                     ->toggleable(),
+                TextColumn::make('role')
+                    ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                    // The effective role, so a zaak without a stored role still
+                    // shows the role it derives from its zaaktype.
+                    ->state(fn (Zaak $record): ?ZaaktypeRole => $record->effectiveRole())
+                    ->badge()
+                    ->sortable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => self::whereRoleLabelMatches($query, $search))
+                    ->toggleable(),
                 TextColumn::make('zaaktype.name')
                     ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->sortable()
                     ->searchable()
-                    ->toggleable(),
+                    // Hidden by default: a zaaktype may serve several kinds of
+                    // aanvraag, so the aanvraagtype column is the one that tells
+                    // them apart. Still available through the column toggle.
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))
@@ -143,11 +155,10 @@ class ZakenTable
                         fn (Builder $q) => $q->where('municipalities.name', 'like', "%{$search}%")
                     ))
                     ->toggleable()
-                    // The calendar spans municipalities, and so does the
-                    // platform administrator's list: they are the only views in
-                    // which a zaak's municipality is not already implied by the
-                    // panel's tenant.
-                    ->visible(fn (): bool => $isCalendarView || auth()->user()->role === Role::Admin),
+                    // Only the municipality panel is scoped to a single
+                    // municipality. The organiser, advisor and platform
+                    // administrator lists, and the calendar, span several.
+                    ->visible(fn (): bool => $isCalendarView || ! self::isMunicipalityPanel()),
                 TextColumn::make('advisors')
                     ->label(__('resources/zaak.columns.advisors.label'))
                     ->visible(fn () => Filament::getCurrentPanel()->getId() === 'advisor')
@@ -218,24 +229,22 @@ class ZakenTable
 
                         return $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('municipality_id', $data['values']));
                     })
-                    ->visible(fn (): bool => auth()->user()->role === Role::Admin),
+                    ->visible(fn (): bool => ! self::isMunicipalityPanel()),
                 SelectFilter::make('role')
-                    ->label(__('resources/zaak.columns.zaaktype.label'))
+                    ->label(__('resources/zaak.columns.aanvraag_type.label'))
                     ->options(ZaaktypeRole::class)
                     ->multiple()
-                    // Matched through the effective-role ladder rather than the
-                    // `role` column directly: that column is nullable and only
-                    // written by a koppeling or a catalogus sync, so comparing
-                    // it drops every zaak whose zaaktype has no stored role.
+                    // Matched on the effective role of the zaak: its stored
+                    // role, or the role of its zaaktype for a zaak without one.
+                    // Several roles may share one zaaktype, so the zaaktype
+                    // alone cannot answer this.
                     ->query(function (Builder $query, array $data): Builder {
                         if (empty($data['values'])) {
                             return $query;
                         }
 
-                        return $query->whereHas('zaaktype', function (Builder $zaaktypen) use ($data): Builder {
-                            /** @var Builder<Zaaktype> $zaaktypen */
-                            return $zaaktypen->withEffectiveRoleIn($data['values']);
-                        });
+                        /** @var Builder<Zaak> $query */
+                        return $query->withEffectiveRoleIn($data['values']);
                     }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
@@ -251,5 +260,34 @@ class ZakenTable
             ])
             ->defaultSort('created_at', direction: 'desc')
             ->poll(); // default 10s
+    }
+
+    /**
+     * Search on the aanvraagtype by its label: the role is stored as a code, so
+     * the search term is matched against the labels first and the zaken are
+     * then selected on their effective role.
+     *
+     * @param  Builder<Zaak>  $query
+     * @return Builder<Zaak>
+     */
+    private static function whereRoleLabelMatches(Builder $query, string $search): Builder
+    {
+        $needle = mb_strtolower(trim($search));
+
+        $roles = array_values(array_filter(
+            ZaaktypeRole::cases(),
+            fn (ZaaktypeRole $role): bool => $needle !== '' && str_contains(mb_strtolower($role->getLabel()), $needle),
+        ));
+
+        return $query->withEffectiveRoleIn($roles);
+    }
+
+    /**
+     * Whether the list is shown in the municipality panel, whose tenant is a
+     * single municipality, so the municipality of a zaak goes without saying.
+     */
+    private static function isMunicipalityPanel(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'municipality';
     }
 }
