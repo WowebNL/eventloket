@@ -796,6 +796,21 @@ class Zaak extends Model implements Eventable
             ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
             ->values();
 
+        // The besluitdocumenten follow the same status rule as the documents
+        // tab: a document that is not established (e.g. still in_bewerking) is
+        // left out, also when the besluit itself may be shown. Whether the
+        // besluit is shown at all was decided above on its unfiltered documents,
+        // so a besluit that is publishable without an established document
+        // stays visible, just without the documents that are not established.
+        // map(), not each(): the value object is readonly, see below.
+        $besluiten = $besluiten
+            ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                'besluitDocumenten' => $besluit->besluitDocumenten
+                    ?->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld())
+                    ->values(),
+            ])))
+            ->values();
+
         if (app()->runningInConsole()) {
             // Queue and console have no authenticated user; the role filter
             // is applied before the job is queued, mirroring documenten().
