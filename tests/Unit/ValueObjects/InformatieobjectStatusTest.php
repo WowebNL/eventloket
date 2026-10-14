@@ -51,8 +51,12 @@ test('draft and unknown statuses are not shown (strict allowlist)', function (st
 
 test('a document whose content has expired is not shown, whatever its status', function (?string $status) {
     // inhoudIsVervallen (Documenten API 1.5.0) is independent of the status: a
-    // definitief document can carry it too. It is hidden like a draft.
-    expect(informatieobjectWithStatus($status, inhoudIsVervallen: true)->isVastgesteld())->toBeFalse();
+    // definitief document can carry it too. It is hidden like a draft, but it
+    // is still established, which is what decides whether its besluit exists.
+    $document = informatieobjectWithStatus($status, inhoudIsVervallen: true);
+
+    expect($document->isZichtbaar())->toBeFalse()
+        ->and($document->isVastgesteld())->toBeTrue();
 })->with([
     'definitief' => 'definitief',
     'gearchiveerd' => 'gearchiveerd',
@@ -60,8 +64,8 @@ test('a document whose content has expired is not shown, whatever its status', f
 ]);
 
 test('a document whose content has not expired follows its status', function (?bool $inhoudIsVervallen) {
-    expect(informatieobjectWithStatus('definitief', $inhoudIsVervallen)->isVastgesteld())->toBeTrue()
-        ->and(informatieobjectWithStatus('in_bewerking', $inhoudIsVervallen)->isVastgesteld())->toBeFalse();
+    expect(informatieobjectWithStatus('definitief', $inhoudIsVervallen)->isZichtbaar())->toBeTrue()
+        ->and(informatieobjectWithStatus('in_bewerking', $inhoudIsVervallen)->isZichtbaar())->toBeFalse();
 })->with([
     'false' => false,
     'not sent (API before 1.5.0)' => null,
@@ -72,7 +76,7 @@ test('inhoudIsVervallen survives a round trip through toArray()', function () {
     $document = new Informatieobject(...informatieobjectWithStatus('definitief', inhoudIsVervallen: true)->toArray());
 
     expect($document->inhoudIsVervallen)->toBeTrue()
-        ->and($document->isVastgesteld())->toBeFalse();
+        ->and($document->isZichtbaar())->toBeFalse();
 });
 
 test('a null beschrijving is accepted (some ZGW backends omit it)', function () {

@@ -71,15 +71,26 @@ class Informatieobject implements Arrayable
     }
 
     /**
-     * Whether this document may be shown to and notified about, judged on its
-     * status and on whether its content has expired. Who may see it is a
-     * separate question, answered by the vertrouwelijkheidaanduiding and the
-     * user's role.
+     * Whether this document may be shown to and notified about: it is
+     * established (see isVastgesteld()) and its content has not expired. Who may
+     * see it is a separate question, answered by the vertrouwelijkheidaanduiding
+     * and the user's role.
      *
-     * A document whose content has expired (inhoudIsVervallen) is treated like
-     * a draft and stays hidden, whatever its status: a definitief document can
-     * carry the flag as well. A missing flag (API versions before 1.5.0) or
-     * false means not expired.
+     * A document whose content has expired (inhoudIsVervallen) is hidden like a
+     * draft, whatever its status: a definitief document can carry the flag as
+     * well. A missing flag (API versions before 1.5.0) or false means not
+     * expired.
+     */
+    public function isZichtbaar(): bool
+    {
+        return $this->isVastgesteld() && $this->readInhoudIsVervallen() !== true;
+    }
+
+    /**
+     * Whether this document is established, judged on its status alone. This
+     * also decides whether a besluit carrying it may be published, so a besluit
+     * does not disappear when the content of its document later expires; the
+     * expired document itself is left out through isZichtbaar().
      *
      * Allowlist: 'definitief', 'gearchiveerd', and documents without an explicit
      * status (our own uploads and legacy documents). The draft statuses
@@ -98,10 +109,6 @@ class Informatieobject implements Arrayable
      */
     public function isVastgesteld(): bool
     {
-        if ($this->readInhoudIsVervallen() === true) {
-            return false;
-        }
-
         return $this->status === null
             || $this->status === ''
             || $this->status === self::STATUS_DEFINITIEF

@@ -195,6 +195,19 @@ test('a definitief besluitdocument whose content has expired is left out', funct
         ->assertDontSee('Vervallen besluitdocument');
 });
 
+test('a besluit whose only document has expired content stays visible without that document', function () {
+    // The document is still established, so the besluit may still be
+    // published; only the expired document itself is left out.
+    seedBesluitWithDocuments($this->zaak, [
+        besluitDocument('expired-doc', 'Vervallen besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief', inhoudIsVervallen: true),
+    ]);
+
+    $this->actingAs($this->reviewer);
+
+    expect($this->zaak->besluiten)->toHaveCount(1)
+        ->and($this->zaak->besluiten->first()->besluitDocumenten)->toHaveCount(0);
+});
+
 test('the status rule for besluitdocumenten also applies in console context', function () {
     // Queued jobs read the besluiten without a user; the role filter is skipped
     // there, the status rule is not (as with the documents of a zaak).

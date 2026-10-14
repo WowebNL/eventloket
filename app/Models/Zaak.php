@@ -671,11 +671,11 @@ class Zaak extends Model implements Eventable
      */
     private function visibleDocuments(Collection $documenten): Collection
     {
-        // Only show established documents; concepts from an external ZGW
-        // backend are hidden (documents without an explicit status, such
-        // as our own uploads, count as established, and so do archived
-        // ones). See Informatieobject::isVastgesteld().
-        $documenten = $documenten->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld());
+        // Only show established documents whose content has not expired;
+        // concepts from an external ZGW backend are hidden (documents without
+        // an explicit status, such as our own uploads, count as established,
+        // and so do archived ones). See Informatieobject::isZichtbaar().
+        $documenten = $documenten->filter(fn (Informatieobject $informatieobject) => $informatieobject->isZichtbaar());
 
         if (app()->runningInConsole()) {
             // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
@@ -796,9 +796,10 @@ class Zaak extends Model implements Eventable
             ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
             ->values();
 
-        // The besluitdocumenten follow the same status rule as the documents
-        // tab: a document that is not established (e.g. still in_bewerking) is
-        // left out, also when the besluit itself may be shown. Whether the
+        // The besluitdocumenten follow the same rule as the documents tab: a
+        // document that is not established (e.g. still in_bewerking) or whose
+        // content has expired is left out, also when the besluit itself may be
+        // shown. Whether the
         // besluit is shown at all was decided above on its unfiltered documents,
         // so a besluit that is publishable without an established document
         // stays visible, just without the documents that are not established.
@@ -806,7 +807,7 @@ class Zaak extends Model implements Eventable
         $besluiten = $besluiten
             ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
                 'besluitDocumenten' => $besluit->besluitDocumenten
-                    ?->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld())
+                    ?->filter(fn (Informatieobject $informatieobject) => $informatieobject->isZichtbaar())
                     ->values(),
             ])))
             ->values();
