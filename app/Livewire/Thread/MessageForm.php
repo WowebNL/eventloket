@@ -67,6 +67,12 @@ class MessageForm extends Component implements HasActions, HasSchemas
         return collect($this->documents)->map(function ($documentData) {
             $document = $this->thread->zaak->documenten->firstWhere('url', $documentData['url']);
 
+            // A selected document that is no longer visible (removed from the
+            // zaak, not or no longer established) is skipped.
+            if ($document === null) {
+                return null;
+            }
+
             if ($document->versie !== $documentData['versie']) {
                 $document = new Informatieobject(...ZgwResource::showDocumentVersion($this->thread->zaak->zgwConnectionName(), $document->uuid, (int) $documentData['versie']));
             }

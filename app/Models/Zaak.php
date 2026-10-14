@@ -671,11 +671,11 @@ class Zaak extends Model implements Eventable
      */
     private function visibleDocuments(Collection $documenten): Collection
     {
-        // Only show established documents; concepts from an external ZGW
-        // backend are hidden (documents without an explicit status, such
-        // as our own uploads, count as established, and so do archived
-        // ones). See Informatieobject::isVastgesteld().
-        $documenten = $documenten->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld());
+        // Only show established documents whose content has not expired;
+        // concepts from an external ZGW backend are hidden (documents without
+        // an explicit status, such as our own uploads, count as established,
+        // and so do archived ones). See Informatieobject::isZichtbaar().
+        $documenten = $documenten->filter(fn (Informatieobject $informatieobject) => $informatieobject->isZichtbaar());
 
         if (app()->runningInConsole()) {
             // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
@@ -794,6 +794,22 @@ class Zaak extends Model implements Eventable
         // rule, so it also applies in console context.
         $besluiten = $besluiten
             ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
+            ->values();
+
+        // The besluitdocumenten follow the same rule as the documents tab: a
+        // document that is not established (e.g. still in_bewerking) or whose
+        // content has expired is left out, also when the besluit itself may be
+        // shown. Whether the
+        // besluit is shown at all was decided above on its unfiltered documents,
+        // so a besluit that is publishable without an established document
+        // stays visible, just without the documents that are not established.
+        // map(), not each(): the value object is readonly, see below.
+        $besluiten = $besluiten
+            ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                'besluitDocumenten' => $besluit->besluitDocumenten
+                    ?->filter(fn (Informatieobject $informatieobject) => $informatieobject->isZichtbaar())
+                    ->values(),
+            ])))
             ->values();
 
         if (app()->runningInConsole()) {

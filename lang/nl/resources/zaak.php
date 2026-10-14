@@ -134,6 +134,9 @@ return [
             'description' => 'Deze zaak bevat bestanden die niet via Eventloket opgehaald mogen worden. Neem contact op met de beheerder als u een van deze bestanden nodig heeft.',
             'empty_state_heading' => 'De bestanden zijn niet beschikbaar via deze koppeling',
         ],
+        // Shown in a message thread in place of an attached document that is no
+        // longer among the documents the reader may see.
+        'no_longer_available' => 'Dit document is niet meer beschikbaar',
     ],
     'besluiten' => [
         // The besluiten halves of the same two messages. They have their own
