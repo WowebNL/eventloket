@@ -7,6 +7,7 @@ namespace App\EventForm\Schema;
 use App\EventForm\Schema\CustomSteps\SamenvattingStep;
 use App\EventForm\Schema\Patches\LocatiePolygonsPatch;
 use App\EventForm\Schema\Steps\AanvraagOfMeldingStep;
+use App\EventForm\Schema\Steps\AanvullendeVragenStep;
 use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\ContactgegevensStep;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
@@ -41,12 +42,20 @@ use Filament\Schemas\Components\Wizard\Step;
 class EventFormSchema
 {
     /**
+     * @param  bool  $withAanvullendeVragen  laat de stap "Aanvullende vragen"
+     *                                       weg wanneer de gemeente er geen
+     *                                       enkele heeft die op het huidige
+     *                                       aanvraagpad geldt. Applicability
+     *                                       alleen zou de stap doorgestreept
+     *                                       in de zijbalk laten staan; dat
+     *                                       zou iedere gemeente zien die de
+     *                                       functie niet gebruikt.
      * @return list<Step>
      */
-    public static function steps(?Organisation $organisation = null): array
+    public static function steps(?Organisation $organisation = null, bool $withAanvullendeVragen = true): array
     {
         return [
-            ...self::stepsForReport($organisation),
+            ...self::stepsForReport($organisation, $withAanvullendeVragen),
             SamenvattingStep::make(),
         ];
     }
@@ -61,10 +70,16 @@ class EventFormSchema
      * `SubmissionReport` herkent 'm en bouwt zelf een afgeleide
      * "Onderdelen aanvraag"-sectie op basis van de FormState.
      *
+     * Hetzelfde geldt voor `AanvullendeVragenStep`: die staat hier altijd in
+     * (de rapportage-tak slaat 'm over zodra er geen antwoorden zijn), ook
+     * wanneer de wizard 'm weglaat.
+     *
      * @return list<Step>
      */
-    public static function stepsForReport(?Organisation $organisation = null): array
+    public static function stepsForReport(?Organisation $organisation = null, bool $withAanvullendeVragen = true): array
     {
+        $aanvullendeVragen = $withAanvullendeVragen ? [AanvullendeVragenStep::make()] : [];
+
         return [
             ContactgegevensStep::make(),
             NaamVanHetEvenementStep::make(),
@@ -81,6 +96,7 @@ class EventFormSchema
             VergunningaanvraagMaatregelenStep::make($organisation),
             VergunningsaanvraagExtraActiviteitenStep::make(),
             VergunningaanvraagOverigStep::make($organisation),
+            ...$aanvullendeVragen,
             BijlagenStep::make($organisation),
             TypeAanvraagStep::make(),
         ];
@@ -93,11 +109,15 @@ class EventFormSchema
      * `EventFormPage::resolveStartStep()` om uit een step-key de
      * 1-based positie af te leiden).
      *
+     * Geef `$withAanvullendeVragen` dezelfde waarde mee als aan `steps()`:
+     * lopen die twee uiteen, dan wijst de afgeleide positie één stap
+     * verkeerd en opent een opgeslagen concept op de verkeerde stap.
+     *
      * @return list<string>
      */
-    public static function stepUuidsInOrder(): array
+    public static function stepUuidsInOrder(bool $withAanvullendeVragen = true): array
     {
-        return [
+        return array_values(array_filter([
             ContactgegevensStep::UUID,
             NaamVanHetEvenementStep::UUID,
             LocatieVanHetEvenement2Step::UUID,
@@ -113,9 +133,10 @@ class EventFormSchema
             VergunningaanvraagMaatregelenStep::UUID,
             VergunningsaanvraagExtraActiviteitenStep::UUID,
             VergunningaanvraagOverigStep::UUID,
+            $withAanvullendeVragen ? AanvullendeVragenStep::UUID : null,
             BijlagenStep::UUID,
             TypeAanvraagStep::UUID,
             SamenvattingStep::UUID,
-        ];
+        ], fn (?string $uuid): bool => $uuid !== null));
     }
 }

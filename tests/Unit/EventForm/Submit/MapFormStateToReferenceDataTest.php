@@ -115,6 +115,64 @@ test('persoonlijke organisatie → organisator valt terug op de persoonsnaam', f
     expect($ref->organisator)->toBe('Jan Jansen');
 });
 
+// --- Location-state leak (ZGW/PDF counterpart of #493) ---------------------
+//
+// Unticking a location kind hides its field but leaves the value in the state.
+// A copied application therefore still carries the source event's location.
+// These tests prove that leftover state of an unticked kind no longer reaches
+// the local reference_data, while a ticked kind is unchanged.
+
+test('locaties_evenement laat de naam van een afgevinkte soort niet lekken', function () {
+    $state = new FormState(values: [
+        'EvenementStart' => '2026-06-14T14:00',
+        'EvenementEind' => '2026-06-14T18:00',
+        'waarVindtHetEvenementPlaats' => ['route'],
+        'adresVanDeGebouwEn' => [['naamVanDeLocatieGebouw' => 'Sporthal Noord']],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+    ]);
+
+    $ref = $this->map->build($state, 'Ingediend', '');
+
+    expect($ref->locaties_evenement)->toBe('Route Centrum');
+});
+
+test('naam_locatie_evenement lekt geen gebouwnaam van een afgevinkte gebouw-soort', function () {
+    // Alleen "route" aangevinkt; het gebouwadres met naam staat nog in de
+    // state maar mag niet als naam_locatie_evenement terugkomen. Er is geen
+    // generieke naamVanDeLocatie, dus het resultaat valt terug op null.
+    $state = new FormState(values: [
+        'EvenementStart' => '2026-06-14T14:00',
+        'EvenementEind' => '2026-06-14T18:00',
+        'waarVindtHetEvenementPlaats' => ['route'],
+        'adresVanDeGebouwEn' => [
+            'uuid-1' => ['naamVanDeLocatieGebouw' => 'Sporthal De Geusselt', 'huisnummer' => '1'],
+        ],
+    ]);
+
+    $ref = $this->map->build($state, 'Ingediend', '');
+
+    expect($ref->naam_locatie_evenement)->toBeNull();
+});
+
+test('regressie-anker: met de gebouw-soort aangevinkt blijft naam_locatie_evenement de gebouwnaam', function () {
+    $state = new FormState(values: [
+        'EvenementStart' => '2026-06-14T14:00',
+        'EvenementEind' => '2026-06-14T18:00',
+        'waarVindtHetEvenementPlaats' => ['gebouw', 'buiten', 'route'],
+        'adresVanDeGebouwEn' => [
+            'uuid-1' => ['naamVanDeLocatieGebouw' => 'Sporthal De Geusselt', 'huisnummer' => '1'],
+        ],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+    ]);
+
+    $ref = $this->map->build($state, 'Ingediend', '');
+
+    expect($ref->naam_locatie_evenement)->toBe('Sporthal De Geusselt')
+        ->and($ref->locaties_evenement)->toBe('Sporthal De Geusselt, Stadspark, Route Centrum');
+});
+
 test('registratiedatum wordt gezet op "nu" bij elke build', function () {
     $state = new FormState(values: [
         'EvenementStart' => '2026-06-14T14:00',

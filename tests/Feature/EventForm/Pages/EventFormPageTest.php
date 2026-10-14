@@ -5,13 +5,16 @@ declare(strict_types=1);
 use App\Enums\MunicipalityVariableType;
 use App\Enums\OrganisationType;
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Schema\EventFormSchema;
+use App\EventForm\Schema\Steps\BijlagenStep;
 use App\EventForm\Schema\Steps\LocatieVanHetEvenement2Step;
 use App\EventForm\Schema\Steps\TijdenStep;
 use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Municipality;
+use App\Models\MunicipalityFormQuestion;
 use App\Models\MunicipalityVariable;
 use App\Models\Organisation;
 use App\Models\User;
@@ -208,6 +211,51 @@ test('mount opent op de step waar de gebruiker gebleven was (uit draft)', functi
     expect($reflection->invoke($page))->toBe($expectedIndex + 1);
 });
 
+test('zonder aanvullende vragen opent een concept op de positie uit de 18-staps lijst', function () {
+    // De stap "Aanvullende vragen" zit vóór Bijlagen. Laat de wizard 'm weg
+    // maar `stepUuidsInOrder()` niet, dan ligt elke positie erna er één naast
+    // en opent dit concept op de verkeerde stap. Dit is de regressietest voor
+    // de vijftien gemeenten die de functie niet gebruiken.
+    $this->draft->update(['current_step_key' => BijlagenStep::UUID]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    $reflection = new ReflectionMethod($page, 'resolveStartStep');
+    $reflection->setAccessible(true);
+
+    $zonderExtra = array_search(BijlagenStep::UUID, EventFormSchema::stepUuidsInOrder(false), true);
+    $metExtra = array_search(BijlagenStep::UUID, EventFormSchema::stepUuidsInOrder(true), true);
+
+    expect($metExtra)->toBe($zonderExtra + 1)
+        ->and($reflection->invoke($page))->toBe($zonderExtra + 1);
+});
+
+test('met aanvullende vragen schuift de positie van Bijlagen één op', function () {
+    $this->draft->update([
+        'current_step_key' => BijlagenStep::UUID,
+        'state' => (new FormState(values: [
+            'gemeenteVariabelen' => [
+                'extra_questions' => [
+                    ['id' => 1, 'type' => 'text', 'label' => 'Nog iets?', 'options' => []],
+                ],
+            ],
+        ]))->toSnapshot(),
+    ]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    $reflection = new ReflectionMethod($page, 'resolveStartStep');
+    $reflection->setAccessible(true);
+
+    $metExtra = array_search(BijlagenStep::UUID, EventFormSchema::stepUuidsInOrder(true), true);
+
+    expect($reflection->invoke($page))->toBe($metExtra + 1);
+});
+
 test('mount valt terug op stap 1 zonder current_step_key', function () {
     $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
 
@@ -253,6 +301,79 @@ function seedInGemeentenResponse(EventFormPage $page, array $gemeenten, array $e
         'all' => ['items' => $items, 'object' => $object],
     ], $extra));
 }
+
+test('een meerkeuze-aanvullende-vraag krijgt een lege array zodra de gemeente bekend wordt', function () {
+    // De stap bouwt z'n componenten uit de state, dus bij een gemeente die
+    // pas tijdens het invullen bekend wordt, bestaat het CheckboxList-veld
+    // nog niet wanneer `$form->fill()` draait. Blijft de sleutel dan ongezet,
+    // dan ziet Livewire `null` in plaats van een array en bindt 'ie de
+    // vinkjes als één boolean: één optie aanvinken vinkt ze allemaal aan.
+    $municipality = Municipality::factory()->create(['brk_identification' => 'GM9999']);
+    $vraag = MunicipalityFormQuestion::factory()->checkboxes(['A', 'B', 'C'])->create([
+        'municipality_id' => $municipality->id,
+    ]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
+    seedInGemeentenResponse($page, [['GM9999', $municipality->name]]);
+    $page->data['userSelectGemeente'] = 'GM9999';
+
+    $page->updated('data.userSelectGemeente');
+
+    expect($page->data['extraVraag_'.$vraag->id])->toBe([]);
+});
+
+test('een meerkeuzevraag die pas door een padwijziging verschijnt krijgt ook een lege array', function () {
+    // Deze vraag geldt alleen bij een vooraankondiging. Op het moment dat de
+    // gemeente bekend wordt is het pad nog "vergunning", dus de vraag bestaat
+    // dan nog niet. Hing de hydratie aan de gemeente-fetch, dan bleef de
+    // sleutel hier ongezet en bond Livewire de groep als één boolean.
+    $municipality = Municipality::factory()->create(['brk_identification' => 'GM9999']);
+    $vraag = MunicipalityFormQuestion::factory()
+        ->checkboxes(['A', 'B', 'C'])
+        ->forAanvraagTypes([ZaaktypeRole::Vooraankondiging->value])
+        ->create(['municipality_id' => $municipality->id]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
+    seedInGemeentenResponse($page, [['GM9999', $municipality->name]]);
+    $page->data['userSelectGemeente'] = 'GM9999';
+    $page->updated('data.userSelectGemeente');
+
+    expect($page->data['extraVraag_'.$vraag->id] ?? null)
+        ->toBeNull('de vraag geldt nog niet op het vergunning-pad');
+
+    $page->data['waarvoorWiltUEventloketGebruiken'] = 'vooraankondiging';
+    $page->updated('data.waarvoorWiltUEventloketGebruiken');
+
+    expect($page->data['extraVraag_'.$vraag->id])->toBe([]);
+});
+
+test('een reeds beantwoorde meerkeuzevraag wordt niet leeggegooid door de hydratie', function () {
+    $municipality = Municipality::factory()->create(['brk_identification' => 'GM9999']);
+    $vraag = MunicipalityFormQuestion::factory()->checkboxes(['A', 'B', 'C'])->create([
+        'municipality_id' => $municipality->id,
+    ]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $this->draft->id]);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+
+    seedInGemeentenResponse($page, [['GM9999', $municipality->name]]);
+    $page->data['userSelectGemeente'] = 'GM9999';
+    $page->data['extraVraag_'.$vraag->id] = ['B'];
+
+    $page->updated('data.userSelectGemeente');
+
+    expect($page->data['extraVraag_'.$vraag->id])->toBe(['B']);
+});
 
 test('route verlegd waardoor de gekozen gemeente wegvalt → keuze wordt geleegd', function () {
     // De organisator had Heerlen gekozen en verlegt daarna z'n route zo dat

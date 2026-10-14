@@ -239,6 +239,38 @@ class FormState implements Arrayable
     }
 
     /**
+     * Drop state keys that are no longer part of the answer.
+     *
+     * `absorbFields()` merges and never removes a key, so a value outlives
+     * the field it belongs to: once a field is hidden it stops being
+     * submitted, yet its last value stays in the bag and keeps flowing into
+     * everything built from this state. Callers that know the current schema
+     * use this to bring the bag back in line with what is actually asked.
+     *
+     * @param  list<string>  $keys
+     */
+    public function forgetFields(array $keys): void
+    {
+        $removed = false;
+
+        foreach ($keys as $key) {
+            if (! array_key_exists($key, $this->values)) {
+                continue;
+            }
+
+            unset($this->values[$key]);
+            $removed = true;
+        }
+
+        if (! $removed) {
+            return;
+        }
+
+        $this->getCache = [];
+        $this->version++;
+    }
+
+    /**
      * Set meerdere variabelen in één keer (bv. initial values of service response).
      *
      * @param  array<string, mixed>  $values

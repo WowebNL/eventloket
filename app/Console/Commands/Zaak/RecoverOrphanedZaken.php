@@ -9,8 +9,8 @@ use App\Models\Organisation;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\Services\Zgw\ZaakReadModel;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
-use App\ValueObjects\OzZaak;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -87,14 +87,14 @@ class RecoverOrphanedZaken extends Command
         }
 
         try {
-            $ozZaak = new OzZaak(...$openzaak->get($url.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen')->toArray());
+            $ozZaak = ZaakReadModel::fromArray($openzaak->get($url.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen')->toArray());
         } catch (Throwable $e) {
             $this->error("- {$url}: failed to fetch ZGW case ({$e->getMessage()}).");
 
             return false;
         }
 
-        $zaaktype = Zaaktype::where(['zgw_zaaktype_url' => $ozZaak->zaaktype, 'is_active' => true])->first();
+        $zaaktype = $this->resolveZaaktype($ozZaak->zaaktype, $openzaak);
         if (! $zaaktype) {
             $this->warn("- {$url}: zaaktype not found or inactive ({$ozZaak->zaaktype}), skipping.");
 
@@ -118,11 +118,17 @@ class RecoverOrphanedZaken extends Command
             return true;
         }
 
+        // Per-day times of a multi-day event live only locally, not as a
+        // zaakeigenschap in OpenZaak. If a local case already exists, recovery
+        // must not overwrite those with nothing.
+        $bestaand = Zaak::withTrashed()->firstWhere('zgw_zaak_url', $ozZaak->url);
+
         $zaak = Zaak::updateOrCreate(
             ['zgw_zaak_url' => $ozZaak->url],
             [
                 'public_id' => $ozZaak->identificatie,
                 'zaaktype_id' => $zaaktype->id,
+                'zgw_zaaktype_url' => $ozZaak->zaaktype, // snapshot of the version used
                 'data_object_url' => $ozZaak->data_object_url,
                 'organisation_id' => $organisation?->id,
                 'organiser_user_id' => $user?->id,
@@ -134,6 +140,9 @@ class RecoverOrphanedZaken extends Command
                             'status_name' => $ozZaak->status_name ?? '',
                             'statustype_url' => $ozZaak->statustype_url ?? '',
                             'organisator' => $organisator,
+                            'dagen_evenement' => $bestaand?->reference_data->dagen_evenement,
+                            'dagen_opbouw' => $bestaand?->reference_data->dagen_opbouw,
+                            'dagen_afbouw' => $bestaand?->reference_data->dagen_afbouw,
                         ]
                     )
                 ),
@@ -145,6 +154,31 @@ class RecoverOrphanedZaken extends Command
         }
 
         return true;
+    }
+
+    /**
+     * Resolve the local logical zaaktype for a ZGW zaaktype version url.
+     *
+     * Tries an exact url match first; after version-collapsing the local row holds
+     * the latest version url, so an older version on an orphaned zaak falls back to
+     * a lookup by that version's logical identificatie.
+     */
+    private function resolveZaaktype(string $versionUrl, Openzaak $openzaak): ?Zaaktype
+    {
+        $zaaktype = Zaaktype::where(['zgw_zaaktype_url' => $versionUrl, 'is_active' => true])->first();
+        if ($zaaktype) {
+            return $zaaktype;
+        }
+
+        try {
+            $identificatie = $openzaak->get($versionUrl)->toArray()['identificatie'] ?? null;
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $identificatie
+            ? Zaaktype::where(['identificatie' => $identificatie, 'is_active' => true])->first()
+            : null;
     }
 
     /**
@@ -172,7 +206,7 @@ class RecoverOrphanedZaken extends Command
      *
      * @return array{0: ?Organisation, 1: ?OrganiserUser}
      */
-    private function resolveOrganisationAndUser(OzZaak $ozZaak, ObjectsApi $objectsapi): array
+    private function resolveOrganisationAndUser(ZaakReadModel $ozZaak, ObjectsApi $objectsapi): array
     {
         if (! $ozZaak->data_object_url) {
             return [null, null];
@@ -196,19 +230,22 @@ class RecoverOrphanedZaken extends Command
         ];
     }
 
-    private function buildOrganisatorLabel(OzZaak $ozZaak): string
+    private function buildOrganisatorLabel(ZaakReadModel $ozZaak): string
     {
         $initiator = $ozZaak->initiator;
         if (! $initiator) {
             return '';
         }
 
-        if ($initiator->betrokkeneType === 'natuurlijk_persoon') {
-            return trim(($initiator->betrokkeneIdentificatie['voornamen'] ?? '').' '.($initiator->betrokkeneIdentificatie['geslachtsnaam'] ?? ''));
+        $type = $initiator['betrokkeneType'] ?? null;
+        $id = $initiator['betrokkeneIdentificatie'] ?? [];
+
+        if ($type === 'natuurlijk_persoon') {
+            return trim(($id['voornamen'] ?? '').' '.($id['geslachtsnaam'] ?? ''));
         }
 
-        if ($initiator->betrokkeneType === 'niet_natuurlijk_persoon') {
-            return ($initiator->betrokkeneIdentificatie['statutaireNaam'] ?? '').' - '.($initiator->contactpersoonRol['naam'] ?? '');
+        if ($type === 'niet_natuurlijk_persoon') {
+            return ($id['statutaireNaam'] ?? '').' - '.($initiator['contactpersoonRol']['naam'] ?? '');
         }
 
         return '';

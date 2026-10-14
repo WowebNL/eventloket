@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Enums\MunicipalityFormQuestionType;
+use App\EventForm\Components\AddressNL;
 use App\EventForm\Components\VerticalWizard;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
@@ -13,6 +15,8 @@ use App\EventForm\State\FormDerivedState;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ResolveZaaktype;
 use App\EventForm\Submit\SubmitEventForm;
+use App\EventForm\Support\ExtraQuestions;
+use App\EventForm\Support\LocationKinds;
 use App\Exceptions\GemeenteLocatieMismatchException;
 use App\Filament\Organiser\Resources\Zaken\ZaakResource;
 use App\Models\Municipality;
@@ -22,11 +26,13 @@ use App\Models\Users\OrganiserUser;
 use Carbon\CarbonInterface;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use Filament\Forms\Components\Field;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Panel;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Schema;
 use Livewire\Attributes\Locked;
 
@@ -174,6 +180,8 @@ class EventFormPage extends Page implements HasForms
                 $this->data[$mapKey] = $values[$mapKey];
             }
         }
+
+        $this->hydrateAanvullendeVragenState();
     }
 
     /**
@@ -354,8 +362,7 @@ class EventFormPage extends Page implements HasForms
      * Meteen ook een integriteitsgrens: `$data` komt van de client, dus zonder
      * deze filter kan een aangepaste `inGemeentenResponse` de aanvraag naar een
      * willekeurige gemeente sturen — inclusief langs de controle in
-     * {@see ResolveZaaktype}, die tegen diezelfde
-     * response vergelijkt.
+     * {@see ResolveZaaktype}, die tegen diezelfde response vergelijkt.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -392,7 +399,7 @@ class EventFormPage extends Page implements HasForms
 
         return $form
             ->schema([
-                VerticalWizard::make(EventFormSchema::steps($organisation))
+                VerticalWizard::make(EventFormSchema::steps($organisation, $this->hasAanvullendeVragen()))
                     ->stepApplicability(fn (string $stepKey): bool => $this->state->isStepApplicable($stepKey))
                     // Resume bij terugkeer: als de organisator weg is geweest
                     // (bv. naar Dashboard) en geen `?step=`-query-param meer
@@ -426,6 +433,8 @@ class EventFormPage extends Page implements HasForms
             return;
         }
 
+        $this->runAddressLookupForObjectUpdate($propertyName);
+
         $this->absorbFormData($this->data ?? []);
 
         // Service-fetches die voorheen door fetch-rules in de RulesEngine
@@ -433,6 +442,11 @@ class EventFormPage extends Page implements HasForms
         // bepalen we welke fetches aan-kunnen — ServiceFetcher cachet
         // intern op input-hash, dus dezelfde state → geen werk.
         $this->triggerFetchesFor($propertyName);
+
+        // Na de fetches, want die kunnen een nieuwe vragenlijst opleveren —
+        // en na absorb, want een gewijzigd antwoord kan het aanvraagpad
+        // omzetten en daarmee andere vragen van toepassing maken.
+        $this->hydrateAanvullendeVragenState();
 
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
 
@@ -451,6 +465,30 @@ class EventFormPage extends Page implements HasForms
     }
 
     /**
+     * Runs the address auto-fill when an edit to an address arrives as an
+     * update of the whole address object rather than of one of its fields
+     * (see `AddressNL::lookupFieldPathForObjectUpdate()`). The update is
+     * handed to the schema as an update of the changed lookup field, so the
+     * field's own `afterStateUpdated` callback runs as it would for a
+     * per-field update.
+     */
+    private function runAddressLookupForObjectUpdate(string $propertyName): void
+    {
+        foreach ($this->getCachedSchemas() as $schema) {
+            $lookupFieldPath = AddressNL::lookupFieldPathForObjectUpdate(
+                $schema,
+                $propertyName,
+                $this->getOldSchemaState($propertyName),
+                data_get($this, $propertyName),
+            );
+
+            if ($lookupFieldPath !== null) {
+                $schema->callAfterStateUpdated($lookupFieldPath);
+            }
+        }
+    }
+
+    /**
      * Persisteer de huidige draft direct, los van de updated()-throttle.
      * Aangeroepen vanuit JS (Volgende-knop in de vertical-wizard) om te
      * garanderen dat de meest recente kaart-tekening en andere deferred-
@@ -459,6 +497,7 @@ class EventFormPage extends Page implements HasForms
     public function saveDraftNow(): void
     {
         $this->absorbFormData($this->data ?? []);
+        $this->hydrateAanvullendeVragenState();
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
         $this->persistDraft();
         $this->lastDraftSaveAt = time();
@@ -535,13 +574,27 @@ class EventFormPage extends Page implements HasForms
         // geval een legacy-draft de `form.`-prefix nog meeschrijft.
         $cleanKey = str_starts_with($key, 'form.') ? substr($key, 5) : $key;
 
-        foreach (EventFormSchema::stepUuidsInOrder() as $index => $uuid) {
+        // Dezelfde conditie als in form(): laat de wizard de stap
+        // "Aanvullende vragen" weg en deze lijst niet, dan liggen alle
+        // posities daarna er één naast en opent het concept op de
+        // verkeerde stap.
+        foreach (EventFormSchema::stepUuidsInOrder($this->hasAanvullendeVragen()) as $index => $uuid) {
             if ($uuid === $cleanKey) {
                 return $index + 1;
             }
         }
 
         return 1;
+    }
+
+    /**
+     * Of de stap "Aanvullende vragen" in de wizard hoort: alleen wanneer de
+     * gemeente minstens één actieve vraag heeft die op het huidige
+     * aanvraagpad van toepassing is.
+     */
+    private function hasAanvullendeVragen(): bool
+    {
+        return ExtraQuestions::hasAny($this->state);
     }
 
     /**
@@ -552,6 +605,43 @@ class EventFormPage extends Page implements HasForms
      * `AlsBoolEnIsNietGelijkAanNone*`). De ServiceFetcher cachet intern
      * op een input-hash, dus over-fetchen kost geen extra werk.
      */
+    /**
+     * Geef elke aanvullende meerkeuzevraag een lege array als er nog geen
+     * antwoord is.
+     *
+     * De stap bouwt z'n componenten uit de state, dus een CheckboxList kan
+     * pas halverwege het invullen ontstaan — en dan heeft `$form->fill()`
+     * z'n sleutel in `$this->data` nooit aangemaakt. Livewire ziet dan `null`
+     * in plaats van een array en bindt de hele groep als één boolean: één
+     * optie aanvinken zet ze allemaal aan, en de samenvatting toont `1`
+     * (de boolean als string) in plaats van de gekozen opties.
+     *
+     * Dit draait bewust bij élke roundtrip en niet alleen na een
+     * gemeente-fetch. De set toepasselijke vragen hangt namelijk óók van het
+     * aanvraagpad af: een vraag die alleen bij een vooraankondiging hoort,
+     * ontstaat pas zodra de organisator dat pad kiest — lang nadat de
+     * gemeente bekend werd.
+     *
+     * Radio en Textarea hebben dit probleem niet; die werken gewoon met `null`.
+     */
+    private function hydrateAanvullendeVragenState(): void
+    {
+        foreach (ExtraQuestions::forState($this->state) as $question) {
+            if (($question['type'] ?? null) !== MunicipalityFormQuestionType::Checkboxes->value) {
+                continue;
+            }
+
+            $key = ExtraQuestions::fieldKey($question);
+
+            if (is_array($this->data[$key] ?? null)) {
+                continue;
+            }
+
+            $this->data[$key] = [];
+            $this->state->setField($key, []);
+        }
+    }
+
     private function triggerFetchesFor(string $propertyName): void
     {
         $field = $this->fieldKeyFromProperty($propertyName);
@@ -572,7 +662,13 @@ class EventFormPage extends Page implements HasForms
             $fetcher->fetch('evenementenInDeGemeente', $this->state);
         }
 
-        if (in_array($field, ['locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'], true)) {
+        // `waarVindtHetEvenementPlaats` belongs in this list even though it
+        // holds no location itself: unticking a kind removes its address,
+        // area or route from the check (see `LocationKinds`), and nothing
+        // else changes at that moment. Without it, the municipality of the
+        // kind just dropped stays in the choice list until the organiser
+        // happens to touch a location field again.
+        if (in_array($field, [LocationKinds::QUESTION, 'locatieSOpKaart', 'routesOpKaart', 'adresVanDeGebouwEn'], true)) {
             // Reactieve check tijdens het typen/tekenen: adressen tellen alleen
             // mee als hun gemeente al uit de auto-fill bekend is, zodat deze
             // synchrone call nooit een trage PDOK-lookup voor een adres doet.
@@ -617,6 +713,8 @@ class EventFormPage extends Page implements HasForms
         $fetcher->fetch('gemeenteVariabelen', $this->state);
         $fetcher->fetch('evenementenInDeGemeente', $this->state);
 
+        $this->hydrateAanvullendeVragenState();
+
         $this->stateSnapshot = $this->serializableSnapshot($this->state);
     }
 
@@ -625,11 +723,12 @@ class EventFormPage extends Page implements HasForms
      * intersectie de eerdere keuze van de organisator ongeldig maakt: de
      * gekozen gemeente zit niet langer tussen de gevonden gemeenten. Dat
      * gebeurt wanneer de organisator z'n route of locatie zo verlegt dat
-     * die gemeente er niet meer bij is. Zonder deze reset zou een stale
-     * brk_identification de `evenementInGemeente`-derivation blijven
-     * aansturen; die levert dan `null` op en de gate blokkeert met de
-     * misleidende melding "Gemeente niet bepaald" i.p.v. om een nieuwe
-     * keuze te vragen.
+     * die gemeente er niet meer bij is, en bij "Nieuwe aanvraag met deze
+     * gegevens" waarbij de keuze van de bron-aanvraag nog in de state stond.
+     * Zonder deze reset zou een stale brk_identification de
+     * `evenementInGemeente`-derivation blijven aansturen; die levert dan
+     * `null` op en de gate blokkeert met de misleidende melding "Gemeente
+     * niet bepaald" i.p.v. om een nieuwe keuze te vragen.
      *
      * Bewust idempotent: een keuze die nog in de gevonden set zit blijft
      * staan, hoe vaak deze check ook draait. De gate (`runLocationGate()`)
@@ -731,6 +830,7 @@ class EventFormPage extends Page implements HasForms
         $dehydrationState = [];
         $this->form->callBeforeStateDehydrated($dehydrationState);
         $this->absorbFormData($this->form->getStateSnapshot());
+        $this->pruneStateToVisible();
 
         $user = $this->state->get('authUser');
         $org = $this->state->get('authOrganisation');
@@ -810,17 +910,197 @@ class EventFormPage extends Page implements HasForms
         }
 
         foreach ($wizard->getChildSchema()->getComponents() as $step) {
-            // Filament prefixeert de step-key met "form." (de naam van de form-schema-
-            // binding); COMPUTED_STEPS bevat alleen de kale UUID's. Dezelfde strip
-            // staat in vertical-wizard.blade.php.
-            $rawKey = $step->getKey();
-            $stepUuid = str_starts_with($rawKey, 'form.') ? substr($rawKey, 5) : $rawKey;
-
-            if (! $this->state->isStepApplicable($stepUuid)) {
+            if (! $this->state->isStepApplicable(self::stepUuid($step))) {
                 continue;
             }
             $step->getChildSchema()->validate();
         }
+    }
+
+    /**
+     * Bring the state back in line with the answers the form is actually
+     * collecting, so that everything built from it describes the application
+     * the organiser is submitting.
+     *
+     * A field that was filled in and later became hidden keeps its value:
+     * `absorbFields()` merges and never drops a key. The value is invisible in
+     * the interface from that moment on, but it still reaches the outputs, so
+     * an application can carry an answer that was withdrawn or that came along
+     * with a copied application. Filament already leaves a hidden field out of
+     * its own dehydration, so the visible set below is exactly what the
+     * organiser sees; this only stops the merge from putting the stale value
+     * back.
+     *
+     * Step applicability is a second layer, because it is not a Filament
+     * concept: a step the answers make irrelevant is only dimmed in the step
+     * list, its fields stay rendered and would therefore count as visible.
+     *
+     * Two boundaries are respected. Nested values (repeater rows and the like)
+     * are not addressed here: the whole top-level value is replaced on absorb,
+     * so Filament's own pruning of those already survives. And keys the server
+     * owns are never dropped, for the same reason {@see absorbFormData} never
+     * lets the client write them: they are computed, not answered.
+     */
+    private function pruneStateToVisible(): void
+    {
+        $this->state->forgetFields($this->stateKeysNotBeingAsked());
+    }
+
+    /**
+     * The state as the form is currently asking for it: everything that has
+     * been filled in, minus the answers to questions that are no longer being
+     * put to the organiser.
+     *
+     * The components that show back what has been filled in read this instead
+     * of the raw state. Without it they print a value the organiser can no
+     * longer see or correct — the same stale value {@see pruneStateToVisible}
+     * keeps out of the submitted application — so the overview and the
+     * application would disagree about what was asked.
+     *
+     * The state itself is deliberately left untouched. Only submitting settles
+     * what the answers are; until then a question that comes back has to show
+     * what was typed before, and a stored draft keeps its own bag.
+     */
+    public function stateAsAsked(): FormState
+    {
+        $shown = FormState::fromSnapshot($this->state->toSnapshot());
+        $shown->forgetFields($this->stateKeysNotBeingAsked());
+
+        return $shown;
+    }
+
+    /**
+     * The top-level state keys the wizard owns but is not currently asking
+     * for: hidden fields, and fields of a step the answers do not apply to.
+     *
+     * @return list<string>
+     */
+    private function stateKeysNotBeingAsked(): array
+    {
+        $wizard = $this->form->getComponents(withHidden: true)[0] ?? null;
+        if (! $wizard instanceof Component) {
+            return [];
+        }
+
+        $wizardSchema = $wizard->getChildSchema();
+        if ($wizardSchema === null) {
+            return [];
+        }
+
+        /** @var array{owned: list<string>, answerable: list<string>} $keys */
+        $keys = Component::withVisibilityCache(function () use ($wizardSchema): array {
+            $owned = [];
+            $answerable = [];
+
+            foreach ($wizardSchema->getComponents(withHidden: true) as $step) {
+                $stepSchema = $step->getChildSchema();
+                if ($stepSchema === null) {
+                    continue;
+                }
+
+                $owned = [...$owned, ...$this->fieldStateKeys($this->fieldsOf($stepSchema, withHidden: true))];
+
+                if (! $this->state->isStepApplicable(self::stepUuid($step))) {
+                    continue;
+                }
+
+                $answerable = [...$answerable, ...$this->fieldStateKeys($this->fieldsOf($stepSchema, withHidden: false))];
+            }
+
+            return ['owned' => $owned, 'answerable' => $answerable];
+        });
+
+        // A key can be owned by more than one step, so a field is only dropped
+        // when no step offers it to the organiser at all.
+        $forget = array_diff(
+            $keys['owned'],
+            $keys['answerable'],
+            ServiceFetcher::FETCHED_VARIABLES,
+            array_keys(FormDerivedState::COMPUTED_KEYS),
+        );
+
+        return array_values(array_unique($forget));
+    }
+
+    /**
+     * The fields of a schema, optionally including the ones it is currently
+     * hiding.
+     *
+     * Deliberately not `getFlatFields()`: that memoises its result per
+     * visibility flag on the schema, and the schema outlives the moment the
+     * answers change. The overviews ask for the visible set while the page
+     * renders, submitting asks for it again after the last answer is in, and a
+     * memoised set would hand the second caller the first caller's world. This
+     * walk mirrors what Filament does but evaluates the visibility every time
+     * it is asked.
+     *
+     * @return list<Field>
+     */
+    private function fieldsOf(Schema $schema, bool $withHidden): array
+    {
+        $fields = [];
+
+        foreach ($schema->getComponents(withActions: false, withHidden: $withHidden) as $component) {
+            if (! $component instanceof Component) {
+                continue;
+            }
+
+            if ($component instanceof Field) {
+                $fields[] = $component;
+            }
+
+            foreach ($component->getChildSchemas($withHidden) as $childSchema) {
+                $fields = [...$fields, ...$this->fieldsOf($childSchema, $withHidden)];
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * The top-level state keys the given fields write to.
+     *
+     * @param  list<Field>  $fields
+     * @return list<string>
+     */
+    private function fieldStateKeys(array $fields): array
+    {
+        $prefix = $this->form->getStatePath();
+        $prefix = filled($prefix) ? $prefix.'.' : '';
+
+        $keys = [];
+
+        foreach ($fields as $field) {
+            $path = (string) $field->getStatePath();
+
+            if ($prefix !== '') {
+                if (! str_starts_with($path, $prefix)) {
+                    continue;
+                }
+
+                $path = substr($path, strlen($prefix));
+            }
+
+            if ($path === '' || str_contains($path, '.')) {
+                continue;
+            }
+
+            $keys[] = $path;
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Filament prefixes a step key with the name of the schema binding
+     * ("form."); the applicability rules are keyed on the bare UUID. The same
+     * strip lives in vertical-wizard.blade.php.
+     */
+    private static function stepUuid(Component $step): string
+    {
+        $key = (string) $step->getKey();
+
+        return str_starts_with($key, 'form.') ? substr($key, 5) : $key;
     }
 
     public function getTitle(): string

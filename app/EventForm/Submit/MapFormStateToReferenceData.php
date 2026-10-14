@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\EventForm\Submit;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Support\DagenRepeater;
+use App\EventForm\Support\LocationKinds;
 use App\Models\Organisation;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Carbon\Carbon;
@@ -41,7 +43,29 @@ final class MapFormStateToReferenceData
             start_afbouw: $this->iso8601OrNull($state->get('AfbouwStart')),
             eind_afbouw: $this->iso8601OrNull($state->get('AfbouwEind')),
             locaties_evenement: $this->locatiesEvenement($state),
+            dagen_evenement: $this->dagen($state, 'EvenementDagen'),
+            dagen_opbouw: $this->dagen($state, 'OpbouwDagen'),
+            dagen_afbouw: $this->dagen($state, 'AfbouwDagen'),
         );
+    }
+
+    /**
+     * Per-day start and end times, filled in only when the period runs over
+     * several calendar days. Null keeps the envelope the whole story.
+     *
+     * @return list<array{datum: string, start: string, eind: string}>|null
+     */
+    private function dagen(FormState $state, string $key): ?array
+    {
+        $rijen = $state->get($key);
+
+        if (! is_array($rijen)) {
+            return null;
+        }
+
+        $blokken = DagenRepeater::naarReferenceData($rijen);
+
+        return $blokken !== [] ? $blokken : null;
     }
 
     private function iso8601(mixed $value): string
@@ -78,7 +102,11 @@ final class MapFormStateToReferenceData
     {
         $names = [];
 
-        $gebouwen = $state->get('adresVanDeGebouwEn');
+        // Read every location field through `LocationKinds` so that state left
+        // behind by a kind the organiser unticked (Filament keeps a hidden
+        // field's value; see `LocationKinds`) does not leak a copied-over
+        // source event's location into the local reference_data.
+        $gebouwen = LocationKinds::valueFor($state, LocationKinds::GEBOUW);
         if (is_array($gebouwen)) {
             foreach ($gebouwen as $entry) {
                 if (is_array($entry) && ! empty($entry['naamVanDeLocatieGebouw'])) {
@@ -87,12 +115,19 @@ final class MapFormStateToReferenceData
             }
         }
 
-        $kaart = $this->stringOrNull($state->get('naamVanDeLocatieKaart'));
+        // The map/route name fields hang on the "buiten" resp. "route" kind:
+        // both are hidden together with their kind's component, so their
+        // leftover value counts only while that kind is ticked.
+        $kaart = LocationKinds::isSelected($state, LocationKinds::BUITEN)
+            ? $this->stringOrNull($state->get('naamVanDeLocatieKaart'))
+            : null;
         if ($kaart !== null) {
             $names[] = $kaart;
         }
 
-        $route = $this->stringOrNull($state->get('naamVanDeRoute'));
+        $route = LocationKinds::isSelected($state, LocationKinds::ROUTE)
+            ? $this->stringOrNull($state->get('naamVanDeRoute'))
+            : null;
         if ($route !== null) {
             $names[] = $route;
         }
@@ -102,8 +137,9 @@ final class MapFormStateToReferenceData
 
     private function naamLocatie(FormState $state): ?string
     {
-        // Gebouw-tak: eerste naam uit adresVanDeGebouwEn.
-        $gebouwen = $state->get('adresVanDeGebouwEn');
+        // Gebouw-tak: eerste naam uit adresVanDeGebouwEn, alleen zolang de
+        // gebouw-soort is aangevinkt (LocationKinds houdt afgevinkte state weg).
+        $gebouwen = LocationKinds::valueFor($state, LocationKinds::GEBOUW);
         if (is_array($gebouwen)) {
             foreach ($gebouwen as $entry) {
                 if (is_array($entry) && ! empty($entry['naamVanDeLocatieGebouw'])) {
@@ -112,7 +148,10 @@ final class MapFormStateToReferenceData
             }
         }
 
-        // Buiten/route-tak: eventuele opgegeven naam.
+        // Generic fallback name migrated from Open Formulieren
+        // (`watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt` → `naamVanDeLocatie`,
+        // see `BackfillSnapshotsFromObjects`). It is not bound to a single kind
+        // and is not hidden by unticking one, so it stays a direct read.
         return $this->stringOrNull($state->get('naamVanDeLocatie'));
     }
 

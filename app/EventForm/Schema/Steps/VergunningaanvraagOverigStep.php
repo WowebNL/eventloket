@@ -10,8 +10,8 @@ use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Hidden;
 use App\EventForm\Schema\Label;
+use App\Filament\Forms\Components\BasemapMap;
 use App\Models\Organisation;
-use Dotswan\MapPicker\Fields\Map;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Repeater;
@@ -47,7 +47,7 @@ final class VergunningaanvraagOverigStep
                                     ->label('Voorwerp')
                                     ->required()
                                     ->maxLength(1000),
-                                Map::make('positieVanHetVoorwerp')
+                                BasemapMap::make('positieVanHetVoorwerp')
                                     ->label('Positie van het voorwerp')
                                     ->defaultLocation(50.8514, 5.6910)
                                     ->zoom(11)

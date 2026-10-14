@@ -1,6 +1,10 @@
 <?php
 
 return [
+    // Used in place of the event name when the zaak carries none (a doorkomst
+    // deelzaak whose zaaktype does not know the eigenschap, a recovered zaak).
+    'unnamed_event' => 'onbekend evenement',
+
     'label' => [
         'reviewer' => 'Nieuwe zaak',
         'organiser' => 'Nieuwe aanvraag',

@@ -24,7 +24,10 @@
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
+use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\SubmitEventForm;
 use App\Jobs\Submit\GenerateSubmissionPdf;
@@ -32,15 +35,18 @@ use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
+use App\Jobs\Zaak\AddGlobaleLocatieZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\SetInitialStatusZGW;
 use App\Jobs\Zaak\UpdateInitiatorZGW;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
+use App\Models\ZaakRelatie;
 use App\Models\Zaaktype;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
@@ -117,10 +123,10 @@ function fakeOpenzaakZaakCreate(): string
         ], 201),
         // CreateLocalZaak resolves the initial statustype (volgnummer 1) so the
         // local zaak has a valid statustype_url from creation.
-        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response([
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'Ontvangen', 'volgnummer' => 1, 'isEindstatus' => false],
             ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/2', 'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/1', 'omschrijving' => 'In behandeling', 'volgnummer' => 2, 'isEindstatus' => false],
-        ], 200),
+        ]), 200),
     ]);
 
     return $zaakUrl;
@@ -183,7 +189,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
     expect(Draft::whereKey($activeDraft->id)->exists())->toBeFalse()
         ->and(Draft::whereKey($otherDraft->id)->exists())->toBeTrue();
 
-    // 5. De 8 jobs zitten samen in één Bus::chain() in de juiste volgorde.
+    // 5. De jobs zitten samen in één Bus::chain() in de juiste volgorde.
     //    GenerateSubmissionPdf staat als eerste zodat de bevestigingsmail zo
     //    snel mogelijk verstuurd wordt. HashIdentifyingAttributes loopt als
     //    allerlaatste zodat alle eerdere jobs de plain BSN/KvK kunnen lezen.
@@ -194,6 +200,7 @@ test('happy-path: lokale Zaak, ZGW-URL, draft leeg, async keten dispatched', fun
         AddEinddatumZGW::class,
         UpdateInitiatorZGW::class,
         AddGeometryZGW::class,
+        AddGlobaleLocatieZGW::class,
         CreateDoorkomstZaken::class,
         HashIdentifyingAttributes::class,
     ]);
@@ -254,4 +261,63 @@ test('OpenZaak faalt → DB-transactie gerold, geen lokale Zaak', function () {
     }
 
     expect(Zaak::count())->toBe(0);
+});
+
+test('een gekoppelde vooraankondiging krijgt bij submit de vervangt-relatie (issue #10)', function () {
+    $sc = scenarioBuurtfeestInHeerlen();
+    fakeOpenzaakZaakCreate();
+
+    $vooraankondiging = Zaak::factory()->create([
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'name' => 'Vooraankondiging gemeente Heerlen',
+            'municipality_id' => $sc['heerlen']->id,
+            'is_active' => true,
+        ])->id,
+        'organisation_id' => $sc['organisation']->id,
+    ]);
+
+    $sc['state']->setField(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD, 'Ja');
+    $sc['state']->setField(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD, $vooraankondiging->id);
+
+    Bus::fake();
+
+    $zaak = app(SubmitEventForm::class)->execute($sc['state'], $sc['user'], $sc['organisation']);
+
+    $relatie = ZaakRelatie::sole();
+    expect($relatie->zaak_id)->toBe($zaak->id)
+        ->and($relatie->gerelateerde_zaak_id)->toBe($vooraankondiging->id)
+        ->and($relatie->type)->toBe(ZaakRelatieType::VervangtVooraankondiging)
+        ->and($zaak->vervangtVooraankondiging()->pluck('zaken.id')->all())->toBe([$vooraankondiging->id]);
+});
+
+test('legt het aanvraagtype vast op de zaak wanneer aanvraagtypen één zaaktype delen', function () {
+    $sc = scenarioBuurtfeestInHeerlen();
+    $sc['zaaktype']->update(['identificatie' => 'SYN-GEDEELD']);
+
+    // Vergunning first: a role derived from the zaaktype alone would say
+    // vergunning for every zaak on it.
+    foreach ([ZaaktypeRole::Vergunning, ZaaktypeRole::Vooraankondiging] as $rol) {
+        MunicipalityZaaktypeMapping::create([
+            'municipality_id' => $sc['heerlen']->id,
+            'role' => $rol,
+            'zaaktype_identificatie' => 'SYN-GEDEELD',
+        ]);
+    }
+
+    $state = new FormState(values: [
+        'evenementInGemeente' => ['brk_identification' => 'GM0917', 'name' => 'Heerlen'],
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'watIsDeNaamVanHetEvenementVergunning' => 'Synthetische vooraankondiging',
+        'EvenementStart' => '2026-06-14T14:00',
+        'EvenementEind' => '2026-06-14T18:00',
+    ]);
+
+    fakeOpenzaakZaakCreate();
+    Bus::fake();
+
+    $zaak = app(SubmitEventForm::class)->execute($state, $sc['user'], $sc['organisation']);
+
+    expect($zaak->zaaktype_id)->toBe($sc['zaaktype']->id)
+        ->and($zaak->refresh()->role)->toBe(ZaaktypeRole::Vooraankondiging)
+        ->and($zaak->isVooraankondiging())->toBeTrue();
 });

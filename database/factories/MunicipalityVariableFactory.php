@@ -6,6 +6,7 @@ use App\Enums\MunicipalityVariableType;
 use App\Models\Municipality;
 use App\Models\MunicipalityVariable;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<MunicipalityVariable>
@@ -24,7 +25,11 @@ class MunicipalityVariableFactory extends Factory
         return [
             'municipality_id' => Municipality::factory(),
             'name' => fake()->words(2, true),
-            'key' => fake()->word(),
+            // The key is unique per municipality, and both observers copy a
+            // variable to other rows under the same key, so a repeated word
+            // ends up as a constraint violation in an unrelated test. The
+            // suffix keeps generated keys apart without making them unreadable.
+            'key' => fake()->word().'_'.Str::lower(Str::random(8)),
             'type' => $type,
             'value' => $this->generateValueForType($type),
             'is_default' => fake()->boolean(30), // 30% chance of being default

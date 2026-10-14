@@ -33,6 +33,7 @@ class MunicipalityAdminUserTable
                         Role::Coordinator->value => Role::Coordinator->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->afterStateUpdated(function () {

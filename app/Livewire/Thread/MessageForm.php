@@ -11,6 +11,7 @@ use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Message;
 use App\Models\Thread;
+use App\Services\Zgw\ZgwResource;
 use App\Support\Documents\DocumentVersionAuthorizer;
 use App\ValueObjects\MessageDocument;
 use App\ValueObjects\ZGW\Informatieobject;
@@ -33,7 +34,6 @@ use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Woweb\Openzaak\Openzaak;
 
 /**
  * @property Schema|mixed $form
@@ -68,7 +68,7 @@ class MessageForm extends Component implements HasActions, HasSchemas
             $document = $this->thread->zaak->documenten->firstWhere('url', $documentData['url']);
 
             if ($document->versie !== $documentData['versie']) {
-                $document = new Informatieobject(...(new Openzaak)->get($document->url.'?versie='.$documentData['versie'])->toArray());
+                $document = new Informatieobject(...ZgwResource::showDocumentVersion($this->thread->zaak->zgwConnectionName(), $document->uuid, (int) $documentData['versie']));
             }
 
             return $document ? [

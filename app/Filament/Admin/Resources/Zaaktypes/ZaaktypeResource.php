@@ -12,6 +12,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ZaaktypeResource extends Resource
 {
@@ -52,5 +53,11 @@ class ZaaktypeResource extends Resource
             'index' => ListZaaktypes::route('/'),
             'edit' => EditZaaktype::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        // Eager-load the source instance for the "Bron-instantie" column.
+        return parent::getEloquentQuery()->with('municipality.zgwConnection');
     }
 }

@@ -231,3 +231,47 @@ test('een gemanipuleerde locatiecheck in de client-data stuurt de aanvraag niet 
 
     expect($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0001');
 });
+
+test('unticking a location kind takes the copied address out of the municipality choice', function () {
+    // A copy of an application that took place in a building. Unticking "in a
+    // building" leaves the address in the hidden form state — Filament keeps
+    // the raw value of a hidden component and `absorbFields()` merges — so the
+    // tick boxes are the only thing still saying the organiser dropped it.
+    $draft = Draft::create([
+        'user_id' => $this->user->id,
+        'organisation_id' => $this->organisation->id,
+        'state' => ['values' => [
+            'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest',
+            'waarVindtHetEvenementPlaats' => ['gebouw'],
+            'adresVanDeGebouwEn' => ['row-1' => [
+                'naamVanDeLocatieGebouw' => 'Zaal',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6411AA', 'huisnummer' => '1', 'brkGemeente' => 'GM0001',
+                    'straatnaam' => 'Straat', 'plaatsnaam' => 'Plaats',
+                ],
+            ]],
+            'inGemeentenResponse' => locatieCheckVoor('GM0001', 'BronGemeente'),
+            'evenementInGemeente' => ['brk_identification' => 'GM0001', 'name' => 'BronGemeente'],
+        ], 'system' => []],
+        'current_step_key' => null,
+    ]);
+
+    $component = Livewire::test(EventFormPage::class, ['draft' => $draft->id]);
+
+    // The unticking alone must already drop the source municipality.
+    $component->set('data.waarVindtHetEvenementPlaats', ['route']);
+
+    /** @var EventFormPage $page */
+    $page = $component->instance();
+    expect($page->state()->get('gemeenten'))->toBeNull();
+
+    // And with a fresh route through a single municipality there is nothing
+    // left to choose: the gate lets the organiser through without asking, and
+    // without the source municipality.
+    $component->set('data.routesOpKaart', routeMapState([[2.5, 0.0], [3.5, 0.0]]));
+    $page = $component->instance();
+    locatieGate()($page);
+
+    expect(array_keys((array) $page->state()->get('inGemeentenResponse.all.object')))->toBe(['GM0002'])
+        ->and($page->state()->get('evenementInGemeente.brk_identification'))->toBe('GM0002');
+});

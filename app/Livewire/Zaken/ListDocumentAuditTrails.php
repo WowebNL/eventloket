@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Zaken;
 
-use App\ValueObjects\ZGW\DocumentAuditTrail;
+use App\Services\Zgw\AuditTrailActionFormatter;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
@@ -12,6 +12,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class ListDocumentAuditTrails extends Component implements HasActions, HasSchemas, HasTable
@@ -20,6 +21,9 @@ class ListDocumentAuditTrails extends Component implements HasActions, HasSchema
     use InteractsWithSchemas;
     use InteractsWithTable;
 
+    // Server-derived from a ZGW audit-trail call; lock it so the browser cannot
+    // overwrite the rows shown back to the user.
+    #[Locked]
     public array $audittrail = [];
 
     public function mount($audittrail)
@@ -30,7 +34,10 @@ class ListDocumentAuditTrails extends Component implements HasActions, HasSchema
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (): Collection => collect($this->audittrail)->map(fn (array $item) => (new DocumentAuditTrail(...$item))->toArray()))
+            ->records(fn (): Collection => collect($this->audittrail)->map(fn (array $item) => [
+                ...$item,
+                'friendlyAction' => AuditTrailActionFormatter::friendly($item['actieWeergave'] ?? ''),
+            ]))
             ->columns([
                 TextColumn::make('aanmaakdatum')->label(__('Datum'))->dateTime(config('app.datetime_format')),
                 TextColumn::make('friendlyAction')->label(__('Actie')),

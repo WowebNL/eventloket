@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Jobs\Zaak;
 
 use App\Models\Zaak;
+use App\Services\Zgw\ZaaktypeBlueprint;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 /**
  * Zet de initiële status (statustype met volgnummer 1) op de ZGW-zaak
@@ -23,17 +24,20 @@ class SetInitialStatusZGW implements ShouldQueue
 
     public function __construct(public readonly Zaak $zaak) {}
 
-    public function handle(Openzaak $openzaak): void
+    public function handle(): void
     {
         if (! $this->zaak->zgw_zaak_url) {
             return;
         }
 
         $zaakUrl = $this->zaak->zgw_zaak_url;
-        $zaaktype = $this->zaak->zaaktype->zgw_zaaktype_url;
+        $zaaktype = $this->zaak->zgwZaaktypeVersionUrl();
 
-        $statustypen = $openzaak->catalogi()->statustypen()->getAll(['zaaktype' => $zaaktype]);
-        $initieel = $statustypen->sortBy('volgnummer')->first();
+        $connection = Zgw::connection($this->zaak->zgwConnectionName());
+
+        $statustypen = $connection->catalogi()->statustypen()->index(['zaaktype' => $zaaktype])->collect();
+        $mapping = $this->zaak->zaaktypeMapping();
+        $initieel = ZaaktypeBlueprint::initialStatustype($mapping, $statustypen);
 
         if (! $initieel) {
             Log::warning('SetInitialStatusZGW: geen statustype gevonden', [
@@ -44,7 +48,7 @@ class SetInitialStatusZGW implements ShouldQueue
             return;
         }
 
-        $openzaak->zaken()->statussen()->store([
+        $connection->zaken()->statussen()->store([
             'zaak' => $zaakUrl,
             'statustype' => $initieel['url'],
             'datumStatusGezet' => now()->toIso8601String(),

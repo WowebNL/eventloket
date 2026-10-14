@@ -2,7 +2,9 @@
 
 namespace App\ValueObjects\ModelAttributes;
 
+use App\Services\Zgw\ZgwConnectionConfig;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Database\Eloquent\Castable;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Contracts\Support\Arrayable;
@@ -10,9 +12,24 @@ use Illuminate\Database\Eloquent\Model;
 
 final readonly class ZaakReferenceData implements Arrayable, Castable
 {
-    public Carbon $start_evenement_datetime;
+    /**
+     * The fields that hold a moment in time as ISO 8601 text and can be filled
+     * from a date or date-time zaakeigenschap.
+     *
+     * @var list<string>
+     */
+    public const DATE_TIME_FIELDS = [
+        'start_evenement',
+        'eind_evenement',
+        'start_opbouw',
+        'eind_opbouw',
+        'start_afbouw',
+        'eind_afbouw',
+    ];
 
-    public Carbon $eind_evenement_datetime;
+    public ?Carbon $start_evenement_datetime;
+
+    public ?Carbon $eind_evenement_datetime;
 
     public Carbon $registratiedatum_datetime;
 
@@ -22,12 +39,21 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
 
     public ?array $types_evenement_array;
 
+    /**
+     * A zaaktype does not have to carry the start_evenement/eind_evenement
+     * eigenschappen, so a zaak built straight from the ZGW eigenschappen (a
+     * doorkomst deelzaak, a recovered zaak) can arrive without them. They are
+     * therefore optional and declared after the always-supplied parameters;
+     * every caller uses named arguments or an associative spread, and
+     * {@see self::toArray()} keeps its original key order, so stored rows keep
+     * their exact shape.
+     */
     public function __construct(
-        public string $start_evenement,
-        public string $eind_evenement,
         public string $registratiedatum,
         public string $status_name,
         public string $statustype_url,
+        public ?string $start_evenement = null,
+        public ?string $eind_evenement = null,
         public ?string $risico_classificatie = null,
         public ?string $naam_locatie_eveneme = null, // due to limit char restriction in OZ
         public ?string $naam_evenement = null,
@@ -43,10 +69,16 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         public ?string $eind_afbouw = null,
         public ?string $locaties_evenement = null,
         public ?string $intern_zaaknummer = null,
+        /** @var list<array{datum: string, start: string, eind: string}>|null */
+        public ?array $dagen_evenement = null,
+        /** @var list<array{datum: string, start: string, eind: string}>|null */
+        public ?array $dagen_opbouw = null,
+        /** @var list<array{datum: string, start: string, eind: string}>|null */
+        public ?array $dagen_afbouw = null,
         ...$otherParams
     ) {
-        $this->start_evenement_datetime = $this->parseDateTime($this->start_evenement);
-        $this->eind_evenement_datetime = $this->parseDateTime($this->eind_evenement);
+        $this->start_evenement_datetime = $this->start_evenement === null ? null : $this->parseDateTime($this->start_evenement);
+        $this->eind_evenement_datetime = $this->eind_evenement === null ? null : $this->parseDateTime($this->eind_evenement);
         $this->registratiedatum_datetime = $this->parseDateTime($this->registratiedatum);
         if ($this->naam_locatie_eveneme) {
             $this->naam_locatie_evenement = $this->naam_locatie_eveneme;
@@ -61,6 +93,61 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
         }
 
         $this->otherParams = $otherParams;
+    }
+
+    /**
+     * Bring date and date-time values read back from the zaakeigenschappen
+     * into the ISO 8601 form this reference data stores.
+     *
+     * The zaaksysteem holds them in the compact ZGW wire form (YYYYMMDD for a
+     * `datum`, YYYYMMDDHHMMSS for a `datum_tijd`, see
+     * {@see ZgwConnectionConfig::formatEigenschapWaarde()}). Stored as-is they
+     * no longer compare as ISO 8601 text, which is how the start of an event
+     * is queried. A `datum_tijd` value converts without loss. A `datum` value
+     * has no time, so when the current value already falls on that same day it
+     * is kept; otherwise the day starts at midnight. Anything that is not in a
+     * wire form, including a value that is already ISO 8601, is returned as is.
+     *
+     * @param  array<string, mixed>  $values  keyed by reference data field
+     * @param  array<string, mixed>  $current  the reference data the values are merged over
+     * @return array<string, mixed>
+     */
+    public static function normalizeEigenschapDates(array $values, array $current = []): array
+    {
+        foreach (self::DATE_TIME_FIELDS as $field) {
+            if (! isset($values[$field]) || ! is_string($values[$field])) {
+                continue;
+            }
+
+            $waarde = $values[$field];
+
+            if ($dateTime = ZgwConnectionConfig::parseEigenschapWaarde($waarde, 'datum_tijd')) {
+                $values[$field] = $dateTime->toIso8601String();
+
+                continue;
+            }
+
+            if ($date = ZgwConnectionConfig::parseEigenschapWaarde($waarde, 'datum')) {
+                $values[$field] = self::sameDay($current[$field] ?? null, $date)
+                    ? $current[$field]
+                    : $date->startOfDay()->toIso8601String();
+            }
+        }
+
+        return $values;
+    }
+
+    private static function sameDay(mixed $stored, CarbonImmutable $date): bool
+    {
+        if (! is_string($stored) || ! str_contains($stored, 'T')) {
+            return false;
+        }
+
+        try {
+            return CarbonImmutable::parse($stored)->setTimezone($date->getTimezone())->isSameDay($date);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function parseDateTime(string $dateTime): Carbon
@@ -102,6 +189,9 @@ final readonly class ZaakReferenceData implements Arrayable, Castable
             'eind_afbouw' => $this->eind_afbouw,
             'locaties_evenement' => $this->locaties_evenement,
             'intern_zaaknummer' => $this->intern_zaaknummer,
+            'dagen_evenement' => $this->dagen_evenement,
+            'dagen_opbouw' => $this->dagen_opbouw,
+            'dagen_afbouw' => $this->dagen_afbouw,
         ];
     }
 

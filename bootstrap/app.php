@@ -7,6 +7,10 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Sentry\Laravel\Integration;
+use Sentry\State\Scope;
+use Woweb\Zgw\Exceptions\ApiRequestException;
+
+use function Sentry\configureScope;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +21,19 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
+
+        // Restrict which forwarded headers a trusted proxy may set. The only
+        // reason an environment opts in through TRUSTED_PROXIES
+        // (config/trustedproxy.php) is to let a TLS-terminating proxy report
+        // https via X-Forwarded-Proto, so we trust For, Proto and Port and
+        // nothing else. Leaving the mask at Laravel's default would also honour
+        // X-Forwarded-Host, which lets an attacker forge the host in a
+        // password-reset link (reset poisoning) on any opt-in environment. We
+        // pass only `headers:` here, so the proxy list keeps falling back to
+        // config('trustedproxy.proxies') and this only narrows the mask.
+        $middleware->trustProxies(headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_PROTO
+            | Request::HEADER_X_FORWARDED_PORT);
 
         // Standaard valt Laravel's `AuthenticationException::redirectTo()`
         // terug op `route('login')` — die route bestaat niet, want we
@@ -55,5 +72,24 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // ZGW write failures (typically HTTP 400 ValidatieFout) keep the response
+        // body off the exception message on purpose, because it can carry PII. That
+        // makes them undiagnosable in Sentry: we only see "request failed validation
+        // [400]" with no field-level detail. Attach the response status and body as a
+        // Sentry context so we can see *what* the ZGW API rejected without reproducing
+        // the request. Registered before Integration::handles() so the scope is set
+        // before Sentry captures the event; returning void keeps default reporting.
+        $exceptions->report(function (ApiRequestException $e): void {
+            configureScope(function (Scope $scope) use ($e): void {
+                $response = $e->getResponse();
+
+                $scope->setContext('zgw_response', [
+                    'status' => $response->status(),
+                    // Cap the body so a stray large payload can't bloat the event.
+                    'body' => mb_substr($response->body(), 0, 4000),
+                ]);
+            });
+        });
+
         Integration::handles($exceptions);
     })->create();

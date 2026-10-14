@@ -19,12 +19,25 @@ class NewZaak extends BaseNotification
 
     /**
      * Create a new notification instance.
+     *
+     * The event name is optional on the reference data: a zaak built straight
+     * from the ZGW eigenschappen (a doorkomst deelzaak whose zaaktype does not
+     * carry the eigenschap, a recovered zaak) can arrive without one. This
+     * notification is raised synchronously from the zaak observer, so a missing
+     * name used to abort whatever was creating the zaak rather than merely
+     * spoiling one message. A placeholder is used instead, keeping the failure
+     * inside the notification where it belongs.
      */
     public function __construct(
         protected Zaak $zaak,
     ) {
-        $this->eventName = $zaak->reference_data->naam_evenement;
-        $this->municipalityName = $zaak->municipality->name;
+        $eventName = $zaak->reference_data->naam_evenement;
+
+        $this->eventName = ($eventName === null || $eventName === '')
+            ? __('notification/new-zaak.unnamed_event')
+            : $eventName;
+
+        $this->municipalityName = (string) $zaak->municipality?->name;
     }
 
     public static function getLabel(): string|Htmlable|null

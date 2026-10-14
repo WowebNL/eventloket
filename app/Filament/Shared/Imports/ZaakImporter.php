@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Imports;
 
+use App\Enums\ZaaktypeRole;
 use App\Models\Municipality;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
@@ -224,6 +225,12 @@ class ZaakImporter extends Importer
 
         $this->record = new Zaak([
             'zaaktype_id' => $zaaktype->id,
+            // The validated type column holds exactly the role values. Stored
+            // on the zaak because several roles may share one zaaktype.
+            'role' => ZaaktypeRole::from($this->data['type']),
+            // Filled explicitly because saveRecord() writes without model
+            // events, so the observer that normally derives this never runs.
+            'zgw_connection' => $zaaktype->zgwConnectionName(),
             'reference_data' => new ZaakReferenceData(
                 start_evenement: self::parseDate($this->data['start_date']),
                 eind_evenement: self::parseDate($this->data['end_date'], true),

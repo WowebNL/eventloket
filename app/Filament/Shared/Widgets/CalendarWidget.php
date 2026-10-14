@@ -3,6 +3,8 @@
 namespace App\Filament\Shared\Widgets;
 
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Shared\Exports\AdvisorEventExporter;
 use App\Filament\Shared\Exports\BaseEventExporter;
 use App\Filament\Shared\Exports\ExtendedEventExporter;
@@ -19,6 +21,8 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\CarbonImmutable;
+use Carbon\Exceptions\InvalidFormatException;
+use DateTimeInterface;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Facades\Filament;
@@ -143,6 +147,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         return ViewAction::make()
             ->modelLabel(__('resources/zaak.label'))
             ->pluralModelLabel(__('resources/zaak.plural_label'))
+            // The infolist reads from the record, so the modal state does not
+            // need a copy of the record attributes.
+            ->mutateRecordDataUsing(fn (): array => [])
             ->before(function (Zaak $record) {
                 activity('views')
                     ->event('view')
@@ -255,13 +262,18 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                 ]),
             ExportAction::make()
                 ->exporter($exporter)
+                // The organiser calendar is not scoped to a single
+                // organisation, so an export there would expose case-party
+                // data of other organisations. Export stays available to the
+                // case-handling roles only.
+                ->visible(fn () => auth()->user()->role !== Role::Organiser)
                 ->label(__('shared/widgets/calendar.actions.export.label'))
                 ->modalHeading(__('shared/widgets/calendar.actions.export.label'))
                 ->columnMapping(false)
                 ->fillForm(fn () => [
                     ...$this->filters,
                     'start_date' => $this->start?->format('Y-m-d'),
-                    'end_date' => $this->end?->format('Y-m-d'),
+                    'end_date' => $this->defaultExportEndDate()?->format('Y-m-d'),
                 ])
                 ->schema([
                     Section::make('Filters')
@@ -296,8 +308,12 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                         ->visible(fn () => in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Advisor, Role::Admin]))
                         ->label('Exporteer naar GeoJSON')
                         ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->action(function (array $mountedActions) {
-                            $data = $mountedActions[0]->getRawData();
+                        ->action(function () {
+                            // Read the export modal through its schema, so this
+                            // button applies the same validation as the main
+                            // export action (required, ordered dates) instead
+                            // of the raw, unvalidated form data.
+                            $data = $this->getMountedActionSchema(0)->getState();
                             $filters = $data;
                             unset($filters['start_date'], $filters['end_date']);
 
@@ -312,12 +328,16 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
                             $features = $events->map(function (Model $zaak) {
                                 /** @var Zaak $zaak */
-                                $geometry = $zaak->openzaak->zaakgeometrie;
+                                // A zaak without a ZGW zaak (for example an
+                                // imported one) has no zgw data, and a zaak
+                                // without a geometry has nothing to map. Skip
+                                // both instead of failing the whole export.
+                                $geometry = $zaak->openzaak?->zaakgeometrie;
                                 if ($geometry) {
                                     return [
                                         'type' => 'Feature',
                                         'geometry' => $geometry,
-                                        'properties' => $zaak->makeHidden(['zgw_zaak_url', 'organiser_user_id', 'imported_data'])->toArray(),
+                                        'properties' => $this->geojsonProperties($zaak),
                                     ];
                                 }
 
@@ -340,6 +360,58 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         ];
     }
 
+    /**
+     * Properties of a zaak in the GeoJSON export.
+     *
+     * An explicit list of event fields, all of which the CSV export already
+     * offers to the same roles, instead of the full model. Contact details,
+     * form data, imported source data and internal references stay out.
+     *
+     * @return array<string, string|null>
+     */
+    protected function geojsonProperties(Zaak $zaak): array
+    {
+        return [
+            'public_id' => $zaak->public_id,
+            'naam_evenement' => $zaak->reference_data->naam_evenement,
+            'aanvraagtype' => $zaak->effectiveRole()?->getLabel(),
+            'zaaktype' => $zaak->zaaktype?->name,
+            'gemeente' => $zaak->municipality?->name,
+            'naam_locatie_evenement' => $zaak->reference_data->naam_locatie_evenement,
+            'start_evenement' => $zaak->reference_data->start_evenement,
+            'eind_evenement' => $zaak->reference_data->eind_evenement,
+            'risico_classificatie' => $zaak->reference_data->risico_classificatie,
+            'status_name' => $zaak->reference_data->status_name,
+            'status_color' => $zaak->status_color,
+            // The stored description of the resultaattype, as shown on the
+            // zaak page; null while the zaak has no result.
+            'resultaat' => $zaak->reference_data->resultaat,
+            // Kept as the stored text, which is not guaranteed to be a number.
+            'aantal_aanwezigen' => $zaak->reference_data->aanwezigen,
+        ];
+    }
+
+    /**
+     * End date to prefill in the export modal.
+     *
+     * The list view starts at today without an end date, so the export
+     * modal would open with an empty, required end date there. In that case
+     * propose a period of one month from the start. An end date that is set,
+     * by the calendar view or by the list range filter, is used as is.
+     */
+    protected function defaultExportEndDate(): ?CarbonImmutable
+    {
+        if ($this->end !== null) {
+            return $this->end;
+        }
+
+        if ($this->viewMode !== 'table' || $this->start === null) {
+            return null;
+        }
+
+        return $this->start->addMonthNoOverflow();
+    }
+
     // Let child widgets add their own filters.
     protected function getFilterSchema(): array
     {
@@ -355,6 +427,9 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
             ->recordActions([
                 \Filament\Actions\ViewAction::make()
                     ->schema(fn (Schema $schema) => $this->defaultSchema($schema))
+                    // Same as the calendar view action: the infolist reads
+                    // from the record, not from the modal state.
+                    ->mutateRecordDataUsing(fn (): array => [])
                     ->extraModalFooterActions([
                         $this->viewActionFooterAction(),
                     ]),
@@ -377,7 +452,7 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
                             ->default(fn () => $this->start)
-                            ->afterStateUpdated(fn ($state) => $this->start = $state ? CarbonImmutable::parse($state) : null),
+                            ->afterStateUpdated(fn ($state) => $this->start = self::parseRangeDate($state)),
                         DatePicker::make('to')
                             ->label(__('shared/widgets/calendar.filters.range.to.label'))
                             ->placeholder(__('shared/widgets/calendar.filters.range.to.placeholder'))
@@ -386,20 +461,57 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
                             ->format(config('app.date_format'))
                             ->displayFormat(config('app.date_format'))
                             ->default(fn () => $this->end)
-                            ->afterStateUpdated(fn ($state) => $this->end = $state ? CarbonImmutable::parse($state) : null),
+                            ->afterStateUpdated(fn ($state) => $this->end = self::parseRangeDate($state)),
                     ])
+                    // The stored start is ISO 8601 text, so the range is applied
+                    // as a lexical comparison on that text, the same way the
+                    // month view bounds its query. Casting the JSON value to a
+                    // date in SQL would fail the whole list as soon as one zaak
+                    // carries a start the database cannot read as a date.
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '>=', $date),
+                                self::parseRangeDate($data['from'] ?? null),
+                                fn (Builder $query, CarbonImmutable $from): Builder => $query->where('reference_data->start_evenement', '>=', $from->toDateString()),
                             )
                             ->when(
-                                $data['to'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('reference_data->start_evenement', '<=', $date),
+                                self::parseRangeDate($data['to'] ?? null),
+                                fn (Builder $query, CarbonImmutable $to): Builder => $query->where('reference_data->start_evenement', '<', $to->addDay()->toDateString()),
                             );
                     }),
             ]);
+    }
+
+    /**
+     * Read a range picker value as a calendar day.
+     *
+     * The picker state arrives as text in more than one shape: the configured
+     * display format once it has passed through the schema state cast, or the
+     * picker's own internal format straight from the client. Neither may reach
+     * the database as-is, because a day-first string is read month-first or
+     * rejected there, so the value is parsed here and formatted by the query.
+     */
+    private static function parseRangeDate(mixed $value): ?CarbonImmutable
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return CarbonImmutable::instance($value)->startOfDay();
+        }
+
+        try {
+            return CarbonImmutable::createFromFormat(config('app.date_format'), (string) $value)->startOfDay();
+        } catch (InvalidFormatException) {
+            // Not in the display format; fall through to the generic parser.
+        }
+
+        try {
+            return CarbonImmutable::parse((string) $value)->startOfDay();
+        } catch (InvalidFormatException) {
+            return null;
+        }
     }
 
     protected function getEvents(?FetchInfo $info = null): Collection|array|Builder
@@ -407,6 +519,24 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
         $query = Event::query();
 
         return $this->applyContextFilters($query, $info);
+    }
+
+    /**
+     * Resolve a clicked calendar item on the server.
+     *
+     * Every item in this calendar is an Event, so the record is always looked
+     * up as one, within the same query that feeds the calendar. Only Event
+     * records are resolved.
+     */
+    protected function resolveEventRecordRouteBinding(string $model, mixed $key): ?Model
+    {
+        if ($model !== Event::class) {
+            return null;
+        }
+
+        return $this->applyContextFilters(Event::query())
+            ->whereKey($key)
+            ->first();
     }
 
     // Let child widgets add their own constraints.
@@ -432,26 +562,56 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
         $this->applyHiddenResultaatTypesFilter($query);
 
+        $this->applyOmgezetteVooraankondigingenFilter($query);
+
         return $query;
+    }
+
+    /**
+     * Hide vooraankondigingen that have been replaced by a definitive
+     * aanvraag (issue #10): the aanvraag takes their place on the
+     * calendar. Deliberately a hard exclusion here and not a user filter
+     * in $this->filters — "Filters resetten" must never bring them back.
+     *
+     * The join re-checks `deleted_at` of the successor because `Zaak`
+     * soft-deletes: the FK cascade only fires on hard deletes, so without
+     * this check a soft-deleted aanvraag would keep its vooraankondiging
+     * hidden behind a zaak that no longer exists. The status or resultaat
+     * of either zaak is irrelevant on purpose: a closed vooraankondiging
+     * is the normal case, only the existence of the relation counts.
+     */
+    protected function applyOmgezetteVooraankondigingenFilter(Builder $query): void
+    {
+        $query->whereNotExists(function ($subQuery) {
+            $subQuery->select(DB::raw(1))
+                ->from('zaak_relaties')
+                ->join('zaken as opvolgers', 'opvolgers.id', '=', 'zaak_relaties.zaak_id')
+                ->whereColumn('zaak_relaties.gerelateerde_zaak_id', 'zaken.id')
+                ->where('zaak_relaties.type', ZaakRelatieType::VervangtVooraankondiging->value)
+                ->whereNull('opvolgers.deleted_at');
+        });
     }
 
     protected function applyHiddenResultaatTypesFilter(Builder $query)
     {
-        // Preload all zaaktypes that have a non-empty hidden_resultaat_types list.
-        // For each one, exclude zaken that both belong to that zaaktype AND have
-        // their resultaattype_url in the hidden list. Uses only Laravel abstractions
-        // so it works on both MySQL and PostgreSQL.
-        $zaaktypesWithHidden = Zaaktype::whereNotNull('hidden_resultaat_types')
-            ->whereJsonLength('hidden_resultaat_types', '>', 0)
-            ->get(['id', 'hidden_resultaat_types']);
-
-        foreach ($zaaktypesWithHidden as $zaaktype) {
-            $hiddenUrls = $zaaktype->hidden_resultaat_types;
-
-            $query->whereNot(function (Builder $q) use ($zaaktype, $hiddenUrls) {
-                $q->where('zaaktype_id', $zaaktype->id)
+        // The effective hidden-resultaattype urls per zaaktype and role: the
+        // admin-managed row value, overridden by the koppeling of the zaak's
+        // role where a gemeente runs its own ZGW instance. For each rule,
+        // exclude the zaken it covers that have their resultaattype_url in the
+        // hidden list. Uses only Laravel abstractions so it works on both
+        // MySQL and PostgreSQL.
+        foreach (Zaaktype::effectiveHiddenResultaatTypeRules() as $rule) {
+            $query->whereNot(function (Builder $q) use ($rule) {
+                $q->where('zaaktype_id', $rule['zaaktype_id'])
+                    ->when(
+                        $rule['role'] !== null,
+                        fn (Builder $byRole) => $byRole->where('zaken.role', $rule['role']),
+                        fn (Builder $otherRoles) => $otherRoles->where(fn (Builder $roles) => $roles
+                            ->whereNull('zaken.role')
+                            ->when($rule['except_roles'] !== [], fn (Builder $except) => $except->orWhereNotIn('zaken.role', $rule['except_roles']))),
+                    )
                     ->whereNotNull('reference_data->resultaattype_url')
-                    ->whereIn('reference_data->resultaattype_url', $hiddenUrls);
+                    ->whereIn('reference_data->resultaattype_url', $rule['hidden']);
             });
         }
     }
@@ -553,28 +713,24 @@ class CalendarWidget extends \Guava\Calendar\Filament\CalendarWidget implements 
 
     protected function zaaktypesFilter()
     {
-        return Select::make('zaaktypes')
-            ->label(__('resources/zaak.columns.zaaktype.label'))
-            ->options(function () {
-                $query = Zaaktype::query()->orderBy('name');
-
-                if (in_array(auth()->user()->role, [Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer])) {
-                    /** @var Municipality $municipality */
-                    $municipality = Filament::getTenant();
-                    $query->where('municipality_id', $municipality->id);
-                }
-
-                return $query->pluck('name', 'id');
-            })
+        // Filter on the logical role rather than on individual zaaktype rows:
+        // every municipality has its own concrete zaaktype with the same name, so
+        // a name list would show duplicates. The four roles cover all of them.
+        return Select::make('zaaktype_roles')
+            ->label(__('resources/zaak.columns.aanvraag_type.label'))
+            ->options(ZaaktypeRole::class)
             ->multiple()
-            ->searchable()
             ->preload();
     }
 
     protected function applyZaaktypesFilter(Builder $query, array $filters)
     {
-        if (! empty($filters['zaaktypes'])) {
-            $query->whereIn('zaaktype_id', $filters['zaaktypes']);
+        if (! empty($filters['zaaktype_roles'])) {
+            // Matched on the effective role of the zaak: its stored role, or the
+            // role of its zaaktype for a zaak without one. Several roles may
+            // share one zaaktype, so the zaaktype alone cannot answer this.
+            /** @var Builder<Zaak> $query */
+            $query->withEffectiveRoleIn($filters['zaaktype_roles']);
         }
     }
 }

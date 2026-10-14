@@ -90,8 +90,20 @@ function minimalVooraankondigingData(): array
         // LocatieVanHetEvenement2Step — 'gebouw' toont het Repeater-veld (geen kaart nodig);
         // 'buiten' vereist een Map-tekening die niet in unit-tests te vullen is.
         'waarVindtHetEvenementPlaats' => ['gebouw'],
+        // The repeater item carries an AddressNL group whose postcode, house
+        // number, street and town have always been required. Server-side
+        // revalidation reaches the fields inside a repeater item, so an item
+        // without an address is not a valid answer.
         'adresVanDeGebouwEn' => [
-            ['naamVanDeLocatieGebouw' => 'Stadhuis Heerlen'],
+            [
+                'naamVanDeLocatieGebouw' => 'Stadhuis Heerlen',
+                'adresVanHetGebouwWaarUwEvenementPlaatsvindt1' => [
+                    'postcode' => '6411CD',
+                    'huisnummer' => '1',
+                    'straatnaam' => 'Teststraat',
+                    'woonplaatsnaam' => 'Heerlen',
+                ],
+            ],
         ],
 
         // TijdenStep — datum + 4 radios altijd zichtbaar en vereist

@@ -6,7 +6,7 @@ namespace App\EventForm\Schema\Patches;
 
 use App\EventForm\Components\InfoText;
 use App\EventForm\Validation\CompleteMapGeometry;
-use Dotswan\MapPicker\Fields\Map;
+use App\Filament\Forms\Components\BasemapMap;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
@@ -84,7 +84,7 @@ final class LocatiePolygonsPatch
                     ->live()
                     ->hidden($hiddenCallback);
 
-                $patched[] = Map::make('locatieSOpKaart')
+                $patched[] = BasemapMap::make('locatieSOpKaart')
                     ->label('Locatie(s) op kaart')
                     ->defaultLocation(50.8514, 5.6910)
                     ->zoom(11)
@@ -176,7 +176,7 @@ final class LocatiePolygonsPatch
         $new = [];
         foreach ($children['default'] as $component) {
             if ($component instanceof Repeater && $component->getName() === 'routesOpKaart') {
-                $new[] = Map::make('routesOpKaart')
+                $new[] = BasemapMap::make('routesOpKaart')
                     ->label('Route(s) op kaart')
                     ->defaultLocation(50.8514, 5.6910)
                     ->zoom(11)

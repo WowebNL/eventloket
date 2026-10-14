@@ -3,10 +3,14 @@
 namespace App\Filament\Shared\Resources\Zaken\Tables;
 
 use App\Enums\Role;
+use App\Enums\ZaaktypeRole;
 use App\Filament\Shared\Resources\Zaken\Filters\AdvisorWorkingstockFilter;
 use App\Filament\Shared\Resources\Zaken\Filters\WorkingstockFilter;
 use App\Models\Advisory;
+use App\Models\Municipality;
 use App\Models\Zaak;
+use App\Models\Zaaktype;
+use App\Support\RisicoClassificatie;
 use Filament\Actions\RestoreAction;
 use Filament\Actions\ViewAction;
 use Filament\Facades\Filament;
@@ -39,14 +43,33 @@ class ZakenTable
                     ->toggleable(),
                 TextColumn::make('public_id')
                     ->label(__('resources/zaak.columns.public_id.label'))
-                    ->sortable()
+                    // The column is nullable, and PostgreSQL places NULLs first on a
+                    // descending sort. Records without an identification would then fill
+                    // the first page, so they are forced to the bottom in both directions.
+                    // The null check is ordered on directly instead of using a NULLS LAST
+                    // clause, which MySQL does not support.
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query
+                        ->orderByRaw($query->qualifyColumn('public_id').' is null')
+                        ->orderBy($query->qualifyColumn('public_id'), $direction))
                     ->searchable()
+                    ->toggleable(),
+                TextColumn::make('role')
+                    ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                    // The effective role, so a zaak without a stored role still
+                    // shows the role it derives from its zaaktype.
+                    ->state(fn (Zaak $record): ?ZaaktypeRole => $record->effectiveRole())
+                    ->badge()
+                    ->sortable()
+                    ->searchable(query: fn (Builder $query, string $search): Builder => self::whereRoleLabelMatches($query, $search))
                     ->toggleable(),
                 TextColumn::make('zaaktype.name')
                     ->label(__('resources/zaak.columns.zaaktype.label'))
                     ->sortable()
                     ->searchable()
-                    ->toggleable(),
+                    // Hidden by default: a zaaktype may serve several kinds of
+                    // aanvraag, so the aanvraagtype column is the one that tells
+                    // them apart. Still available through the column toggle.
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('created_at')
                     ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))
@@ -66,6 +89,7 @@ class ZakenTable
                     ->forceSearchCaseInsensitive(),
                 TextColumn::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
+                    ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
                     ->sortable()
                     ->toggleable()
                     ->searchable()
@@ -131,7 +155,10 @@ class ZakenTable
                         fn (Builder $q) => $q->where('municipalities.name', 'like', "%{$search}%")
                     ))
                     ->toggleable()
-                    ->visible($isCalendarView),
+                    // Only the municipality panel is scoped to a single
+                    // municipality. The organiser, advisor and platform
+                    // administrator lists, and the calendar, span several.
+                    ->visible(fn (): bool => $isCalendarView || ! self::isMunicipalityPanel()),
                 TextColumn::make('advisors')
                     ->label(__('resources/zaak.columns.advisors.label'))
                     ->visible(fn () => Filament::getCurrentPanel()->getId() === 'advisor')
@@ -178,12 +205,7 @@ class ZakenTable
                     ->attribute('reference_data->status_name'),
                 SelectFilter::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
-                    ->options([
-                        '0' => '0',
-                        'A' => 'A',
-                        'B' => 'B',
-                        'C' => 'C',
-                    ])
+                    ->options(RisicoClassificatie::options())
                     ->multiple()
                     ->attribute('reference_data->risico_classificatie'),
                 SelectFilter::make('organisation_id')
@@ -192,6 +214,38 @@ class ZakenTable
                     ->searchable()
                     ->multiple()
                     ->hidden(fn () => auth()->user()->role == Role::Organiser),
+                SelectFilter::make('municipality')
+                    ->label(__('resources/zaak.columns.municipality.label'))
+                    ->options(fn (): array => Municipality::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable()
+                    ->multiple()
+                    // A zaak reaches its municipality through its zaaktype, so
+                    // the filter is a query rather than a relationship: there is
+                    // no municipality_id on the zaak itself to filter on.
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['values'])) {
+                            return $query;
+                        }
+
+                        return $query->whereHas('zaaktype', fn (Builder $q) => $q->whereIn('municipality_id', $data['values']));
+                    })
+                    ->visible(fn (): bool => ! self::isMunicipalityPanel()),
+                SelectFilter::make('role')
+                    ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                    ->options(ZaaktypeRole::class)
+                    ->multiple()
+                    // Matched on the effective role of the zaak: its stored
+                    // role, or the role of its zaaktype for a zaak without one.
+                    // Several roles may share one zaaktype, so the zaaktype
+                    // alone cannot answer this.
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (empty($data['values'])) {
+                            return $query;
+                        }
+
+                        /** @var Builder<Zaak> $query */
+                        return $query->withEffectiveRoleIn($data['values']);
+                    }),
             ], layout: FiltersLayout::AboveContent)
             ->deferFilters(false)
             ->recordActions([
@@ -206,5 +260,34 @@ class ZakenTable
             ])
             ->defaultSort('created_at', direction: 'desc')
             ->poll(); // default 10s
+    }
+
+    /**
+     * Search on the aanvraagtype by its label: the role is stored as a code, so
+     * the search term is matched against the labels first and the zaken are
+     * then selected on their effective role.
+     *
+     * @param  Builder<Zaak>  $query
+     * @return Builder<Zaak>
+     */
+    private static function whereRoleLabelMatches(Builder $query, string $search): Builder
+    {
+        $needle = mb_strtolower(trim($search));
+
+        $roles = array_values(array_filter(
+            ZaaktypeRole::cases(),
+            fn (ZaaktypeRole $role): bool => $needle !== '' && str_contains(mb_strtolower($role->getLabel()), $needle),
+        ));
+
+        return $query->withEffectiveRoleIn($roles);
+    }
+
+    /**
+     * Whether the list is shown in the municipality panel, whose tenant is a
+     * single municipality, so the municipality of a zaak goes without saying.
+     */
+    private static function isMunicipalityPanel(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'municipality';
     }
 }

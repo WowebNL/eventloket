@@ -37,14 +37,14 @@ test('status_color resolves the configured color for an eindstatus with resultaa
     $zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'reference_data' => new ZaakReferenceData(
-            now(),
-            now()->addDay(),
-            now(),
-            'Afgerond',
-            ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
-            'A',
-            'Test locatie',
-            'Test event',
+            registratiedatum: now(),
+            status_name: 'Afgerond',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            start_evenement: now(),
+            eind_evenement: now()->addDay(),
+            risico_classificatie: 'A',
+            naam_locatie_eveneme: 'Test locatie',
+            naam_evenement: 'Test event',
             resultaat: 'Verleend',
         ),
     ]);
@@ -56,14 +56,14 @@ test('status_color is null when no matching color is configured', function () {
     $zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'reference_data' => new ZaakReferenceData(
-            now(),
-            now()->addDay(),
-            now(),
-            'OnbekendeStatus',
-            ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
-            'A',
-            'Test locatie',
-            'Test event',
+            registratiedatum: now(),
+            status_name: 'OnbekendeStatus',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            start_evenement: now(),
+            eind_evenement: now()->addDay(),
+            risico_classificatie: 'A',
+            naam_locatie_eveneme: 'Test locatie',
+            naam_evenement: 'Test event',
         ),
     ]);
 
@@ -88,14 +88,14 @@ test('toCalendarEvent does not set a background color when none is configured', 
     $zaak = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'reference_data' => new ZaakReferenceData(
-            now(),
-            now()->addDay(),
-            now(),
-            'OnbekendeStatus',
-            ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
-            'A',
-            'Test locatie',
-            'Test event',
+            registratiedatum: now(),
+            status_name: 'OnbekendeStatus',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            start_evenement: now(),
+            eind_evenement: now()->addDay(),
+            risico_classificatie: 'A',
+            naam_locatie_eveneme: 'Test locatie',
+            naam_evenement: 'Test event',
         ),
     ]);
 

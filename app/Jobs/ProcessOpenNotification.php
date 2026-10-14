@@ -4,11 +4,11 @@ namespace App\Jobs;
 
 use App\Actions\OpenNotification\GetIncommingNotificationType;
 use App\Enums\OpenNotificationType;
+use App\Jobs\Zaak\BesluitNotificationReceived;
 use App\Jobs\Zaak\ClearZaakCache;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Woweb\Openzaak\Openzaak;
 
 class ProcessOpenNotification implements ShouldQueue
 {
@@ -16,13 +16,24 @@ class ProcessOpenNotification implements ShouldQueue
 
     public function __construct(private OpenNotification $notification) {}
 
-    public function handle(Openzaak $openzaak, GetIncommingNotificationType $typeProcessor): void
+    public function handle(GetIncommingNotificationType $typeProcessor): void
     {
-        match ($typeProcessor->handle($openzaak, $this->notification)) {
-            OpenNotificationType::UpdateZaakEigenschap => ClearZaakCache::dispatch($this->notification),
+        match ($typeProcessor->handle($this->notification)) {
+            // Delay so the burst of zaakeigenschap notifications one zaak fires
+            // (every eigenschap is written separately, all sharing the same
+            // hoofdObject) collapses into the one unique job, instead of a full
+            // ZGW refetch per eigenschap.
+            OpenNotificationType::UpdateZaakEigenschap => ClearZaakCache::dispatch($this->notification)->delay(now()->addSeconds(30)),
             OpenNotificationType::ZaakStatusChanged => ZaakStatusNotificationReceived::dispatch($this->notification),
             OpenNotificationType::NewZaakDocument => DocumentNotificationReceived::dispatch($this->notification, true)->delay(now()->addSeconds(10)), // delay because document needs to be linked to the zaak first
             OpenNotificationType::UpdatedZaakDocument => DocumentNotificationReceived::dispatch($this->notification, false)->delay(now()->addSeconds(10)),
+            // Delay so the burst of notifications a zaaktype publish fires
+            // (zaaktype update + child-resource creates, all sharing the same
+            // hoofdObject) collapses into the one unique job.
+            OpenNotificationType::ZaaktypeChanged => ZaaktypeNotificationReceived::dispatch($this->notification)->delay(now()->addSeconds(30)),
+            // Delayed for the same reason as documents: the besluit and its
+            // informatieobject links are created in quick succession.
+            OpenNotificationType::BesluitChanged => BesluitNotificationReceived::dispatch($this->notification)->delay(now()->addSeconds(10)),
             default => null,
         };
     }

@@ -7,13 +7,14 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Zaak;
+use App\Services\Zgw\ZgwResource;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification as FilamentNotification;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Notifications\Messages\MailMessage;
-use Woweb\Openzaak\Openzaak;
+use Illuminate\Support\Facades\Log;
 
 /**
  * note: municipality users are only informed if organisation withdraws a pending request
@@ -53,23 +54,126 @@ class Result extends BaseNotification
      */
     public function toMail(User $notifiable): MailMessage
     {
+        [$attachments, $omittedAttachments] = $this->resolveAttachments();
+
         $mailMessage = (new MailMessage)
             ->subject($this->title)
             ->markdown('mail.result-set', [
                 'content' => $this->message,
                 'url' => $this->url,
+                'omittedAttachments' => $omittedAttachments,
             ]);
 
-        // Add attachments if they exist
-        if ($this->attachmentUrls) {
-            $attachments = $this->zaak->documenten->whereIn('url', $this->attachmentUrls)->map(fn ($document) => Attachment::fromData(
-                fn () => (new Openzaak)->getRaw($document->inhoud), $document->bestandsnaam)->withMime($document->formaat)
-            )->toArray();
-
-            $mailMessage->attachMany($attachments);
-        }
+        $mailMessage->attachMany($attachments);
 
         return $mailMessage;
+    }
+
+    /**
+     * Build the attachments for this mail, keeping their combined size within
+     * the configured budget.
+     *
+     * A receiving mail server rejects a message that exceeds its size limit
+     * outright (SMTP 552), which loses the entire notification: message and
+     * attachments alike. Documents are therefore added in the order they appear
+     * on the zaak until the budget is spent, and a document that no longer fits
+     * is skipped without blocking the smaller ones behind it. The skipped file
+     * names are returned so the mail can name them and point the recipient at
+     * the application, where every document stays available.
+     *
+     * The size is measured on the downloaded bytes rather than on the ZGW
+     * `bestandsomvang` metadata: that field is not guaranteed to be filled by
+     * every backend, and a wrong value would put the message back over the
+     * server's limit. The bytes are fetched here either way, exactly as before,
+     * because Attachment::fromData resolves its data as soon as the attachment
+     * is added to the message.
+     *
+     * @return array{0: array<int, Attachment>, 1: array<int, string>}
+     */
+    private function resolveAttachments(): array
+    {
+        if (! $this->attachmentUrls) {
+            return [[], []];
+        }
+
+        $remaining = (int) config('mail.attachments.max_total_bytes');
+        $attachments = [];
+        $omitted = [];
+
+        foreach ($this->zaak->documenten->whereIn('url', $this->attachmentUrls) as $document) {
+            try {
+                $contents = ZgwResource::downloadByUrl($this->zaak->zgwConnectionName(), $document->inhoud);
+            } catch (\Throwable $e) {
+                // Deliberately not turned into a "leave this one out" path. A result mail
+                // whose attachments are incomplete is worse than no mail at all: neither
+                // the recipient nor the handler can see that something is missing. The
+                // error is logged with enough to trace it and then left to surface, which
+                // keeps the notification in the queue's failed jobs. Callers that still
+                // have the handler in front of them check the selection with
+                // {@see self::unretrievableAttachments()} before they get here.
+                Log::error('Result: attachment could not be downloaded, mail not built', [
+                    'zaak_id' => $this->zaak->id,
+                    'uuid' => $document->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+
+                throw $e;
+            }
+
+            if (strlen($contents) > $remaining) {
+                // A line break in the name would close the raw HTML block the mail
+                // lists these names in, which would hand the remainder of the name
+                // back to the Markdown parser. Each name is listed on one line, so
+                // folding the breaks into spaces keeps the block intact.
+                $omitted[] = str_replace(["\r", "\n"], ' ', $document->bestandsnaam);
+
+                continue;
+            }
+
+            $remaining -= strlen($contents);
+
+            $attachments[] = Attachment::fromData(fn () => $contents, $document->bestandsnaam)
+                ->withMime($document->formaat);
+        }
+
+        return [$attachments, $omitted];
+    }
+
+    /**
+     * The documents selected as attachments that cannot be downloaded right now,
+     * by their title.
+     *
+     * The mail is built in a queued job, so a document that cannot be fetched there
+     * fails out of sight of the person who selected it. A caller that still has that
+     * person in front of it asks this first and stops, so the decision stays with the
+     * handler instead of a recipient receiving a set that is incomplete without saying so.
+     *
+     * @param  array<int, string>|null  $attachmentUrls
+     * @return array<int, string>
+     */
+    public static function unretrievableAttachments(Zaak $zaak, ?array $attachmentUrls): array
+    {
+        if (! $attachmentUrls) {
+            return [];
+        }
+
+        $unretrievable = [];
+
+        foreach ($zaak->documenten->whereIn('url', $attachmentUrls) as $document) {
+            try {
+                ZgwResource::downloadByUrl($zaak->zgwConnectionName(), $document->inhoud);
+            } catch (\Throwable $e) {
+                Log::error('Result: attachment could not be downloaded, action stopped', [
+                    'zaak_id' => $zaak->id,
+                    'uuid' => $document->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $unretrievable[] = $document->titel;
+            }
+        }
+
+        return $unretrievable;
     }
 
     public function toDatabase(User $notifiable): array

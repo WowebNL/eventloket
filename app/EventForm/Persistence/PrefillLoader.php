@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\EventForm\Persistence;
 
 use App\EventForm\State\FormState;
+use App\EventForm\Support\DagenRepeater;
+use App\EventForm\Support\ExtraQuestions;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -121,6 +123,20 @@ class PrefillLoader
             }
         }
 
+        // Per-day times of a multi-day period.
+        $dagen = [
+            'EvenementDagen' => $ref->dagen_evenement,
+            'OpbouwDagen' => $ref->dagen_opbouw,
+            'AfbouwDagen' => $ref->dagen_afbouw,
+        ];
+
+        foreach ($dagen as $key => $blokken) {
+            $rijen = DagenRepeater::uitReferenceData($blokken);
+            if ($rijen !== []) {
+                $state->setField($key, $rijen);
+            }
+        }
+
         return $state;
     }
 
@@ -160,6 +176,17 @@ class PrefillLoader
         if (isset($clean['values']) && is_array($clean['values'])) {
             foreach (self::LOCATION_DEPENDENT_KEYS as $key) {
                 unset($clean['values'][$key]);
+            }
+
+            // Answers to the municipality's own extra questions belong to that
+            // municipality's question list, which is dropped along with
+            // `gemeenteVariabelen` above. A copy can end up at a different
+            // municipality with entirely different questions, so the answers
+            // must not travel with it.
+            foreach (array_keys($clean['values']) as $key) {
+                if (is_string($key) && str_starts_with($key, ExtraQuestions::FIELD_PREFIX)) {
+                    unset($clean['values'][$key]);
+                }
             }
 
             $clean['values'] = $this->stripAddressBrkGemeente($clean['values']);

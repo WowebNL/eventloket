@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Favicon: the brand mark from the logo, cropped square. The mark is identical in
+  both logo variants, so a single file serves light and dark backgrounds. The
+  viewBox re-frames the original coordinates; the geometry is unchanged.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-74.23 -17.9 440 440">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fd6814;
+      }
+
+      .cls-4 {
+        fill: url(#linear-gradient);
+      }
+    </style>
+    <linearGradient id="linear-gradient" x1="71.71" y1="47.85" x2="244.09" y2="282.99" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#761bbf"/>
+      <stop offset=".16" stop-color="#951ea9"/>
+      <stop offset=".32" stop-color="#ae2199"/>
+      <stop offset=".42" stop-color="#b82393"/>
+      <stop offset=".68" stop-color="#d84357"/>
+      <stop offset="1" stop-color="#fd6814"/>
+    </linearGradient>
+  </defs>
+  <path class="cls-4" d="M154.54,252.75c42.88-2.93,76.63-31.89,87.64-72.16l32.08-16.69c4.18-2.17,9.97.49,12.94,3.36,2.8,2.71,5.19,7.95,4.06,12.97-6.07,26.9-17.78,52.74-37.38,72.59l-51.17,51.83-38.91,39.16c-9.41,9.47-25.86,7.72-35.02-1.58l-90.82-92.2C17.45,229.21,5.37,200.78,1.39,171.79-6.21,116.42,17.85,60.67,62.87,27.86,86.37,10.73,114.74.71,144.02.04c59.99-1.37,115.17,35.66,137.09,90.89,3.13,7.88-.48,18.87-7.57,22.59l-138.98,72.95c-7.51,3.94-17.19,5.19-22.33-2.79-3.63-5.64-6.86-13.46-8.74-19.8-2.8-9.45,3.84-15.43,11.23-19.34l109.16-57.75c-19.35-24.81-49.5-39.71-81.86-37.66-22.08,1.39-42.93,10.02-59.19,24.31-47.74,41.97-46.75,117.37,2.06,157.98,19.15,15.93,43.87,23.1,69.66,21.33Z"/>
+  <circle class="cls-1" cx="147.3" cy="385.61" r="18.57"/>
+</svg>

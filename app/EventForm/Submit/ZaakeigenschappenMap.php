@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\EventForm\Submit;
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
+use App\EventForm\Support\LocationKinds;
 
 /**
  * Mapping tussen FormState-veldnamen en ZGW-zaakeigenschap-namen.
@@ -26,6 +28,14 @@ use App\EventForm\State\FormState;
 final class ZaakeigenschappenMap
 {
     /**
+     * Optional eigenschap carrying the kind of aanvraag (vergunning, melding,
+     * vooraankondiging, doorkomst). Lets a zaaksysteem tell the kinds apart
+     * when several of them share one zaaktype. Like every eigenschap it is
+     * only written when the catalogus of the zaaktype defines it.
+     */
+    public const AANVRAAG_TYPE = 'aanvraag_type';
+
+    /**
      * @var array<string, string> eigenschap-naam → FormState-veld-key
      */
     private const EIGENSCHAPPEN = [
@@ -42,14 +52,39 @@ final class ZaakeigenschappenMap
     ];
 
     /**
+     * The logical eigenschap keys this map can emit: the FormState-derived
+     * ones plus `locaties_evenement`, which is composed by the caller. These are
+     * the keys a per-municipality blueprint maps to concrete ZGW eigenschap namen.
+     *
+     * @return list<string>
+     */
+    public static function logicalKeys(): array
+    {
+        return [...array_keys(self::EIGENSCHAPPEN), 'locaties_evenement', self::AANVRAAG_TYPE];
+    }
+
+    /**
+     * The default (identity) eigenschap_map: our own OpenZaak names every
+     * eigenschap exactly like its logical key. Used to seed the blueprint.
+     *
+     * @return array<string, string>
+     */
+    public static function defaultEigenschapMap(): array
+    {
+        return array_combine(self::logicalKeys(), self::logicalKeys());
+    }
+
+    /**
      * Bouwt de lijst zaakeigenschappen uit de FormState. Format matcht
      * het oude Objects-API-record: `[{"naam_evenement": "..."}, ...]`.
      * Entries met lege waarde worden weggelaten — OF's `AddZaakeigenschappenZGW`
      * sloeg lege waarden al over op regel 50-51 van de oude job.
      *
+     * The aanvraagtype is added when the role of the zaak is passed.
+     *
      * @return list<array<string, scalar|array<int|string, mixed>>>
      */
-    public function buildEigenschappen(FormState $state): array
+    public function buildEigenschappen(FormState $state, ?ZaaktypeRole $role = null): array
     {
         $out = [];
         foreach (self::EIGENSCHAPPEN as $eigenschap => $key) {
@@ -65,19 +100,32 @@ final class ZaakeigenschappenMap
             $out[] = ['locaties_evenement' => $locaties];
         }
 
-        // formsubmission_id: OF gebruikte hiervoor `submission.kenmerk` —
-        // wij hebben geen submission-object, dus dit wordt het lokale
-        // zaak-public_id (= OpenZaak identificatie). Wordt door de caller
-        // toegevoegd want op build-tijd is dat nog niet bekend.
+        if ($role !== null) {
+            $out[] = [self::AANVRAAG_TYPE => self::aanvraagTypeWaarde($role)];
+        }
 
         return $out;
+    }
+
+    /**
+     * The value written to the aanvraagtype eigenschap: the Dutch label of the
+     * role. Fixed to Dutch so the stored value does not depend on the locale
+     * of the process that happens to write it.
+     */
+    public static function aanvraagTypeWaarde(ZaaktypeRole $role): string
+    {
+        return (string) __("enums/zaaktype_role.{$role->value}", [], 'nl');
     }
 
     private function buildLocatiesEvenement(FormState $state): ?string
     {
         $names = [];
 
-        $gebouwen = $state->get('adresVanDeGebouwEn');
+        // Read every location field through `LocationKinds` so that state left
+        // behind by a kind the organiser unticked (Filament keeps a hidden
+        // field's value; see `LocationKinds`) does not leak a copied-over
+        // source event's location into the zaakeigenschappen.
+        $gebouwen = LocationKinds::valueFor($state, LocationKinds::GEBOUW);
         if (is_array($gebouwen)) {
             foreach ($gebouwen as $entry) {
                 if (is_array($entry) && ! empty($entry['naamVanDeLocatieGebouw'])) {
@@ -86,12 +134,19 @@ final class ZaakeigenschappenMap
             }
         }
 
-        $kaart = $this->stringOrNull($state->get('naamVanDeLocatieKaart'));
+        // The map/route name fields hang on the "buiten" resp. "route" kind:
+        // both are hidden together with their kind's component, so their
+        // leftover value counts only while that kind is ticked.
+        $kaart = LocationKinds::isSelected($state, LocationKinds::BUITEN)
+            ? $this->stringOrNull($state->get('naamVanDeLocatieKaart'))
+            : null;
         if ($kaart !== null) {
             $names[] = $kaart;
         }
 
-        $route = $this->stringOrNull($state->get('naamVanDeRoute'));
+        $route = LocationKinds::isSelected($state, LocationKinds::ROUTE)
+            ? $this->stringOrNull($state->get('naamVanDeRoute'))
+            : null;
         if ($route !== null) {
             $names[] = $route;
         }
@@ -100,6 +155,22 @@ final class ZaakeigenschappenMap
     }
 
     /**
+     * The two address entries are assembled from the flat fields of the two
+     * address fieldsets, which are shown to one aanvrager each:
+     *
+     * - natuurlijk_persoon_adres from "Adresgegevens", shown only to an
+     *   aanvrager without a KvK number, so a private aanvrager's verblijfsadres
+     *   reaches the ZGW rol.
+     * - organisatie_adres from the address grid inside "Organisatie
+     *   informatie", shown only to an aanvrager with a KvK number, so an
+     *   organisation's verblijfsadres reaches the ZGW rol as well.
+     *
+     * Only one of the two fieldsets is filled in a submission, and the rol
+     * variant that consumes each entry follows the same split, so the two never
+     * compete over one rol. The organisation fieldset asks for no country: the
+     * address is prefilled from the registered organisation, which carries a
+     * Dutch BAG or postbus address, so there is no land to map here.
+     *
      * @return array<string, mixed>
      */
     public function buildInitiator(FormState $state): array
@@ -111,7 +182,23 @@ final class ZaakeigenschappenMap
         return array_filter([
             'kvk' => $this->stringOrNull($state->get('watIsHetKamerVanKoophandelNummerVanUwOrganisatie')),
             'organisatie_naam' => $this->stringOrNull($state->get('watIsDeNaamVanUwOrganisatie')),
-            'organisatie_adres' => $state->get('watIsHetAdresVanUwOrganisatie'),
+            'organisatie_adres' => array_filter([
+                'postcode' => $this->stringOrNull($state->get('postcode1')),
+                'huisnummer' => $this->stringOrNull($state->get('huisnummer1')),
+                'huisletter' => $this->stringOrNull($state->get('huisletter1')),
+                'huisnummertoevoeging' => $this->stringOrNull($state->get('huisnummertoevoeging1')),
+                'straatnaam' => $this->stringOrNull($state->get('straatnaam1')),
+                'plaatsnaam' => $this->stringOrNull($state->get('plaatsnaam1')),
+            ]),
+            'natuurlijk_persoon_adres' => array_filter([
+                'postcode' => $this->stringOrNull($state->get('postcode')),
+                'huisnummer' => $this->stringOrNull($state->get('huisnummer')),
+                'huisletter' => $this->stringOrNull($state->get('huisletter')),
+                'huisnummertoevoeging' => $this->stringOrNull($state->get('huisnummertoevoeging')),
+                'straatnaam' => $this->stringOrNull($state->get('straatnaam')),
+                'plaatsnaam' => $this->stringOrNull($state->get('plaatsnaam')),
+                'land' => $this->stringOrNull($state->get('land')),
+            ]),
             'contactpersoon' => array_filter([
                 'naam' => $naam !== '' ? $naam : null,
                 'emailadres' => $this->stringOrNull($state->get('watIsUwEMailadres')),
@@ -126,9 +213,16 @@ final class ZaakeigenschappenMap
     public function buildEventLocation(FormState $state): array
     {
         return array_filter([
-            'multipolygons' => $state->get('locatieSOpKaart'),
-            'line' => $state->get('routesOpKaart'),
-            'bag_addresses' => $state->get('adresVanDeGebouwEn'),
+            // Geometry and address fields: read through `LocationKinds` so an
+            // unticked kind's leftover polygon/line/address does not travel to
+            // the zaakgeometrie (`AddGeometryZGW`/`CreateDoorkomstZaken`).
+            'multipolygons' => LocationKinds::valueFor($state, LocationKinds::BUITEN),
+            'line' => LocationKinds::valueFor($state, LocationKinds::ROUTE),
+            'bag_addresses' => LocationKinds::valueFor($state, LocationKinds::GEBOUW),
+            // `watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt` is the generic
+            // event-location name migrated from Open Formulieren (see
+            // `BackfillSnapshotsFromObjects`); it is not bound to a single kind
+            // and is not hidden by unticking one, so it stays a direct read.
             'name' => $this->stringOrNull($state->get('watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt')),
         ], fn ($v) => $v !== null && $v !== '' && $v !== []);
     }

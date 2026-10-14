@@ -15,6 +15,7 @@
  * jobs precies hetzelfde blijven werken.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 
@@ -89,6 +90,50 @@ test('initiator-blok bevat KvK en contactpersoon', function () {
         ->and($initiator['contactpersoon']['naam'])->toBe('Noah de Graaf')
         ->and($initiator['contactpersoon']['emailadres'])->toBe('noah@example.net')
         ->and($initiator['contactpersoon']['telefoonnummer'])->toBe('06-1234');
+});
+
+test('the organisation address fieldset is assembled into organisatie_adres', function () {
+    // The organisation address lives in the number-suffixed fields of the
+    // "Organisatie informatie" fieldset, which is the fieldset an aanvrager with
+    // a KvK number fills in. It is assembled here so the rol builder can record
+    // it as the vestiging verblijfsadres.
+    $state = new FormState(values: [
+        'watIsHetKamerVanKoophandelNummerVanUwOrganisatie' => '12345678',
+        'watIsDeNaamVanUwOrganisatie' => 'Media Tuin',
+        'postcode1' => '6411 CD',
+        'huisnummer1' => '32',
+        'huisletter1' => 'a',
+        'huisnummertoevoeging1' => 'bis',
+        'straatnaam1' => 'Coriovallumstraat',
+        'plaatsnaam1' => 'Heerlen',
+    ]);
+
+    $initiator = $this->map->buildInitiator($state);
+
+    expect($initiator['organisatie_adres'])->toBe([
+        'postcode' => '6411 CD',
+        'huisnummer' => '32',
+        'huisletter' => 'a',
+        'huisnummertoevoeging' => 'bis',
+        'straatnaam' => 'Coriovallumstraat',
+        'plaatsnaam' => 'Heerlen',
+    ])->and($initiator)->not->toHaveKey('natuurlijk_persoon_adres');
+});
+
+test('an initiator without organisation address fields has no organisatie_adres entry', function () {
+    // Only one of the two address fieldsets is shown per aanvrager, so a
+    // private aanvrager's initiator carries no organisation address at all.
+    $state = new FormState(values: [
+        'postcode' => '6411 CD',
+        'huisnummer' => '32',
+        'straatnaam' => 'Coriovallumstraat',
+        'plaatsnaam' => 'Heerlen',
+    ]);
+
+    $initiator = $this->map->buildInitiator($state);
+
+    expect($initiator)->not->toHaveKey('organisatie_adres')
+        ->and($initiator['natuurlijk_persoon_adres']['huisnummer'])->toBe('32');
 });
 
 test('initiator zonder voornaam+achternaam heeft géén lege "naam"-entry', function () {
@@ -170,4 +215,105 @@ test('locaties_evenement ontbreekt als geen locatie-velden zijn opgegeven', func
     $naden = collect($this->map->buildEigenschappen($state))->map(fn ($e) => key($e))->all();
 
     expect($naden)->not->toContain('locaties_evenement');
+});
+
+// --- Location-state leak (ZGW/PDF counterpart of #493) ---------------------
+//
+// Unticking a location kind hides its field but leaves the value in the state
+// (Filament keeps a hidden field's value). A copied application therefore still
+// carries the source event's location. These tests prove that leftover state of
+// an unticked kind no longer reaches the zaakeigenschappen, while a ticked kind
+// (or an unanswered question, which counts as "no opinion") is unchanged.
+
+test('event_location laat een afgevinkte gebouw/buiten-soort niet lekken', function () {
+    // Alleen "route" aangevinkt, maar gebouw-adres en buiten-vlak staan nog in
+    // de state (overgekopieerd uit een eerder evenement).
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['route'],
+        'adresVanDeGebouwEn' => ['uuid-1' => ['postcode' => '6211AB', 'huisnummer' => '1']],
+        'locatieSOpKaart' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+        'routesOpKaart' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+    ]);
+
+    $location = $this->map->buildEventLocation($state);
+
+    expect($location)->toHaveKey('line')
+        ->and($location)->not->toHaveKey('bag_addresses')
+        ->and($location)->not->toHaveKey('multipolygons');
+});
+
+test('locaties_evenement laat de naam van een afgevinkte soort niet lekken', function () {
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['route'],
+        'adresVanDeGebouwEn' => [['naamVanDeLocatieGebouw' => 'Sporthal Noord']],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+    ]);
+
+    $plat = collect($this->map->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toHaveKey('locaties_evenement', 'Route Centrum');
+});
+
+test('regressie-anker: met alle waarde-dragende soorten aangevinkt blijft de output identiek', function () {
+    $state = new FormState(values: [
+        'waarVindtHetEvenementPlaats' => ['gebouw', 'buiten', 'route'],
+        'adresVanDeGebouwEn' => [
+            ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+            ['naamVanDeLocatieGebouw' => 'Gymzaal West'],
+        ],
+        'locatieSOpKaart' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+        'routesOpKaart' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+        'naamVanDeLocatieKaart' => 'Stadspark',
+        'naamVanDeRoute' => 'Route Centrum',
+        'watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt' => 'Vrijthof',
+    ]);
+
+    $plat = collect($this->map->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toHaveKey('locaties_evenement', 'Sporthal Noord, Gymzaal West, Stadspark, Route Centrum')
+        ->and($this->map->buildEventLocation($state))->toBe([
+            'multipolygons' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+            'line' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+            'bag_addresses' => [
+                ['naamVanDeLocatieGebouw' => 'Sporthal Noord'],
+                ['naamVanDeLocatieGebouw' => 'Gymzaal West'],
+            ],
+            'name' => 'Vrijthof',
+        ]);
+});
+
+test('geen mening: zonder waarVindtHetEvenementPlaats telt elke soort mee (ongewijzigd)', function () {
+    // Exact het bestaande event_location-scenario, maar nu expliciet als anker
+    // voor het "geen mening"-contract: een afwezige vraag mag niets wissen.
+    $state = new FormState(values: [
+        'locatieSOpKaart' => ['type' => 'MultiPolygon', 'coordinates' => [[[[5, 50]]]]],
+        'routesOpKaart' => ['type' => 'LineString', 'coordinates' => [[5, 50], [5.1, 50.1]]],
+        'adresVanDeGebouwEn' => ['uuid-1' => ['postcode' => '6211AB', 'huisnummer' => '1']],
+        'watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt' => 'Vrijthof',
+    ]);
+
+    expect($this->map->buildEventLocation($state))->toHaveKeys(['multipolygons', 'line', 'bag_addresses', 'name']);
+});
+
+test('het aanvraagtype gaat mee als eigenschap wanneer de rol van de zaak bekend is', function () {
+    $state = new FormState(values: ['watIsDeNaamVanHetEvenementVergunning' => 'Synthetisch evenement']);
+
+    $plat = collect($this->map->buildEigenschappen($state, ZaaktypeRole::Vooraankondiging))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toMatchArray([
+        ZaakeigenschappenMap::AANVRAAG_TYPE => 'Vooraankondiging',
+        'naam_evenement' => 'Synthetisch evenement',
+    ])
+        // It is a logical key like the others, so a koppeling can map it to a
+        // naam of its own catalogus.
+        ->and(ZaakeigenschappenMap::logicalKeys())->toContain(ZaakeigenschappenMap::AANVRAAG_TYPE);
+});
+
+test('zonder rol blijft het aanvraagtype weg', function () {
+    $state = new FormState(values: ['watIsDeNaamVanHetEvenementVergunning' => 'Synthetisch evenement']);
+
+    $namen = collect($this->map->buildEigenschappen($state))->map(fn ($e) => key($e))->all();
+
+    expect($namen)->not->toContain(ZaakeigenschappenMap::AANVRAAG_TYPE);
 });

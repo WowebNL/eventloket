@@ -74,14 +74,16 @@ beforeEach(function () {
     $this->zaakWithoutAdvice = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
         'zgw_zaak_url' => $zgwZaakUrl,
+        // Values kept verbatim from the previous positional call (this fixture
+        // has always been shifted by one; none of it is asserted on here).
         'reference_data' => new ZaakReferenceData(
-            'B',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Another locatie',
-            'Another event'
+            registratiedatum: now()->addDay(),
+            status_name: now(),
+            statustype_url: 'Ontvangen',
+            start_evenement: 'B',
+            eind_evenement: now(),
+            risico_classificatie: 'Another locatie',
+            naam_locatie_eveneme: 'Another event',
         ),
     ]);
 
@@ -177,14 +179,15 @@ test('advisory with can_view_any_zaak can upload documents only to zaak with adv
     // Create zaak with advice thread for advisory with access
     $zaakWithAdviceForFullAccess = Zaak::factory()->create([
         'zaaktype_id' => $this->zaaktype->id,
+        // Values kept verbatim from the previous positional call, see above.
         'reference_data' => new ZaakReferenceData(
-            'C',
-            now(),
-            now()->addDay(),
-            now(),
-            'Ontvangen',
-            'Third locatie',
-            'Third event'
+            registratiedatum: now()->addDay(),
+            status_name: now(),
+            statustype_url: 'Ontvangen',
+            start_evenement: 'C',
+            eind_evenement: now(),
+            risico_classificatie: 'Third locatie',
+            naam_locatie_eveneme: 'Third event',
         ),
     ]);
 

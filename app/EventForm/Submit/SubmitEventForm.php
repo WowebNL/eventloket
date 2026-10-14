@@ -9,11 +9,13 @@ use App\EventForm\Persistence\DraftStore;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\Steps\CreateLocalZaak;
 use App\EventForm\Submit\Steps\CreateZaakInZGW;
+use App\EventForm\Submit\Steps\KoppelVooraankondiging;
 use App\Jobs\Submit\GenerateSubmissionPdf;
 use App\Jobs\Submit\HashIdentifyingAttributes;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Jobs\Zaak\AddEinddatumZGW;
 use App\Jobs\Zaak\AddGeometryZGW;
+use App\Jobs\Zaak\AddGlobaleLocatieZGW;
 use App\Jobs\Zaak\AddZaakeigenschappenZGW;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
 use App\Jobs\Zaak\SetInitialStatusZGW;
@@ -45,9 +47,11 @@ use Illuminate\Support\Facades\Log;
  *   - AddEinddatumZGW
  *   - UpdateInitiatorZGW
  *   - AddGeometryZGW
+ *   - AddGlobaleLocatieZGW  (locaties_evenement als zaakobject "GlobaleLocatie")
  *   - CreateDoorkomstZaken  (alleen bij route-events)
- *   - HashIdentifyingAttributes  (laatste in chain; anonimiseert BSN/KvK zodat
- *     alle eerdere jobs bij retry nog de originele data kunnen lezen)
+ *   - HashIdentifyingAttributes  (last in the chain, so every earlier job can
+ *     still read the original BSN/KvK on a retry; also dispatched by the chain's
+ *     catch callback, so it still runs when a job before it fails for good)
  *   - UploadFormBijlagenToZGW  (los, geen plain BSN/KvK nodig)
  */
 final class SubmitEventForm
@@ -56,6 +60,7 @@ final class SubmitEventForm
         private readonly ResolveZaaktype $resolveZaaktype,
         private readonly CreateZaakInZGW $createZaakInZGW,
         private readonly CreateLocalZaak $createLocalZaak,
+        private readonly KoppelVooraankondiging $koppelVooraankondiging,
         private readonly DraftStore $draftStore,
     ) {}
 
@@ -80,6 +85,11 @@ final class SubmitEventForm
                 organisation: $organisation,
             );
         });
+
+        // 3b. Vooraankondiging linked in the form? Write the typed
+        //     zaak-relation (issue #10), with server-side re-checks on
+        //     ownership and aard inside the step itself.
+        $this->koppelVooraankondiging->execute($state, $zaak, $organisation);
 
         // 4. Het ingediende concept verwijderen; andere concepten van de
         //    gebruiker (parallelle aanvragen) blijven staan.
@@ -109,21 +119,40 @@ final class SubmitEventForm
 
     private function dispatchAsyncChain(Zaak $zaak): void
     {
+        $zaakId = $zaak->id;
+
         Bus::chain([
-            // PDF staat als eerste zodat de bevestigingsmail zo snel mogelijk
-            // verstuurd wordt. Leest alleen form_state_snapshot + lokale relaties,
-            // dus geen afhankelijkheid van de ZGW-jobs die erna lopen.
-            // HashIdentifyingAttributes blijft laatste: pas hashen als alle jobs
-            // die de plain BSN/KvK nodig hebben klaar zijn.
+            // The PDF goes first so the confirmation mail is sent as soon as
+            // possible. It only reads form_state_snapshot and local relations, so
+            // it does not depend on the ZGW jobs that follow.
+            // HashIdentifyingAttributes stays last: hash only once every job that
+            // needs the plain BSN/KvK is done.
             (new GenerateSubmissionPdf($zaak))->onQueue('high'),
             new SetInitialStatusZGW($zaak),
             new AddZaakeigenschappenZGW($zaak),
             new AddEinddatumZGW($zaak),
             new UpdateInitiatorZGW($zaak),
             new AddGeometryZGW($zaak),
+            new AddGlobaleLocatieZGW($zaak),
             new CreateDoorkomstZaken($zaak),
             new HashIdentifyingAttributes($zaak),
-        ])->dispatch();
+        ])->catch(static function () use ($zaakId): void {
+            // A chain stops at the first job that fails for good, and that
+            // would leave the hashing at the end of it undone, keeping the
+            // plain identifiers in the stored snapshot. This callback only runs
+            // once that job has used up its retries, so the jobs that need the
+            // plain values have had every regular attempt by then. The hash job
+            // is idempotent, so running it here as well as at the end of a
+            // chain that is resumed later changes nothing.
+            //
+            // Only the id is captured, so the serialized callback carries no
+            // snapshot data.
+            $zaak = Zaak::find($zaakId);
+
+            if ($zaak !== null) {
+                HashIdentifyingAttributes::dispatch($zaak);
+            }
+        })->dispatch();
 
         // Upload alle FileUpload-bijlagen die de organisator heeft
         // toegevoegd als zaakinformatieobject naar OpenZaak. Staat bewust

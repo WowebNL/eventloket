@@ -50,6 +50,14 @@ class Organisation extends Model
         return $this->type === OrganisationType::Personal;
     }
 
+    /**
+     * How long a lookup that produced no address is remembered. Short, because
+     * an unreachable Locatieserver must never blank out an address for good;
+     * long enough that an outage does not turn every render of every zaak page
+     * into another request that has to time out first.
+     */
+    private const BAG_ADDRESS_MISS_TTL = 60;
+
     /** @return Attribute<BagObject|null, void> */
     protected function bagAddress(): Attribute
     {
@@ -59,9 +67,32 @@ class Organisation extends Model
                     return null;
                 }
 
-                return Cache::rememberForever("organisation.{$this->id}.{$attributes['bag_id']}", function () use ($attributes) {
-                    return (new LocatieserverService)->getBagObjectById($attributes['bag_id']);
-                });
+                $key = "organisation.{$this->id}.{$attributes['bag_id']}";
+                $cached = Cache::get($key);
+
+                if ($cached instanceof BagObject) {
+                    return $cached;
+                }
+
+                // `false` records a recent lookup that produced nothing: PDOK
+                // does not know the BAG id, or it could not be reached. That
+                // outcome is cached briefly and never forever, so one failed
+                // request cannot leave the address empty permanently.
+                if ($cached === false) {
+                    return null;
+                }
+
+                $bagObject = (new LocatieserverService)->getBagObjectById($attributes['bag_id']);
+
+                if ($bagObject === null) {
+                    Cache::put($key, false, self::BAG_ADDRESS_MISS_TTL);
+
+                    return null;
+                }
+
+                Cache::forever($key, $bagObject);
+
+                return $bagObject;
             }
         );
     }

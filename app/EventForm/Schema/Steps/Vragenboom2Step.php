@@ -6,15 +6,20 @@ namespace App\EventForm\Schema\Steps;
 
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\Schema\Label;
+use App\Models\Organisation;
+use App\Models\Zaak;
+use Carbon\Carbon;
 use Closure;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Support\Icons\Heroicon;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * @openforms-step-uuid ae44ab5b-c068-4ceb-b121-6e6907f78ef9
@@ -25,19 +30,67 @@ final class Vragenboom2Step
 {
     public const UUID = 'ae44ab5b-c068-4ceb-b121-6e6907f78ef9';
 
+    /** Existing Ja/Nee question "did you submit a vooraankondiging earlier?". */
+    public const HEEFT_VOORAANKONDIGING_FIELD = 'voordatUVerderGaatMetHetBeantwoordenVanDeVragenVoorUwEvenementWillenWeGraagWetenOfUEerderEenVooraankondigingHeeftIngevuldVoorDitEvenement';
+
+    /** Zaak UUID of the vooraankondiging the organiser links to this aanvraag. */
+    public const VOORAANKONDIGING_ZAAK_FIELD = 'welkeVooraankondigingHoortBijDezeAanvraag';
+
+    /** Locked display field carrying the public zaaknummer of that vooraankondiging. */
+    public const VOORAANKONDIGING_ZAAKNUMMER_FIELD = 'zaaknummerVanDeVooraankondiging';
+
     public static function make(): Step
     {
         return Step::make('Vergunningsaanvraag: soort')
             ->key(self::UUID)
             ->schema([
-                Radio::make('voordatUVerderGaatMetHetBeantwoordenVanDeVragenVoorUwEvenementWillenWeGraagWetenOfUEerderEenVooraankondigingHeeftIngevuldVoorDitEvenement')
+                // The whole vooraankondiging question is only shown when the
+                // organisation actually has a submitted vooraankondiging;
+                // without one there is nothing to link (issue #10, answer 7).
+                Radio::make(self::HEEFT_VOORAANKONDIGING_FIELD)
                     ->label('Voordat u verder gaat met het beantwoorden van de vragen voor uw evenement willen we graag weten of u eerder een vooraankondiging heeft ingevuld voor dit evenement?')
                     ->options(JaNeeOptions::OPTIONS)
                     ->required()
-                    ->belowContent([
-                        Icon::make(Heroicon::InformationCircle),
-                        'Op dit moment is het nog niet mogelijk om de gegevens uit de vooraankondiging over te nemen in de definitieve aanvraag. Deze functionaliteit wordt in 2026 gebouwd.',
-                    ]),
+                    ->live()
+                    ->visible(fn (): bool => self::organisationHasVooraankondiging())
+                    ->afterStateUpdated(function (Set $set, ?string $state): void {
+                        // "Nee" after an earlier "Ja" must also drop the
+                        // selection, otherwise the hidden values would still
+                        // link the vooraankondiging on submit.
+                        if ($state !== 'Ja') {
+                            $set(self::VOORAANKONDIGING_ZAAK_FIELD, null);
+                            $set(self::VOORAANKONDIGING_ZAAKNUMMER_FIELD, null);
+                        }
+                    }),
+                Select::make(self::VOORAANKONDIGING_ZAAK_FIELD)
+                    ->label('Welke vooraankondiging hoort bij dit evenement?')
+                    ->belowContent('Controleer of dit de juiste vooraankondiging is. Bij het indienen wordt uw aanvraag hieraan gekoppeld en vervangt de aanvraag de vooraankondiging in de evenementenagenda.')
+                    ->options(fn ($livewire): array => self::vooraankondigingOptions($livewire))
+                    ->required()
+                    ->live()
+                    ->visible(fn (Get $get): bool => $get(self::HEEFT_VOORAANKONDIGING_FIELD) === 'Ja' && self::organisationHasVooraankondiging())
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set(self::VOORAANKONDIGING_ZAAKNUMMER_FIELD, self::zaaknummerFor($state)))
+                    ->afterStateHydrated(function (Select $component, Set $set, mixed $state, $livewire): void {
+                        // Date-based suggestion: with the event date filled and
+                        // exactly one vooraankondiging on that date, preselect
+                        // it. The organiser still confirms explicitly — the
+                        // field stays editable and the zaaknummer is shown.
+                        if (filled($state)) {
+                            return;
+                        }
+                        $suggestion = self::suggestedVooraankondiging($livewire);
+                        if ($suggestion instanceof Zaak) {
+                            $set(self::VOORAANKONDIGING_ZAAK_FIELD, $suggestion->id);
+                            $set(self::VOORAANKONDIGING_ZAAKNUMMER_FIELD, $suggestion->public_id);
+                        }
+                    }),
+                TextInput::make(self::VOORAANKONDIGING_ZAAKNUMMER_FIELD)
+                    ->label('Zaaknummer van de vooraankondiging')
+                    // disabled() makes it read-only for the organiser;
+                    // dehydrated() keeps the value in the submitted state.
+                    ->disabled()
+                    ->dehydrated()
+                    ->visible(fn (Get $get): bool => $get(self::HEEFT_VOORAANKONDIGING_FIELD) === 'Ja' && filled($get(self::VOORAANKONDIGING_ZAAK_FIELD)) && self::organisationHasVooraankondiging()),
                 TextInput::make('watIsTijdensDeHeleDuurVanUwEvenementWatIsDeNaamVanHetEvenementVergunningHetTotaalAantalAanwezigePersonenVanAlleDagenBijElkaarOpgeteld')
                     ->label(Label::render('Wat is tijdens de hele duur van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }} het totaal aantal aanwezige personen van alle dagen bij elkaar opgeteld?'))
                     ->numeric()
@@ -223,5 +276,159 @@ final class Vragenboom2Step
                         return ! ($get('isUwEvenementToegankelijkVoorMensenMetEenBeperking') === 'Ja');
                     }),
             ]);
+    }
+
+    /**
+     * Whether the current organisation has at least one submitted
+     * vooraankondiging to link. Closed vooraankondigingen count too: in
+     * practice a vooraankondiging is usually already finished by the time
+     * the definitive aanvraag arrives (issue #10, answer 6), so filtering
+     * on an open status would hide exactly the normal case. One that
+     * already has a definitive aanvraag no longer counts, though — it
+     * cannot be linked a second time.
+     */
+    private static function organisationHasVooraankondiging(): bool
+    {
+        $tenant = Filament::getTenant();
+        if (! $tenant instanceof Organisation) {
+            return false;
+        }
+
+        return Zaak::query()
+            ->vooraankondigingen()
+            ->nogNietOpgevolgd()
+            ->where('organisation_id', $tenant->getKey())
+            ->exists();
+    }
+
+    /**
+     * Options for the vooraankondiging select, scoped to the current
+     * organisation and without any status filter (see above), excluding
+     * vooraankondigingen that already have a definitive aanvraag. Sorted
+     * with the best date match on top: vooraankondigingen on the entered
+     * event date first, then most recent first.
+     *
+     * @return array<string, string>
+     */
+    private static function vooraankondigingOptions($livewire): array
+    {
+        $eventDate = self::enteredEventDate($livewire);
+
+        $options = self::vooraankondigingenForTenant()
+            ->sortBy([
+                fn (Zaak $a, Zaak $b): int => (int) self::isOnDate($b, $eventDate) <=> (int) self::isOnDate($a, $eventDate),
+                fn (Zaak $a, Zaak $b): int => $b->created_at <=> $a->created_at,
+            ])
+            ->mapWithKeys(fn (Zaak $zaak): array => [$zaak->id => self::optionLabel($zaak, $eventDate)])
+            ->all();
+
+        // Outside a panel request there is no tenant — that is the report
+        // render (samenvatting/PDF via SubmissionReport's stub livewire)
+        // resolving this closure after submit, when the linked
+        // vooraankondiging is also already excluded by nogNietOpgevolgd().
+        // Resolve the selected value directly so the report shows its
+        // label instead of the raw UUID. Display-only: the selection
+        // itself is re-validated server-side at submit.
+        $selected = method_exists($livewire, 'state')
+            ? $livewire->state()->get(self::VOORAANKONDIGING_ZAAK_FIELD)
+            : null;
+        if (is_string($selected) && $selected !== '' && ! isset($options[$selected]) && Filament::getTenant() === null) {
+            $zaak = Zaak::query()->whereKey($selected)->first();
+            if ($zaak instanceof Zaak) {
+                $options[$selected] = self::optionLabel($zaak, $eventDate);
+            }
+        }
+
+        return $options;
+    }
+
+    private static function optionLabel(Zaak $zaak, ?Carbon $eventDate): string
+    {
+        $label = sprintf(
+            '%s — %s (%s)',
+            $zaak->public_id,
+            $zaak->reference_data->naam_evenement ?? 'evenement zonder naam',
+            $zaak->reference_data->start_evenement_datetime->format('d-m-Y'),
+        );
+        if (self::isOnDate($zaak, $eventDate)) {
+            $label .= ' — zelfde datum als deze aanvraag';
+        }
+
+        return $label;
+    }
+
+    /**
+     * The vooraankondiging to preselect: only when the event date is
+     * filled and exactly one vooraankondiging of the organisation starts
+     * on that date. Anything more ambiguous stays a manual choice.
+     */
+    private static function suggestedVooraankondiging($livewire): ?Zaak
+    {
+        $eventDate = self::enteredEventDate($livewire);
+        if ($eventDate === null) {
+            return null;
+        }
+
+        $matches = self::vooraankondigingenForTenant()
+            ->filter(fn (Zaak $zaak): bool => self::isOnDate($zaak, $eventDate));
+
+        return $matches->count() === 1 ? $matches->first() : null;
+    }
+
+    /** @return Collection<int, Zaak> */
+    private static function vooraankondigingenForTenant(): Collection
+    {
+        $tenant = Filament::getTenant();
+        if (! $tenant instanceof Organisation) {
+            return new Collection;
+        }
+
+        return Zaak::query()
+            ->vooraankondigingen()
+            ->nogNietOpgevolgd()
+            ->where('organisation_id', $tenant->getKey())
+            ->get();
+    }
+
+    /** The event start date the organiser entered earlier in the wizard, date-only. */
+    private static function enteredEventDate($livewire): ?Carbon
+    {
+        $raw = method_exists($livewire, 'state') ? $livewire->state()->get('EvenementStart') : null;
+        if (! is_string($raw) || $raw === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($raw)->startOfDay();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private static function isOnDate(Zaak $zaak, ?Carbon $date): bool
+    {
+        if ($date === null) {
+            return false;
+        }
+
+        return $zaak->reference_data->start_evenement_datetime->isSameDay($date);
+    }
+
+    /** Public zaaknummer for a selected vooraankondiging, ownership-scoped to the tenant. */
+    private static function zaaknummerFor(?string $zaakId): ?string
+    {
+        if (! is_string($zaakId) || $zaakId === '') {
+            return null;
+        }
+
+        $tenant = Filament::getTenant();
+        if (! $tenant instanceof Organisation) {
+            return null;
+        }
+
+        return Zaak::query()
+            ->whereKey($zaakId)
+            ->where('organisation_id', $tenant->getKey())
+            ->value('public_id');
     }
 }

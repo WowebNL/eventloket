@@ -12,6 +12,7 @@ use App\Filament\Shared\Pages\PasswordReset\ResetPassword;
 use App\Filament\Shared\Resources\Zaken\Pages\ListZaken;
 use App\Models\Advisory;
 use App\Models\Zaak;
+use App\Services\Zgw\StatusPhase;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Facades\Filament;
 use Filament\FontProviders\LocalFontProvider;
@@ -46,8 +47,9 @@ class AdvisorPanelProvider extends PanelProvider
                 'primary' => Color::Blue,
             ])
             ->font('Satoshi', url: asset('css/fonts/satoshi.css'), provider: LocalFontProvider::class)
-            ->brandLogo(asset('images/logos/logo-dark.svg'))
-            ->darkModeBrandLogo(asset('images/logos/logo-light.svg'))
+            ->favicon(asset('images/logos/favicon-v2.svg'))
+            ->brandLogo(asset('images/logos/logo-dark-v2.svg'))
+            ->darkModeBrandLogo(asset('images/logos/logo-light-v2.svg'))
             ->brandLogoHeight('2.5rem')
             ->viteTheme('resources/css/filament/advisor/theme.css')
             ->tenant(Advisory::class)
@@ -111,7 +113,7 @@ class AdvisorPanelProvider extends PanelProvider
                             fn (Builder $query) => $query->whereHas('assignedUsers', fn (Builder $query) => $query->where('user_id', auth()->id()))->active() // @phpstan-ignore-line
                         )->get();
 
-                        return $zakenAssignedToUser->filter(fn ($zaak) => $zaak->statustype->isReceived() || $zaak->statustype->isInProgress())->count();
+                        return $zakenAssignedToUser->filter(fn ($zaak) => StatusPhase::isReceived($zaak->statustype) || StatusPhase::isInProgress($zaak->statustype))->count();
                     })
                     ->icon(Heroicon::Inbox)
                     ->url(fn (): string => ListZaken::getUrl(['filters' => ['workingstock-advisor' => ['workingstock-adv' => 'me']]]))

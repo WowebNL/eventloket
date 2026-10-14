@@ -9,6 +9,26 @@ class ZgwHttpFake
 {
     public static $baseUrl = 'https://zgw.example.com';
 
+    /**
+     * Wrap a list of resources in the ZGW pagination envelope.
+     *
+     * The new woweb/laravel-zgw-client reads $response['results'] strictly, so list
+     * fakes must return the envelope. The legacy woweb/openzaak package is tolerant of
+     * both shapes, so this stays compatible while call sites are being migrated.
+     *
+     * @param  array<int, array<string, mixed>>  $results
+     * @return array<string, mixed>
+     */
+    public static function envelope(array $results): array
+    {
+        return [
+            'count' => count($results),
+            'next' => null,
+            'previous' => null,
+            'results' => $results,
+        ];
+    }
+
     public static function fakeSingleZaak(string $uuid = '1', array $data = []): string
     {
         $url = self::$baseUrl.'/zaken/api/v1/zaken/'.$uuid;
@@ -41,11 +61,34 @@ class ZgwHttpFake
         return $url;
     }
 
+    public static function documentUrl(string $uuid = '1'): string
+    {
+        return self::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/'.$uuid;
+    }
+
     public static function fakeSingleDocument(string $uuid = '1', array $data = []): string
     {
-        $url = self::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobject/'.$uuid;
+        $url = self::documentUrl($uuid);
 
-        $data = array_merge([
+        Http::fake([
+            $url => Http::response(self::documentBody($uuid, $data), 200),
+        ]);
+
+        return $url;
+    }
+
+    /**
+     * The body of a single document, without registering a stub for it, so a
+     * test can hand the same body to a stub of its own (a sequence, say).
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function documentBody(string $uuid = '1', array $data = []): array
+    {
+        $url = self::documentUrl($uuid);
+
+        return array_merge([
             'url' => $url,
             'uuid' => $uuid,
             'identificatie' => 'DOC-123',
@@ -65,9 +108,21 @@ class ZgwHttpFake
             'zaak' => self::$baseUrl.'/zaken/api/v1/zaken/1',
             'bestandslocatie' => self::$baseUrl.'/files/doc-123.pdf',
         ], $data);
+    }
+
+    /**
+     * Fake the besluitinformatieobjecten list endpoint (links between a besluit
+     * and its documents). Defaults to empty, so a document is treated as not
+     * belonging to a besluit.
+     *
+     * @param  array<int, array<string, mixed>>  $results
+     */
+    public static function fakeBesluitinformatieobjecten(array $results = [])
+    {
+        $url = self::$baseUrl.'/besluiten/api/v1/besluitinformatieobjecten';
 
         Http::fake([
-            $url => Http::response($data, 200),
+            $url.'*' => Http::response(self::envelope($results), 200),
         ]);
 
         return $url;
@@ -91,7 +146,7 @@ class ZgwHttpFake
         ];
 
         Http::fake([
-            $url.'*' => Http::response($data, 200),
+            $url.'*' => Http::response(self::envelope($data), 200),
         ]);
 
         return $url;
@@ -105,7 +160,7 @@ class ZgwHttpFake
             'url' => $url,
             'uuid' => '1',
             'identificatie' => 'TEST-ZAAKTYPE',
-            'omschrijving' => 'Evenementenvergunning gemeente Heerlen',
+            'omschrijving' => 'Evenementenvergunning gemeente Testdorp',
             'omschrijvingGeneriek' => '',
             'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
             'doel' => 'Verlenen evenementenvergunning',
@@ -161,7 +216,7 @@ class ZgwHttpFake
         ];
 
         Http::fake([
-            $url.'*' => Http::response($data, 200),
+            $url.'*' => Http::response(self::envelope($data), 200),
         ]);
 
         return $url;
@@ -196,7 +251,7 @@ class ZgwHttpFake
         ];
 
         Http::fake([
-            $url.'*' => Http::response($data, 200),
+            $url.'*' => Http::response(self::envelope($data), 200),
         ]);
 
         return $url;

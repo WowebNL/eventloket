@@ -7,6 +7,9 @@ use App\Filament\Shared\Resources\Zaken\Actions\DownloadDocumentsAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Zaak;
+use App\Services\Zgw\SubmissionDocumentDetector;
+use App\ValueObjects\ZGW\Informatieobject;
+use App\ValueObjects\ZGW\ZaakDocumentSet;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -24,7 +27,7 @@ use Illuminate\View\View;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Facades\Zgw;
 
 class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, HasTable
 {
@@ -35,26 +38,83 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     #[Locked]
     public Zaak $zaak;
 
+    /**
+     * Read-only mode for the organiser when the bestanden tab is disabled for
+     * the connection: only the files delivered with the application are shown
+     * and no new files can be added.
+     */
+    #[Locked]
+    public bool $submissionOnly = false;
+
     public bool $hasDocuments = false;
 
-    public function mount(Zaak $zaak): void
+    /**
+     * How many documents of this zaak were not handed over for a reason that may
+     * pass on its own. Drives the notice above the table, so the reader is never
+     * shown a short list as if it were the whole list.
+     */
+    public int $unavailableDocumentCount = 0;
+
+    /**
+     * Whether a document of this zaak was left out because the documents API is
+     * not authorised to hand it over. A flag and not a count on purpose: those
+     * documents are not shown to this reader, so a number would tell them how many
+     * documents exist that they are not going to see.
+     */
+    public bool $hasForbiddenDocuments = false;
+
+    private ?ZaakDocumentSet $documentSet = null;
+
+    public function mount(Zaak $zaak, bool $submissionOnly = false): void
     {
         $this->zaak = $zaak;
+        $this->submissionOnly = $submissionOnly;
     }
 
     #[On('refreshTable')]
     public function refresh(): void {}
 
+    /**
+     * The documents read for this zaak, resolved once per request.
+     *
+     * The model caches an incomplete read only briefly, so two calls can give
+     * two different answers; resolving once keeps the table, its empty state and
+     * the notice above them describing one and the same read.
+     */
+    private function documents(): ZaakDocumentSet
+    {
+        return $this->documentSet ??= $this->zaak->documentenForDisplay();
+    }
+
+    /**
+     * The documents shown in the table. In read-only submission mode only the
+     * files the organiser delivered with the application are listed.
+     *
+     * @return Collection<int, Informatieobject>
+     */
+    private function records(): Collection
+    {
+        $documenten = $this->documents()->documenten;
+
+        if ($this->submissionOnly) {
+            return $documenten->filter(
+                fn (Informatieobject $document) => SubmissionDocumentDetector::isSubmissionDocument($document, $this->zaak)
+            )->values();
+        }
+
+        return $documenten;
+    }
+
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn (): Collection => $this->zaak->documenten->mapWithKeys(fn ($item) => [$item->uuid => $item->toArray()]))
+            ->records(fn (): Collection => $this->records()->mapWithKeys(fn ($item) => [$item->uuid => $item->toArray()]))
             ->defaultSort('created_at', direction: 'desc')
             ->columns([
                 TextColumn::make('titel'),
                 TextColumn::make('informatieobjecttype')
                     ->label(__('Type document'))
-                    ->formatStateUsing(fn ($state) => $this->zaak->zaaktype->document_types->firstWhere('url', $state)?->omschrijving),
+                    ->formatStateUsing(fn ($state) => $this->zaak->document_types->first(fn ($type) => (string) $type->url === $state)?->omschrijving),
                 TextColumn::make('creatiedatum')
                     ->date(config('app.date_format'))
                     ->sortable(),
@@ -78,7 +138,13 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ]))
                     ->openUrlInNewTab()
                     ->icon('heroicon-o-eye'),
-                NewDocumentVersionAction::make($this->zaak),
+                // Use hidden() rather than a second visible(): visible() would
+                // replace the action's own visibility closure and discard the
+                // DocumentVersionAuthorizer ownership check, making "Nieuwe
+                // versie" appear for everyone. hidden() is a separate condition
+                // that is AND-ed with that check.
+                NewDocumentVersionAction::make($this->zaak)
+                    ->hidden(fn (): bool => $this->submissionOnly),
                 ActionGroup::make([
                     Action::make('downloaden')
                     // ->label(__('municipality/resources/zaak.actions.download.label'))
@@ -93,7 +159,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                         ->label(__('Audit trail'))
                         ->icon('heroicon-o-clock')
                         ->schema(fn (array $record) => [
-                            Livewire::make(ListDocumentAuditTrails::class, ['audittrail' => (new Openzaak)->documenten()->enkelvoudiginformatieobjecten()->audittrail($record['uuid'])])->key('audit-trail-'.$record['uuid']),
+                            Livewire::make(ListDocumentAuditTrails::class, ['audittrail' => Zgw::connection($this->zaak->zgwConnectionName())->documenten()->enkelvoudiginformatieobjecten()->audittrail($record['uuid'])->all()])->key('audit-trail-'.$record['uuid']),
                         ])
                         ->modalSubmitAction(false)
                         ->modalCancelAction(false),
@@ -132,18 +198,93 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                     ->visible(fn (): bool => auth()->user()->role != Role::Organiser),
             ])
             ->headerActions([
-                UploadDocumentAction::make($this->zaak),
+                UploadDocumentAction::make($this->zaak)
+                    ->visible(fn (): bool => ! $this->submissionOnly),
             ])
             ->toolbarActions([
                 DownloadDocumentsAction::make($this->zaak),
             ])
-            ->emptyStateHeading('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...')
-            ->emptyStateDescription(null);
+            ->emptyStateHeading(fn (): string => $this->emptyStateHeading())
+            ->emptyStateDescription(fn (): ?string => $this->emptyStateDescription());
+    }
+
+    /**
+     * An empty table has four quite different causes, which used to be
+     * indistinguishable: nothing has arrived from ZGW yet, everything that did
+     * arrive is hidden by the visibility rules, (in submission mode) the zaak
+     * only holds documents that were not part of the application, or the
+     * documents API refused every document there is. Saying "hold on, the files
+     * are coming" in the other three cases sends the reader waiting for
+     * something that is never going to appear.
+     */
+    private function emptyStateHeading(): string
+    {
+        if ($this->nothingCouldBeRead()) {
+            // A heading that says "not right now" would be wrong when nothing was
+            // withheld "right now": if no document failed for a reason that may
+            // pass, every one of them is refused by design and will be tomorrow
+            // too.
+            return $this->documents()->hasUnavailable()
+                ? __('resources/zaak.documents.unavailable.empty_state_heading')
+                : __('resources/zaak.documents.forbidden.empty_state_heading');
+        }
+
+        if ($this->documents()->documenten->isNotEmpty()) {
+            return __('Geen bestanden om te tonen');
+        }
+
+        return $this->zaakHasDocumentsInZgw()
+            ? __('Geen bestanden om te tonen')
+            : __('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...');
+    }
+
+    private function emptyStateDescription(): ?string
+    {
+        if ($this->nothingCouldBeRead()) {
+            // The notice above the table already explains this one; repeating it
+            // here would only say the same thing twice.
+            return null;
+        }
+
+        if ($this->documents()->documenten->isNotEmpty()) {
+            // Documents exist and are visible, but none of them belong to the
+            // application itself.
+            return __('Bij deze aanvraag zijn geen aanvraagdocumenten ingediend.');
+        }
+
+        return $this->zaakHasDocumentsInZgw()
+            ? __('Deze zaak bevat wel bestanden, maar die zijn niet zichtbaar met uw rechten of hun status. Neem contact op met de beheerder als u ze wel zou moeten zien.')
+            : null;
+    }
+
+    /**
+     * Whether every document of this zaak was left out. Blocks the two empty
+     * states that would then be untrue: "the files are still coming" (they are
+     * already there) and "not visible with your rights" (the visibility rules are
+     * not what kept them off the screen).
+     */
+    private function nothingCouldBeRead(): bool
+    {
+        return $this->documents()->isIncomplete() && $this->documents()->documenten->isEmpty();
+    }
+
+    /**
+     * Whether the zaak holds any document at all, before the status and role
+     * filters are applied. Distinguishes "nothing there yet" from "everything
+     * filtered out".
+     */
+    private function zaakHasDocumentsInZgw(): bool
+    {
+        return $this->documents()->totalCount() > 0;
     }
 
     public function render(): View
     {
-        $this->hasDocuments = $this->zaak->documenten->isNotEmpty();
+        $documents = $this->documents();
+
+        $this->hasDocuments = $documents->documenten->isNotEmpty();
+        $this->unavailableDocumentCount = $documents->unavailableCount;
+        $this->hasForbiddenDocuments = $documents->hasForbidden();
 
         return view('livewire.zaken.zaak-documents-table');
     }

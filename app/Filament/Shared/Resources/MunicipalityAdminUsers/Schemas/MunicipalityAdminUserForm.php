@@ -21,6 +21,7 @@ class MunicipalityAdminUserForm
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
+                        Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->required(),
