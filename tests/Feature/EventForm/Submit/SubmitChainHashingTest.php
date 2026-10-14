@@ -94,7 +94,7 @@ function chainHashingRouteScenario(): array
         'soortEvenement' => 'Sportevenement',
         'EvenementStart' => '2026-06-14T14:00',
         'EvenementEind' => '2026-06-14T18:00',
-        'aantalVerwachteAanwezigen' => 80,
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '80',
         'risicoClassificatie' => 'A',
         'routesOpKaart' => [
             'type' => 'LineString',
