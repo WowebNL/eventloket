@@ -358,8 +358,8 @@ test('a vooraankondiging sends the number asked on the first step as aanwezigen'
 });
 
 test('a value left in the field of the other path does not count', function () {
-    // A request prefilled from an earlier zaak fills the maximum field, and a
-    // hidden field keeps its value; only the field of the chosen path counts.
+    // The submitted state only holds the field of the chosen path; a state that
+    // was not cleaned up still maps to the field of its own path.
     $vooraankondiging = aanwezigenVoor([
         'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
         'aantalVerwachteAanwezigen' => '300',
@@ -373,6 +373,15 @@ test('a value left in the field of the other path does not count', function () {
 
     expect($vooraankondiging)->toBe(['eigenschap' => '300', 'reference' => '300'])
         ->and($vergunning)->toBe(['eigenschap' => '1500', 'reference' => '1500']);
+});
+
+test('a full aanvraag does not fall back to the vooraankondiging field', function () {
+    $result = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'aantalVerwachteAanwezigen' => '300',
+    ]);
+
+    expect($result)->toBe(['eigenschap' => null, 'reference' => null]);
 });
 
 test('without any number the aanwezigen eigenschap is left out', function () {

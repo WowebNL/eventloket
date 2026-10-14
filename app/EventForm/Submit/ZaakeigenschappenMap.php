@@ -137,27 +137,22 @@ final class ZaakeigenschappenMap
      * The number of people present: the maximum present at any one time.
      *
      * A full aanvraag asks for it in the event questions; a vooraankondiging
-     * skips those steps and asks for it on the first step instead. The field of
-     * the other path can still hold a value (Filament keeps a hidden field's
-     * value, and a request prefilled from an earlier zaak fills the maximum
-     * field), so the kind of aanvraag decides which field counts. Without that
-     * answer the maximum field wins and the vooraankondiging field is the
-     * fallback.
+     * skips those steps and asks for it on the first step instead, so the kind
+     * of aanvraag decides which field counts. The submitted state only holds
+     * the field of the chosen path; picking by kind keeps the mapping right for
+     * a state that was not cleaned up. There is no fallback to the other path's
+     * field: its value would answer a question that was not asked.
      *
      * Both the zaakeigenschap and the local reference data read this, so the
      * zaaksysteem and Eventloket always hold the same number.
      */
     public static function aanwezigen(FormState $state): mixed
     {
-        $vooraankondiging = $state->get(self::VOORAANKONDIGING_AANWEZIGEN_FIELD);
+        $field = $state->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'
+            ? self::VOORAANKONDIGING_AANWEZIGEN_FIELD
+            : self::MAXIMUM_AANWEZIGEN_FIELD;
 
-        if ($state->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging') {
-            return $vooraankondiging;
-        }
-
-        $maximum = $state->get(self::MAXIMUM_AANWEZIGEN_FIELD);
-
-        return $maximum === null || $maximum === '' ? $vooraankondiging : $maximum;
+        return $state->get($field);
     }
 
     private function buildLocatiesEvenement(FormState $state): ?string

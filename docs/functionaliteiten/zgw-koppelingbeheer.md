@@ -190,6 +190,8 @@ De onderstaande tabel toont alle eigenschappen die Eventloket bij een zaak kan a
 | `locaties_evenement` | Namen van de locatie(s), kommagescheiden | tekst | 255 |
 | `aanvraag_type` | Soort aanvraag: `Vergunning`, `Melding`, `Vooraankondiging` of `Doorkomst` | tekst | 255 |
 
+De eigenschap `intern_zaaknummer` is niet nodig voor een koppeling. Vult een behandelaar het interne zaaknummer in, dan schrijft Eventloket het naar het zaaksysteem als het zaaktype die eigenschap kent; anders blijft het alleen in Eventloket.
+
 Toelichting bij de formaten:
 
 - **Datums.** Datumvelden krijgen het formaat datum_tijd; de waarde wordt aangeleverd als `jjjjmmdduummss` (lengte 14).
