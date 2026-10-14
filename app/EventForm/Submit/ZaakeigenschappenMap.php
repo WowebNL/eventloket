@@ -36,7 +36,23 @@ final class ZaakeigenschappenMap
     public const AANVRAAG_TYPE = 'aanvraag_type';
 
     /**
+     * Eigenschap carrying the maximum number of people present at the event
+     * at any one time. Its value is derived by `aanwezigen()`, not read from a
+     * single field.
+     */
+    public const AANWEZIGEN = 'aanwezigen';
+
+    /** Field asked in the full aanvraag: the maximum number present at once. */
+    public const MAXIMUM_AANWEZIGEN_FIELD = 'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX';
+
+    /** Field asked in a vooraankondiging, which skips the full aanvraag steps. */
+    public const VOORAANKONDIGING_AANWEZIGEN_FIELD = 'aantalVerwachteAanwezigen';
+
+    /**
      * @var array<string, string> eigenschap-naam → FormState-veld-key
+     *
+     * `aanwezigen` is listed for its position only: its value comes from
+     * `aanwezigen()`, which picks the field that belongs to the kind of aanvraag.
      */
     private const EIGENSCHAPPEN = [
         'start_evenement' => 'EvenementStart',
@@ -47,7 +63,7 @@ final class ZaakeigenschappenMap
         'eind_afbouw' => 'AfbouwEind',
         'naam_evenement' => 'watIsDeNaamVanHetEvenementVergunning',
         'types_evenement' => 'soortEvenement',
-        'aanwezigen' => 'aantalVerwachteAanwezigen',
+        self::AANWEZIGEN => self::MAXIMUM_AANWEZIGEN_FIELD,
         'risico_classificatie' => 'risicoClassificatie',
     ];
 
@@ -88,7 +104,7 @@ final class ZaakeigenschappenMap
     {
         $out = [];
         foreach (self::EIGENSCHAPPEN as $eigenschap => $key) {
-            $value = $state->get($key);
+            $value = $eigenschap === self::AANWEZIGEN ? self::aanwezigen($state) : $state->get($key);
             if ($value === null || $value === '' || $value === []) {
                 continue;
             }
@@ -115,6 +131,28 @@ final class ZaakeigenschappenMap
     public static function aanvraagTypeWaarde(ZaaktypeRole $role): string
     {
         return (string) __("enums/zaaktype_role.{$role->value}", [], 'nl');
+    }
+
+    /**
+     * The number of people present: the maximum present at any one time.
+     *
+     * A full aanvraag asks for it in the event questions; a vooraankondiging
+     * skips those steps and asks for it on the first step instead, so the kind
+     * of aanvraag decides which field counts. The submitted state only holds
+     * the field of the chosen path; picking by kind keeps the mapping right for
+     * a state that was not cleaned up. There is no fallback to the other path's
+     * field: its value would answer a question that was not asked.
+     *
+     * Both the zaakeigenschap and the local reference data read this, so the
+     * zaaksysteem and Eventloket always hold the same number.
+     */
+    public static function aanwezigen(FormState $state): mixed
+    {
+        $field = $state->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'
+            ? self::VOORAANKONDIGING_AANWEZIGEN_FIELD
+            : self::MAXIMUM_AANWEZIGEN_FIELD;
+
+        return $state->get($field);
     }
 
     private function buildLocatiesEvenement(FormState $state): ?string
