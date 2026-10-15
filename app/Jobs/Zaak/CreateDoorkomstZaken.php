@@ -38,6 +38,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Throwable;
 use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
@@ -872,6 +873,8 @@ class CreateDoorkomstZaken implements ShouldQueue
         // mapping and the source-type omschrijvingen are resolved at most once here.
         $deelMapping = $sameInstance ? null : MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
         $sourceTypeOmschrijvingen = [];
+        $failedDocuments = 0;
+        $firstDocumentFailure = null;
 
         $zios = Zgw::connection($hoofdConnectionName)->zaken()->zaakinformatieobjecten()->index(['zaak' => $ozZaak->url]);
         foreach ($zios as $zio) {
@@ -889,10 +892,11 @@ class CreateDoorkomstZaken implements ShouldQueue
                 continue;
             }
 
-            // A single failing document is logged and skipped so the remaining
-            // documents are still copied. A retry skips a registered deelzaak and
-            // cannot copy this document after all, so aborting here would lose
-            // the rest as well; a skipped document can be re-added by hand.
+            // A single failing document is logged, reported and skipped so the
+            // remaining documents are still copied; once they all had their turn
+            // the step fails, so the deelzaak counts as incomplete. A retry skips
+            // a registered deelzaak and cannot copy this document after all, so
+            // aborting here would lose the rest as well.
             try {
                 $targetUrl = $this->copyDocumentToTargetInstance(
                     $hoofdConnectionName,
@@ -909,6 +913,10 @@ class CreateDoorkomstZaken implements ShouldQueue
                     'informatieobject' => $informatieobjectUrl,
                     'exception' => $e->getMessage(),
                 ]);
+                report($e);
+
+                $failedDocuments++;
+                $firstDocumentFailure ??= $e;
 
                 continue;
             }
@@ -921,6 +929,17 @@ class CreateDoorkomstZaken implements ShouldQueue
                 'zaak' => $newZaakUrl,
                 'informatieobject' => $targetUrl,
             ]);
+        }
+
+        // A document without a matching informatieobjecttype (null above) is a
+        // configuration warning, not a failure; a document that failed to copy
+        // fails the step.
+        if ($firstDocumentFailure !== null) {
+            throw new RuntimeException(
+                sprintf('%d document(s) could not be copied to doorkomst deelzaak %s.', $failedDocuments, $newZaakUrl),
+                0,
+                $firstDocumentFailure,
+            );
         }
     }
 

@@ -858,7 +858,7 @@ test('leaves a linked document with its own RSIN when the deelzaak shares the ho
         && str_contains($request->url(), '/documenten/api/v1/'));
 });
 
-test('skips a document cross-instance when no target informatieobjecttype resolves, but still creates the deelzaak and its status', function () {
+test('skips a document cross-instance when no target informatieobjecttype resolves, without failing the job', function () {
     Http::fake([
         OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
             'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
@@ -898,7 +898,9 @@ test('skips a document cross-instance when no target informatieobjecttype resolv
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
     withPassingDoorkomstZaaktype($scenario['passing']);
 
-    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+    // A document without a matching type is a configuration warning, not a
+    // failed step, so the job does not fail for it.
+    runDoorkomstJob($scenario['hoofdzaak'])->assertNotFailed();
 
     // The deelzaak is still created locally.
     expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
@@ -912,7 +914,8 @@ test('skips a document cross-instance when no target informatieobjecttype resolv
         && str_starts_with($request->url(), ZgwHttpFake::$baseUrl.'/zaken/api/v1/statussen'));
 });
 
-test('a failing document copy does not abort the remaining documents or the deelzaak', function () {
+test('a failing document copy does not abort the remaining documents, and fails the job afterwards', function () {
+    Exceptions::fake();
     Http::fake([
         OWN_HOST.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
             'url' => OWN_HOST.'/zaken/api/v1/zaken/hoofd-1',
@@ -964,7 +967,7 @@ test('a failing document copy does not abort the remaining documents or the deel
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
     withPassingDoorkomstZaaktype($scenario['passing']);
 
-    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+    $job = runDoorkomstJob($scenario['hoofdzaak']);
 
     // Exactly one document was re-created (the second): the failure of the first
     // did not abort the loop.
@@ -976,6 +979,12 @@ test('a failing document copy does not abort the remaining documents or the deel
 
     // The deelzaak is still created locally.
     expect(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
+
+    // The failed copy is reported, and once the other documents had their turn
+    // the documenten step fails: the deelzaak is incomplete, so the job is
+    // marked as failed without a retry.
+    Exceptions::assertReported(fn (DoorkomstDeelzaakIncompleteException $e) => $e->failedSteps === ['documenten']);
+    $job->assertFailedWith(DoorkomstZakenIncompleteException::class);
 });
 
 test('is idempotent: running twice does not create a second doorkomst zaak', function () {
