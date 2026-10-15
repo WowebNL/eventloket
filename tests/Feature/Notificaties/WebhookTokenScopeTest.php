@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Notificaties\WebhookTokenIssuer;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Laravel\Passport\Client;
 
@@ -12,6 +13,10 @@ function fakeIssuedJwt(): string
 }
 
 beforeEach(function () {
+    // The webhook validates the hoofdObject host against the configured
+    // connections.
+    Config::set('openzaak.url', 'https://zgw.example.com/');
+
     Http::fake([
         rtrim((string) config('app.url'), '/').'/oauth/token' => Http::response([
             'access_token' => fakeIssuedJwt(),
@@ -38,4 +43,55 @@ it('asks the token endpoint for that scope', function () {
 
     Http::assertSent(fn ($request) => str_ends_with($request->url(), '/oauth/token')
         && ($request->data()['scope'] ?? null) === WebhookTokenIssuer::SCOPE);
+});
+
+it('does not let a client scoped for something else reach the webhook', function () {
+    // The scope list is what the column exists for. Passport's
+    // ScopeRepository::finalizeScopes() drops a scope the client does not carry,
+    // so the token endpoint still answers but the token comes back without it,
+    // and the webhook refuses it. Asserted end to end, because that refusal is
+    // the behaviour that matters.
+    $client = Client::factory()->asClientCredentials()->create([
+        'secret' => '12345678',
+        'scopes' => ['api:access'],
+    ]);
+
+    $token = $this->postJson(route('passport.token'), [
+        'grant_type' => 'client_credentials',
+        'client_id' => $client->id,
+        'client_secret' => '12345678',
+        'scope' => WebhookTokenIssuer::SCOPE,
+    ])->json('access_token');
+
+    $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'destroy',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://zgw.example.com/zaken/api/v1/zaken/1',
+        'resourceUrl' => 'https://zgw.example.com/zaken/api/v1/zaken/1',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], ['Authorization' => 'Bearer '.$token])->assertStatus(403);
+});
+
+it('does let the webhook client itself through', function () {
+    $client = Client::factory()->asClientCredentials()->create([
+        'secret' => '12345678',
+        'scopes' => [WebhookTokenIssuer::SCOPE],
+    ]);
+
+    $token = $this->postJson(route('passport.token'), [
+        'grant_type' => 'client_credentials',
+        'client_id' => $client->id,
+        'client_secret' => '12345678',
+        'scope' => WebhookTokenIssuer::SCOPE,
+    ])->json('access_token');
+
+    $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'destroy',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://zgw.example.com/zaken/api/v1/zaken/1',
+        'resourceUrl' => 'https://zgw.example.com/zaken/api/v1/zaken/1',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], ['Authorization' => 'Bearer '.$token])->assertStatus(200);
 });

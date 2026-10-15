@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
@@ -263,4 +264,23 @@ test('a failing read is retried rather than treated as confirmation', function (
     expect(Zaak::withTrashed()->find($this->zaak->id))->not->toBeNull()
         ->and(Thread::find($thread->id))->not->toBeNull()
         ->and(ZaakDestructionLog::count())->toBe(0);
+});
+
+test('a notification from the wrong connection is recorded as a refusal', function () {
+    fakeSourceGone();
+
+    Log::spy();
+
+    $other = Municipality::factory()->create();
+
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $other->id]);
+
+    new ZaakDestroyNotificationReceived(destroyNotification($this->zaakUrl, 'gemeente_'.$other->id))
+        ->handle(app(EventloketDataDestroyer::class));
+
+    Log::shouldHaveReceived('warning')
+        ->withArgs(fn (string $message, array $context = []): bool => str_contains($message, 'does not own the zaak')
+            && ($context['sender_connection'] ?? null) === 'gemeente_'.$other->id
+            && ($context['zaak_connection'] ?? null) === 'main')
+        ->once();
 });
