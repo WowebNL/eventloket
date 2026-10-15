@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
+use App\Exceptions\DoorkomstZaakeigenschapRejectedException;
 use App\Exceptions\DoorkomstZakenIncompleteException;
 use App\Exceptions\ZaaktypeConnectionMismatchException;
 use App\Jobs\Zaak\CreateDoorkomstZaken;
@@ -1377,8 +1378,9 @@ test('a doorkomst koppeling that uses the logical keys reads back exactly as bef
  * @param  array<string, string>  $hoofdEigenschappen  hoofdzaak naam => waarde
  * @param  array<string, string>  $deelCatalogus  deel catalogus naam => eigenschap slug
  * @param  array<string, string>  $deelFormaten  deel catalogus naam => specificatie formaat
+ * @param  list<string>  $rejectedSlugs  eigenschap slugs the deel zaaksysteem refuses with a 400
  */
-function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, array $deelCatalogus, array $deelFormaten = []): void
+function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, array $deelCatalogus, array $deelFormaten = [], array $rejectedSlugs = []): void
 {
     $expanded = [];
     foreach ($hoofdEigenschappen as $naam => $waarde) {
@@ -1409,8 +1411,14 @@ function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, arra
         ], 200),
         OWN_HOST.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
         ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => Http::response(ZgwHttpFake::envelope($catalogus), 200),
-        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) {
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use ($rejectedSlugs) {
             if ($request->method() === 'POST') {
+                $eigenschap = (string) ($request->data()['eigenschap'] ?? '');
+                if (str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/zaakeigenschappen')
+                    && in_array(basename($eigenschap), $rejectedSlugs, true)) {
+                    return Http::response(rejectedEigenschapResponse(), 400);
+                }
+
                 return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1'], 201);
             }
 
@@ -1419,6 +1427,27 @@ function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, arra
         '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
         '*' => Http::response([], 200),
     ]);
+}
+
+/** A 400 for a zaakeigenschap whose waarde does not match the formaat of its eigenschap. */
+function rejectedEigenschapResponse(): array
+{
+    return [
+        'type' => 'https://zgw.example.com/ref/fouten/ValidationError/',
+        'code' => 'invalid',
+        'title' => 'Invalid input.',
+        'status' => 400,
+        'detail' => '',
+        'instance' => 'urn:uuid:00000000-0000-0000-0000-000000000000',
+        'invalidParams' => [
+            [
+                'name' => 'eigenschap',
+                'code' => 'invalid',
+                // A validator may quote the rejected value in its reason.
+                'reason' => 'Value 2026-07-01 is not in the required date-time format.',
+            ],
+        ],
+    ];
 }
 
 /** The eigenschap urls the job posted onto the deelzaak, keyed by waarde. */
@@ -1526,6 +1555,38 @@ test('formats a copied eigenschap for the formaat of the receiving zaaktype', fu
         '20260701093000' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/deel-eind-opbouw',
         '20260702' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/deel-naam',
     ]);
+});
+
+test('keeps creating the deelzaak when the receiving zaaksysteem refuses one eigenschap', function () {
+    // One refused eigenschap used to abort the deelzaak half way and fail the
+    // job. It is reported instead, and the rest of the deelzaak follows.
+    Exceptions::fake();
+    fakeDoorkomstWithCatalogusEigenschappen(
+        hoofdEigenschappen: ['start_evenement' => '2026-07-01', 'naam_evenement' => 'Zomerfeest'],
+        deelCatalogus: ['start_evenement' => 'deel-start', 'naam_evenement' => 'deel-naam'],
+        rejectedSlugs: ['deel-start'],
+    );
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    // The other eigenschap is still sent, after the refused one.
+    expect(copiedZaakeigenschappen())->toHaveKey('Zomerfeest')
+        // The deelzaak is registered: the job went on past the refusal.
+        ->and(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
+
+    Exceptions::assertNotReported(DoorkomstZakenIncompleteException::class);
+    Exceptions::assertReported(function (DoorkomstZaakeigenschapRejectedException $e) {
+        return $e->eigenschap === 'start_evenement'
+            && $e->response['status'] === 400
+            && $e->response['invalid_params'] === [['name' => 'eigenschap', 'code' => 'invalid']]
+            && str_contains($e->getMessage(), 'start_evenement')
+            // Neither the value that was sent nor the reason quoting it.
+            && ! str_contains($e->getMessage(), '2026')
+            && ! str_contains((string) json_encode($e->context()), '2026-07-01');
+    });
 });
 
 test('takes the event name from the hoofdzaak when the doorkomst zaaktype does not carry it', function () {

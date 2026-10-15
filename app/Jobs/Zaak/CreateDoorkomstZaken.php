@@ -10,6 +10,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Exceptions\DoorkomstZaakeigenschapRejectedException;
 use App\Exceptions\DoorkomstZakenIncompleteException;
 use App\Exceptions\ZaaktypeConnectionMismatchException;
 use App\Models\Municipality;
@@ -615,15 +616,42 @@ class CreateDoorkomstZaken implements ShouldQueue
             if (! $cat) {
                 continue;
             }
-            $deelConnection->zaken()->zaken()->zaakeigenschappen($newUuid)->store([
-                'zaak' => $newZaakUrl,
-                'eigenschap' => (string) $cat->url,
-                'waarde' => ZgwConnectionConfig::formatEigenschapWaarde(
-                    (string) $waarde,
-                    $cat->specificatie?->formaat?->value,
-                ),
-            ]);
+            try {
+                $deelConnection->zaken()->zaken()->zaakeigenschappen($newUuid)->store([
+                    'zaak' => $newZaakUrl,
+                    'eigenschap' => (string) $cat->url,
+                    'waarde' => ZgwConnectionConfig::formatEigenschapWaarde(
+                        (string) $waarde,
+                        $cat->specificatie?->formaat?->value,
+                    ),
+                ]);
+            } catch (Throwable $e) {
+                // One eigenschap the receiving zaaksysteem refuses must not cost
+                // the deelzaak its other eigenschappen, its initiator, documents
+                // and status. It is reported instead, without the value.
+                $this->reportRejectedEigenschap((string) $cat->naam, $newZaakUrl, $e);
+            }
         }
+    }
+
+    /**
+     * Log and report one zaakeigenschap that could not be written onto the
+     * deelzaak, with the catalogus naam and a summary of the error response.
+     * The value is left out, see {@see DoorkomstZaakeigenschapRejectedException}.
+     */
+    private function reportRejectedEigenschap(string $eigenschap, string $newZaakUrl, Throwable $e): void
+    {
+        $response = $this->responseSummary($e);
+
+        Log::warning('CreateDoorkomstZaken: a zaakeigenschap could not be written onto the deelzaak; continuing with the rest.', [
+            'zaak_id' => $this->zaak->id,
+            'zaak_url' => $newZaakUrl,
+            'eigenschap' => $eigenschap,
+            'exception' => $e::class,
+            'response' => $response,
+        ]);
+
+        report(new DoorkomstZaakeigenschapRejectedException($eigenschap, $newZaakUrl, $response, $e));
     }
 
     /**
