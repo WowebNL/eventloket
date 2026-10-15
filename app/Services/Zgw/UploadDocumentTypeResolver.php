@@ -52,7 +52,7 @@ final class UploadDocumentTypeResolver
         }
 
         $chosen = ZaaktypeBlueprint::bijlageInformatieobjecttype(
-            MunicipalityZaaktypeMapping::forZaaktype($zaak->zaaktype),
+            $zaak->zaaktypeMapping(),
             $types,
         );
 

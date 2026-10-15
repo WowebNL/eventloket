@@ -11,6 +11,7 @@ use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 
 /**
  * Herbruikbare NL-adresvelden met postcode+huisnummer → PDOK auto-fill.
@@ -113,6 +114,52 @@ final class AddressNL
     {
         return is_string($postcode) && $postcode !== ''
             && $huisnummer !== null && $huisnummer !== '';
+    }
+
+    /**
+     * The sub fields whose value is sent to the PDOK lookup.
+     */
+    public const LOOKUP_SUBFIELDS = [
+        'postcode',
+        'huisnummer',
+        'huisletter',
+        'huisnummertoevoeging',
+    ];
+
+    /**
+     * Livewire sends an update for the enclosing object instead of for the
+     * field itself when the object gains a key that was not in the previous
+     * snapshot. Filament only runs a field's `afterStateUpdated` callbacks
+     * for an update on the field's own path (or below it), so such an update
+     * on an address object would skip the PDOK lookup entirely.
+     *
+     * Given the path of an update, this returns the path of a lookup sub
+     * field to treat as updated when the path is an address object rendered
+     * by this component and its lookup input changed, or null otherwise. An
+     * object update that only touches street or city returns null, so a
+     * manually entered street or city is left alone.
+     */
+    public static function lookupFieldPathForObjectUpdate(Schema $schema, string $path, mixed $old, mixed $new): ?string
+    {
+        if (! is_array($new)) {
+            return null;
+        }
+
+        foreach (self::LOOKUP_SUBFIELDS as $subfield) {
+            if (! $schema->getComponentByStatePath("{$path}.{$subfield}", withHidden: true, withAbsoluteStatePath: true) instanceof TextInput) {
+                return null;
+            }
+        }
+
+        $old = is_array($old) ? $old : [];
+
+        foreach (self::LOOKUP_SUBFIELDS as $subfield) {
+            if (($old[$subfield] ?? null) !== ($new[$subfield] ?? null)) {
+                return "{$path}.{$subfield}";
+            }
+        }
+
+        return null;
     }
 
     /**

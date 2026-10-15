@@ -28,6 +28,34 @@ it('leaves the value unchanged when the formaat is unknown or absent', function 
     expect(ZgwConnectionConfig::formatEigenschapWaarde('ZAAK-2026-0001', 'getal'))->toBe('ZAAK-2026-0001');
 });
 
+it('reads a datum_tijd and a datum value back from the wire in the application timezone', function () {
+    expect(ZgwConnectionConfig::parseEigenschapWaarde('20260718180000', 'datum_tijd')?->toIso8601String())
+        ->toBe('2026-07-18T18:00:00+02:00')
+        ->and(ZgwConnectionConfig::parseEigenschapWaarde('20260718', 'datum')?->toIso8601String())
+        ->toBe('2026-07-18T00:00:00+02:00');
+});
+
+it('round trips a datum_tijd value through the wire format', function () {
+    $wire = ZgwConnectionConfig::formatEigenschapWaarde('2026-12-05T17:30:00+01:00', 'datum_tijd');
+
+    expect(ZgwConnectionConfig::parseEigenschapWaarde($wire, 'datum_tijd')?->toIso8601String())
+        ->toBe('2026-12-05T17:30:00+01:00');
+});
+
+it('does not read a value that is not exactly in the wire format of the formaat', function (string $waarde, string $formaat) {
+    expect(ZgwConnectionConfig::parseEigenschapWaarde($waarde, $formaat))->toBeNull();
+})->with([
+    'ISO 8601' => ['2026-07-18T18:00:00+02:00', 'datum_tijd'],
+    'a date where a date-time is expected' => ['20260718', 'datum_tijd'],
+    'a date-time where a date is expected' => ['20260718180000', 'datum'],
+    'one digit short' => ['2026071818000', 'datum_tijd'],
+    'an impossible month' => ['20261318180000', 'datum_tijd'],
+    'an impossible day' => ['20260231', 'datum'],
+    'text' => ['B', 'datum'],
+    'empty' => ['', 'datum'],
+    'a formaat without a date' => ['20260718', 'tekst'],
+]);
+
 it('falls back to the configured RSIN for bronorganisatie', function () {
     Config::set('zgw.connections.main.bronorganisatie_rsin', '820151130');
 

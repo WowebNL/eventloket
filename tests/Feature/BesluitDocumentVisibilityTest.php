@@ -54,7 +54,7 @@ beforeEach(function () {
 /**
  * Builds a besluitdocument value object at the given vertrouwelijkheid.
  */
-function besluitDocument(string $uuid, string $titel, string $vertrouwelijkheid): Informatieobject
+function besluitDocument(string $uuid, string $titel, string $vertrouwelijkheid, ?string $status = null, ?bool $inhoudIsVervallen = null): Informatieobject
 {
     return new Informatieobject(
         uuid: $uuid,
@@ -70,6 +70,8 @@ function besluitDocument(string $uuid, string $titel, string $vertrouwelijkheid)
         informatieobjecttype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
         formaat: 'application/pdf',
         locked: false,
+        status: $status,
+        inhoudIsVervallen: $inhoudIsVervallen,
     );
 }
 
@@ -78,6 +80,20 @@ function besluitDocument(string $uuid, string $titel, string $vertrouwelijkheid)
  * and one vertrouwelijk besluitdocument, bypassing the ZGW HTTP layer.
  */
 function seedBesluitenCache(Zaak $zaak): void
+{
+    seedBesluitWithDocuments($zaak, [
+        besluitDocument('open-doc', 'Openbaar besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value),
+        besluitDocument('geheim-doc', 'Vertrouwelijk besluitdocument', DocumentVertrouwelijkheden::Vertrouwelijk->value),
+    ]);
+}
+
+/**
+ * Seeds the besluiten cache with a single besluit holding the given
+ * besluitdocumenten, bypassing the ZGW HTTP layer.
+ *
+ * @param  list<Informatieobject>  $documenten
+ */
+function seedBesluitWithDocuments(Zaak $zaak, array $documenten): void
 {
     Cache::forever("zaak.{$zaak->id}.besluiten", collect([
         new Besluit(
@@ -97,10 +113,7 @@ function seedBesluitenCache(Zaak $zaak): void
                 'informatieobjecttypen' => [ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1'],
                 'toelichting' => '',
             ]),
-            besluitDocumenten: collect([
-                besluitDocument('open-doc', 'Openbaar besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value),
-                besluitDocument('geheim-doc', 'Vertrouwelijk besluitdocument', DocumentVertrouwelijkheden::Vertrouwelijk->value),
-            ]),
+            besluitDocumenten: collect($documenten),
         ),
     ]));
 }
@@ -150,6 +163,76 @@ test('the besluiten infolist does not show a vertrouwelijk document to the organ
         ->assertOk()
         ->assertSee('Openbaar besluitdocument')
         ->assertDontSee('Vertrouwelijk besluitdocument');
+});
+
+test('a besluitdocument that is still in_bewerking is left out of a shown besluit', function () {
+    // Same status rule as the documents tab: only established documents are
+    // shown. The besluit itself stays visible through its definitief document.
+    seedBesluitWithDocuments($this->zaak, [
+        besluitDocument('final-doc', 'Definitief besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief'),
+        besluitDocument('draft-doc', 'Besluitdocument in bewerking', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'in_bewerking'),
+    ]);
+
+    $this->actingAs($this->reviewer);
+
+    expect($this->zaak->besluiten)->toHaveCount(1)
+        ->and($this->zaak->besluiten->first()->besluitDocumenten->pluck('uuid')->all())->toBe(['final-doc']);
+});
+
+test('a definitief besluitdocument whose content has expired is left out', function () {
+    seedBesluitWithDocuments($this->zaak, [
+        besluitDocument('final-doc', 'Definitief besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief'),
+        besluitDocument('expired-doc', 'Vervallen besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief', inhoudIsVervallen: true),
+    ]);
+
+    $this->actingAs($this->reviewer);
+
+    expect($this->zaak->besluiten->first()->besluitDocumenten->pluck('uuid')->all())->toBe(['final-doc']);
+
+    livewire(BesluitenInfolist::class, ['zaak' => $this->zaak])
+        ->assertOk()
+        ->assertSee('Definitief besluitdocument')
+        ->assertDontSee('Vervallen besluitdocument');
+});
+
+test('a besluit whose only document has expired content stays visible without that document', function () {
+    // The document is still established, so the besluit may still be
+    // published; only the expired document itself is left out.
+    seedBesluitWithDocuments($this->zaak, [
+        besluitDocument('expired-doc', 'Vervallen besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief', inhoudIsVervallen: true),
+    ]);
+
+    $this->actingAs($this->reviewer);
+
+    expect($this->zaak->besluiten)->toHaveCount(1)
+        ->and($this->zaak->besluiten->first()->besluitDocumenten)->toHaveCount(0);
+});
+
+test('the status rule for besluitdocumenten also applies in console context', function () {
+    // Queued jobs read the besluiten without a user; the role filter is skipped
+    // there, the status rule is not (as with the documents of a zaak).
+    (new ReflectionProperty($this->app, 'isRunningInConsole'))->setValue($this->app, true);
+
+    seedBesluitWithDocuments($this->zaak, [
+        besluitDocument('final-doc', 'Definitief besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief'),
+        besluitDocument('draft-doc', 'Besluitdocument in bewerking', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'in_bewerking'),
+    ]);
+
+    expect($this->zaak->besluiten->first()->besluitDocumenten->pluck('uuid')->all())->toBe(['final-doc']);
+});
+
+test('the besluiten infolist does not show a besluitdocument that is still in_bewerking', function () {
+    seedBesluitWithDocuments($this->zaak, [
+        besluitDocument('final-doc', 'Definitief besluitdocument', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'definitief'),
+        besluitDocument('draft-doc', 'Besluitdocument in bewerking', DocumentVertrouwelijkheden::Zaakvertrouwelijk->value, 'in_bewerking'),
+    ]);
+
+    $this->actingAs($this->reviewer);
+
+    livewire(BesluitenInfolist::class, ['zaak' => $this->zaak])
+        ->assertOk()
+        ->assertSee('Definitief besluitdocument')
+        ->assertDontSee('Besluitdocument in bewerking');
 });
 
 test('viewing a document the role may not see returns a 404 instead of a 500', function () {

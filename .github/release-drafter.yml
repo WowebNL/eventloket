@@ -1,47 +1,9 @@
-name-template: 'v$RESOLVED_VERSION'
-tag-template: 'v$RESOLVED_VERSION'
+# Only the autolabeler of Release Drafter is used (see .github/workflows/release-drafter.yml).
+# Release drafts are prepared by a maintainer, so no release template, categories or
+# version resolver are configured here. `template` is required by the configuration
+# schema and is otherwise unused.
 template: |
-  # What's Changed
-
   $CHANGES
-
-  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
-
-categories:
-  - title: '💥 Breaking changes'
-    label: 'changelog: breaking'
-  - title: '✨ New feautures'
-    label: 'changelog: feature'
-  - title: '🔒 Security'
-    label: 'changelog: security'
-  - title: '🐛 Bug Fixes'
-    label: 'changelog: bug'
-  - title: '📝 Documentation'
-    label: 'changelog: docs'
-  - title: '♻️ Refactor'
-    label: 'changelog: refactor'
-  - title: 'Other changes'
-  - title: '⬆️ Dependency Updates'
-    label: 'changelog: dependencies'
-    collapse-after: 5
-
-version-resolver:
-  major:
-    labels:
-      - 'changelog: breaking'
-  minor:
-    labels:
-      - 'changelog: feature'
-  patch:
-    labels:
-      - 'changelog: bug'
-      - 'changelog: refactor'
-      - 'changelog: docs'
-      - 'changelog: dependencies'
-      - 'changelog: security'
-
-exclude-labels:
-  - 'skip-changelog'
 
 autolabeler:
   - label: 'changelog: feature'

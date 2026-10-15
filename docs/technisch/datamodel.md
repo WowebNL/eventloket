@@ -163,6 +163,7 @@ Deze evenement applicatie is een procesondersteuningssysteem voor gemeenten, org
 - `public_id` - Publiek zichtbaar ID (unique)
 - `zgw_zaak_url` - URL naar zaak in OpenZaak (unique) ⚠️
 - `zaaktype_id` - FK naar zaaktype
+- `role` - Eventloket-rol van de zaak: `vergunning`, `melding`, `vooraankondiging` of `doorkomst` (nullable). Wordt bij het aanmaken vastgelegd, omdat een gemeente meerdere rollen aan hetzelfde zaaktype mag koppelen en het zaaktype de rol dan niet meer bepaalt. Een zaak zonder rol (van voor deze kolom en niet af te leiden) leidt de rol af uit zijn zaaktype.
 - `organisation_id` - FK naar organisatie (nullable, cascade delete)
 - `organiser_user_id` - FK naar aanvragende gebruiker (nullable, cascade delete)
 - `data_object_url` - URL naar data-object in Objects API (nullable)

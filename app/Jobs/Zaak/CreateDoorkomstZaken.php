@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Jobs\Zaak;
 
 use App\Actions\Geospatial\CheckIntersects;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Exceptions\DoorkomstZakenIncompleteException;
 use App\Exceptions\ZaaktypeConnectionMismatchException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
@@ -35,6 +37,7 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -62,6 +65,20 @@ class CreateDoorkomstZaken implements ShouldQueue
 
     private bool $hoofdAanvraagResolved = false;
 
+    /**
+     * How far the deelzaak of the municipality in progress got, for the log line
+     * when it fails: the connection it is sent to once that is resolved, and the
+     * url of the ZGW zaak once that is created. Reset for every municipality.
+     *
+     * @var array{connection: ?string, zaak_url: ?string}
+     */
+    private array $attempt = ['connection' => null, 'zaak_url' => null];
+
+    /**
+     * Cap on the error text taken over from a failed response into the log.
+     */
+    private const RESPONSE_TEXT_MAX = 300;
+
     public function __construct(public readonly Zaak $zaak) {}
 
     public function handle(ZaakeigenschappenMap $map): void
@@ -69,7 +86,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         if (! $this->zaak->zgw_zaak_url || ! $this->zaak->zaaktype) {
             return;
         }
-        if (! $this->zaak->zaaktype->effectiveTriggersRouteCheck()) {
+        if (! $this->zaak->triggersRouteCheck()) {
             return;
         }
 
@@ -103,7 +120,12 @@ class CreateDoorkomstZaken implements ShouldQueue
         // across instances.
         $initiator = $map->buildInitiator($state);
 
+        $failed = [];
+        $firstFailure = null;
+
         foreach ($passing as $muniRef) {
+            $this->attempt = ['connection' => null, 'zaak_url' => null];
+
             try {
                 $this->createDeelzaakFor($hoofdConnectionName, $ozZaak, $muniRef, $state, $initiator);
             } catch (ZaaktypeConnectionMismatchException $e) {
@@ -113,8 +135,114 @@ class CreateDoorkomstZaken implements ShouldQueue
                 // Creating a deelzaak is idempotent per (hoofdzaak x zaaktype), so a
                 // rerun after the koppeling is corrected still creates the missing one.
                 report($e);
+            } catch (Throwable $e) {
+                // Any other failure (typically an error response from the receiving
+                // ZGW API) is isolated to this municipality as well, so the ones
+                // after it on the route still get their deelzaak. Unlike a mismatch
+                // it does fail the job once the loop is done, see below.
+                $this->logFailedDeelzaak($muniRef, $e);
+                report($e);
+
+                $failed[] = (string) $muniRef->brk_identification;
+                $firstFailure ??= $e;
             }
         }
+
+        // Failing at the end keeps the missing deelzaken visible as a failed job,
+        // and makes a retry useful: the idempotency check in createDeelzaakFor()
+        // skips every municipality that already has its deelzaak, so a retry only
+        // tries the ones that are still missing.
+        if ($firstFailure !== null) {
+            throw DoorkomstZakenIncompleteException::forHoofdzaak(
+                zaakId: $this->zaak->id,
+                failedMunicipalities: $failed,
+                attempted: $passing->count(),
+                previous: $firstFailure,
+            );
+        }
+    }
+
+    /**
+     * Log a municipality whose deelzaak could not be created.
+     *
+     * The line carries what is needed to tell the cause apart: the municipality,
+     * the connection the deelzaak was sent to, and a summary of the error
+     * response. The request payload is deliberately left out, as it holds the
+     * aanvrager's details, and so is the raw response body; see
+     * {@see self::responseSummary()}.
+     *
+     * zaak_url is set when the deelzaak was already created in ZGW before a later
+     * step failed. The idempotency check is local and the local record is only
+     * written at the very end, so a retry creates that deelzaak a second time;
+     * the url is logged so such a leftover can be found and removed.
+     */
+    private function logFailedDeelzaak(Municipality $muniRef, Throwable $e): void
+    {
+        Log::error('CreateDoorkomstZaken: failed to create the deelzaak for a municipality; continuing with the next one.', [
+            'zaak_id' => $this->zaak->id,
+            'municipality' => $muniRef->brk_identification,
+            'connection' => $this->attempt['connection'],
+            'zaak_url' => $this->attempt['zaak_url'],
+            'exception' => $e::class,
+            'response' => $this->responseSummary($e),
+        ]);
+    }
+
+    /**
+     * A summary of the error response of a failed ZGW call, without anything
+     * that can echo what was sent.
+     *
+     * A ZGW error body ("Fout") is reduced to its generic fields plus the name
+     * and code of every invalid parameter; the reason texts are left out, as a
+     * validator can quote the rejected value in them. A body that is not JSON
+     * (an error page from a proxy or the application server) is reduced to the
+     * start of its text, which is where such a page names the error.
+     *
+     * @return array<string, mixed>
+     */
+    private function responseSummary(Throwable $e): array
+    {
+        if (! $e instanceof ApiRequestException) {
+            return [];
+        }
+
+        $response = $e->getResponse();
+        $body = $response->json();
+
+        if (! is_array($body)) {
+            $text = trim((string) preg_replace('/\s+/', ' ', strip_tags($response->body())));
+
+            return [
+                'status' => $response->status(),
+                'content_type' => $response->header('Content-Type'),
+                'text' => mb_substr($text, 0, self::RESPONSE_TEXT_MAX),
+            ];
+        }
+
+        $invalidParams = [];
+        foreach ((array) ($body['invalidParams'] ?? []) as $param) {
+            if (is_array($param)) {
+                $invalidParams[] = [
+                    'name' => self::scalarOrNull($param['name'] ?? null),
+                    'code' => self::scalarOrNull($param['code'] ?? null),
+                ];
+            }
+        }
+
+        $detail = self::scalarOrNull($body['detail'] ?? null);
+
+        return [
+            'status' => $response->status(),
+            'code' => self::scalarOrNull($body['code'] ?? null),
+            'title' => self::scalarOrNull($body['title'] ?? null),
+            'detail' => $detail === null ? null : mb_substr($detail, 0, self::RESPONSE_TEXT_MAX),
+            'invalid_params' => $invalidParams,
+        ];
+    }
+
+    private static function scalarOrNull(mixed $value): ?string
+    {
+        return is_scalar($value) ? (string) $value : null;
     }
 
     /**
@@ -273,6 +401,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         // deelzaak and its zaaktype in the same instance. Reads from the hoofdzaak
         // keep using the hoofdzaak connection.
         $deelConnectionName = $doorkomstZaaktype->zgwConnectionName();
+        $this->attempt['connection'] = $deelConnectionName;
 
         $this->assertZaaktypeBelongsToConnection($deelConnectionName, $doorkomstZaaktype);
 
@@ -280,12 +409,17 @@ class CreateDoorkomstZaken implements ShouldQueue
 
         // The koppeling of the doorkomst zaaktype decides how its catalogus names
         // the eigenschappen, both when writing them and when reading them back.
-        $deelMapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $deelMapping = MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
+
+        // The deelzaak acts as the organisation of the connection it is created
+        // on, just like the hoofdzaak does in CreateZaakInZGW. On the hoofdzaak's
+        // own connection this is the same RSIN the hoofdzaak carries.
+        $bronorganisatie = ZgwConnectionConfig::bronorganisatie($deelConnectionName);
 
         $payload = [
             'zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url,
-            'bronorganisatie' => $hoofdZaak->bronorganisatie,
-            'verantwoordelijkeOrganisatie' => $hoofdZaak->bronorganisatie,
+            'bronorganisatie' => $bronorganisatie,
+            'verantwoordelijkeOrganisatie' => $bronorganisatie,
             'startdatum' => $hoofdZaak->startdatum,
             'omschrijving' => $hoofdZaak->omschrijving,
             'zaakgeometrie' => $hoofdZaak->zaakgeometrie,
@@ -310,6 +444,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
             return;
         }
+        $this->attempt['zaak_url'] = (string) $newZaakUrl;
 
         $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping);
         $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
@@ -328,6 +463,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             [
                 'public_id' => $newOzZaak->identificatie,
                 'zaaktype_id' => $doorkomstZaaktype->id,
+                'role' => ZaaktypeRole::Doorkomst,
                 'hoofdzaak_id' => $this->zaak->id, // local hoofdzaak link (works cross-instance)
                 'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
                 'data_object_url' => null, // the Objects API is no longer part of the new flow
@@ -339,8 +475,13 @@ class CreateDoorkomstZaken implements ShouldQueue
                         // returns its eigenschappen under the namen its own
                         // catalogus uses, and a naam that is not translated back
                         // to its logical key is dropped by ZaakReferenceData.
+                        // Dates come back in the ZGW wire form and are turned
+                        // into the ISO 8601 the reference data stores.
                         $this->withHoofdzaakFallbacks(
-                            ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value)
+                            ZaakReferenceData::normalizeEigenschapDates(
+                                ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value),
+                                $this->zaak->reference_data->toArray(),
+                            )
                         ),
                         [
                             'registratiedatum' => $newOzZaak->registratiedatum,
@@ -452,8 +593,12 @@ class CreateDoorkomstZaken implements ShouldQueue
             ->collect()
             ->map(fn ($e) => EigenschapData::from($e));
 
-        $hoofdMapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $hoofdMapping = $this->zaak->zaaktypeMapping();
         $eigenschappen = ZaaktypeBlueprint::logicalEigenschappen($hoofdMapping, $ozZaak->eigenschappen_key_value);
+
+        // The deelzaak is a route passage, whatever kind of aanvraag the
+        // hoofdzaak is, so its aanvraagtype is not copied over.
+        $eigenschappen[ZaakeigenschappenMap::AANVRAAG_TYPE] = ZaakeigenschappenMap::aanvraagTypeWaarde(ZaaktypeRole::Doorkomst);
 
         foreach ($eigenschappen as $logicalKey => $waarde) {
             if (! $waarde) {
@@ -486,7 +631,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
 
         $roltypen = $deelConnection->catalogi()->roltypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url]);
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $mapping = MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
         $roltype = ZaaktypeBlueprint::initiatorRoltype($mapping, $roltypen);
         if (! $roltype) {
             Log::warning('CreateDoorkomstZaken: no initiator roltype', ['zaak' => $newZaakUrl]);
@@ -520,7 +665,7 @@ class CreateDoorkomstZaken implements ShouldQueue
         // Resolving a target informatieobjecttype is only needed cross-instance; the
         // source type url is not portable and must be re-mapped by omschrijving. The
         // mapping and the source-type omschrijvingen are resolved at most once here.
-        $deelMapping = $sameInstance ? null : MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $deelMapping = $sameInstance ? null : MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
         $sourceTypeOmschrijvingen = [];
 
         $zios = Zgw::connection($hoofdConnectionName)->zaken()->zaakinformatieobjecten()->index(['zaak' => $ozZaak->url]);
@@ -550,7 +695,6 @@ class CreateDoorkomstZaken implements ShouldQueue
                     $deelConnectionName,
                     $deelConnection,
                     (string) $informatieobjectUrl,
-                    $ozZaak->bronorganisatie,
                     $doorkomstZaaktype,
                     $deelMapping,
                     $sourceTypeOmschrijvingen,
@@ -588,7 +732,6 @@ class CreateDoorkomstZaken implements ShouldQueue
         string $deelConnectionName,
         ZgwConnection $deelConnection,
         string $informatieobjectUrl,
-        string $bronorganisatie,
         Zaaktype $doorkomstZaaktype,
         ?MunicipalityZaaktypeMapping $deelMapping,
         array &$sourceTypeOmschrijvingen,
@@ -614,7 +757,9 @@ class CreateDoorkomstZaken implements ShouldQueue
         $content = ZgwResource::downloadDocument($hoofdConnectionName, (string) ($eio['uuid'] ?? ''));
 
         $payload = [
-            'bronorganisatie' => $bronorganisatie,
+            // The copy belongs to the organisation of the connection it is created
+            // on, like the deelzaak itself, not to the hoofdzaak's organisation.
+            'bronorganisatie' => ZgwConnectionConfig::bronorganisatie($deelConnectionName),
             'creatiedatum' => $eio['creatiedatum'] ?? now()->format('Y-m-d'),
             // Determined by the target connection, not copied from the source: the
             // source instance's confidentiality scheme need not match the target's,
@@ -731,7 +876,7 @@ class CreateDoorkomstZaken implements ShouldQueue
             return $this->hoofdAanvraagOmschrijving = null;
         }
 
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($zaaktype);
+        $mapping = $this->zaak->zaaktypeMapping();
         $aanvraag = ZaaktypeBlueprint::aanvraagInformatieobjecttype($mapping, $zaaktype->documentTypesForUser());
 
         return $this->hoofdAanvraagOmschrijving = ($aanvraag && property_exists($aanvraag, 'omschrijving'))
@@ -742,7 +887,7 @@ class CreateDoorkomstZaken implements ShouldQueue
     private function createInitieleStatus(ZgwConnection $deelConnection, string $newZaakUrl, Zaaktype $doorkomstZaaktype): void
     {
         $statustypen = $deelConnection->catalogi()->statustypen()->index(['zaaktype' => $doorkomstZaaktype->zgw_zaaktype_url])->collect();
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($doorkomstZaaktype);
+        $mapping = MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst);
         $initieel = ZaaktypeBlueprint::initialStatustype($mapping, $statustypen);
         if (! $initieel) {
             Log::warning('CreateDoorkomstZaken: no statustype', ['zaak' => $newZaakUrl]);

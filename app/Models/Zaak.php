@@ -52,6 +52,7 @@ use Woweb\Zgw\Facades\Zgw;
 
 /**
  * @property ZaakReferenceData $reference_data
+ * @property ZaaktypeRole|null $role
  * @property string $zgw_connection
  * @property array<string, mixed> $form_state_snapshot
  * @property array<string, mixed>|null $imported_data
@@ -120,6 +121,7 @@ class Zaak extends Model implements Eventable
         'zgw_connection',
         'zgw_zaak_url',
         'zaaktype_id',
+        'role',
         'zgw_zaaktype_url',
         'hoofdzaak_id',
         'data_object_url',
@@ -136,6 +138,7 @@ class Zaak extends Model implements Eventable
     {
         return [
             'reference_data' => ZaakReferenceData::class,
+            'role' => ZaaktypeRole::class,
             'imported_data' => 'array',
             'form_state_snapshot' => 'array',
         ];
@@ -323,7 +326,7 @@ class Zaak extends Model implements Eventable
     protected function intrekkenResultaatType(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->zaaktype?->intrekkenResultaatTypeForVersion($this->zgwZaaktypeVersionUrl()),
+            get: fn () => $this->zaaktype?->intrekkenResultaatTypeForVersion($this->zgwZaaktypeVersionUrl(), $this->zaaktypeMapping()),
         );
     }
 
@@ -420,13 +423,43 @@ class Zaak extends Model implements Eventable
     }
 
     /**
-     * Whether this zaak is a vooraankondiging. Single seam: it delegates to the
-     * zaaktype, which resolves its role from the municipality's koppeling first
-     * and only falls back to the shared-catalogus naming convention.
+     * The Eventloket role of this zaak. Recorded when the zaak is created,
+     * because several roles may share one zaaktype. A zaak without a stored
+     * role (imported or recovered) derives it from its zaaktype, as before.
+     */
+    public function effectiveRole(): ?ZaaktypeRole
+    {
+        return $this->role ?? $this->zaaktype?->effectiveRole();
+    }
+
+    /**
+     * Whether this zaak is a vooraankondiging. Single seam for every check on
+     * the role of a zaak, see {@see self::effectiveRole()}.
      */
     public function isVooraankondiging(): bool
     {
-        return $this->zaaktype?->isVooraankondiging() ?? false;
+        return $this->effectiveRole() === ZaaktypeRole::Vooraankondiging;
+    }
+
+    /**
+     * The koppeling that applies to this zaak: the one of its own role on its
+     * zaaktype. Use this instead of looking the koppeling up by zaaktype.
+     */
+    public function zaaktypeMapping(): ?MunicipalityZaaktypeMapping
+    {
+        return MunicipalityZaaktypeMapping::forZaak($this);
+    }
+
+    /**
+     * Whether submitting this zaak starts the route check. The koppeling of
+     * the zaak's role can override the admin-managed value on the zaaktype; a
+     * null override falls back to it.
+     */
+    public function triggersRouteCheck(): bool
+    {
+        $override = $this->zaaktypeMapping()?->triggers_route_check;
+
+        return $override ?? (bool) $this->zaaktype?->triggers_route_check;
     }
 
     /**
@@ -436,9 +469,61 @@ class Zaak extends Model implements Eventable
     #[Scope]
     protected function vooraankondigingen(Builder $query): Builder
     {
-        return $query->whereHas('zaaktype', function (Builder $zaaktypen): Builder {
-            /** @var Builder<Zaaktype> $zaaktypen */
-            return $zaaktypen->withEffectiveRole(ZaaktypeRole::Vooraankondiging);
+        return $query->withEffectiveRole(ZaaktypeRole::Vooraankondiging);
+    }
+
+    /**
+     * Zaken whose effective role is $role: the stored role, or for a zaak
+     * without one the role of its zaaktype. The query-level twin of
+     * {@see self::effectiveRole()}.
+     *
+     * @param  Builder<Zaak>  $query
+     * @return Builder<Zaak>
+     */
+    #[Scope]
+    protected function withEffectiveRole(Builder $query, ZaaktypeRole $role): Builder
+    {
+        return $query->where(function (Builder $ladder) use ($role): void {
+            $ladder
+                ->where('zaken.role', $role->value)
+                ->orWhere(function (Builder $withoutRole) use ($role): void {
+                    $withoutRole
+                        ->whereNull('zaken.role')
+                        ->whereHas('zaaktype', function (Builder $zaaktypen) use ($role): void {
+                            /** @var Builder<Zaaktype> $zaaktypen */
+                            $zaaktypen->withEffectiveRole($role);
+                        });
+                });
+        });
+    }
+
+    /**
+     * Zaken whose effective role is any of $roles, for the multi-select role
+     * filters. Accepts backing values as well as enum cases, because filter
+     * state arrives from the request as strings.
+     *
+     * @param  Builder<Zaak>  $query
+     * @param  array<int, ZaaktypeRole|string|null>  $roles
+     * @return Builder<Zaak>
+     */
+    #[Scope]
+    protected function withEffectiveRoleIn(Builder $query, array $roles): Builder
+    {
+        $roles = array_filter(array_map(
+            fn ($role): ?ZaaktypeRole => $role instanceof ZaaktypeRole ? $role : ZaaktypeRole::tryFrom((string) $role),
+            $roles
+        ));
+
+        if ($roles === []) {
+            // Nothing recognisable was asked for: match no row, like an `in`
+            // over an empty set, rather than silently widening the result.
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $any) use ($roles): void {
+            foreach ($roles as $role) {
+                $any->orWhere(fn (Builder $ladder) => $ladder->withEffectiveRole($role));
+            }
         });
     }
 
@@ -586,11 +671,11 @@ class Zaak extends Model implements Eventable
      */
     private function visibleDocuments(Collection $documenten): Collection
     {
-        // Only show established documents; concepts from an external ZGW
-        // backend are hidden (documents without an explicit status, such
-        // as our own uploads, count as established, and so do archived
-        // ones). See Informatieobject::isVastgesteld().
-        $documenten = $documenten->filter(fn (Informatieobject $informatieobject) => $informatieobject->isVastgesteld());
+        // Only show established documents whose content has not expired;
+        // concepts from an external ZGW backend are hidden (documents without
+        // an explicit status, such as our own uploads, count as established,
+        // and so do archived ones). See Informatieobject::isZichtbaar().
+        $documenten = $documenten->filter(fn (Informatieobject $informatieobject) => $informatieobject->isZichtbaar());
 
         if (app()->runningInConsole()) {
             // queue needs documents for adding to mail, skip role filter because this is allready done before job is queued
@@ -709,6 +794,22 @@ class Zaak extends Model implements Eventable
         // rule, so it also applies in console context.
         $besluiten = $besluiten
             ->filter(fn (Besluit $besluit) => $this->besluitIsPubliceerbaar($besluit))
+            ->values();
+
+        // The besluitdocumenten follow the same rule as the documents tab: a
+        // document that is not established (e.g. still in_bewerking) or whose
+        // content has expired is left out, also when the besluit itself may be
+        // shown. Whether the
+        // besluit is shown at all was decided above on its unfiltered documents,
+        // so a besluit that is publishable without an established document
+        // stays visible, just without the documents that are not established.
+        // map(), not each(): the value object is readonly, see below.
+        $besluiten = $besluiten
+            ->map(fn (Besluit $besluit) => new Besluit(...array_merge($besluit->toArrayWithObjects(), [
+                'besluitDocumenten' => $besluit->besluitDocumenten
+                    ?->filter(fn (Informatieobject $informatieobject) => $informatieobject->isZichtbaar())
+                    ->values(),
+            ])))
             ->values();
 
         if (app()->runningInConsole()) {

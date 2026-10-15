@@ -39,10 +39,15 @@ class ListAdminUsers extends ListRecords
                         ->label(__('admin/resources/admin.actions.invite.form.email.label'))
                         ->email()
                         ->required()
-                        ->unique(table: User::class)
                         ->rules([
                             fn () => function (string $attribute, $value, Closure $fail) {
-                                if (AdminInvite::where('email', $value)->exists()) {
+                                if (User::withTrashed()->where('email', strtolower($value))->exists()) {
+                                    $fail(__('validation.unique'));
+
+                                    return;
+                                }
+
+                                if (AdminInvite::whereEmail($value)->exists()) {
                                     $fail(__('admin/resources/admin.actions.invite.form.email.validation.already_invited'));
                                 }
                             },

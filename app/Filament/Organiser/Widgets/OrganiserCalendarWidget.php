@@ -13,6 +13,7 @@ class OrganiserCalendarWidget extends CalendarWidget
     {
         return [
             $this->municipalitiesFilter(),
+            $this->zaaktypesFilter(),
             $this->statusNameFilter(),
             RisicoClassificatiesSelect::make(),
             $this->searchFilter(),
