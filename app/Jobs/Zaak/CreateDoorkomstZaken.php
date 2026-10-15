@@ -17,6 +17,7 @@ use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\Observers\ZaakObserver;
 use App\Services\Zgw\InitiatorRolBuilder;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZaaktypeBlueprint;
@@ -172,10 +173,10 @@ class CreateDoorkomstZaken implements ShouldQueue
      * aanvrager's details, and so is the raw response body; see
      * {@see self::responseSummary()}.
      *
-     * zaak_url is set when the deelzaak was already created in ZGW before a later
-     * step failed. The idempotency check is local and the local record is only
-     * written at the very end, so a retry creates that deelzaak a second time;
-     * the url is logged so such a leftover can be found and removed.
+     * zaak_url is set when the deelzaak was already created in ZGW before its
+     * registration could be completed. It is registered locally right after its
+     * creation, so a retry completes that registration instead of creating the
+     * deelzaak a second time.
      */
     private function logFailedDeelzaak(Municipality $muniRef, Throwable $e): void
     {
@@ -388,11 +389,25 @@ class CreateDoorkomstZaken implements ShouldQueue
         // Idempotency: never create a second doorkomst zaak for the same
         // (hoofdzaak × zaaktype). Tracked locally because the ZGW hoofdzaak/deelzaak
         // relationship does not exist for cross-instance doorkomst zaken.
-        $alreadyExists = Zaak::query()
+        $existing = Zaak::query()
             ->where('hoofdzaak_id', $this->zaak->id)
             ->where('zaaktype_id', $doorkomstZaaktype->id)
-            ->exists();
-        if ($alreadyExists) {
+            ->first();
+        if ($existing) {
+            // A deelzaak that an earlier attempt created and registered, but
+            // never got to read back, is completed now instead of created again.
+            if ($existing->public_id === null && filled($existing->zgw_zaak_url)) {
+                $this->attempt['connection'] = $doorkomstZaaktype->zgwConnectionName();
+                $this->attempt['zaak_url'] = (string) $existing->zgw_zaak_url;
+
+                $this->completeDeelzaak(
+                    $existing,
+                    $doorkomstZaaktype->zgwConnectionName(),
+                    (string) $existing->zgw_zaak_url,
+                    MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst),
+                );
+            }
+
             return;
         }
 
@@ -447,61 +462,144 @@ class CreateDoorkomstZaken implements ShouldQueue
         }
         $this->attempt['zaak_url'] = (string) $newZaakUrl;
 
-        $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping);
-        $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
-        $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
-        $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
+        // Register the deelzaak locally as soon as it exists in ZGW. The
+        // idempotency check above only sees local records, so a deelzaak that
+        // was registered only once every later step had succeeded was created a
+        // second time by every retry after a failure in between.
+        $deelzaak = $this->registerDeelzaak($response, (string) $newZaakUrl, $doorkomstZaaktype, $deelConnectionName, $state);
 
+        try {
+            $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping);
+            $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
+            $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
+            $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
+        } catch (Throwable $e) {
+            // The deelzaak exists and is registered, so a retry skips it and
+            // cannot repair this step. Failing the job for it would only invite
+            // a retry that does nothing; it is reported instead, and the local
+            // registration below is still completed.
+            Log::error('CreateDoorkomstZaken: the deelzaak was created but a later step failed; completing its registration.', [
+                'zaak_id' => $this->zaak->id,
+                'municipality' => $municipality->brk_identification,
+                'connection' => $deelConnectionName,
+                'zaak_url' => $newZaakUrl,
+                'exception' => $e::class,
+                'response' => $this->responseSummary($e),
+            ]);
+            report($e);
+        }
+
+        $this->completeDeelzaak($deelzaak, $deelConnectionName, (string) $newZaakUrl, $deelMapping);
+    }
+
+    /**
+     * Register a deelzaak that was just created in ZGW, before anything else is
+     * written onto it.
+     *
+     * The record is saved without model events: the zaak observer notifies the
+     * handlers and derives concept advice questions from the reference data,
+     * which is only complete once the deelzaak has been read back. Those hooks
+     * run in {@see self::completeDeelzaak()}. For the same reason the observer
+     * cannot fill `zgw_connection`, so it is set here to the connection the
+     * deelzaak was created on, which is the answer the observer would give.
+     *
+     * Until then the reference data holds what is known without the read-back:
+     * the evenement fields of the hoofdzaak, the organisator and the per-day
+     * times. `public_id` stays empty until the read-back fills it, which marks
+     * a registration that an interrupted attempt left unfinished.
+     *
+     * @param  array<string, mixed>  $response  the ZGW response to creating the deelzaak
+     */
+    private function registerDeelzaak(array $response, string $newZaakUrl, Zaaktype $doorkomstZaaktype, string $deelConnectionName, FormState $state): Zaak
+    {
+        $zaaktypeUrl = $response['zaaktype'] ?? null;
+        $registratiedatum = $response['registratiedatum'] ?? null;
+
+        $deelzaak = new Zaak([
+            'public_id' => null,
+            'zgw_connection' => $deelConnectionName,
+            'zgw_zaak_url' => $newZaakUrl,
+            'zaaktype_id' => $doorkomstZaaktype->id,
+            'role' => ZaaktypeRole::Doorkomst,
+            'hoofdzaak_id' => $this->zaak->id, // local hoofdzaak link (works cross-instance)
+            'zgw_zaaktype_url' => is_string($zaaktypeUrl) ? $zaaktypeUrl : $doorkomstZaaktype->zgw_zaaktype_url,
+            'data_object_url' => null, // the Objects API is no longer part of the new flow
+            'organisation_id' => $this->zaak->organisation_id,
+            'organiser_user_id' => $this->zaak->organiser_user_id,
+            'reference_data' => $this->deelzaakReferenceData(
+                [],
+                is_string($registratiedatum) && $registratiedatum !== '' ? $registratiedatum : now()->toDateString(),
+                '',
+                '',
+            ),
+            // Deelzaken carry the same snapshot so they can perform follow-up
+            // actions on their own, without depending on the hoofdzaak.
+            'form_state_snapshot' => $state->toSnapshot(),
+        ]);
+        $deelzaak->saveQuietly();
+
+        return $deelzaak;
+    }
+
+    /**
+     * Complete the local registration of a deelzaak from what ZGW now holds,
+     * and run the zaak observer's creation hooks that were held back in
+     * {@see self::registerDeelzaak()}.
+     */
+    private function completeDeelzaak(Zaak $deelzaak, string $deelConnectionName, string $newZaakUrl, ?MunicipalityZaaktypeMapping $deelMapping): void
+    {
         $newOzZaak = ZaakReadModel::fromArray(ZgwResource::byUrl(
             $deelConnectionName,
             $newZaakUrl.'?expand=zaakobjecten,eigenschappen,status,status.statustype,rollen'
         ));
 
-        $organisator = $this->resolveOrganisatorLabel();
-
-        Zaak::updateOrCreate(
-            ['zgw_zaak_url' => $newZaakUrl],
-            [
-                'public_id' => $newOzZaak->identificatie,
-                'zaaktype_id' => $doorkomstZaaktype->id,
-                'role' => ZaaktypeRole::Doorkomst,
-                'hoofdzaak_id' => $this->zaak->id, // local hoofdzaak link (works cross-instance)
-                'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
-                'data_object_url' => null, // the Objects API is no longer part of the new flow
-                'organisation_id' => $this->zaak->organisation_id,
-                'organiser_user_id' => $this->zaak->organiser_user_id,
-                'reference_data' => new ZaakReferenceData(
-                    ...array_merge(
-                        // Read back through the koppeling first: the deelzaak
-                        // returns its eigenschappen under the namen its own
-                        // catalogus uses, and a naam that is not translated back
-                        // to its logical key is dropped by ZaakReferenceData.
-                        // Dates come back in the ZGW wire form and are turned
-                        // into the ISO 8601 the reference data stores.
-                        $this->withHoofdzaakFallbacks(
-                            ZaakReferenceData::normalizeEigenschapDates(
-                                ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value),
-                                $this->zaak->reference_data->toArray(),
-                            )
-                        ),
-                        [
-                            'registratiedatum' => $newOzZaak->registratiedatum,
-                            'status_name' => $newOzZaak->status_name ?? '',
-                            'statustype_url' => $newOzZaak->statustype_url ?? '',
-                            'organisator' => $organisator,
-                            // Per-day times of a multi-day event do not exist
-                            // as a zaakeigenschap, so carry them over from the
-                            // parent case directly.
-                            'dagen_evenement' => $this->zaak->reference_data->dagen_evenement,
-                            'dagen_opbouw' => $this->zaak->reference_data->dagen_opbouw,
-                            'dagen_afbouw' => $this->zaak->reference_data->dagen_afbouw,
-                        ]
-                    )
+        $deelzaak->fill([
+            'public_id' => $newOzZaak->identificatie,
+            'zgw_zaaktype_url' => $newOzZaak->zaaktype, // snapshot of the version used
+            'reference_data' => $this->deelzaakReferenceData(
+                // Read back through the koppeling first: the deelzaak returns its
+                // eigenschappen under the namen its own catalogus uses, and a
+                // naam that is not translated back to its logical key is dropped
+                // by ZaakReferenceData. Dates come back in the ZGW wire form and
+                // are turned into the ISO 8601 the reference data stores.
+                ZaakReferenceData::normalizeEigenschapDates(
+                    ZaaktypeBlueprint::logicalEigenschappen($deelMapping, $newOzZaak->eigenschappen_key_value),
+                    $this->zaak->reference_data->toArray(),
                 ),
-                // Deelzaken carry the same snapshot so they can perform follow-up
-                // actions on their own, without depending on the hoofdzaak.
-                'form_state_snapshot' => $state->toSnapshot(),
-            ]
+                $newOzZaak->registratiedatum ?? now()->toDateString(),
+                $newOzZaak->status_name ?? '',
+                $newOzZaak->statustype_url ?? '',
+            ),
+        ])->save();
+
+        app(ZaakObserver::class)->created($deelzaak);
+    }
+
+    /**
+     * The reference data of a deelzaak: its own eigenschappen, completed with
+     * the evenement fields of the hoofdzaak, plus the fields that do not exist
+     * as a zaakeigenschap.
+     *
+     * @param  array<string, mixed>  $eigenschappen  logical key => value, dates as ISO 8601
+     */
+    private function deelzaakReferenceData(array $eigenschappen, string $registratiedatum, string $statusName, string $statustypeUrl): ZaakReferenceData
+    {
+        return new ZaakReferenceData(
+            ...array_merge(
+                $this->withHoofdzaakFallbacks($eigenschappen),
+                [
+                    'registratiedatum' => $registratiedatum,
+                    'status_name' => $statusName,
+                    'statustype_url' => $statustypeUrl,
+                    'organisator' => $this->resolveOrganisatorLabel(),
+                    // Per-day times of a multi-day event do not exist as a
+                    // zaakeigenschap, so carry them over from the parent case
+                    // directly.
+                    'dagen_evenement' => $this->zaak->reference_data->dagen_evenement,
+                    'dagen_opbouw' => $this->zaak->reference_data->dagen_opbouw,
+                    'dagen_afbouw' => $this->zaak->reference_data->dagen_afbouw,
+                ]
+            )
         );
     }
 
