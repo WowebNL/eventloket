@@ -128,7 +128,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
         $failed = [];
         $firstFailure = null;
-        $onlyIncomplete = true;
+        $anyIncomplete = false;
 
         foreach ($passing as $muniRef) {
             $this->attempt = ['connection' => null, 'zaak_url' => null];
@@ -152,27 +152,31 @@ class CreateDoorkomstZaken implements ShouldQueue
 
                 $failed[] = (string) $muniRef->brk_identification;
                 $firstFailure ??= $e;
-                $onlyIncomplete = $onlyIncomplete && $e instanceof DoorkomstDeelzaakIncompleteException;
+                $anyIncomplete = $anyIncomplete || $e instanceof DoorkomstDeelzaakIncompleteException;
             }
         }
 
-        // Failing at the end keeps the missing deelzaken visible as a failed job,
-        // and makes a retry useful: the idempotency check in createDeelzaakFor()
-        // skips every municipality that already has its deelzaak, so a retry only
-        // tries the ones that are still missing.
+        // Failing at the end keeps the missing and incomplete deelzaken visible
+        // as a failed job. The idempotency check in createDeelzaakFor() skips
+        // every municipality that already has its deelzaak, so a retry only
+        // creates the ones that are still missing.
         if ($firstFailure !== null) {
             $exception = DoorkomstZakenIncompleteException::forHoofdzaak(
                 zaakId: $this->zaak->id,
                 failedMunicipalities: $failed,
                 attempted: $passing->count(),
                 previous: $firstFailure,
+                retriedAutomatically: ! $anyIncomplete,
             );
 
-            // When every failed municipality does have its deelzaak, only
-            // incomplete, a retry has nothing to create: it would skip them all,
-            // succeed, and so remove the failed job again. The job is marked as
-            // failed without a retry instead, so it stays visible.
-            if ($onlyIncomplete) {
+            // A retry never repairs an incomplete deelzaak: it skips it and, once
+            // nothing else fails, succeeds and removes the failed job again. So
+            // as soon as one deelzaak is incomplete the job is marked as failed
+            // without a retry, also when another municipality is still missing
+            // its deelzaak; the exception message says how to create those.
+            // When deelzaken are only missing, the job throws so the queue's
+            // retry can create them.
+            if ($anyIncomplete) {
                 $this->fail($exception);
 
                 return;

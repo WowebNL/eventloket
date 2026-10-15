@@ -1270,20 +1270,95 @@ test('marks the job as failed without a retry when its only failure is an incomp
     runDoorkomstJob($scenario['hoofdzaak'])->assertFailedWith(DoorkomstZakenIncompleteException::class);
 });
 
-test('still throws for a retry when a municipality did not get its deelzaak at all', function () {
-    // The deelzaak could not be read back, so it is registered but unfinished.
-    // The retry completes it, so the job is left to the queue's retry.
-    $readBackFails = true;
+/**
+ * Two passing municipalities on main: creating the deelzaak of the first one
+ * (dk-m) fails, and the second one (dk-m2) gets its deelzaak, but setting its
+ * initial status fails, so it is incomplete.
+ */
+function fakeDoorkomstMissingAndIncomplete(): void
+{
     $created = 0;
-    fakeDoorkomstWithInterruptions($readBackFails, eigenschappenCatalogusFails: false, created: $created);
+    $serverError = fn () => Http::response([
+        'type' => 'https://zgw.example.com/ref/fouten/APIException/',
+        'code' => 'error',
+        'title' => 'A server error occurred.',
+        'status' => 500,
+        'detail' => 'A server error occurred.',
+        'instance' => 'urn:uuid:00000000-0000-0000-0000-000000000000',
+    ], 500);
 
-    $scenario = doorkomstScenario(hoofdOwnInstance: true);
-    withPassingDoorkomstZaaktype($scenario['passing']);
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/ontvangen', 'volgnummer' => 1, 'omschrijving' => 'Ontvangen'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/statussen*' => $serverError(),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use (&$created, $serverError) {
+            if ($request->method() === 'POST') {
+                if (($request->data()['zaaktype'] ?? null) === doorkomstZaaktypeUrl('dk-m')) {
+                    return $serverError();
+                }
 
-    $job = (new CreateDoorkomstZaken($scenario['hoofdzaak']))->withFakeQueueInteractions();
+                $created++;
+
+                return Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-'.$created], 201);
+            }
+
+            $slug = basename((string) parse_url($request->url(), PHP_URL_PATH));
+
+            return Http::response(array_merge(deelZaakReadResponse(), [
+                'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/'.$slug,
+                'identificatie' => strtoupper($slug),
+            ]), 200);
+        },
+        '*/catalogi/api/v1/*' => Http::response(ZgwHttpFake::envelope([]), 200),
+        '*' => Http::response([], 200),
+    ]);
+}
+
+test('marks the job as failed without a retry when one municipality is missing its deelzaak and another one is incomplete', function () {
+    // A retry would create the missing deelzaak, skip the incomplete one and
+    // succeed, which removes the failed job and with it the only sign of the
+    // incomplete deelzaak. The job is marked as failed instead, and the
+    // message says how to create the missing one.
+    Exceptions::fake();
+    fakeDoorkomstMissingAndIncomplete();
+    secondPassingMunicipality();
+    $hoofdzaak = multiRouteHoofdZaak([
+        lineGeometry([[0.5, 0.5], [3.5, 3.5]]),
+        lineGeometry([[0.5, -2.0], [3.5, -2.0]]),
+    ]);
+
+    $job = runDoorkomstJob($hoofdzaak);
+
+    $job->assertFailedWith(function (DoorkomstZakenIncompleteException $e) {
+        return count($e->failedMunicipalities) === 2
+            && str_contains($e->getMessage(), 'not retried automatically')
+            && str_contains($e->getMessage(), 'zaak:create-doorkomst-zaken');
+    });
+    expect(localDeelzaakZaaktypen($hoofdzaak))->toBe([doorkomstZaaktypeUrl('dk-m2')]);
+});
+
+test('throws for an automatic retry when deelzaken are only missing', function () {
+    // Nothing is incomplete, so the queue's retry can create the missing
+    // deelzaak and nothing gets lost when it succeeds.
+    Exceptions::fake();
+    $failing = true;
+    fakeDoorkomstZgwOnMainFailingFor(doorkomstZaaktypeUrl('dk-m'), $failing);
+    $hoofdzaak = threeRouteHoofdZaak();
+
+    $job = (new CreateDoorkomstZaken($hoofdzaak))->withFakeQueueInteractions();
 
     expect(fn () => $job->handle(app(ZaakeigenschappenMap::class)))
-        ->toThrow(DoorkomstZakenIncompleteException::class);
+        ->toThrow(fn (DoorkomstZakenIncompleteException $e) => str_contains($e->getMessage(), 'a retry only creates the ones that are still missing'));
     $job->assertNotFailed();
 });
 
