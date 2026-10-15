@@ -65,7 +65,11 @@ class NewDocumentVersionAction
                 ->rule(DocumentUploadType::fileUploadRule())
                 ->directory('documents')
                 ->visibility('private')
-                ->storeFileNamesIn('file_name'),
+                ->storeFileNamesIn('file_name')
+                // Only accept a fresh upload. The stored path is read and
+                // deleted after submitting, so a path in the field's state
+                // must never be taken as is.
+                ->preventFilePathTampering(),
         ];
     }
 

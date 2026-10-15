@@ -20,6 +20,7 @@ use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Exceptions;
@@ -40,13 +41,15 @@ use function Pest\Livewire\livewire;
  * upload does not stay behind on local storage.
  */
 const REJECTED_DOCUMENT_UUID = 'own-doc-uuid';
-const REJECTED_UPLOAD_PATH = 'documents/new-version.pdf';
+const UNRELATED_STORED_FILE = 'zaken/1/aanvraagformulier.pdf';
+const NEW_VERSION_CONTENT = '%PDF-1.4 updated pdf content';
 
 beforeEach(function () {
     Config::set('openzaak.url', ZgwHttpFake::$baseUrl.'/');
 
     Storage::fake('local');
-    Storage::put(REJECTED_UPLOAD_PATH, '%PDF-1.4 updated pdf content');
+    // A file on the same disk that has nothing to do with the new version.
+    Storage::put(UNRELATED_STORED_FILE, '%PDF-1.4 unrelated content');
 
     Exceptions::fake();
 
@@ -128,9 +131,17 @@ function versionData(): array
 {
     return [
         'titel' => 'Bijgewerkt document',
-        'file' => [REJECTED_UPLOAD_PATH],
-        'file_name' => 'new-version.pdf',
+        'file' => UploadedFile::fake()->createWithContent('new-version.pdf', NEW_VERSION_CONTENT),
     ];
+}
+
+/**
+ * The upload is stored under documents/ when the form is submitted; after a
+ * rejected version nothing of it may be left there.
+ */
+function assertUploadRemoved(): void
+{
+    expect(Storage::allFiles('documents'))->toBe([]);
 }
 
 function forbiddenNotification(): Notification
@@ -180,7 +191,7 @@ test('a refused lock shows the permission message instead of an unexpected error
         'code' => 'permission_denied',
     ] && $e->getPrevious() instanceof ValidationException);
 
-    Storage::assertMissing(REJECTED_UPLOAD_PATH);
+    assertUploadRemoved();
     expect(Activity::where('log_name', 'document')->where('event', 'updated')->count())->toBe(0);
 });
 
@@ -196,14 +207,16 @@ test('a failing patch shows a general message and still releases the lock', func
         ->assertNotified(generalFailureNotification())
         ->assertNotNotified('Nieuwe versie is toegevoegd');
 
-    Http::assertSent(sentToDocument('', 'PATCH'));
+    // The PATCH carried the uploaded content, so the upload was stored and read.
+    Http::assertSent(fn (Request $request): bool => sentToDocument('', 'PATCH')($request)
+        && $request->data()['inhoud'] === base64_encode(NEW_VERSION_CONTENT));
     Http::assertSent(sentToDocument('/unlock', 'POST'));
 
     Exceptions::assertReported(fn (DocumentVersionRejectedException $e): bool => $e->status === 500
         && $e->errorCode === 'error'
         && $e->getPrevious() instanceof ApiRequestException);
 
-    Storage::assertMissing(REJECTED_UPLOAD_PATH);
+    assertUploadRemoved();
     expect(Activity::where('log_name', 'document')->where('event', 'updated')->count())->toBe(0);
 });
 
@@ -222,7 +235,7 @@ test('an unreachable Documenten API shows a general message', function () {
         && $e->errorCode === null
         && $e->getPrevious() instanceof ConnectionException);
 
-    Storage::assertMissing(REJECTED_UPLOAD_PATH);
+    assertUploadRemoved();
 });
 
 test('a refused lock from the message form shows the permission message and attaches nothing', function () {
@@ -260,5 +273,59 @@ test('a refused lock from the message form shows the permission message and atta
     Exceptions::assertReported(fn (DocumentVersionRejectedException $e): bool => $e->isForbidden()
         && $e->documentUuid === REJECTED_DOCUMENT_UUID);
 
-    Storage::assertMissing(REJECTED_UPLOAD_PATH);
+    assertUploadRemoved();
+});
+
+/**
+ * The file field must only accept a fresh upload. A path sent as the field's
+ * state must not be read as the new content, nor be deleted afterwards.
+ */
+test('a file path sent as the upload state is refused in the documents table', function () {
+    fakeDocumentenApi(
+        lock: Http::response(['lock' => 'lock-string-123'], 200),
+        patch: Http::response([], 200),
+    );
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->callTableAction('new-version', REJECTED_DOCUMENT_UUID, data: [
+            'titel' => 'Bijgewerkt document',
+            'file' => [UNRELATED_STORED_FILE],
+        ])
+        ->assertHasTableActionErrors(['file']);
+
+    Http::assertNotSent(sentToDocument('/lock', 'POST'));
+    Http::assertNotSent(sentToDocument('', 'PATCH'));
+    Storage::assertExists(UNRELATED_STORED_FILE);
+});
+
+test('a file path sent as the upload state is refused in the message form', function () {
+    fakeDocumentenApi(
+        lock: Http::response(['lock' => 'lock-string-123'], 200),
+        patch: Http::response([], 200),
+    );
+
+    LaravelNotification::fake();
+
+    $thread = OrganiserThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Organiser,
+        'created_by' => $this->organiser->id,
+        'title' => 'Test thread',
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    Filament::setTenant($this->organisation);
+
+    livewire(MessageForm::class, ['thread' => $thread])
+        ->callAction('attach', data: [
+            'type' => 'version',
+            'existing_document' => REJECTED_DOCUMENT_UUID,
+            'titel' => 'Bijgewerkt document',
+            'file' => [UNRELATED_STORED_FILE],
+        ])
+        ->assertHasActionErrors(['file']);
+
+    Http::assertNotSent(sentToDocument('/lock', 'POST'));
+    Http::assertNotSent(sentToDocument('', 'PATCH'));
+    Storage::assertExists(UNRELATED_STORED_FILE);
 });
