@@ -247,6 +247,7 @@ Toelichting bij de formaten:
 - **Getal.** Het aantal aanwezigen wordt als geheel getal aangeleverd; een lengte van 9 cijfers is ruim voldoende.
 - **Tekst.** Voor de tekstvelden is een lengte van 255 karakters de veilige keuze; dit is ook de lengte die Eventloket in de eigen hoofdkoppeling gebruikt.
 - **Soort aanvraag.** `aanvraag_type` krijgt altijd een van de vier waarden uit de tabel, met hoofdletter. Een deelzaak voor een doorkomst krijgt `Doorkomst`, ook als de hoofdzaak een vergunning is. De eigenschap is vooral nuttig als meerdere rollen hetzelfde zaaktype gebruiken: dan kan het zaaksysteem er op filteren en rapporteren.
+- **Risicoclassificatie.** Een deelzaak voor een doorkomst krijgt de risicoclassificatie en de toelichting van de hoofdzaak niet, omdat die beoordeling hoort bij het evenement op de hoofdzaak. Bestaande deelzaken houden wat ze al hebben.
 
 Alle eigenschappen zijn optioneel; ontbreekt een eigenschap in het zaaktype, dan wordt die waarde overgeslagen (zie ook [sectie 7](#7-zaaktype-koppelingen-instellen)). Gebruik voor elke eigenschap een kardinaliteit van 1.
 

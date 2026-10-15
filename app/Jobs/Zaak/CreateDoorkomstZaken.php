@@ -719,6 +719,17 @@ class CreateDoorkomstZaken implements ShouldQueue
     ];
 
     /**
+     * The logical eigenschappen of the hoofdzaak that are never copied onto a
+     * deelzaak, see {@see self::copyZaakeigenschappen()}.
+     *
+     * @var array<int, string>
+     */
+    private const HOOFDZAAK_ONLY_KEYS = [
+        'risico_classificatie',
+        'risico_toelichting',
+    ];
+
+    /**
      * Fill in the evenement fields for the deelzaak registration when the
      * doorkomst zaaktype does not carry the matching eigenschappen (or the
      * hoofdzaak had nothing to copy). The hoofdzaak reference_data always holds
@@ -802,6 +813,12 @@ class CreateDoorkomstZaken implements ShouldQueue
         // The deelzaak is a route passage, whatever kind of aanvraag the
         // hoofdzaak is, so its aanvraagtype is not copied over.
         $eigenschappen[ZaakeigenschappenMap::AANVRAAG_TYPE] = ZaakeigenschappenMap::aanvraagTypeWaarde(ZaaktypeRole::Doorkomst);
+
+        // The risico classificatie (and its toelichting) is assessed for the
+        // event on the hoofdzaak and does not apply to a doorkomst zaak.
+        foreach (self::HOOFDZAAK_ONLY_KEYS as $key) {
+            unset($eigenschappen[$key]);
+        }
 
         foreach ($eigenschappen as $logicalKey => $waarde) {
             if (! $waarde) {
