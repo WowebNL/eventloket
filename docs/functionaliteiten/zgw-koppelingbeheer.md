@@ -144,9 +144,52 @@ De aangemaakte API-client moet voldoende rechten (autorisaties/scopes) hebben op
 
 - Aanmaken, lezen en bijwerken van zaken.
 - Lezen van de catalogi (zaaktypen, statustypen, roltypen, resultaattypen, eigenschappen, informatieobjecttypen).
-- Aanmaken, lezen en bijwerken van documenten.
+- Aanmaken, lezen, vergrendelen en bijwerken van documenten.
+- Lezen van de audittrail van documenten.
 - Aanmaken en lezen van besluiten.
 - Rechten om notificatie-abonnementen te registreren en te ontvangen.
+
+Een autorisatie geldt in de ZGW-standaard niet voor een hele API, maar voor een zaaktype (Zaken API), een informatieobjecttype (Documenten API) of een besluittype (Besluiten API). Bij zaken en documenten hoort er ook een maximale vertrouwelijkheidaanduiding bij. Ken de scopes daarom toe voor alle zaaktypen, informatieobjecttypen en besluittypen die de koppeling gebruikt, en kies een maximale vertrouwelijkheid die minstens zo hoog is als het hoogste niveau dat Eventloket bij het uploaden meegeeft (zie [sectie 5.6](#56-vertrouwelijkheid)).
+
+#### Scopes per API
+
+De tabellen hieronder noemen per scope de aanroep in Eventloket die hem nodig heeft. De scopenamen zijn die uit de ZGW-standaard; een zaaksysteem kan ze in zijn eigen beheerscherm anders tonen.
+
+**Zaken API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `zaken.aanmaken` | Het aanmaken van de zaak bij het indienen van een aanvraag (`POST /zaken`), en van deelzaken bij een doorkomst. |
+| `zaken.lezen` | Het ophalen van zaken, statussen, zaakeigenschappen en de documenten bij een zaak (`GET`). |
+| `zaken.bijwerken` | Het bijwerken van de zaak (`PATCH /zaken/{uuid}`, zoals de einddatum en de zaakgeometrie), het vastleggen en wijzigen van zaakeigenschappen, rollen, zaakobjecten en resultaten, en het koppelen van documenten aan de zaak (`POST /zaakinformatieobjecten`). |
+| `zaken.statussen.toevoegen` | Het zetten van een nieuwe status (`POST /statussen`), bijvoorbeeld bij het afronden van een zaak. De standaard accepteert voor deze aanroep ook `zaken.aanmaken`. |
+| `zaken.verwijderen` | Alleen nodig als bij het verwijderen van een zaak in Eventloket ook gekozen wordt voor verwijderen in het zaaksysteem (`DELETE /zaken/{uuid}`). |
+
+**Catalogi API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `catalogi.lezen` | Het lezen van zaaktypen, statustypen, roltypen, resultaattypen, eigenschappen en informatieobjecttypen. |
+| `catalogi.schrijven` | Alleen voor de beheercommando's die de catalogus zelf aanvullen: `app:sync-zaaktype-eigenschappen` (`POST /eigenschappen`) en `app:sync-deelzaaktypen` (`PATCH /zaaktypen/{uuid}`). Voor het gewone gebruik van Eventloket is deze scope niet nodig. |
+
+**Documenten API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `documenten.aanmaken` | Het uploaden van documenten: de aanvraag-PDF, de formulierbijlagen, "Nieuw bestand toevoegen" en documenten bij een deelzaak (`POST /enkelvoudiginformatieobjecten`). |
+| `documenten.lezen` | Het tonen en downloaden van documenten, ook een eerdere versie (`GET`, `/download`). |
+| `documenten.lock` | "Nieuwe versie" van een bestaand document, op het tabblad Bestanden en bij een bericht. Eventloket vergrendelt het document eerst (`POST /enkelvoudiginformatieobjecten/{uuid}/lock`) en ontgrendelt het daarna weer (`POST .../unlock`). |
+| `documenten.bijwerken` | "Nieuwe versie" van een bestaand document: het opslaan van de nieuwe inhoud (`PATCH /enkelvoudiginformatieobjecten/{uuid}`). |
+| `audittrails.lezen` | De knop "Audit trail" bij een document op het tabblad Bestanden (`GET /enkelvoudiginformatieobjecten/{uuid}/audittrail`). |
+
+**Let op bij "Nieuwe versie".** Dat documenten aanmaken lukt, zegt niets over `documenten.lock` en `documenten.bijwerken`: dat zijn aparte scopes. Ontbreken ze voor het informatieobjecttype van het document, of ligt de vertrouwelijkheid van het document boven het toegestane maximum, dan weigert het zaaksysteem de vergrendeling, doorgaans met HTTP 403. Bij zo'n weigering krijgt de gebruiker de melding dat het zaaksysteem geen toestemming geeft om een nieuwe versie te maken, en dat de beheerder de koppeling moet laten nakijken. Er wordt dan geen nieuwe versie opgeslagen.
+
+**Besluiten API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `besluiten.aanmaken` | Het vastleggen van een besluit bij het afronden van een zaak (`POST /besluiten`) en het koppelen van documenten aan dat besluit (`POST /besluitinformatieobjecten`). |
+| `besluiten.lezen` | Het tonen van de besluiten en de besluitdocumenten bij een zaak (`GET`). |
 
 Zonder de juiste autorisaties lukt de verbinding technisch wel, maar mislukt het aanmaken van een zaak later alsnog. Test daarom altijd ook met een echte proefaanvraag (zie [sectie 10](#10-eindcontrole-met-een-proefaanvraag)).
 
@@ -446,6 +489,7 @@ Een geslaagde verbindingstest bewijst dat Eventloket het zaaksysteem kan bereike
    - De beginstatus correct is gezet.
 3. Controleer in Eventloket dat de zaak zichtbaar is in het gemeentepaneel en dat de status klopt.
 4. Test zonodig een statuswijziging in het zaaksysteem en controleer of die via notificaties terugkomt in Eventloket.
+5. Staat het tabblad Bestanden aan, voeg daar dan een nieuwe versie toe aan een document van de testaanvraag. Het indienen gebruikt alleen het aanmaken van documenten; deze stap test ook `documenten.lock` en `documenten.bijwerken` (zie [sectie 4.3](#43-ken-de-juiste-autorisaties-scopes-toe)).
 
 Pas als deze proef slaagt is de koppeling volledig bruikbaar.
 
@@ -502,7 +546,7 @@ Gebruik deze checklist als samenvatting bij het opzetten van een nieuwe gemeente
 
 - [ ] De vijf tot zes ZGW-API-componenten zijn actief; de base-URL's zijn genoteerd (met versiepad en afsluitende slash).
 - [ ] Er is een API-client aangemaakt; client-ID en een client-secret van minimaal 32 tekens zijn genoteerd.
-- [ ] De client heeft autorisaties voor zaken, catalogi, documenten, besluiten en notificaties.
+- [ ] De client heeft autorisaties voor zaken, catalogi, documenten, besluiten en notificaties, voor documenten ook `documenten.lock` en `documenten.bijwerken` (zie [sectie 4.3](#43-ken-de-juiste-autorisaties-scopes-toe)).
 - [ ] De zaaktypen bestaan en zijn gepubliceerd, met de juiste eigenschappen, statustypen, roltypen, resultaattypen en documenttypen.
 - [ ] De Notificaties API is bereikbaar (indien statusupdates gewenst zijn).
 
