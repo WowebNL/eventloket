@@ -1893,8 +1893,8 @@ test('copies an eigenschap onto the deelzaak even when both koppelingen rename i
     // Hoofdzaak catalogus calls it "A.…", deel catalogus "B.…". Only the logical
     // key in between connects the two.
     fakeDoorkomstWithCatalogusEigenschappen(
-        hoofdEigenschappen: ['A.naam evenement' => 'Zomerfeest', 'A.risico klasse' => 'C'],
-        deelCatalogus: ['B.naam evenement' => 'b-naam', 'B.risico klasse' => 'b-risico'],
+        hoofdEigenschappen: ['A.naam evenement' => 'Zomerfeest', 'A.soort evenement' => 'Optocht'],
+        deelCatalogus: ['B.naam evenement' => 'b-naam', 'B.soort evenement' => 'b-soort'],
     );
 
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
@@ -1905,19 +1905,19 @@ test('copies an eigenschap onto the deelzaak even when both koppelingen rename i
         'zaaktype_identificatie' => 'HZ-1',
         'eigenschap_map' => [
             'naam_evenement' => 'A.naam evenement',
-            'risico_classificatie' => 'A.risico klasse',
+            'types_evenement' => 'A.soort evenement',
         ],
     ]));
     doorkomstZaaktypeWithEigenschapMap($scenario['passing'], [
         'naam_evenement' => 'B.naam evenement',
-        'risico_classificatie' => 'B.risico klasse',
+        'types_evenement' => 'B.soort evenement',
     ]);
 
     CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
 
     expect(copiedZaakeigenschappen())->toBe([
         'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/b-naam',
-        'C' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/b-risico',
+        'Optocht' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/b-soort',
     ]);
 });
 
@@ -1936,6 +1936,71 @@ test('copies eigenschappen by their own naam when neither zaaktype has a koppeli
 
     expect(copiedZaakeigenschappen())->toBe([
         'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/plain-naam',
+    ]);
+});
+
+test('does not copy the risico classificatie onto the deelzaak', function () {
+    // The risico classificatie and its toelichting belong to the hoofdzaak: a
+    // doorkomst zaak does not carry them, even when its zaaktype knows them.
+    fakeDoorkomstWithCatalogusEigenschappen(
+        hoofdEigenschappen: [
+            'naam_evenement' => 'Zomerfeest',
+            'risico_classificatie' => 'C',
+            'risico_toelichting' => 'Grote drukte verwacht',
+        ],
+        deelCatalogus: [
+            'naam_evenement' => 'plain-naam',
+            'risico_classificatie' => 'plain-risico',
+            'risico_toelichting' => 'plain-toelichting',
+        ],
+    );
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect(copiedZaakeigenschappen())->toBe([
+        'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/plain-naam',
+    ]);
+});
+
+test('does not copy the risico classificatie onto the deelzaak when both koppelingen rename it', function () {
+    fakeDoorkomstWithCatalogusEigenschappen(
+        hoofdEigenschappen: [
+            'A.naam evenement' => 'Zomerfeest',
+            'A.risico klasse' => 'C',
+            'A.risico toelichting' => 'Grote drukte verwacht',
+        ],
+        deelCatalogus: [
+            'B.naam evenement' => 'b-naam',
+            'B.risico klasse' => 'b-risico',
+            'B.risico toelichting' => 'b-toelichting',
+        ],
+    );
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->zaaktype->update(['identificatie' => 'HZ-1']);
+    MunicipalityZaaktypeMapping::withoutEvents(fn () => MunicipalityZaaktypeMapping::create([
+        'municipality_id' => $scenario['hoofd']->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'zaaktype_identificatie' => 'HZ-1',
+        'eigenschap_map' => [
+            'naam_evenement' => 'A.naam evenement',
+            'risico_classificatie' => 'A.risico klasse',
+            'risico_toelichting' => 'A.risico toelichting',
+        ],
+    ]));
+    doorkomstZaaktypeWithEigenschapMap($scenario['passing'], [
+        'naam_evenement' => 'B.naam evenement',
+        'risico_classificatie' => 'B.risico klasse',
+        'risico_toelichting' => 'B.risico toelichting',
+    ]);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect(copiedZaakeigenschappen())->toBe([
+        'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/b-naam',
     ]);
 });
 
