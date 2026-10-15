@@ -182,7 +182,7 @@ De tabellen hieronder noemen per scope de aanroep in Eventloket die hem nodig he
 | `documenten.bijwerken` | "Nieuwe versie" van een bestaand document: het opslaan van de nieuwe inhoud (`PATCH /enkelvoudiginformatieobjecten/{uuid}`). |
 | `audittrails.lezen` | De knop "Audit trail" bij een document op het tabblad Bestanden (`GET /enkelvoudiginformatieobjecten/{uuid}/audittrail`). |
 
-**Let op bij "Nieuwe versie".** Dat documenten aanmaken lukt, zegt niets over `documenten.lock` en `documenten.bijwerken`: dat zijn aparte scopes. Ontbreken ze voor het informatieobjecttype van het document, of ligt de vertrouwelijkheid van het document boven het toegestane maximum, dan weigert het zaaksysteem de vergrendeling, doorgaans met HTTP 403. Bij zo'n weigering krijgt de gebruiker de melding dat het zaaksysteem geen toestemming geeft om een nieuwe versie te maken, en dat de beheerder de koppeling moet laten nakijken. Er wordt dan geen nieuwe versie opgeslagen.
+**Let op bij "Nieuwe versie".** Dat documenten aanmaken lukt, zegt niets over `documenten.lock` en `documenten.bijwerken`: dat zijn aparte scopes. Ontbreken ze voor het informatieobjecttype van het document, of ligt de vertrouwelijkheid van het document boven het toegestane maximum, dan weigert het zaaksysteem de vergrendeling, doorgaans met HTTP 403. Bij zo'n weigering krijgt de gebruiker de melding dat het zaaksysteem geen toestemming geeft om een nieuwe versie te maken. Een organisator leest daarbij dat hij contact moet opnemen met de gemeente; in de andere portalen staat dat de beheerder van de zaaksysteemkoppeling dit moet nakijken. Er wordt dan geen nieuwe versie opgeslagen.
 
 **Besluiten API**
 
