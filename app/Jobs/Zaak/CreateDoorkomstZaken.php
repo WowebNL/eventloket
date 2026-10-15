@@ -127,6 +127,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
         $failed = [];
         $firstFailure = null;
+        $onlyIncomplete = true;
 
         foreach ($passing as $muniRef) {
             $this->attempt = ['connection' => null, 'zaak_url' => null];
@@ -150,6 +151,7 @@ class CreateDoorkomstZaken implements ShouldQueue
 
                 $failed[] = (string) $muniRef->brk_identification;
                 $firstFailure ??= $e;
+                $onlyIncomplete = $onlyIncomplete && $e instanceof DoorkomstDeelzaakIncompleteException;
             }
         }
 
@@ -158,12 +160,24 @@ class CreateDoorkomstZaken implements ShouldQueue
         // skips every municipality that already has its deelzaak, so a retry only
         // tries the ones that are still missing.
         if ($firstFailure !== null) {
-            throw DoorkomstZakenIncompleteException::forHoofdzaak(
+            $exception = DoorkomstZakenIncompleteException::forHoofdzaak(
                 zaakId: $this->zaak->id,
                 failedMunicipalities: $failed,
                 attempted: $passing->count(),
                 previous: $firstFailure,
             );
+
+            // When every failed municipality does have its deelzaak, only
+            // incomplete, a retry has nothing to create: it would skip them all,
+            // succeed, and so remove the failed job again. The job is marked as
+            // failed without a retry instead, so it stays visible.
+            if ($onlyIncomplete) {
+                $this->fail($exception);
+
+                return;
+            }
+
+            throw $exception;
         }
     }
 

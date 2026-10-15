@@ -2,6 +2,7 @@
 
 use App\Enums\Role;
 use App\Enums\ZaaktypeRole;
+use App\EventForm\Submit\ZaakeigenschappenMap;
 use App\Exceptions\DoorkomstDeelzaakIncompleteException;
 use App\Exceptions\DoorkomstZaakeigenschapRejectedException;
 use App\Exceptions\DoorkomstZakenIncompleteException;
@@ -1176,6 +1177,18 @@ test('completes an unfinished registration on the connection the deelzaak was cr
         && str_starts_with($request->url(), OWN_HOST.'/zaken/api/v1/zaken/deel-1'));
 });
 
+/**
+ * Run the job with fake queue interactions, so a test can tell a job that
+ * marks itself as failed apart from one that throws for a retry.
+ */
+function runDoorkomstJob(Zaak $hoofdzaak): CreateDoorkomstZaken
+{
+    $job = (new CreateDoorkomstZaken($hoofdzaak))->withFakeQueueInteractions();
+    $job->handle(app(ZaakeigenschappenMap::class));
+
+    return $job;
+}
+
 test('runs the other steps when one fails after the deelzaak was created, and fails the job afterwards', function () {
     // Reading the eigenschappen catalogus fails. The steps after it still run,
     // and the job still ends as failed so the incomplete deelzaak stays visible.
@@ -1192,8 +1205,7 @@ test('runs the other steps when one fails after the deelzaak was created, and fa
     ])]);
     withPassingDoorkomstZaaktype($scenario['passing']);
 
-    expect(fn () => CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']))
-        ->toThrow(DoorkomstZakenIncompleteException::class);
+    runDoorkomstJob($scenario['hoofdzaak'])->assertFailedWith(DoorkomstZakenIncompleteException::class);
 
     $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->sole();
     expect($created)->toBe(1)
@@ -1222,14 +1234,48 @@ test('still sets the initial status when registering the initiator fails', funct
     ])]);
     withPassingDoorkomstZaaktype($scenario['passing']);
 
-    expect(fn () => CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']))
-        ->toThrow(DoorkomstZakenIncompleteException::class);
+    runDoorkomstJob($scenario['hoofdzaak'])->assertFailedWith(DoorkomstZakenIncompleteException::class);
 
     expect(postedTo('rollen'))->toBeTrue()
         ->and(postedTo('statussen'))->toBeTrue()
         ->and(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->sole()->public_id)->toBe('DEEL-1');
     Exceptions::assertReported(ApiRequestException::class);
     Exceptions::assertReported(fn (DoorkomstDeelzaakIncompleteException $e) => $e->failedSteps === ['initiator']);
+});
+
+test('marks the job as failed without a retry when its only failure is an incomplete deelzaak', function () {
+    // A retry would skip the registered deelzaak and succeed, which removes the
+    // failed job again. Marking the job as failed keeps it visible.
+    Exceptions::fake();
+    $readBackFails = false;
+    $created = 0;
+    fakeDoorkomstWithInterruptions($readBackFails, eigenschappenCatalogusFails: false, created: $created, initiatorFails: true);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->update(['form_state_snapshot' => routeSnapshotWithValues([
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Jansen',
+    ])]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    runDoorkomstJob($scenario['hoofdzaak'])->assertFailedWith(DoorkomstZakenIncompleteException::class);
+});
+
+test('still throws for a retry when a municipality did not get its deelzaak at all', function () {
+    // The deelzaak could not be read back, so it is registered but unfinished.
+    // The retry completes it, so the job is left to the queue's retry.
+    $readBackFails = true;
+    $created = 0;
+    fakeDoorkomstWithInterruptions($readBackFails, eigenschappenCatalogusFails: false, created: $created);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    $job = (new CreateDoorkomstZaken($scenario['hoofdzaak']))->withFakeQueueInteractions();
+
+    expect(fn () => $job->handle(app(ZaakeigenschappenMap::class)))
+        ->toThrow(DoorkomstZakenIncompleteException::class);
+    $job->assertNotFailed();
 });
 
 test('fails the job when an eigenschap fails for another reason than an invalid value, and a retry creates nothing new', function (int $status) {
@@ -1249,8 +1295,7 @@ test('fails the job when an eigenschap fails for another reason than an invalid 
     ])]);
     withPassingDoorkomstZaaktype($scenario['passing']);
 
-    expect(fn () => CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']))
-        ->toThrow(DoorkomstZakenIncompleteException::class);
+    runDoorkomstJob($scenario['hoofdzaak'])->assertFailedWith(DoorkomstZakenIncompleteException::class);
 
     expect(postedTo('rollen'))->toBeTrue()
         ->and(postedTo('statussen'))->toBeTrue();
