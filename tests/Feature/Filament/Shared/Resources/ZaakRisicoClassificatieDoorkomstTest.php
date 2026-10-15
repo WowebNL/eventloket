@@ -60,9 +60,6 @@ function zaakWithRisicoClassificatieForRole(string $zaaktypeId, ?ZaaktypeRole $r
 test('a doorkomst zaak neither shows nor edits the risico classificatie', function () {
     $zaak = zaakWithRisicoClassificatieForRole($this->zaaktype->id, ZaaktypeRole::Doorkomst);
 
-    expect($zaak->hasRisicoClassificatie())->toBeFalse()
-        ->and($zaak->behandelaarCanEditRisicoClassificatie())->toBeFalse();
-
     $this->actingAs($this->admin);
 
     livewire(ViewZaak::class, ['record' => $zaak->id])
@@ -70,6 +67,9 @@ test('a doorkomst zaak neither shows nor edits the risico classificatie', functi
         ->assertSchemaComponentHidden('reference_data.risico_classificatie')
         ->assertActionDoesNotExist(TestAction::make('editRisicoClassificatie')->schemaComponent('reference_data.risico_classificatie'))
         ->assertDontSeeText(__('resources/zaak.columns.risico_classificatie.label'));
+
+    expect($zaak->hasRisicoClassificatie())->toBeFalse()
+        ->and($zaak->behandelaarCanEditRisicoClassificatie())->toBeFalse();
 });
 
 test('a doorkomst zaak whose role comes from its zaaktype hides the risico classificatie as well', function () {
@@ -84,9 +84,6 @@ test('a doorkomst zaak whose role comes from its zaaktype hides the risico class
 test('any other zaak shows and edits the risico classificatie', function (ZaaktypeRole $role) {
     $zaak = zaakWithRisicoClassificatieForRole($this->zaaktype->id, $role);
 
-    expect($zaak->hasRisicoClassificatie())->toBeTrue()
-        ->and($zaak->behandelaarCanEditRisicoClassificatie())->toBeTrue();
-
     $this->actingAs($this->admin);
 
     livewire(ViewZaak::class, ['record' => $zaak->id])
@@ -94,6 +91,9 @@ test('any other zaak shows and edits the risico classificatie', function (Zaakty
         ->assertSchemaComponentVisible('reference_data.risico_classificatie')
         ->assertActionVisible(TestAction::make('editRisicoClassificatie')->schemaComponent('reference_data.risico_classificatie'))
         ->assertSeeText(__('resources/zaak.columns.risico_classificatie.label'));
+
+    expect($zaak->hasRisicoClassificatie())->toBeTrue()
+        ->and($zaak->behandelaarCanEditRisicoClassificatie())->toBeTrue();
 })->with([
     'vergunning' => [ZaaktypeRole::Vergunning],
     'melding' => [ZaaktypeRole::Melding],
