@@ -67,23 +67,7 @@ beforeEach(function () {
     ]);
 
     // The documents come from the cache, so listing them makes no ZGW call.
-    Cache::forever("zaak.{$this->zaak->id}.documenten", collect([
-        new Informatieobject(
-            uuid: REJECTED_DOCUMENT_UUID,
-            url: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/'.REJECTED_DOCUMENT_UUID,
-            creatiedatum: now()->toIso8601String(),
-            titel: 'Eigen document',
-            vertrouwelijkheidaanduiding: DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
-            auteur: 'Test',
-            versie: 1,
-            bestandsnaam: 'eigen-document.pdf',
-            inhoud: 'base64content',
-            beschrijving: 'Test beschrijving',
-            informatieobjecttype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
-            formaat: 'application/pdf',
-            locked: false,
-        ),
-    ]));
+    Cache::forever("zaak.{$this->zaak->id}.documenten", collect([cachedDocument(REJECTED_DOCUMENT_UUID)]));
 
     // The organiser uploaded the document, so they may add a version to it.
     activity('document')
@@ -95,6 +79,25 @@ beforeEach(function () {
 
     $this->actingAs($this->organiser);
 });
+
+function cachedDocument(string $uuid): Informatieobject
+{
+    return new Informatieobject(
+        uuid: $uuid,
+        url: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/'.$uuid,
+        creatiedatum: now()->toIso8601String(),
+        titel: 'Eigen document',
+        vertrouwelijkheidaanduiding: DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+        auteur: 'Test',
+        versie: 1,
+        bestandsnaam: 'eigen-document.pdf',
+        inhoud: 'base64content',
+        beschrijving: 'Test beschrijving',
+        informatieobjecttype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
+        formaat: 'application/pdf',
+        locked: false,
+    );
+}
 
 /**
  * Fake the Documenten API with the given lock and patch responses. The specific
@@ -144,11 +147,14 @@ function assertUploadRemoved(): void
     expect(Storage::allFiles('documents'))->toBe([]);
 }
 
-function forbiddenNotification(): Notification
+const ORGANISER_FOLLOW_UP = 'Neem contact op met de gemeente.';
+const MUNICIPALITY_FOLLOW_UP = 'Vraag de beheerder van de zaaksysteemkoppeling dit na te kijken.';
+
+function forbiddenNotification(string $followUp): Notification
 {
     return Notification::make()
         ->title('Nieuwe versie niet opgeslagen')
-        ->body('Het zaaksysteem geeft geen toestemming om een nieuwe versie van dit document te maken. Vraag de beheerder om de koppeling met het zaaksysteem te laten nakijken.')
+        ->body('Het zaaksysteem geeft geen toestemming om een nieuwe versie van dit document te maken. '.$followUp)
         ->danger()
         ->persistent();
 }
@@ -174,10 +180,12 @@ test('a refused lock shows the permission message instead of an unexpected error
         patch: Http::response([], 200),
     );
 
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+
     livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
         ->callTableAction('new-version', REJECTED_DOCUMENT_UUID, data: versionData())
         ->assertHasNoTableActionErrors()
-        ->assertNotified(forbiddenNotification())
+        ->assertNotified(forbiddenNotification(ORGANISER_FOLLOW_UP))
         ->assertNotNotified('Nieuwe versie is toegevoegd');
 
     // Nothing was locked, so there is nothing to patch or release.
@@ -193,6 +201,40 @@ test('a refused lock shows the permission message instead of an unexpected error
 
     assertUploadRemoved();
     expect(Activity::where('log_name', 'document')->where('event', 'updated')->count())->toBe(0);
+});
+
+test('a refused lock in the municipality portal points to the administrator of the connection', function () {
+    fakeDocumentenApi(
+        lock: Http::response(forbiddenBody(), 403),
+        patch: Http::response([], 200),
+    );
+
+    $reviewer = User::factory()->create(['role' => Role::Reviewer]);
+    $this->zaaktype->municipality->users()->attach($reviewer);
+
+    // The reviewer's own document, so they may add a version to it.
+    Cache::forever("zaak.{$this->zaak->id}.documenten", collect([
+        cachedDocument(REJECTED_DOCUMENT_UUID),
+        cachedDocument('reviewer-doc-uuid'),
+    ]));
+
+    activity('document')
+        ->event('created')
+        ->causedBy($reviewer)
+        ->performedOn($this->zaak)
+        ->withProperties(['document_uuid' => 'reviewer-doc-uuid'])
+        ->log('created');
+
+    $this->actingAs($reviewer);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->callTableAction('new-version', 'reviewer-doc-uuid', data: versionData())
+        ->assertHasNoTableActionErrors()
+        ->assertNotified(forbiddenNotification(MUNICIPALITY_FOLLOW_UP))
+        ->assertNotNotified(forbiddenNotification(ORGANISER_FOLLOW_UP));
+
+    assertUploadRemoved();
 });
 
 test('a failing patch shows a general message and still releases the lock', function () {
@@ -264,7 +306,7 @@ test('a refused lock from the message form shows the permission message and atta
             ...versionData(),
         ])
         ->assertHasNoActionErrors()
-        ->assertNotified(forbiddenNotification())
+        ->assertNotified(forbiddenNotification(ORGANISER_FOLLOW_UP))
         ->assertNotNotified('Nieuwe versie toegevoegd')
         ->assertSet('documents', []);
 

@@ -8,6 +8,7 @@ use App\Support\Documents\DocumentVersionAuthorizer;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -79,8 +80,8 @@ class NewDocumentVersionAction
      *
      * A 403 is a refused authorisation for this client (for example a missing
      * lock or update scope on the document's type), which only an administrator
-     * of the ZGW connection can resolve, so the message says so. Anything else
-     * gets a general message.
+     * of the ZGW connection can resolve, so the message says who to turn to.
+     * Anything else gets a general message.
      */
     public static function handleRejectedVersion(ApiRequestException|ConnectionException $e, string $documentUuid, Zaak $zaak): void
     {
@@ -91,11 +92,26 @@ class NewDocumentVersionAction
         Notification::make()
             ->title(__('Nieuwe versie niet opgeslagen'))
             ->body($rejection->isForbidden()
-                ? __('Het zaaksysteem geeft geen toestemming om een nieuwe versie van dit document te maken. Vraag de beheerder om de koppeling met het zaaksysteem te laten nakijken.')
+                ? __('Het zaaksysteem geeft geen toestemming om een nieuwe versie van dit document te maken.').' '.self::forbiddenFollowUp()
                 : __('Het zaaksysteem kon de nieuwe versie nu niet opslaan. Probeer het later opnieuw. Blijft dit gebeuren, neem dan contact op met de beheerder.'))
             ->danger()
             ->persistent()
             ->send();
+    }
+
+    /**
+     * Who can resolve a refused authorisation depends on the portal. An
+     * organiser has no access to the connection and can only turn to the
+     * municipality. Users of the other portals are pointed to the
+     * administrator of the connection.
+     */
+    private static function forbiddenFollowUp(): string
+    {
+        if (Filament::getCurrentPanel()?->getId() === 'organiser') {
+            return __('Neem contact op met de gemeente.');
+        }
+
+        return __('Vraag de beheerder van de zaaksysteemkoppeling dit na te kijken.');
     }
 
     public static function createNewDocumentVersion(string $documentUuid, array $data, Zaak $zaak)
