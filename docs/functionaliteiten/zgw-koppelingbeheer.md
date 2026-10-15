@@ -170,7 +170,7 @@ De tabellen hieronder noemen per scope de aanroep in Eventloket die hem nodig he
 | Scope | Nodig voor |
 |-------|------------|
 | `catalogi.lezen` | Het lezen van zaaktypen, statustypen, roltypen, resultaattypen, eigenschappen en informatieobjecttypen. |
-| `catalogi.schrijven` | Alleen voor de beheercommando's die de catalogus zelf aanvullen: `app:sync-zaaktype-eigenschappen` (`POST /eigenschappen`) en `app:sync-deelzaaktypen` (`PATCH /zaaktypen/{uuid}`). Voor het gewone gebruik van Eventloket is deze scope niet nodig. |
+| `catalogi.schrijven` | Niet nodig voor een koppeling met een extern zaaksysteem. Drie beheercommando's schrijven naar de catalogus, maar alleen naar de eigen standaardkoppeling van Eventloket; bij een andere koppeling controleren ze alleen (lezen): `app:import-doorkomst-zaaktypen` (`POST /zaaktypen`, `/statustypen`, `/roltypen`, `/resultaattypen`, `/eigenschappen`, `/zaaktype-informatieobjecttypen` en `POST /zaaktypen/{uuid}/publish`), `app:sync-zaaktype-eigenschappen` (`POST /eigenschappen`) en `app:sync-deelzaaktypen` (`PATCH /zaaktypen/{uuid}`). |
 
 **Documenten API**
 
