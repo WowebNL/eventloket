@@ -35,8 +35,8 @@ class NewDocumentVersionAction
             ->action(function (array $record, array $data, Action $action) use ($zaak): void {
                 try {
                     self::createNewDocumentVersion($record['uuid'], $data, $zaak);
-                } catch (ApiRequestException|ConnectionException $e) {
-                    self::handleRejectedVersion($e, $record['uuid'], $zaak);
+                } catch (DocumentVersionRejectedException $e) {
+                    self::handleRejectedVersion($e);
 
                     return;
                 }
@@ -83,10 +83,8 @@ class NewDocumentVersionAction
      * of the ZGW connection can resolve, so the message says who to turn to.
      * Anything else gets a general message.
      */
-    public static function handleRejectedVersion(ApiRequestException|ConnectionException $e, string $documentUuid, Zaak $zaak): void
+    public static function handleRejectedVersion(DocumentVersionRejectedException $rejection): void
     {
-        $rejection = DocumentVersionRejectedException::fromFailure($e, $zaak->zgwConnectionName(), $documentUuid);
-
         report($rejection);
 
         Notification::make()
@@ -120,10 +118,16 @@ class NewDocumentVersionAction
         // is removed whether or not the API accepted the new version. A refused
         // lock or patch otherwise left the file behind on local storage.
         try {
-            $connection = Zgw::connection($zaak->zgwConnectionName());
+            $connectionName = $zaak->zgwConnectionName();
+            $connection = Zgw::connection($connectionName);
             $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
             $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
-            $lockString = $connection->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
+
+            try {
+                $lockString = $connection->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
+            } catch (ApiRequestException|ConnectionException $e) {
+                throw DocumentVersionRejectedException::fromFailure($e, $connectionName, $documentUuid, DocumentVersionRejectedException::STEP_LOCK);
+            }
 
             // Always release the lock, even when the patch fails. Without this a
             // failed patch left the document locked, and every subsequent "Nieuwe
@@ -143,6 +147,8 @@ class NewDocumentVersionAction
                         'status' => Informatieobject::STATUS_DEFINITIEF,
                     ]
                 );
+            } catch (ApiRequestException|ConnectionException $e) {
+                throw DocumentVersionRejectedException::fromFailure($e, $connectionName, $documentUuid, DocumentVersionRejectedException::STEP_PATCH);
             } finally {
                 try {
                     $connection->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);
@@ -153,6 +159,11 @@ class NewDocumentVersionAction
                         'document_uuid' => $documentUuid,
                         'error' => $unlockError->getMessage(),
                     ]);
+
+                    // A lock that stays behind blocks every later version of
+                    // this document, so it has to be visible in error
+                    // reporting and not only in the log.
+                    report(DocumentVersionRejectedException::fromFailure($unlockError, $connectionName, $documentUuid, DocumentVersionRejectedException::STEP_UNLOCK));
                 }
             }
         } finally {

@@ -195,8 +195,10 @@ test('a refused lock shows the permission message instead of an unexpected error
     Exceptions::assertReported(fn (DocumentVersionRejectedException $e): bool => $e->context() === [
         'connection' => $this->zaak->zgwConnectionName(),
         'document_uuid' => REJECTED_DOCUMENT_UUID,
+        'step' => 'lock',
         'status' => 403,
         'code' => 'permission_denied',
+        'invalid_params' => [],
     ] && $e->getPrevious() instanceof ValidationException);
 
     assertUploadRemoved();
@@ -255,6 +257,7 @@ test('a failing patch shows a general message and still releases the lock', func
     Http::assertSent(sentToDocument('/unlock', 'POST'));
 
     Exceptions::assertReported(fn (DocumentVersionRejectedException $e): bool => $e->status === 500
+        && $e->step === 'patch'
         && $e->errorCode === 'error'
         && $e->getPrevious() instanceof ApiRequestException);
 
@@ -316,6 +319,58 @@ test('a refused lock from the message form shows the permission message and atta
         && $e->documentUuid === REJECTED_DOCUMENT_UUID);
 
     assertUploadRemoved();
+});
+
+test('a failing unlock after a stored version is reported while the user sees the success', function () {
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/*/lock' => Http::response(['lock' => 'lock-string-123'], 200),
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/*/unlock' => Http::response(['code' => 'error', 'title' => 'Server error'], 500),
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/*' => Http::response([], 200),
+        ZgwHttpFake::$baseUrl.'*' => Http::response([], 200),
+    ]);
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->callTableAction('new-version', REJECTED_DOCUMENT_UUID, data: versionData())
+        ->assertHasNoTableActionErrors()
+        ->assertNotified('Nieuwe versie is toegevoegd');
+
+    Exceptions::assertReported(fn (DocumentVersionRejectedException $e): bool => $e->context() === [
+        'connection' => $this->zaak->zgwConnectionName(),
+        'document_uuid' => REJECTED_DOCUMENT_UUID,
+        'step' => 'unlock',
+        'status' => 500,
+        'code' => 'error',
+        'invalid_params' => [],
+    ]);
+
+    assertUploadRemoved();
+});
+
+test('a validation error on the lock reports the invalid parameters without their reason', function () {
+    $reason = 'Het document is al vergrendeld door een andere gebruiker.';
+
+    fakeDocumentenApi(
+        lock: Http::response([
+            'code' => 'invalid',
+            'title' => 'Invalid input.',
+            'status' => 400,
+            'invalidParams' => [
+                ['name' => 'nonFieldErrors', 'code' => 'existing-lock', 'reason' => $reason],
+            ],
+        ], 400),
+        patch: Http::response([], 200),
+    );
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->callTableAction('new-version', REJECTED_DOCUMENT_UUID, data: versionData())
+        ->assertHasNoTableActionErrors()
+        ->assertNotified(generalFailureNotification());
+
+    Exceptions::assertReported(fn (DocumentVersionRejectedException $e): bool => $e->step === 'lock'
+        && $e->status === 400
+        && $e->context()['invalid_params'] === [['name' => 'nonFieldErrors', 'code' => 'existing-lock']]
+        && ! str_contains(json_encode($e->context()), $reason)
+        && ! str_contains($e->getMessage(), $reason));
 });
 
 /**

@@ -5,6 +5,7 @@ namespace App\Livewire\Thread;
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Enums\ThreadType;
+use App\Exceptions\DocumentVersionRejectedException;
 use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
 use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
@@ -30,12 +31,10 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\View\View;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
-use Woweb\Zgw\Exceptions\ApiRequestException;
 
 /**
  * @property Schema|mixed $form
@@ -222,10 +221,10 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
                     try {
                         NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
-                    } catch (ApiRequestException|ConnectionException $e) {
+                    } catch (DocumentVersionRejectedException $e) {
                         // Nothing is attached to the message when the version
                         // was not stored.
-                        NewDocumentVersionAction::handleRejectedVersion($e, $data['existing_document'], $this->thread->zaak);
+                        NewDocumentVersionAction::handleRejectedVersion($e);
 
                         return;
                     }
