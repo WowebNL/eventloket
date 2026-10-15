@@ -5,6 +5,7 @@ namespace App\Enums;
 enum OpenNotificationType: string
 {
     case UpdateZaak = 'update_zaak';
+    case ZaakDestroyed = 'zaak_destroyed';
     case UpdateZaakEigenschap = 'update_zaakeigenschap';
     case ZaakStatusChanged = 'zaak_status_changed';
     case NewZaakDocument = 'new_zaak_document';

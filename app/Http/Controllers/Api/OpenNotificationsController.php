@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\IdentifyWebhookClient;
 use App\Http\Requests\Api\OpenNotificationRequest;
 use App\Jobs\ProcessOpenNotification;
 use App\Listeners\LogZgwRequest;
+use App\Models\ZgwAbonnement;
 use App\Models\ZgwRequestLog;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\ValueObjects\OpenNotification;
@@ -31,11 +33,35 @@ class OpenNotificationsController extends Controller
             // handler which connection owns the notification when several share
             // a host.
             kenmerken: OpenNotification::normaliseKenmerken($data['kenmerken'] ?? null),
+            // Who called, established from the validated token rather than from
+            // anything in the payload. A handler that acts irreversibly checks
+            // this against the zaak's own connection.
+            senderConnection: $this->senderConnection($request),
         );
 
         $this->logIncomingNotification($notification);
 
         dispatch(new ProcessOpenNotification($notification));
+    }
+
+    /**
+     * The connection the calling credential belongs to.
+     *
+     * Each connection's webhook token is minted for its own one-off Passport
+     * client, and the abonnement row records which. Looking the client up there
+     * is therefore the same question as "which connection is this", answered
+     * without trusting the caller. Null when the client matches no abonnement,
+     * which leaves the notification unattributed.
+     */
+    private function senderConnection(OpenNotificationRequest $request): ?string
+    {
+        $clientId = $request->attributes->get(IdentifyWebhookClient::CLIENT_ID_ATTRIBUTE);
+
+        if (! is_string($clientId) || $clientId === '') {
+            return null;
+        }
+
+        return ZgwAbonnement::query()->where('client_id', $clientId)->value('connection');
     }
 
     /**

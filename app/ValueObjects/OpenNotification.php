@@ -20,6 +20,13 @@ class OpenNotification implements Arrayable
         public readonly string $resourceUrl,
         public readonly string $aanmaakdatum,
         public readonly array $kenmerken = [],
+        /**
+         * The ZGW connection whose credential presented this notification, or
+         * null when the caller could not be attributed to one. Established from
+         * the validated token, never from the payload, so a connection cannot
+         * claim to be another one.
+         */
+        public readonly ?string $senderConnection = null,
     ) {}
 
     /**
@@ -48,6 +55,7 @@ class OpenNotification implements Arrayable
             'resourceUrl' => $this->resourceUrl,
             'aanmaakdatum' => $this->aanmaakdatum,
             'kenmerken' => $this->kenmerken,
+            'senderConnection' => $this->senderConnection,
         ];
     }
 
@@ -70,6 +78,8 @@ class OpenNotification implements Arrayable
         $this->resourceUrl = (string) ($data['resourceUrl'] ?? '');
         $this->aanmaakdatum = (string) ($data['aanmaakdatum'] ?? '');
         $this->kenmerken = self::normaliseKenmerken($data['kenmerken'] ?? null);
+        $senderConnection = $data['senderConnection'] ?? null;
+        $this->senderConnection = is_string($senderConnection) && $senderConnection !== '' ? $senderConnection : null;
     }
 
     /**
