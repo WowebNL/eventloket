@@ -241,11 +241,12 @@ class Zaak extends Model implements Eventable
      * from inside Eventloket. The edit writes these eigenschappen by hardcoded
      * naam and bypasses the per-municipality blueprint, so it is only offered on
      * the global "main" connection; a municipality with its own ZGW connection
-     * drives these eigenschappen in its own system.
+     * drives these eigenschappen in its own system. A zaak without a risico
+     * classificatie ({@see self::hasRisicoClassificatie()}) offers no edit.
      */
     public function behandelaarCanEditRisicoClassificatie(): bool
     {
-        return $this->zgwConnectionModel() === null;
+        return $this->hasRisicoClassificatie() && $this->zgwConnectionModel() === null;
     }
 
     /**
@@ -439,6 +440,25 @@ class Zaak extends Model implements Eventable
     public function isVooraankondiging(): bool
     {
         return $this->effectiveRole() === ZaaktypeRole::Vooraankondiging;
+    }
+
+    /**
+     * Whether this zaak is a doorkomst zaak: a deelzaak for a municipality an
+     * event passes through. See {@see self::effectiveRole()}.
+     */
+    public function isDoorkomst(): bool
+    {
+        return $this->effectiveRole() === ZaaktypeRole::Doorkomst;
+    }
+
+    /**
+     * Whether the risico classificatie applies to this zaak. It describes the
+     * event as assessed on the hoofdzaak, so a doorkomst zaak does not carry
+     * it: it is neither shown nor editable there.
+     */
+    public function hasRisicoClassificatie(): bool
+    {
+        return ! $this->isDoorkomst();
     }
 
     /**

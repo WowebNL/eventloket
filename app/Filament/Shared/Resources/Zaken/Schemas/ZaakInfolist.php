@@ -217,7 +217,7 @@ class ZaakInfolist
             TextEntry::make('reference_data.risico_classificatie')
                 ->label(__('resources/zaak.columns.risico_classificatie.label'))
                 ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
-                ->visible(fn ($state) => ! empty($state)),
+                ->visible(fn (Zaak $record, $state) => $record->hasRisicoClassificatie() && ! empty($state)),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
             TextEntry::make('reference_data.status_name')
@@ -320,6 +320,7 @@ class ZaakInfolist
                                 TextEntry::make('reference_data.risico_classificatie')
                                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
                                     ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
+                                    ->visible(fn (Zaak $record): bool => $record->hasRisicoClassificatie())
                                     ->suffix(function (Zaak $record) {
                                         if (! empty($record->reference_data->risico_toelichting)) {
                                             return new HtmlString(
