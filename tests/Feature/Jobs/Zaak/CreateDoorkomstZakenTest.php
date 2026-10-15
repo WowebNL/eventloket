@@ -1376,8 +1376,9 @@ test('a doorkomst koppeling that uses the logical keys reads back exactly as bef
  *
  * @param  array<string, string>  $hoofdEigenschappen  hoofdzaak naam => waarde
  * @param  array<string, string>  $deelCatalogus  deel catalogus naam => eigenschap slug
+ * @param  array<string, string>  $deelFormaten  deel catalogus naam => specificatie formaat
  */
-function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, array $deelCatalogus): void
+function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, array $deelCatalogus, array $deelFormaten = []): void
 {
     $expanded = [];
     foreach ($hoofdEigenschappen as $naam => $waarde) {
@@ -1386,10 +1387,14 @@ function fakeDoorkomstWithCatalogusEigenschappen(array $hoofdEigenschappen, arra
 
     $catalogus = [];
     foreach ($deelCatalogus as $naam => $slug) {
-        $catalogus[] = [
+        $eigenschap = [
             'url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/'.$slug,
             'naam' => $naam,
         ];
+        if (isset($deelFormaten[$naam])) {
+            $eigenschap['specificatie'] = ['formaat' => $deelFormaten[$naam]];
+        }
+        $catalogus[] = $eigenschap;
     }
 
     Http::fake([
@@ -1473,6 +1478,53 @@ test('copies eigenschappen by their own naam when neither zaaktype has a koppeli
 
     expect(copiedZaakeigenschappen())->toBe([
         'Zomerfeest' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/plain-naam',
+    ]);
+});
+
+test('formats a copied eigenschap for the formaat of the receiving zaaktype', function () {
+    // The hoofdzaak returns its eigenschappen in the wire form of its own
+    // catalogus. The receiving catalogus can declare a different formaat for the
+    // same eigenschap, and a backend that enforces it rejects anything else.
+    fakeDoorkomstWithCatalogusEigenschappen(
+        hoofdEigenschappen: [
+            // A datum on the hoofdzaak side, a datum_tijd on the receiving side.
+            'start_evenement' => '20260701',
+            // A datum_tijd on the hoofdzaak side, a datum on the receiving side.
+            'eind_evenement' => '20260701180000',
+            // ISO 8601 text on the hoofdzaak side.
+            'start_opbouw' => '2026-07-01T08:30:00+02:00',
+            // Already in the receiving wire form.
+            'eind_opbouw' => '20260701093000',
+            // A tekst eigenschap that happens to look like a date.
+            'naam_evenement' => '20260702',
+        ],
+        deelCatalogus: [
+            'start_evenement' => 'deel-start',
+            'eind_evenement' => 'deel-eind',
+            'start_opbouw' => 'deel-start-opbouw',
+            'eind_opbouw' => 'deel-eind-opbouw',
+            'naam_evenement' => 'deel-naam',
+        ],
+        deelFormaten: [
+            'start_evenement' => 'datum_tijd',
+            'eind_evenement' => 'datum',
+            'start_opbouw' => 'datum_tijd',
+            'eind_opbouw' => 'datum_tijd',
+            'naam_evenement' => 'tekst',
+        ],
+    );
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect(copiedZaakeigenschappen())->toBe([
+        '20260701000000' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/deel-start',
+        '20260701' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/deel-eind',
+        '20260701083000' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/deel-start-opbouw',
+        '20260701093000' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/deel-eind-opbouw',
+        '20260702' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen/deel-naam',
     ]);
 });
 

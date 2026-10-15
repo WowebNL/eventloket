@@ -585,6 +585,13 @@ class CreateDoorkomstZaken implements ShouldQueue
      * the deel catalogus directly therefore silently skips values whenever one
      * of the two renames. The naam is routed through the logical key instead:
      * hoofdzaak naam, logical key, deel naam.
+     *
+     * The value is read back from the hoofdzaak in the wire form of the
+     * hoofdzaak catalogus, which need not be the form the deel catalogus
+     * expects: a date on one side can be a date-time on the other, and a
+     * backend that enforces the formaat rejects the eigenschap. Each value is
+     * therefore formatted for the eigenschap of the receiving zaaktype, the same
+     * way {@see AddZaakeigenschappenZGW} formats the hoofdzaak eigenschappen.
      */
     private function copyZaakeigenschappen(ZgwConnection $deelConnection, ZaakReadModel $ozZaak, string $newZaakUrl, Zaaktype $doorkomstZaaktype, ?MunicipalityZaaktypeMapping $deelMapping): void
     {
@@ -611,7 +618,10 @@ class CreateDoorkomstZaken implements ShouldQueue
             $deelConnection->zaken()->zaken()->zaakeigenschappen($newUuid)->store([
                 'zaak' => $newZaakUrl,
                 'eigenschap' => (string) $cat->url,
-                'waarde' => $waarde,
+                'waarde' => ZgwConnectionConfig::formatEigenschapWaarde(
+                    (string) $waarde,
+                    $cat->specificatie?->formaat?->value,
+                ),
             ]);
         }
     }
