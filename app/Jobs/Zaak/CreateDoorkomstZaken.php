@@ -849,10 +849,9 @@ class CreateDoorkomstZaken implements ShouldQueue
             }
 
             // A single failing document is logged and skipped so the remaining
-            // documents and the deelzaak's status/local record are still created:
-            // re-running the job would create a duplicate ZGW deelzaak (the
-            // idempotency check is local), so aborting here is worse than losing
-            // one document, which can be re-added by hand.
+            // documents are still copied. A retry skips a registered deelzaak and
+            // cannot copy this document after all, so aborting here would lose
+            // the rest as well; a skipped document can be re-added by hand.
             try {
                 $targetUrl = $this->copyDocumentToTargetInstance(
                     $hoofdConnectionName,
