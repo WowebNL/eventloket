@@ -16,6 +16,7 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Services\Archiving\ZaakDestructionService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -25,6 +26,10 @@ use Tests\Fakes\ZgwHttpFake;
 
 beforeEach(function () {
     Storage::fake('local');
+
+    // The destruction service only sends the Objects API credential to the
+    // configured Objects API host, so the fixture has to be that host.
+    Config::set('openzaak.objectsapi.url', 'https://objects.example.com/');
 
     $this->municipality = Municipality::factory()->create();
     $this->zaaktype = Zaaktype::factory()->create([

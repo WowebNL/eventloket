@@ -121,10 +121,15 @@ final class ZaakReadModel implements Arrayable
         $this->status_name = Arr::get($expand, 'status._expand.statustype.omschrijving');
         $this->statustype_url = Arr::get($expand, 'status._expand.statustype.url');
 
-        $this->data_object_url = Arr::first(
+        // Matched on host, not as a substring: only a url actually served by
+        // the Objects API is a zaakobject of ours. One that merely mentions it
+        // somewhere, in a query string say, is a different host.
+        $objectsHost = self::hostOf((string) config('openzaak.objectsapi.url'));
+
+        $this->data_object_url = $objectsHost === null ? null : (Arr::first(
             $expand['zaakobjecten'] ?? [],
-            fn ($item) => isset($item['object']) && str_contains((string) $item['object'], (string) config('openzaak.objectsapi.url'))
-        )['object'] ?? null;
+            fn ($item) => isset($item['object']) && self::hostOf((string) $item['object']) === $objectsHost
+        )['object'] ?? null);
 
         $this->eigenschappen = array_map(
             fn (array $eigenschap) => ZaakEigenschapData::from($eigenschap),
@@ -147,6 +152,16 @@ final class ZaakReadModel implements Arrayable
         $this->resultaattype = Arr::get($expand, 'resultaat._expand.resultaattype');
 
         $this->zaakAddresses = $this->extractEventAddresses($expand['zaakobjecten'] ?? []);
+    }
+
+    /**
+     * The lowercased host of a url, or null when it has none.
+     */
+    public static function hostOf(string $url): ?string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? strtolower($host) : null;
     }
 
     /**

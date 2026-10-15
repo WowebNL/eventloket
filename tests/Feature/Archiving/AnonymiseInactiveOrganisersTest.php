@@ -252,3 +252,24 @@ test('the configured retention outlives the inactivity window', function () {
     expect((int) config('activitylog.delete_records_older_than_days'))
         ->toBeGreaterThan((int) config('archiving.organiser_inactivity_months') * 30);
 });
+
+test('a soft deleted organiser is anonymised too', function () {
+    // Deleting the account is not the same as erasing the person: the row keeps
+    // the name, e-mail address and phone number until this command gets to it.
+    $organiser = User::factory()->create(['role' => Role::Organiser, 'phone' => '0612345678']);
+    makeOrganiserInactiveSince($organiser, 30);
+
+    $originalEmail = $organiser->email;
+
+    $organiser->delete();
+
+    $this->artisan('archiving:anonymise-inactive-organisers')->assertSuccessful();
+
+    $organiser = User::withTrashed()->find($organiser->id);
+
+    expect($organiser->trashed())->toBeTrue()
+        ->and($organiser->anonymised_at)->not->toBeNull()
+        ->and($organiser->email)->not->toBe($originalEmail)
+        ->and($organiser->name)->toBe('Geanonimiseerde gebruiker')
+        ->and($organiser->phone)->toBeNull();
+});

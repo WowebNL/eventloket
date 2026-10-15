@@ -48,7 +48,12 @@ class AnonymiseInactiveOrganisers extends Command
         // An account counts as dormant when it has not logged in since the
         // threshold and was itself created before it. The created_at condition
         // is what lets accounts that never logged in age out too.
+        //
+        // withTrashed: a soft-deleted organiser is still a row carrying a name,
+        // an e-mail address and a phone number. Deleting the account is not the
+        // same as erasing the person, so those have to age out like any other.
         $organisers = OrganiserUser::query()
+            ->withTrashed()
             ->whereNull('anonymised_at')
             ->where('created_at', '<', $threshold)
             ->whereNotIn('id', $this->userIdsWithLoginSince($threshold))

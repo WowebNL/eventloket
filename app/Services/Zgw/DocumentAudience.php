@@ -43,12 +43,15 @@ class DocumentAudience
                     Role::MunicipalityAdmin,
                     Role::ReviewerMunicipalityAdmin,
                     // The archive roles are gemeente staff too, scoped to their
-                    // own municipality. They follow this group rather than
-                    // getting an unconfigurable scale of their own: deciding
-                    // that a zaak may be destroyed runs on metadata
-                    // (selectielijst, archiefactiedatum), never on document
-                    // content, so there is no case for letting them see more
-                    // than a behandelaar of the same gemeente.
+                    // own municipality, so they follow this group. They do not
+                    // follow it downwards: the decision is that they see
+                    // document content at the highest confidentiality level,
+                    // the way they do on our own OpenZaak, because an archivist
+                    // has to be able to establish what is being destroyed. A
+                    // connection may therefore widen their view but never
+                    // narrow it past that floor, which
+                    // {@see ZgwConnectionConfig::ARCHIVE_VISIBILITY_FLOOR}
+                    // enforces when the map is read.
                     Role::ArchiveCoordinator,
                     Role::ArchiveReviewer,
                 ],

@@ -132,3 +132,56 @@ test('a shared document whose relations sit on the second page is kept', functio
 
     Http::assertNotSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $sharedDocument);
 });
+
+test('a url on an unknown host is refused because the connection cannot be established', function () {
+    Http::fake();
+
+    // No local zaak to resolve through and a host nobody has configured. The
+    // old behaviour fell back to "main", which this guard would have read as
+    // permission to destroy.
+    expect(fn () => app(ZaakDestructionService::class)->destroy('https://ergens-anders.example.org/zaken/api/v1/zaken/1'))
+        ->toThrow(ZaakConnectionNotDestructibleException::class);
+
+    Http::assertNothingSent();
+});
+
+test('a url on a host shared by two connections is refused', function () {
+    Http::fake();
+
+    // Two municipalities configured against the same instance: the host alone
+    // decides nothing, so the guard has to close.
+    foreach ([1, 2] as $i) {
+        $municipality = Municipality::factory()->create();
+
+        MunicipalityZgwConnection::factory()->active()->create([
+            'municipality_id' => $municipality->id,
+            'zaken_url' => 'https://gedeeld.example.com/zaken/api/v1/',
+            'catalogi_url' => 'https://gedeeld.example.com/catalogi/api/v1/',
+            'documenten_url' => 'https://gedeeld.example.com/documenten/api/v1/',
+            'besluiten_url' => 'https://gedeeld.example.com/besluiten/api/v1/',
+        ]);
+    }
+
+    expect(fn () => app(ZaakDestructionService::class)->destroy('https://gedeeld.example.com/zaken/api/v1/zaken/1'))
+        ->toThrow(ZaakConnectionNotDestructibleException::class);
+
+    Http::assertNothingSent();
+});
+
+test('the objects api credential is not sent to a host that is not the objects api', function () {
+    Http::fake();
+
+    app(ZaakDestructionService::class)->deleteDataObject('https://ergens-anders.example.org/api/v2/objects/1');
+
+    Http::assertNothingSent();
+});
+
+test('the form submission object is deleted on the configured objects api host', function () {
+    Http::fake();
+
+    $url = rtrim((string) config('openzaak.objectsapi.url'), '/').'/api/v2/objects/1';
+
+    app(ZaakDestructionService::class)->deleteDataObject($url);
+
+    Http::assertSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $url);
+});

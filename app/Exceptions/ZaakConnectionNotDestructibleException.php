@@ -19,20 +19,37 @@ use RuntimeException;
  * exception means a destruction list item carries a url that no longer resolves
  * to main — a zaaktype recoupled to an own instance, or a hand-made item.
  *
+ * Also thrown when the connection cannot be established at all. A guard in front
+ * of irreversible destruction has to close when it is unsure, not open: without a
+ * local zaak row the url host is all there is, and an unknown host or one shared
+ * by several connections decides nothing.
+ *
  * Destruction is irreversible and aimed at somebody else's production system, so
  * this is a hard stop rather than a skip.
  */
 class ZaakConnectionNotDestructibleException extends RuntimeException
 {
+    /**
+     * @param  ?string  $connectionName  The connection the zaak was placed on, or
+     *                                   null when that could not be established.
+     */
     public function __construct(
         public readonly string $zaakUrl,
-        public readonly string $connectionName,
+        public readonly ?string $connectionName,
     ) {
-        parent::__construct(sprintf(
-            'Deze zaak (%s) staat op ZGW-koppeling "%s" en niet op de eigen OpenZaak. '
-            .'Vernietiging van zaakgegevens op een eigen koppeling van een gemeente loopt via dat zaaksysteem zelf.',
-            $zaakUrl === '' ? 'geen url' : $zaakUrl,
-            $connectionName,
-        ));
+        $url = $zaakUrl === '' ? 'geen url' : $zaakUrl;
+
+        parent::__construct($connectionName === null
+            ? sprintf(
+                'Van deze zaak (%s) kon niet worden vastgesteld op welke ZGW-koppeling hij staat, '
+                .'dus wordt er niets vernietigd. De host is onbekend of hoort bij meerdere koppelingen.',
+                $url,
+            )
+            : sprintf(
+                'Deze zaak (%s) staat op ZGW-koppeling "%s" en niet op de eigen OpenZaak. '
+                .'Vernietiging van zaakgegevens op een eigen koppeling van een gemeente loopt via dat zaaksysteem zelf.',
+                $url,
+                $connectionName,
+            ));
     }
 }

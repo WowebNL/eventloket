@@ -252,3 +252,26 @@ it('always blocks organiser withdrawal on a OneGround connection', function () {
 
     expect(ZgwConnectionConfig::allowsOrganiserWithdrawal('gemeente_9'))->toBeFalse();
 });
+
+it('never lets a connection narrow the archive roles below the floor', function (Role $role) {
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        // The gemeente group is narrowed to intern on this connection.
+        Role::Reviewer->value => 'intern',
+        $role->value => 'intern',
+    ]);
+
+    expect(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', $role))
+        ->toBe(DocumentVertrouwelijkheden::atMost(ZgwConnectionConfig::ARCHIVE_VISIBILITY_FLOOR->value))
+        // A behandelaar on that same connection does follow it down.
+        ->and(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::Reviewer))
+        ->toBe(DocumentVertrouwelijkheden::atMost('intern'));
+})->with([Role::ArchiveCoordinator, Role::ArchiveReviewer]);
+
+it('does let a connection widen the archive roles past the floor', function () {
+    Config::set('zgw.connections.gemeente_9.vertrouwelijkheid_map.visibility', [
+        Role::ArchiveCoordinator->value => 'zeer_geheim',
+    ]);
+
+    expect(ZgwConnectionConfig::documentVisibilityForRole('gemeente_9', Role::ArchiveCoordinator))
+        ->toBe(DocumentVertrouwelijkheden::atMost('zeer_geheim'));
+});

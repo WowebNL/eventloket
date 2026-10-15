@@ -79,11 +79,6 @@ class ZaakDestructionService
     /**
      * Whether this zaak lives on our own OpenZaak and may therefore be destroyed
      * from here.
-     *
-     * The local zaak is the reliable signal (it resolves through its zaaktype,
-     * which records the instance that hosts it). Soft-deleted zaken count: a
-     * destruction list may well hold one. Without a local row the url host is
-     * the only thing left to go on.
      */
     public function isDestructible(string $zaakUrl): bool
     {
@@ -102,7 +97,20 @@ class ZaakDestructionService
         }
     }
 
-    private function connectionFor(string $zaakUrl): string
+    /**
+     * The connection this zaak lives on, or null when that cannot be
+     * established.
+     *
+     * The local zaak is the reliable signal: it resolves through its zaaktype,
+     * which records the instance that hosts it. Soft-deleted zaken count, since
+     * a destruction list may well hold one.
+     *
+     * Without a local row the url host is all there is, and then only a host
+     * belonging to exactly one connection decides anything. An unknown or shared
+     * host resolves to null, and null never equals the default connection, so
+     * the guard closes rather than guessing.
+     */
+    private function connectionFor(string $zaakUrl): ?string
     {
         $zaak = Zaak::withTrashed()->where('zgw_zaak_url', $zaakUrl)->first();
 
@@ -110,7 +118,7 @@ class ZaakDestructionService
             return $zaak->zgwConnectionName();
         }
 
-        return $this->connections->forUrl($zaakUrl);
+        return $this->connections->soleConnectionForUrl($zaakUrl);
     }
 
     /**
@@ -229,10 +237,26 @@ class ZaakDestructionService
      * Delete the form submission object in the Objects API.
      *
      * Still on woweb/openzaak: the Objects API is outside the ZGW standard and
-     * therefore outside the ZGW client.
+     * therefore outside the ZGW client, so it carries no host allowlist of its
+     * own and the check below stands in for one.
      */
     public function deleteDataObject(string $url): void
     {
+        // The credential goes nowhere but the configured Objects API. This url
+        // is stored on the zaak and derived from a ZGW response, so its host is
+        // checked rather than taken on trust.
+        $objectsHost = ZaakReadModel::hostOf((string) config('openzaak.objectsapi.url'));
+        $urlHost = ZaakReadModel::hostOf($url);
+
+        if ($objectsHost === null || $urlHost !== $objectsHost) {
+            Log::warning('Refused to delete a data object on a host that is not the configured Objects API.', [
+                'url_host' => $urlHost,
+                'objects_host' => $objectsHost,
+            ]);
+
+            return;
+        }
+
         $this->validateDeleteResponse(
             $url,
             Http::withHeaders((new ObjectsApiConnection)->getHeaders())->delete($url),
