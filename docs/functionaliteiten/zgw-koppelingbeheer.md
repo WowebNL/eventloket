@@ -161,7 +161,7 @@ De tabellen hieronder noemen per scope de aanroep in Eventloket die hem nodig he
 |-------|------------|
 | `zaken.aanmaken` | Het aanmaken van de zaak bij het indienen van een aanvraag (`POST /zaken`), en van deelzaken bij een doorkomst. |
 | `zaken.lezen` | Het ophalen van zaken, statussen, zaakeigenschappen en de documenten bij een zaak (`GET`). |
-| `zaken.bijwerken` | Het bijwerken van de zaak (`PATCH /zaken/{uuid}`, zoals de einddatum en de zaakgeometrie), het vastleggen en wijzigen van zaakeigenschappen, rollen, zaakobjecten en resultaten, en het koppelen van documenten aan de zaak (`POST /zaakinformatieobjecten`). |
+| `zaken.bijwerken` | Het bijwerken van de zaak (`PATCH /zaken/{uuid}`, zoals de einddatum en de zaakgeometrie), het vastleggen, wijzigen en verwijderen van zaakeigenschappen, het vastleggen van rollen, zaakobjecten en resultaten, en het koppelen van documenten aan de zaak (`POST /zaakinformatieobjecten`). De standaard accepteert voor het koppelen van documenten ook `zaken.aanmaken`. |
 | `zaken.statussen.toevoegen` | Het zetten van een nieuwe status (`POST /statussen`), bijvoorbeeld bij het afronden van een zaak. De standaard accepteert voor deze aanroep ook `zaken.aanmaken`. |
 | `zaken.verwijderen` | Alleen nodig als bij het verwijderen van een zaak in Eventloket ook gekozen wordt voor verwijderen in het zaaksysteem (`DELETE /zaken/{uuid}`). |
 
