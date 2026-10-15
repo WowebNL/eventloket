@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Tests\Fakes\ZgwHttpFake;
+use Spatie\Activitylog\Models\Activity;
 use Woweb\Zgw\Exceptions\ApiRequestException;
 
 uses(RefreshDatabase::class);
@@ -1091,6 +1092,32 @@ function postedTo(string $collection): bool
     return collect(Http::recorded())->contains(fn ($pair) => $pair[0]->method() === 'POST'
         && parse_url($pair[0]->url(), PHP_URL_PATH) === '/zaken/api/v1/'.$collection);
 }
+
+test('logs the creation of a deelzaak with its initial values', function () {
+    // The deelzaak is registered without model events, so its created entry in
+    // the activity log is written explicitly.
+    fakeDoorkomstZgw();
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->sole();
+    $created = Activity::query()
+        ->where('subject_type', $deel->getMorphClass())
+        ->where('subject_id', $deel->getKey())
+        ->where('event', 'created')
+        ->get();
+
+    expect($created)->toHaveCount(1);
+    $attributes = $created->first()->properties['attributes'];
+    expect($attributes['hoofdzaak_id'])->toBe($scenario['hoofdzaak']->id)
+        ->and($attributes['zaaktype_id'])->toBe($deel->zaaktype_id)
+        ->and($attributes['zgw_zaak_url'])->toBe(ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/deel-1')
+        ->and($attributes['zgw_connection'])->toBe('main')
+        ->and($attributes)->not->toHaveKey('form_state_snapshot');
+});
 
 test('completes an unfinished registration on the connection the deelzaak was created on', function () {
     // An earlier attempt registered the deelzaak on the doorkomst gemeente's own

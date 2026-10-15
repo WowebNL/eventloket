@@ -530,6 +530,8 @@ class CreateDoorkomstZaken implements ShouldQueue
      * run in {@see self::completeDeelzaak()}. For the same reason the observer
      * cannot fill `zgw_connection`, so it is set here to the connection the
      * deelzaak was created on, which is the answer the observer would give.
+     * Saving quietly also skips the model's own activity log entry, so the
+     * created entry with the initial values is written here explicitly.
      *
      * Until then the reference data holds what is known without the read-back:
      * the evenement fields of the hoofdzaak, the organisator and the per-day
@@ -565,6 +567,14 @@ class CreateDoorkomstZaken implements ShouldQueue
             'form_state_snapshot' => $state->toSnapshot(),
         ]);
         $deelzaak->saveQuietly();
+
+        // The same entry the model would log on a regular create: the loggable
+        // attributes as configured in Zaak::getActivitylogOptions().
+        activity()
+            ->event('created')
+            ->performedOn($deelzaak)
+            ->withProperties($deelzaak->attributeValuesToBeLogged('created'))
+            ->log('created');
 
         return $deelzaak;
     }
