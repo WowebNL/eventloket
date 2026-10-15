@@ -1092,6 +1092,54 @@ function postedTo(string $collection): bool
         && parse_url($pair[0]->url(), PHP_URL_PATH) === '/zaken/api/v1/'.$collection);
 }
 
+test('completes an unfinished registration on the connection the deelzaak was created on', function () {
+    // An earlier attempt registered the deelzaak on the doorkomst gemeente's own
+    // instance. When its zaaktype resolves to another connection by the time
+    // of the retry, the read-back still has to go where the deelzaak lives.
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1*' => Http::response([
+            'url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1',
+            'zaaktype' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/hoofd',
+            'identificatie' => 'HOOFD-1',
+            'bronorganisatie' => '123456789',
+            'startdatum' => '2026-07-01',
+            'omschrijving' => 'Hoofdzaak',
+        ], 200),
+        OWN_HOST.'/zaken/api/v1/zaken/deel-1*' => Http::response(array_merge(deelZaakReadResponse(), [
+            'url' => OWN_HOST.'/zaken/api/v1/zaken/deel-1',
+        ]), 200),
+        '*' => Http::response([], 200),
+    ]);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: false);
+    $scenario['hoofdzaak']->update(['zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/hoofd-1']);
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $scenario['passing']->id]);
+    $doorkomstZaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $scenario['passing']->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        // Resolves to main now.
+        'connection' => 'main',
+        'zgw_zaaktype_url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/zaaktypen/dk-m',
+        'is_active' => true,
+    ]);
+
+    $deel = Zaak::withoutEvents(fn () => Zaak::factory()->create([
+        'public_id' => null,
+        'zgw_connection' => "gemeente_{$scenario['passing']->id}",
+        'zgw_zaak_url' => OWN_HOST.'/zaken/api/v1/zaken/deel-1',
+        'zaaktype_id' => $doorkomstZaaktype->id,
+        'role' => ZaaktypeRole::Doorkomst,
+        'hoofdzaak_id' => $scenario['hoofdzaak']->id,
+    ]));
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect($deel->fresh()->public_id)->toBe('DEEL-1')
+        ->and(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->count())->toBe(1);
+    Http::assertSent(fn ($request) => $request->method() === 'GET'
+        && str_starts_with($request->url(), OWN_HOST.'/zaken/api/v1/zaken/deel-1'));
+});
+
 test('reports a step that fails after the deelzaak was created without failing the job', function () {
     // A retry skips a deelzaak that exists, so it cannot repair a later step.
     // Failing the job for it would only cause a retry that does nothing.

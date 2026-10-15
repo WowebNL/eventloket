@@ -398,12 +398,21 @@ class CreateDoorkomstZaken implements ShouldQueue
             // A deelzaak that an earlier attempt created and registered, but
             // never got to read back, is completed now instead of created again.
             if ($existing->public_id === null && filled($existing->zgw_zaak_url)) {
-                $this->attempt['connection'] = $doorkomstZaaktype->zgwConnectionName();
+                // Read it back from the connection it was created on, which the
+                // registration recorded; the zaaktype may resolve elsewhere by now.
+                // A municipality's own connection is only defined once the
+                // resolver has registered it, so that is done first.
+                app(ZgwConnectionResolver::class)->forMunicipality($municipality);
+                $recorded = (string) $existing->zgw_connection;
+                $existingConnection = $recorded !== '' && config("zgw.connections.{$recorded}") !== null
+                    ? $recorded
+                    : $doorkomstZaaktype->zgwConnectionName();
+                $this->attempt['connection'] = $existingConnection;
                 $this->attempt['zaak_url'] = (string) $existing->zgw_zaak_url;
 
                 $this->completeDeelzaak(
                     $existing,
-                    $doorkomstZaaktype->zgwConnectionName(),
+                    $existingConnection,
                     (string) $existing->zgw_zaak_url,
                     MunicipalityZaaktypeMapping::forZaaktypeInRole($doorkomstZaaktype, ZaaktypeRole::Doorkomst),
                 );
