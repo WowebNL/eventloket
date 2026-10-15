@@ -20,6 +20,8 @@ use Woweb\Zgw\Exceptions\ApiRequestException;
  */
 class DocumentVersionRejectedException extends RuntimeException
 {
+    private const MAX_ERROR_CODE_LENGTH = 64;
+
     public function __construct(
         public readonly string $connectionName,
         public readonly string $documentUuid,
@@ -45,7 +47,9 @@ class DocumentVersionRejectedException extends RuntimeException
             $status = $response->status();
             $body = $response->json();
             $code = is_array($body) ? ($body['code'] ?? null) : null;
-            $errorCode = is_scalar($code) ? (string) $code : null;
+            // The code comes from the API response; cap it so a misbehaving
+            // server cannot push an arbitrarily long string into reports.
+            $errorCode = is_scalar($code) ? mb_substr((string) $code, 0, self::MAX_ERROR_CODE_LENGTH) : null;
         }
 
         return new self($connectionName, $documentUuid, $status, $errorCode, $e);
