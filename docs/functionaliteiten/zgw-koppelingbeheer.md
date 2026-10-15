@@ -147,7 +147,7 @@ De aangemaakte API-client moet voldoende rechten (autorisaties/scopes) hebben op
 - Aanmaken, lezen, vergrendelen en bijwerken van documenten.
 - Lezen van de audittrail van documenten.
 - Aanmaken en lezen van besluiten.
-- Rechten om notificatie-abonnementen te registreren en te ontvangen.
+- Rechten om notificatie-abonnementen te registreren en te beheren (`notificaties.consumeren`, zie de tabel Notificaties API hieronder).
 
 Een autorisatie geldt in de ZGW-standaard niet voor een hele API, maar voor een zaaktype (Zaken API), een informatieobjecttype (Documenten API) of een besluittype (Besluiten API). Bij zaken en documenten hoort er ook een maximale vertrouwelijkheidaanduiding bij. Ken de scopes daarom toe voor alle zaaktypen, informatieobjecttypen en besluittypen die de koppeling gebruikt, en kies een maximale vertrouwelijkheid die minstens zo hoog is als het hoogste niveau dat Eventloket bij het uploaden meegeeft (zie [sectie 5.6](#56-vertrouwelijkheid)).
 
@@ -190,6 +190,12 @@ De tabellen hieronder noemen per scope de aanroep in Eventloket die hem nodig he
 |-------|------------|
 | `besluiten.aanmaken` | Het vastleggen van een besluit bij het afronden van een zaak (`POST /besluiten`) en het koppelen van documenten aan dat besluit (`POST /besluitinformatieobjecten`). |
 | `besluiten.lezen` | Het tonen van de besluiten en de besluitdocumenten bij een zaak (`GET`). |
+
+**Notificaties API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `notificaties.consumeren` | Het registreren en beheren van het abonnement van Eventloket. Opvragen (`GET /abonnement` en `GET` op het abonnement) bij **Abonnement registreren** en de abonnementcontrole in **Verbinding controleren**, en bij `app:register-zgw-abonnementen` en `app:list-zgw-abonnementen`. Aanmaken (`POST /abonnement`) bij registreren. Bijwerken (`PATCH` op het abonnement) bij opnieuw registreren en bij het dagelijks vernieuwen van het token. Verwijderen (`DELETE` op het abonnement) bij `app:list-zgw-abonnementen --delete=<url>`. Voor het opvragen accepteert de standaard ook `notificaties.publiceren`. |
 
 Zonder de juiste autorisaties lukt de verbinding technisch wel, maar mislukt het aanmaken van een zaak later alsnog. Test daarom altijd ook met een echte proefaanvraag (zie [sectie 10](#10-eindcontrole-met-een-proefaanvraag)).
 
