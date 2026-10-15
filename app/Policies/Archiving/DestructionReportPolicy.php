@@ -40,6 +40,20 @@ class DestructionReportPolicy
     }
 
     /**
+     * Determine whether the user can re-render the PDF of this report.
+     *
+     * Not an exception to the immutability above: the stored row is the record
+     * and is never touched, this only renders it to a file again when that file
+     * is missing. The coordinator keeps the archive, so it is theirs to repair.
+     */
+    public function regenerate(User $user, DestructionReport $destructionReport): bool
+    {
+        return $user->role === Role::ArchiveCoordinator
+            && $user instanceof MunicipalityUser
+            && $user->canAccessMunicipality($destructionReport->municipality_id);
+    }
+
+    /**
      * Determine whether the user can update the model.
      */
     public function update(User $user, DestructionReport $destructionReport): bool

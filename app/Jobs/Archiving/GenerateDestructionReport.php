@@ -8,11 +8,10 @@ use App\Models\Archiving\DestructionList;
 use App\Models\Archiving\DestructionListItem;
 use App\Models\Archiving\DestructionReport;
 use App\Models\Municipality;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\Archiving\DestructionReportPdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Writes the destruction report for a completed list.
@@ -93,19 +92,8 @@ class GenerateDestructionReport implements ShouldQueue
         ];
     }
 
-    /**
-     * The PDF is rendered from the stored report, never from the list, so a
-     * regenerated PDF is identical to the one that was issued originally.
-     */
     private function storePdf(DestructionReport $report): void
     {
-        $path = "archief/rapporten/{$report->batch_number}.pdf";
-
-        Storage::disk(config('archiving.report_disk'))->put(
-            $path,
-            Pdf::loadView('pdf.destruction-report', ['report' => $report])->output(),
-        );
-
-        $report->update(['pdf_path' => $path]);
+        app(DestructionReportPdf::class)->store($report);
     }
 }

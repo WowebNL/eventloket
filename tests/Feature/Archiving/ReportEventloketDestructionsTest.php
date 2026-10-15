@@ -1,9 +1,12 @@
 <?php
 
 use App\Enums\DestructionReportType;
+use App\Enums\Role;
 use App\Models\Archiving\DestructionReport;
 use App\Models\Archiving\ZaakDestructionLog;
 use App\Models\Municipality;
+use App\Models\User;
+use App\Services\Archiving\DestructionReportPdf;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -111,4 +114,47 @@ test('the eventloket report shares the municipality batch number sequence', func
 
     expect(DestructionReport::where('type', DestructionReportType::EventloketData)->sole()->batch_number)
         ->toBe('VL-GM0935-'.now()->year.'-002');
+});
+
+test('a report whose pdf is missing can be rendered again from its stored row', function () {
+    // The rows are committed as reported before the PDF is written, so a job
+    // dying in between leaves a report with no readable proof. The nightly
+    // command will not produce it again, so this is the only way back.
+    ZaakDestructionLog::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'destroyed_at' => now()->subDay(),
+    ]);
+
+    $this->artisan('archiving:report-eventloket-destructions')->assertSuccessful();
+
+    $report = DestructionReport::sole();
+
+    Storage::disk('local')->delete($report->pdf_path);
+
+    expect($report->hasPdf())->toBeFalse();
+
+    app(DestructionReportPdf::class)->store($report);
+
+    expect($report->refresh()->hasPdf())->toBeTrue()
+        // The record itself is untouched: only the file was rebuilt.
+        ->and($report->batch_number)->toBe(DestructionReport::sole()->batch_number)
+        ->and($report->total_count)->toBe(1);
+});
+
+test('the coordinator may repair a missing pdf and nobody may change the report', function () {
+    $coordinator = User::factory()->create(['role' => Role::ArchiveCoordinator]);
+    $this->municipality->users()->attach($coordinator);
+
+    $reviewer = User::factory()->create(['role' => Role::ArchiveReviewer]);
+    $this->municipality->users()->attach($reviewer);
+
+    $report = DestructionReport::factory()->create([
+        'municipality_id' => $this->municipality->id,
+        'type' => DestructionReportType::EventloketData,
+    ]);
+
+    expect($coordinator->can('regenerate', $report))->toBeTrue()
+        ->and($reviewer->can('regenerate', $report))->toBeFalse()
+        ->and($coordinator->can('update', $report))->toBeFalse()
+        ->and($coordinator->can('delete', $report))->toBeFalse();
 });

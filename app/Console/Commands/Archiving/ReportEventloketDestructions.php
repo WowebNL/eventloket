@@ -6,12 +6,11 @@ use App\Enums\DestructionReportType;
 use App\Models\Archiving\DestructionReport;
 use App\Models\Archiving\ZaakDestructionLog;
 use App\Models\Municipality;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\Archiving\DestructionReportPdf;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Rolls the destruction log into one "Eventloket data" report per municipality.
@@ -123,18 +122,13 @@ class ReportEventloketDestructions extends Command
     }
 
     /**
-     * Rendered from the stored report, never from the log rows, so a
-     * regenerated PDF is identical to the one issued originally.
+     * Written outside the transaction above on purpose: rendering is slow and
+     * holding the lock for it would serialise every finalising list behind it.
+     * The cost is that a job dying in between leaves rows marked reported with
+     * no PDF, which is why the report is regenerable from its stored row.
      */
     private function storePdf(DestructionReport $report): void
     {
-        $path = "archief/rapporten/{$report->batch_number}.pdf";
-
-        Storage::disk(config('archiving.report_disk'))->put(
-            $path,
-            Pdf::loadView('pdf.destruction-report', ['report' => $report])->output(),
-        );
-
-        $report->update(['pdf_path' => $path]);
+        app(DestructionReportPdf::class)->store($report);
     }
 }

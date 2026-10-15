@@ -34,3 +34,6 @@ Schedule::command('archiving:anonymise-inactive-organisers')->monthlyOn(1, '03:0
 
 // Roll the previous day's destroyed zaken into one report per municipality
 Schedule::command('archiving:report-eventloket-destructions')->dailyAt('02:00');
+
+// Safety net for a destroy notification that never arrived, on our own OpenZaak
+Schedule::command('archiving:reconcile-destroyed-zaken')->dailyAt('01:00');

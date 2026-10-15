@@ -16,15 +16,22 @@ use App\Models\Zaaktype;
 use App\Services\Archiving\EventloketDataDestroyer;
 use App\ValueObjects\OpenNotification;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 use Tests\Fakes\ZgwHttpFake;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 
 beforeEach(function () {
-    Http::fake();
+    // No default stub here: Http::fake() merges and the first matching stub
+    // wins, so one set up here could never be overridden per test. Each test
+    // states the source's answer itself; anything unfaked throws.
+    Http::preventStrayRequests();
+
+    Config::set('openzaak.objectsapi.url', 'https://objects.example.com/');
 
     $this->municipality = Municipality::factory()->create();
     $this->zaaktype = Zaaktype::factory()->create([
@@ -42,7 +49,16 @@ beforeEach(function () {
     ]);
 });
 
-function destroyNotification(string $zaakUrl): OpenNotification
+/**
+ * The zaaksysteem confirms the zaak is gone. Also answers the Objects API
+ * delete that follows, which treats a 404 as success.
+ */
+function fakeSourceGone(): void
+{
+    Http::fake(fn () => Http::response(['detail' => 'not found'], 404));
+}
+
+function destroyNotification(string $zaakUrl, ?string $senderConnection = 'main'): OpenNotification
 {
     return new OpenNotification(
         actie: 'destroy',
@@ -51,6 +67,7 @@ function destroyNotification(string $zaakUrl): OpenNotification
         hoofdObject: $zaakUrl,
         resourceUrl: $zaakUrl,
         aanmaakdatum: now()->toIso8601String(),
+        senderConnection: $senderConnection,
     );
 }
 
@@ -87,6 +104,8 @@ function localZaakData(Zaak $zaak): array
 }
 
 test('a destroy notification removes everything eventloket held about the zaak', function () {
+    fakeSourceGone();
+
     [$thread, $message, $organiser] = localZaakData($this->zaak);
 
     expect(Activity::where('subject_type', Zaak::class)->where('subject_id', $this->zaak->id)->exists())->toBeTrue();
@@ -111,6 +130,8 @@ test('a destroy notification removes everything eventloket held about the zaak',
 });
 
 test('the destruction is recorded once, with the connection it happened on', function () {
+    fakeSourceGone();
+
     new ZaakDestroyNotificationReceived(destroyNotification($this->zaakUrl))
         ->handle(app(EventloketDataDestroyer::class));
 
@@ -124,6 +145,8 @@ test('the destruction is recorded once, with the connection it happened on', fun
 });
 
 test('a replayed notification does not log the destruction twice', function () {
+    fakeSourceGone();
+
     $notification = destroyNotification($this->zaakUrl);
 
     new ZaakDestroyNotificationReceived($notification)->handle(app(EventloketDataDestroyer::class));
@@ -133,6 +156,8 @@ test('a replayed notification does not log the destruction twice', function () {
 });
 
 test('a notification for a zaak we do not know is ignored', function () {
+    fakeSourceGone();
+
     new ZaakDestroyNotificationReceived(destroyNotification(ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/unknown'))
         ->handle(app(EventloketDataDestroyer::class));
 
@@ -141,6 +166,8 @@ test('a notification for a zaak we do not know is ignored', function () {
 });
 
 test('a zaak on a municipality own zgw instance is cleaned up the same way', function () {
+    fakeSourceGone();
+
     // Eventloket never deletes in their instance, but it does have to clear its
     // own copy once they tell us the zaak is gone.
     $municipality = Municipality::factory()->create();
@@ -163,7 +190,7 @@ test('a zaak on a municipality own zgw instance is cleaned up the same way', fun
         'data_object_url' => null,
     ]);
 
-    new ZaakDestroyNotificationReceived(destroyNotification($zaakUrl))
+    new ZaakDestroyNotificationReceived(destroyNotification($zaakUrl, 'gemeente_'.$municipality->id))
         ->handle(app(EventloketDataDestroyer::class));
 
     expect(Zaak::withTrashed()->find($zaak->id))->toBeNull()
@@ -180,4 +207,60 @@ test('the webhook routes a destroy notification to the cleanup job', function ()
         ->handle(app(GetIncommingNotificationType::class));
 
     Queue::assertPushed(ZaakDestroyNotificationReceived::class);
+});
+
+test('a notification from a connection that does not own the zaak destroys nothing', function () {
+    fakeSourceGone();
+
+    // The zaak lives on main; the caller presented the credential of a
+    // municipality's own connection. The host allowlist on the request only
+    // says the url belongs to some configured connection, not to this caller.
+    $other = Municipality::factory()->create();
+
+    MunicipalityZgwConnection::factory()->active()->create(['municipality_id' => $other->id]);
+
+    new ZaakDestroyNotificationReceived(destroyNotification($this->zaakUrl, 'gemeente_'.$other->id))
+        ->handle(app(EventloketDataDestroyer::class));
+
+    expect(Zaak::withTrashed()->find($this->zaak->id))->not->toBeNull()
+        ->and(ZaakDestructionLog::count())->toBe(0);
+});
+
+test('a notification without an identified sender destroys nothing', function () {
+    fakeSourceGone();
+
+    new ZaakDestroyNotificationReceived(destroyNotification($this->zaakUrl, null))
+        ->handle(app(EventloketDataDestroyer::class));
+
+    expect(Zaak::withTrashed()->find($this->zaak->id))->not->toBeNull()
+        ->and(ZaakDestructionLog::count())->toBe(0);
+});
+
+test('a zaak that still exists at the source is left alone', function () {
+    // The claim does not match reality, so nothing is destroyed: what goes
+    // follows the zaaksysteem rather than the notification.
+    Http::fake(fn () => Http::response(['url' => $this->zaakUrl, 'identificatie' => 'ZAAK-1'], 200));
+
+    [$thread] = localZaakData($this->zaak);
+
+    new ZaakDestroyNotificationReceived(destroyNotification($this->zaakUrl))
+        ->handle(app(EventloketDataDestroyer::class));
+
+    expect(Zaak::withTrashed()->find($this->zaak->id))->not->toBeNull()
+        ->and(Thread::find($thread->id))->not->toBeNull()
+        ->and(ZaakDestructionLog::count())->toBe(0);
+});
+
+test('a failing read is retried rather than treated as confirmation', function () {
+    Http::fake(fn () => Http::response(['detail' => 'kapot'], 500));
+
+    [$thread] = localZaakData($this->zaak);
+
+    expect(fn () => new ZaakDestroyNotificationReceived(destroyNotification($this->zaakUrl))
+        ->handle(app(EventloketDataDestroyer::class)))
+        ->toThrow(ApiRequestException::class);
+
+    expect(Zaak::withTrashed()->find($this->zaak->id))->not->toBeNull()
+        ->and(Thread::find($thread->id))->not->toBeNull()
+        ->and(ZaakDestructionLog::count())->toBe(0);
 });
