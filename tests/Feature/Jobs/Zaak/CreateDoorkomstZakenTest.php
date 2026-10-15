@@ -997,10 +997,12 @@ test('is idempotent: running twice does not create a second doorkomst zaak', fun
 
 /**
  * Cross-instance doorkomst whose receiving zaaksysteem can be made to fail the
- * read-back of the new deelzaak, or the catalogus read of its eigenschappen.
- * Counts how often a deelzaak is created.
+ * read-back of the new deelzaak, the catalogus read of its eigenschappen, or
+ * the initiator rol. The deel catalogus has an initiator roltype and an
+ * initial statustype, so every step has something to send. Counts how often
+ * a deelzaak is created.
  */
-function fakeDoorkomstWithInterruptions(bool &$readBackFails, bool $eigenschappenCatalogusFails, int &$created): void
+function fakeDoorkomstWithInterruptions(bool &$readBackFails, bool $eigenschappenCatalogusFails, int &$created, bool $initiatorFails = false): void
 {
     $serverError = fn () => Http::response([
         'type' => 'https://zgw.example.com/ref/fouten/APIException/',
@@ -1024,6 +1026,16 @@ function fakeDoorkomstWithInterruptions(bool &$readBackFails, bool $eigenschappe
         ZgwHttpFake::$baseUrl.'/catalogi/api/v1/eigenschappen*' => $eigenschappenCatalogusFails
             ? $serverError()
             : Http::response(ZgwHttpFake::envelope([]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/roltypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/roltypen/init', 'omschrijvingGeneriek' => 'initiator'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/ontvangen', 'volgnummer' => 1, 'omschrijving' => 'Ontvangen'],
+        ]), 200),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen*' => $initiatorFails
+            ? $serverError()
+            : Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/rollen/1'], 201),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/statussen*' => Http::response(['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/statussen/1'], 201),
         ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken*' => function ($request) use (&$readBackFails, &$created, $serverError) {
             if ($request->method() === 'POST') {
                 if (parse_url($request->url(), PHP_URL_PATH) === '/zaken/api/v1/zaken') {
@@ -1073,6 +1085,13 @@ test('does not create the deelzaak a second time when the job is retried after a
     Bus::assertDispatchedTimes(fn (CreateConceptAdviceQuestions $job) => $job->zaak->is($deel), 1);
 });
 
+/** Whether the job posted to the given Zaken API collection. */
+function postedTo(string $collection): bool
+{
+    return collect(Http::recorded())->contains(fn ($pair) => $pair[0]->method() === 'POST'
+        && parse_url($pair[0]->url(), PHP_URL_PATH) === '/zaken/api/v1/'.$collection);
+}
+
 test('reports a step that fails after the deelzaak was created without failing the job', function () {
     // A retry skips a deelzaak that exists, so it cannot repair a later step.
     // Failing the job for it would only cause a retry that does nothing.
@@ -1083,16 +1102,48 @@ test('reports a step that fails after the deelzaak was created without failing t
     fakeDoorkomstWithInterruptions($readBackFails, eigenschappenCatalogusFails: true, created: $created);
 
     $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->update(['form_state_snapshot' => routeSnapshotWithValues([
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Jansen',
+    ])]);
     withPassingDoorkomstZaaktype($scenario['passing']);
 
     CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
 
     $deel = Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->sole();
     expect($created)->toBe(1)
-        ->and($deel->public_id)->toBe('DEEL-1');
+        ->and($deel->public_id)->toBe('DEEL-1')
+        // The failing eigenschappen step does not cost the deelzaak the steps
+        // after it.
+        ->and(postedTo('rollen'))->toBeTrue()
+        ->and(postedTo('statussen'))->toBeTrue();
     Exceptions::assertReported(ApiRequestException::class);
     Exceptions::assertNotReported(DoorkomstZakenIncompleteException::class);
     Bus::assertDispatchedTimes(fn (CreateConceptAdviceQuestions $job) => $job->zaak->is($deel), 1);
+});
+
+test('still sets the initial status when registering the initiator fails', function () {
+    // Each step after the creation is tried on its own: no step depends on
+    // another, so one failing must not skip the ones after it.
+    Exceptions::fake();
+    $readBackFails = false;
+    $created = 0;
+    fakeDoorkomstWithInterruptions($readBackFails, eigenschappenCatalogusFails: false, created: $created, initiatorFails: true);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    $scenario['hoofdzaak']->update(['form_state_snapshot' => routeSnapshotWithValues([
+        'watIsUwVoornaam' => 'Jan',
+        'watIsUwAchternaam' => 'Jansen',
+    ])]);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    CreateDoorkomstZaken::dispatchSync($scenario['hoofdzaak']);
+
+    expect(postedTo('rollen'))->toBeTrue()
+        ->and(postedTo('statussen'))->toBeTrue()
+        ->and(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->sole()->public_id)->toBe('DEEL-1');
+    Exceptions::assertReported(ApiRequestException::class);
+    Exceptions::assertNotReported(DoorkomstZakenIncompleteException::class);
 });
 
 /**

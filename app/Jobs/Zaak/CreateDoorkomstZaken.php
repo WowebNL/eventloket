@@ -30,6 +30,7 @@ use Brick\Geo\Engine\PdoEngine;
 use Brick\Geo\Geometry;
 use Brick\Geo\GeometryCollection;
 use Brick\Geo\Point;
+use Closure;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Arr;
@@ -468,28 +469,46 @@ class CreateDoorkomstZaken implements ShouldQueue
         // second time by every retry after a failure in between.
         $deelzaak = $this->registerDeelzaak($response, (string) $newZaakUrl, $doorkomstZaaktype, $deelConnectionName, $state);
 
+        // No step depends on another (the initial status needs no rol or
+        // document), so each one is tried on its own and a failing step does
+        // not cost the deelzaak the ones after it.
+        $context = [
+            'municipality' => $municipality->brk_identification,
+            'connection' => $deelConnectionName,
+            'zaak_url' => $newZaakUrl,
+        ];
+        $this->runDeelzaakStep('eigenschappen', $context, fn () => $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping));
+        $this->runDeelzaakStep('initiator', $context, fn () => $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator));
+        $this->runDeelzaakStep('documenten', $context, fn () => $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype));
+        $this->runDeelzaakStep('status', $context, fn () => $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype));
+
+        $this->completeDeelzaak($deelzaak, $deelConnectionName, (string) $newZaakUrl, $deelMapping);
+    }
+
+    /**
+     * Run one step on a deelzaak that has already been created and registered.
+     *
+     * A retry skips a registered deelzaak and cannot repair the step, so
+     * failing the job for it would only invite a retry that does nothing. A
+     * failure is logged with the name of the step and reported instead.
+     *
+     * @param  array<string, mixed>  $context  municipality, connection and zaak_url of the deelzaak
+     * @param  Closure(): void  $step
+     */
+    private function runDeelzaakStep(string $name, array $context, Closure $step): void
+    {
         try {
-            $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping);
-            $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator);
-            $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype);
-            $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype);
+            $step();
         } catch (Throwable $e) {
-            // The deelzaak exists and is registered, so a retry skips it and
-            // cannot repair this step. Failing the job for it would only invite
-            // a retry that does nothing; it is reported instead, and the local
-            // registration below is still completed.
-            Log::error('CreateDoorkomstZaken: the deelzaak was created but a later step failed; completing its registration.', [
+            Log::error('CreateDoorkomstZaken: a step on the created deelzaak failed; continuing with the next step.', [
                 'zaak_id' => $this->zaak->id,
-                'municipality' => $municipality->brk_identification,
-                'connection' => $deelConnectionName,
-                'zaak_url' => $newZaakUrl,
+                ...$context,
+                'step' => $name,
                 'exception' => $e::class,
                 'response' => $this->responseSummary($e),
             ]);
             report($e);
         }
-
-        $this->completeDeelzaak($deelzaak, $deelConnectionName, (string) $newZaakUrl, $deelMapping);
     }
 
     /**
