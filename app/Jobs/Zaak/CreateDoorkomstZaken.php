@@ -167,6 +167,7 @@ class CreateDoorkomstZaken implements ShouldQueue
                 attempted: $passing->count(),
                 previous: $firstFailure,
                 retriedAutomatically: ! $anyIncomplete,
+                publicId: $this->zaak->public_id,
             );
 
             // A retry never repairs an incomplete deelzaak: it skips it and, once

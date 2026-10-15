@@ -37,19 +37,26 @@ class DoorkomstZakenIncompleteException extends RuntimeException
     /**
      * @param  list<string>  $failedMunicipalities
      * @param  bool  $retriedAutomatically  false when the job is marked as failed without a retry
+     * @param  string|null  $publicId  the public zaaknummer of the hoofdzaak, which zaak:create-doorkomst-zaken asks for
      */
-    public static function forHoofdzaak(int|string $zaakId, array $failedMunicipalities, int $attempted, ?Throwable $previous = null, bool $retriedAutomatically = true): self
+    public static function forHoofdzaak(int|string $zaakId, array $failedMunicipalities, int $attempted, ?Throwable $previous = null, bool $retriedAutomatically = true, ?string $publicId = null): self
     {
+        $publicId = $publicId !== null && $publicId !== '' ? $publicId : null;
+
         return new self(
             sprintf(
-                'Doorkomst deelzaken could not be created or completed for %d of the %d municipalities the route of zaak %s passes (%s); %s',
+                'Doorkomst deelzaken could not be created or completed for %d of the %d municipalities the route of zaak %s%s passes (%s); %s',
                 count($failedMunicipalities),
                 $attempted,
                 (string) $zaakId,
+                $publicId === null ? '' : " (public id {$publicId})",
                 implode(', ', $failedMunicipalities),
                 $retriedAutomatically
                     ? 'a retry only creates the ones that are still missing.'
-                    : 'at least one deelzaak was created but is incomplete, so the job is not retried automatically. A retry does not repair an incomplete deelzaak; a deelzaak that is still missing is created by retrying this failed job or by running zaak:create-doorkomst-zaken for the zaak.',
+                    : sprintf(
+                        'at least one deelzaak was created but is incomplete, so the job is not retried automatically. A retry does not repair an incomplete deelzaak; a deelzaak that is still missing is created by retrying this failed job or by running %s.',
+                        $publicId === null ? 'zaak:create-doorkomst-zaken for the zaak' : "zaak:create-doorkomst-zaken {$publicId}",
+                    ),
             ),
             $zaakId,
             $failedMunicipalities,

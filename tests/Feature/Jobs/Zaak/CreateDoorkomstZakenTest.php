@@ -1363,11 +1363,13 @@ test('marks the job as failed without a retry when one municipality is missing i
 
     $job = runDoorkomstJob($hoofdzaak);
 
-    $job->assertFailedWith(function (DoorkomstZakenIncompleteException $e) {
-        return count($e->failedMunicipalities) === 2
-            && str_contains($e->getMessage(), 'not retried automatically')
-            && str_contains($e->getMessage(), 'zaak:create-doorkomst-zaken');
-    });
+    // assertFailedWith() only checks the class, so the exception itself is
+    // read from the fake queue job.
+    $job->assertFailedWith(DoorkomstZakenIncompleteException::class);
+    $failure = $job->job->failedWith;
+    expect($failure->failedMunicipalities)->toHaveCount(2)
+        ->and($failure->getMessage())->toContain('not retried automatically')
+        ->and($failure->getMessage())->toContain("zaak:create-doorkomst-zaken {$hoofdzaak->public_id}");
     expect(localDeelzaakZaaktypen($hoofdzaak))->toBe([doorkomstZaaktypeUrl('dk-m2')]);
 });
 
@@ -2375,6 +2377,8 @@ test('names the municipalities without a deelzaak in the job failure', function 
     } catch (DoorkomstZakenIncompleteException $e) {
         expect($e->failedMunicipalities)->toBe([$failingBrk])
             ->and($e->zaakId)->toBe($hoofdzaak->id)
+            // The public zaaknummer is what zaak:create-doorkomst-zaken asks for.
+            ->and($e->getMessage())->toContain("(public id {$hoofdzaak->public_id})")
             ->and($e->getPrevious())->toBeInstanceOf(ApiRequestException::class);
     }
 });
