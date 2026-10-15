@@ -10,10 +10,13 @@ use App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\Pages
 use App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\RelationManagers\MunicipalitiesRelationManager;
 use App\Filament\Municipality\Clusters\Settings\Resources\AdvisoryResource\RelationManagers\UsersRelationManager;
 use App\Models\Advisory;
+use App\Models\AdvisoryInvite;
 use App\Models\Municipality;
 use App\Models\User;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 use function Pest\Livewire\livewire;
 
@@ -279,4 +282,34 @@ test('advisory resource has correct model and cluster', function () {
         ->toBe(Advisory::class)
         ->and(AdvisoryResource::getCluster())
         ->toBe(Settings::class);
+});
+
+test('admin cannot invite an advisor again in different casing from the municipality panel', function () {
+    // Arrange - only admins pass AdvisorUserPolicy::viewAny for this relation manager
+    Mail::fake();
+
+    $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+
+    $advisory = Advisory::factory()->create();
+    $advisory->municipalities()->syncWithoutDetaching([$this->municipality->id]);
+
+    AdvisoryInvite::create([
+        'advisory_id' => $advisory->id,
+        'email' => 'jan.fransen@gemeente.nl',
+        'role' => AdvisoryRole::Member,
+        'token' => Str::uuid(),
+    ]);
+
+    // Act & Assert - the check matches the stored lowercase address instead of
+    // letting the insert collide on the unique constraint
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $advisory,
+        'pageClass' => EditAdvisory::class,
+    ])
+        ->callTableAction('invite', null, [
+            'email' => 'Jan.Fransen@Gemeente.nl',
+        ])
+        ->assertHasTableActionErrors(['email']);
+
+    expect(AdvisoryInvite::count())->toBe(1);
 });

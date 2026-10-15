@@ -34,7 +34,7 @@ class AdvisorUserInviteAction
                         fn () => function (string $attribute, $value, Closure $fail) use ($advisory) {
                             $advisory = $advisory ?? static::getAdvisory();
 
-                            if (AdvisoryInvite::where('advisory_id', $advisory->id)->where('email', $value)->exists()) {
+                            if (AdvisoryInvite::where('advisory_id', $advisory->id)->whereEmail($value)->exists()) {
                                 $fail(__('admin/resources/advisory.actions.invite.form.email.validation.already_invited'));
                             }
                         },

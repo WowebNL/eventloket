@@ -35,7 +35,7 @@ final class MapFormStateToReferenceData
             naam_locatie_eveneme: $this->naamLocatie($state),
             naam_evenement: $this->stringOrNull($state->get('watIsDeNaamVanHetEvenementVergunning')),
             organisator: $this->organisator($state),
-            aanwezigen: $this->stringOrNull($state->get('watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX')),
+            aanwezigen: $this->stringOrNull(ZaakeigenschappenMap::aanwezigen($state)),
             types_evenement: $this->stringOrNull($state->get('soortEvenement')),
             risico_toelichting: $this->stringOrNull($state->get('risicoToelichting')),
             start_opbouw: $this->iso8601OrNull($state->get('OpbouwStart')),

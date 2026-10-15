@@ -134,6 +134,37 @@ test('No notification is sent for a concept document', function () {
     Notification::assertNothingSent();
 });
 
+test('No notification is sent for a definitief document whose content has expired', function () {
+    $zaakUrl = ZgwHttpFake::fakeSingleZaak();
+    $documentUrl = ZgwHttpFake::fakeSingleDocument('1', ['status' => 'definitief', 'inhoudIsVervallen' => true]);
+    ZgwHttpFake::fakeZaakinformatieobjecten();
+
+    $organisation = Organisation::factory(['type' => OrganisationType::Business])->create();
+    $users = User::factory(['role' => Role::Organiser])->createMany(2);
+    $organisation->users()->attach($users, ['role' => OrganisationRole::Admin]);
+
+    $zaaktype = Zaaktype::factory()->for(Municipality::factory())->create();
+    Zaak::factory()->create([
+        'zgw_zaak_url' => $zaakUrl,
+        'organisation_id' => $organisation->id,
+        'zaaktype_id' => $zaaktype->id,
+    ]);
+
+    dispatch(new DocumentNotificationReceived(
+        new OpenNotification(
+            actie: 'create',
+            kanaal: 'documenten',
+            resource: 'enkelvoudiginformatieobject',
+            hoofdObject: $documentUrl,
+            resourceUrl: $documentUrl,
+            aanmaakdatum: now(),
+        ),
+        true
+    ));
+
+    Notification::assertNothingSent();
+});
+
 test('A notification IS sent for a definitief document', function () {
     $zaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentUrl = ZgwHttpFake::fakeSingleDocument('1', ['status' => 'definitief']);

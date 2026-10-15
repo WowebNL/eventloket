@@ -33,7 +33,7 @@ class ReviewerUserInviteAction
                     ->required()
                     ->rules([
                         fn () => function (string $attribute, $value, Closure $fail) {
-                            if (MunicipalityInvite::where('email', $value)->exists()) {
+                            if (MunicipalityInvite::whereEmail($value)->exists()) {
                                 $fail(__('admin/resources/user.actions.invite.form.email.validation.already_invited'));
                             }
                         },
