@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Actions;
 
+use App\Exceptions\DocumentVersionRejectedException;
 use App\Models\Zaak;
 use App\Support\Documents\DocumentVersionAuthorizer;
 use App\Support\Uploads\DocumentUploadType;
@@ -10,10 +11,12 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Throwable;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 use Woweb\Zgw\Facades\Zgw;
 
 class NewDocumentVersionAction
@@ -29,8 +32,13 @@ class NewDocumentVersionAction
             ->authorize(fn (): bool => auth()->user()->can('uploadDocument', $zaak))
             ->visible(fn (array $record): bool => DocumentVersionAuthorizer::canAddVersion(auth()->user(), $zaak, $record['uuid']))
             ->action(function (array $record, array $data, Action $action) use ($zaak): void {
+                try {
+                    self::createNewDocumentVersion($record['uuid'], $data, $zaak);
+                } catch (ApiRequestException|ConnectionException $e) {
+                    self::handleRejectedVersion($e, $record['uuid'], $zaak);
 
-                self::createNewDocumentVersion($record['uuid'], $data, $zaak);
+                    return;
+                }
 
                 Notification::make()
                     ->title('Nieuwe versie is toegevoegd')
@@ -61,45 +69,75 @@ class NewDocumentVersionAction
         ];
     }
 
+    /**
+     * Report a new version the Documenten API did not accept and tell the user
+     * why, instead of letting the exception surface as a generic error.
+     *
+     * A 403 is a refused authorisation for this client (for example a missing
+     * lock or update scope on the document's type), which only an administrator
+     * of the ZGW connection can resolve, so the message says so. Anything else
+     * gets a general message.
+     */
+    public static function handleRejectedVersion(ApiRequestException|ConnectionException $e, string $documentUuid, Zaak $zaak): void
+    {
+        $rejection = DocumentVersionRejectedException::fromFailure($e, $zaak->zgwConnectionName(), $documentUuid);
+
+        report($rejection);
+
+        Notification::make()
+            ->title(__('Nieuwe versie niet opgeslagen'))
+            ->body($rejection->isForbidden()
+                ? __('Het zaaksysteem geeft geen toestemming om een nieuwe versie van dit document te maken. Vraag de beheerder om de koppeling met het zaaksysteem te laten nakijken.')
+                : __('Het zaaksysteem kon de nieuwe versie nu niet opslaan. Probeer het later opnieuw. Blijft dit gebeuren, neem dan contact op met de beheerder.'))
+            ->danger()
+            ->persistent()
+            ->send();
+    }
+
     public static function createNewDocumentVersion(string $documentUuid, array $data, Zaak $zaak)
     {
-        $connection = Zgw::connection($zaak->zgwConnectionName());
-        $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
-        $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
-        $lockString = $connection->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
-
-        // Always release the lock, even when the patch fails. Without this a
-        // failed patch left the document locked, and every subsequent "Nieuwe
-        // versie" attempt then failed on the lock with a 400 "document is al
-        // gelocked" — surfacing as an error for every user on that document.
+        // The stored upload only exists to be sent to the Documenten API, so it
+        // is removed whether or not the API accepted the new version. A refused
+        // lock or patch otherwise left the file behind on local storage.
         try {
-            $connection->documenten()->enkelvoudiginformatieobjecten()->patch($documentUuid,
-                [
-                    'inhoud' => base64_encode(Storage::get($data['file'])),
-                    'titel' => $data['titel'],
-                    'auteur' => auth()->user()->name,
-                    'bestandsnaam' => $bestandsnaam,
-                    'bestandsomvang' => Storage::size($data['file']),
-                    'formaat' => $formaat,
-                    'lock' => $lockString,
-                    'indicatieGebruiksrecht' => false,
-                    'status' => Informatieobject::STATUS_DEFINITIEF,
-                ]
-            );
-        } finally {
-            try {
-                $connection->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);
-            } catch (Throwable $unlockError) {
-                // Never let a failing unlock mask the original patch error.
-                Log::warning('Releasing the document lock after a new-version patch did not succeed', [
-                    'zaak_id' => $zaak->id,
-                    'document_uuid' => $documentUuid,
-                    'error' => $unlockError->getMessage(),
-                ]);
-            }
-        }
+            $connection = Zgw::connection($zaak->zgwConnectionName());
+            $formaat = DocumentUploadType::determineFormaat($data['file'], $data['file_name'] ?? null);
+            $bestandsnaam = DocumentUploadType::ensureFileNameHasExtension($data['file_name'] ?? '', $formaat);
+            $lockString = $connection->documenten()->enkelvoudiginformatieobjecten()->lock($documentUuid);
 
-        Storage::delete($data['file']);
+            // Always release the lock, even when the patch fails. Without this a
+            // failed patch left the document locked, and every subsequent "Nieuwe
+            // versie" attempt then failed on the lock with a 400 "document is al
+            // gelocked" — surfacing as an error for every user on that document.
+            try {
+                $connection->documenten()->enkelvoudiginformatieobjecten()->patch($documentUuid,
+                    [
+                        'inhoud' => base64_encode(Storage::get($data['file'])),
+                        'titel' => $data['titel'],
+                        'auteur' => auth()->user()->name,
+                        'bestandsnaam' => $bestandsnaam,
+                        'bestandsomvang' => Storage::size($data['file']),
+                        'formaat' => $formaat,
+                        'lock' => $lockString,
+                        'indicatieGebruiksrecht' => false,
+                        'status' => Informatieobject::STATUS_DEFINITIEF,
+                    ]
+                );
+            } finally {
+                try {
+                    $connection->documenten()->enkelvoudiginformatieobjecten()->unlock($documentUuid, $lockString);
+                } catch (Throwable $unlockError) {
+                    // Never let a failing unlock mask the original patch error.
+                    Log::warning('Releasing the document lock after a new-version patch did not succeed', [
+                        'zaak_id' => $zaak->id,
+                        'document_uuid' => $documentUuid,
+                        'error' => $unlockError->getMessage(),
+                    ]);
+                }
+            }
+        } finally {
+            Storage::delete($data['file']);
+        }
 
         Cache::forget("zaak.{$zaak->id}.documenten");
 

@@ -30,10 +30,12 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
+use Woweb\Zgw\Exceptions\ApiRequestException;
 
 /**
  * @property Schema|mixed $form
@@ -218,7 +220,15 @@ class MessageForm extends Component implements HasActions, HasSchemas
                         403,
                     );
 
-                    NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
+                    try {
+                        NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
+                    } catch (ApiRequestException|ConnectionException $e) {
+                        // Nothing is attached to the message when the version
+                        // was not stored.
+                        NewDocumentVersionAction::handleRejectedVersion($e, $data['existing_document'], $this->thread->zaak);
+
+                        return;
+                    }
 
                     $this->thread->zaak->refresh(); // Need to refresh to re-initialize documenten
                     $document = $this->thread->zaak->documenten->firstWhere('uuid', $data['existing_document']);
