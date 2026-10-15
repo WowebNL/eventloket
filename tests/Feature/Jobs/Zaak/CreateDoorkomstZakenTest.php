@@ -1252,6 +1252,30 @@ test('still sets the initial status when registering the initiator fails', funct
     Exceptions::assertReported(fn (DoorkomstDeelzaakIncompleteException $e) => $e->failedSteps === ['initiator']);
 });
 
+test('keeps an incomplete deelzaak visible when its read-back fails as well', function () {
+    // A step fails and so does the read-back. Passing the read-back failure on
+    // for an automatic retry would let the retry complete the registration,
+    // succeed and hide the incomplete deelzaak; the job is marked as failed.
+    Exceptions::fake();
+    $readBackFails = true;
+    $created = 0;
+    fakeDoorkomstWithInterruptions($readBackFails, eigenschappenCatalogusFails: true, created: $created);
+
+    $scenario = doorkomstScenario(hoofdOwnInstance: true);
+    withPassingDoorkomstZaaktype($scenario['passing']);
+
+    runDoorkomstJob($scenario['hoofdzaak'])->assertFailed();
+    Exceptions::assertReported(fn (DoorkomstDeelzaakIncompleteException $e) => $e->failedSteps === ['eigenschappen', 'registratie']);
+
+    // A manual retry of the failed job completes the registration and creates
+    // nothing new.
+    $readBackFails = false;
+    runDoorkomstJob($scenario['hoofdzaak'])->assertNotFailed();
+
+    expect($created)->toBe(1)
+        ->and(Zaak::where('hoofdzaak_id', $scenario['hoofdzaak']->id)->sole()->public_id)->toBe('DEEL-1');
+});
+
 test('marks the job as failed without a retry when its only failure is an incomplete deelzaak', function () {
     // A retry would skip the registered deelzaak and succeed, which removes the
     // failed job again. Marking the job as failed keeps it visible.

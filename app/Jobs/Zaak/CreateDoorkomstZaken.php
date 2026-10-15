@@ -514,7 +514,31 @@ class CreateDoorkomstZaken implements ShouldQueue
             'status' => $this->runDeelzaakStep('status', $context, fn () => $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype)),
         ]);
 
-        $this->completeDeelzaak($deelzaak, $deelConnectionName, (string) $newZaakUrl, $deelMapping);
+        try {
+            $this->completeDeelzaak($deelzaak, $deelConnectionName, (string) $newZaakUrl, $deelMapping);
+        } catch (Throwable $e) {
+            // Without failed steps an unfinished registration is only missing
+            // its read-back, which a retry completes, so the failure is passed
+            // on for the queue's retry. With failed steps the deelzaak is
+            // incomplete as well, and that must not be hidden behind a retry
+            // that would succeed: the registration counts as one more failed
+            // step instead. A manual retry of the failed job still completes
+            // the registration.
+            if ($failures === []) {
+                throw $e;
+            }
+
+            Log::error('CreateDoorkomstZaken: completing the registration of an incomplete deelzaak failed.', [
+                'zaak_id' => $this->zaak->id,
+                ...$context,
+                'step' => 'registratie',
+                'exception' => $e::class,
+                'response' => $this->responseSummary($e),
+            ]);
+            report($e);
+
+            $failures['registratie'] = $e;
+        }
 
         // The deelzaak is registered, so a retry skips it and cannot repair a
         // failed step. The municipality still counts as failed, so the job ends
