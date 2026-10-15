@@ -5,6 +5,7 @@ namespace App\Livewire\Thread;
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Enums\ThreadType;
+use App\Exceptions\DocumentVersionRejectedException;
 use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
 use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
@@ -218,7 +219,15 @@ class MessageForm extends Component implements HasActions, HasSchemas
                         403,
                     );
 
-                    NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
+                    try {
+                        NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
+                    } catch (DocumentVersionRejectedException $e) {
+                        // Nothing is attached to the message when the version
+                        // was not stored.
+                        NewDocumentVersionAction::handleRejectedVersion($e);
+
+                        return;
+                    }
 
                     $this->thread->zaak->refresh(); // Need to refresh to re-initialize documenten
                     $document = $this->thread->zaak->documenten->firstWhere('uuid', $data['existing_document']);
