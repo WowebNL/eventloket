@@ -1384,7 +1384,7 @@ test('throws for an automatic retry when deelzaken are only missing', function (
     $job = (new CreateDoorkomstZaken($hoofdzaak))->withFakeQueueInteractions();
 
     expect(fn () => $job->handle(app(ZaakeigenschappenMap::class)))
-        ->toThrow(fn (DoorkomstZakenIncompleteException $e) => str_contains($e->getMessage(), 'a retry only creates the ones that are still missing'));
+        ->toThrow(DoorkomstZakenIncompleteException::class, 'a retry only creates the ones that are still missing');
     $job->assertNotFailed();
 });
 
