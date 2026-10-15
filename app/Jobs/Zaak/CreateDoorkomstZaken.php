@@ -10,6 +10,7 @@ use App\EventForm\State\FormState;
 use App\EventForm\Submit\EventLocationGeometryBuilder;
 use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
+use App\Exceptions\DoorkomstDeelzaakIncompleteException;
 use App\Exceptions\DoorkomstZaakeigenschapRejectedException;
 use App\Exceptions\DoorkomstZakenIncompleteException;
 use App\Exceptions\ZaaktypeConnectionMismatchException;
@@ -41,6 +42,7 @@ use Throwable;
 use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Data\Generated\Catalogi\EigenschapData;
 use Woweb\Zgw\Exceptions\ApiRequestException;
+use Woweb\Zgw\Exceptions\ValidationException;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
@@ -486,28 +488,39 @@ class CreateDoorkomstZaken implements ShouldQueue
             'connection' => $deelConnectionName,
             'zaak_url' => $newZaakUrl,
         ];
-        $this->runDeelzaakStep('eigenschappen', $context, fn () => $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping));
-        $this->runDeelzaakStep('initiator', $context, fn () => $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator));
-        $this->runDeelzaakStep('documenten', $context, fn () => $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype));
-        $this->runDeelzaakStep('status', $context, fn () => $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype));
+        $failures = array_filter([
+            'eigenschappen' => $this->runDeelzaakStep('eigenschappen', $context, fn () => $this->copyZaakeigenschappen($deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype, $deelMapping)),
+            'initiator' => $this->runDeelzaakStep('initiator', $context, fn () => $this->createInitiator($deelConnectionName, $deelConnection, $newZaakUrl, $doorkomstZaaktype, $state, $initiator)),
+            'documenten' => $this->runDeelzaakStep('documenten', $context, fn () => $this->copyDocumenten($hoofdConnectionName, $deelConnectionName, $deelConnection, $hoofdZaak, $newZaakUrl, $doorkomstZaaktype)),
+            'status' => $this->runDeelzaakStep('status', $context, fn () => $this->createInitieleStatus($deelConnection, $newZaakUrl, $doorkomstZaaktype)),
+        ]);
 
         $this->completeDeelzaak($deelzaak, $deelConnectionName, (string) $newZaakUrl, $deelMapping);
+
+        // The deelzaak is registered, so a retry skips it and cannot repair a
+        // failed step. The municipality still counts as failed, so the job ends
+        // as failed and the incomplete deelzaak stays visible.
+        if ($failures !== []) {
+            throw DoorkomstDeelzaakIncompleteException::forSteps((string) $newZaakUrl, array_keys($failures), array_values($failures)[0]);
+        }
     }
 
     /**
      * Run one step on a deelzaak that has already been created and registered.
      *
-     * A retry skips a registered deelzaak and cannot repair the step, so
-     * failing the job for it would only invite a retry that does nothing. A
-     * failure is logged with the name of the step and reported instead.
+     * A failure is logged with the name of the step and reported, and returned
+     * so the caller can mark the deelzaak as incomplete once every other step
+     * has had its turn.
      *
      * @param  array<string, mixed>  $context  municipality, connection and zaak_url of the deelzaak
      * @param  Closure(): void  $step
      */
-    private function runDeelzaakStep(string $name, array $context, Closure $step): void
+    private function runDeelzaakStep(string $name, array $context, Closure $step): ?Throwable
     {
         try {
             $step();
+
+            return null;
         } catch (Throwable $e) {
             Log::error('CreateDoorkomstZaken: a step on the created deelzaak failed; continuing with the next step.', [
                 'zaak_id' => $this->zaak->id,
@@ -517,6 +530,8 @@ class CreateDoorkomstZaken implements ShouldQueue
                 'response' => $this->responseSummary($e),
             ]);
             report($e);
+
+            return $e;
         }
     }
 
@@ -761,10 +776,12 @@ class CreateDoorkomstZaken implements ShouldQueue
                         $cat->specificatie?->formaat?->value,
                     ),
                 ]);
-            } catch (Throwable $e) {
-                // One eigenschap the receiving zaaksysteem refuses must not cost
-                // the deelzaak its other eigenschappen, its initiator, documents
-                // and status. It is reported instead, without the value.
+            } catch (ValidationException $e) {
+                // One eigenschap the receiving zaaksysteem refuses as invalid
+                // must not cost the deelzaak its other eigenschappen, and does
+                // not make the deelzaak incomplete: it is reported instead,
+                // without the value. Any other failure (authorisation,
+                // transport, a server error) fails the eigenschappen step.
                 $this->reportRejectedEigenschap((string) $cat->naam, $newZaakUrl, $e);
             }
         }
