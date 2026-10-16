@@ -16,6 +16,9 @@
                         @case('success')
                             <x-filament::icon icon="heroicon-o-check-circle" class="h-6 w-6 text-success-500" />
                             @break
+                        @case('warning')
+                            <x-filament::icon icon="heroicon-o-exclamation-triangle" class="h-6 w-6 text-warning-500" />
+                            @break
                         @case('fail')
                             <x-filament::icon icon="heroicon-o-x-circle" class="h-6 w-6 text-danger-500" />
                             @break

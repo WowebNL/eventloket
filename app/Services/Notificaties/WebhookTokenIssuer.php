@@ -64,7 +64,7 @@ class WebhookTokenIssuer
 
         return new IssuedWebhookToken(
             token: $jwt,
-            tokenId: $this->parseTokenId($jwt),
+            tokenId: self::tokenIdOf($jwt),
             clientId: (string) $client->getKey(),
             expiresAt: is_numeric($expiresIn) ? CarbonImmutable::now()->addSeconds((int) $expiresIn) : null,
         );
@@ -99,9 +99,10 @@ class WebhookTokenIssuer
     }
 
     /**
-     * Extract the token id (jti claim) from a Passport access token JWT.
+     * Extract the token id (jti claim) from a Passport access token JWT. Only
+     * reads the claim; it does not validate the token.
      */
-    private function parseTokenId(string $jwt): ?string
+    public static function tokenIdOf(string $jwt): ?string
     {
         $parts = explode('.', $jwt);
 

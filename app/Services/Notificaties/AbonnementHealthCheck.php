@@ -10,9 +10,11 @@ use Woweb\Zgw\Exceptions\InvalidConfigurationException;
 
 /**
  * Verifies that a connection's Open Notificaties abonnement is correctly
- * registered: a notificaties URL is configured, a local row exists, the remote
- * abonnement is still present, it subscribes to every expected channel and the
- * webhook token has not (nearly) lapsed.
+ * registered: a notificaties URL is configured, no other connection holds the
+ * abonnement on that Notificaties API, a local row exists that shares its
+ * abonnement with no other connection, the remote abonnement is still present
+ * and carries this connection's own webhook token, it subscribes to every
+ * expected channel and the webhook token has not (nearly) lapsed.
  */
 class AbonnementHealthCheck
 {
@@ -29,9 +31,18 @@ class AbonnementHealthCheck
         $api = new NotificatiesApi($connectionName);
 
         try {
-            $api->baseUrl();
+            $baseUrl = $api->baseUrl();
         } catch (InvalidConfigurationException) {
             return new AbonnementCheckResult(AbonnementCheckStatus::NoNotificatiesUrl);
+        }
+
+        $shared = $this->registrar->sharedInstance($connectionName, $baseUrl);
+
+        if ($shared !== null) {
+            return new AbonnementCheckResult(
+                $shared->inherited ? AbonnementCheckStatus::NotificatiesUrlInherited : AbonnementCheckStatus::NotificatiesInstanceInUse,
+                otherConnection: $shared->owner,
+            );
         }
 
         $local = ZgwAbonnement::query()->where('connection', $connectionName)->first();
@@ -40,10 +51,20 @@ class AbonnementHealthCheck
             return new AbonnementCheckResult(AbonnementCheckStatus::NoLocalRecord);
         }
 
+        $sharer = $this->connectionSharingAbonnement($local);
+
+        if ($sharer !== null) {
+            return new AbonnementCheckResult(AbonnementCheckStatus::SharedAbonnement, otherConnection: $sharer);
+        }
+
         $remote = $this->resolveRemote($api, $local);
 
         if ($remote === null) {
             return new AbonnementCheckResult(AbonnementCheckStatus::RemoteMissing);
+        }
+
+        if ($this->presentsForeignToken($remote, $local)) {
+            return new AbonnementCheckResult(AbonnementCheckStatus::AuthMismatch);
         }
 
         $missingKanalen = $this->missingKanalen($remote);
@@ -85,10 +106,52 @@ class AbonnementHealthCheck
         }
 
         try {
-            return $this->registrar->findRemote($api, $local->callback_url);
+            return $this->registrar->findRemote($api, $local->callback_url, $local->connection);
         } catch (Throwable) {
             return null;
         }
+    }
+
+    /**
+     * Another connection whose row stores the same abonnement URL. Both then
+     * rotate the token on one abonnement, so it is attributed to whichever renewed
+     * last.
+     */
+    private function connectionSharingAbonnement(ZgwAbonnement $local): ?string
+    {
+        if (! is_string($local->abonnement_url) || $local->abonnement_url === '') {
+            return null;
+        }
+
+        $other = ZgwAbonnement::query()
+            ->where('connection', '!=', $local->connection)
+            ->where('abonnement_url', $local->abonnement_url)
+            ->orderBy('id')
+            ->value('connection');
+
+        return is_string($other) ? $other : null;
+    }
+
+    /**
+     * Whether the remote abonnement carries a webhook token other than the one
+     * this connection issued. Only decidable when the Notificaties API returns the
+     * auth value and it holds a token id; Open Notificaties treats the field as
+     * write-only, in which case this check cannot fire and the shared-abonnement
+     * check above is what catches a takeover.
+     *
+     * @param  array<string, mixed>  $remote
+     */
+    private function presentsForeignToken(array $remote, ZgwAbonnement $local): bool
+    {
+        $auth = $remote['auth'] ?? null;
+
+        if (! is_string($auth) || $local->token_id === null || $local->token_id === '') {
+            return false;
+        }
+
+        $tokenId = WebhookTokenIssuer::tokenIdOf((string) preg_replace('/^Bearer\s+/i', '', trim($auth)));
+
+        return $tokenId !== null && $tokenId !== $local->token_id;
     }
 
     /**

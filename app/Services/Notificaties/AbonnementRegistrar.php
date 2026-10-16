@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Notificaties;
 
 use App\Models\Municipality;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\ZgwAbonnement;
 use App\Services\Zgw\ZgwConnectionResolver;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\URL;
 use Throwable;
 use Woweb\Zgw\Exceptions\InvalidConfigurationException;
@@ -81,18 +83,62 @@ class AbonnementRegistrar
     }
 
     /**
-     * The remote abonnement registered on this connection's Notificaties API for
-     * our callback URL, or null when none is registered yet.
+     * The remote abonnement that belongs to this connection, or null when it has
+     * none yet.
+     *
+     * The connection's own stored abonnement URL is authoritative. Only when there
+     * is none (or the Notificaties API no longer knows it) does this fall back to
+     * matching on the callback URL, and then it skips every abonnement another
+     * connection has stored: the callback URL is the same for all connections, so
+     * a match on it alone could hand this connection someone else's abonnement.
      *
      * @return array<string, mixed>|null
      */
-    public function findRemote(NotificatiesApi $api, string $callbackUrl): ?array
+    public function findRemote(NotificatiesApi $api, string $callbackUrl, string $connectionName): ?array
     {
-        /** @var array<string, mixed>|null $match */
-        $match = collect($api->abonnementen())
-            ->first(fn (array $abonnement): bool => ($abonnement['callbackUrl'] ?? null) === $callbackUrl);
+        return $this->locateRemote($api, $callbackUrl, $connectionName)['own'];
+    }
 
-        return $match;
+    /**
+     * Whether this connection may not hold an abonnement on the given
+     * Notificaties API because another connection already does. Null when it may.
+     *
+     * The main connection always keeps the abonnement on its own instance. Any
+     * other connection is refused when its notificaties URL is inherited from
+     * main, points at main's instance, or points at an instance on which an
+     * earlier registered connection holds the abonnement.
+     */
+    public function sharedInstance(string $connectionName, string $baseUrl): ?SharedNotificatiesInstance
+    {
+        if ($connectionName === ZgwConnectionResolver::DEFAULT_CONNECTION) {
+            return null;
+        }
+
+        if ($this->inheritsNotificatiesUrl($connectionName)) {
+            return new SharedNotificatiesInstance(ZgwConnectionResolver::DEFAULT_CONNECTION, inherited: true);
+        }
+
+        $instance = self::normaliseUrl($baseUrl);
+        $mainUrl = config('zgw.connections.'.ZgwConnectionResolver::DEFAULT_CONNECTION.'.urls.notificaties');
+
+        if (is_string($mainUrl) && $mainUrl !== '' && self::normaliseUrl($mainUrl) === $instance) {
+            return new SharedNotificatiesInstance(ZgwConnectionResolver::DEFAULT_CONNECTION, inherited: false);
+        }
+
+        // The earliest registration on an instance owns it, so two connections
+        // that were both registered there before this check existed do not end
+        // up refusing each other.
+        $ownId = ZgwAbonnement::query()->where('connection', $connectionName)->value('id');
+
+        $owner = ZgwAbonnement::query()
+            ->where('connection', '!=', $connectionName)
+            ->whereNotNull('abonnement_url')
+            ->when($ownId !== null, fn ($query) => $query->where('id', '<', $ownId))
+            ->orderBy('id')
+            ->get(['connection', 'notificaties_base_url'])
+            ->first(fn (ZgwAbonnement $row): bool => self::normaliseUrl($row->notificaties_base_url) === $instance);
+
+        return $owner === null ? null : new SharedNotificatiesInstance($owner->connection, inherited: false);
     }
 
     /**
@@ -109,6 +155,10 @@ class AbonnementRegistrar
             return AbonnementRegistrationOutcome::SkippedNoNotificatiesUrl;
         }
 
+        if ($this->sharedInstance($connectionName, $baseUrl) !== null) {
+            return AbonnementRegistrationOutcome::RefusedSharedInstance;
+        }
+
         $callbackUrl = $this->callbackUrl();
 
         if ($dryRun) {
@@ -116,7 +166,15 @@ class AbonnementRegistrar
         }
 
         $previous = ZgwAbonnement::where('connection', $connectionName)->first();
-        $existing = $this->findRemote($api, $callbackUrl);
+        ['own' => $existing, 'claimed' => $claimed] = $this->locateRemote($api, $callbackUrl, $connectionName);
+
+        // Our callback is already subscribed on this instance by another
+        // connection, under a URL spelled differently from this one's. A second
+        // abonnement would deliver every notification twice, and patching that one
+        // would take it over, so refuse instead.
+        if ($existing === null && $claimed) {
+            return AbonnementRegistrationOutcome::RefusedSharedInstance;
+        }
 
         $token = $this->issuer->issue();
 
@@ -160,5 +218,80 @@ class AbonnementRegistrar
         $this->issuer->revoke($previous?->token_id, $previous?->client_id);
 
         return $outcome;
+    }
+
+    /**
+     * Find this connection's remote abonnement, and report whether the instance
+     * carries an abonnement on our callback that another connection has stored.
+     *
+     * @return array{own: array<string, mixed>|null, claimed: bool}
+     */
+    private function locateRemote(NotificatiesApi $api, string $callbackUrl, string $connectionName): array
+    {
+        $stored = ZgwAbonnement::query()->where('connection', $connectionName)->value('abonnement_url');
+
+        if (is_string($stored) && $stored !== '') {
+            try {
+                $remote = $api->show($stored);
+
+                if ($remote !== []) {
+                    return ['own' => array_merge(['url' => $stored], $remote), 'claimed' => false];
+                }
+            } catch (RequestException $e) {
+                // Gone on the remote side: look for it by callback below. Any other
+                // failure is real and must not lead to a second abonnement.
+                if ($e->response->status() !== 404) {
+                    throw $e;
+                }
+            }
+        }
+
+        /** @var list<string> $others */
+        $others = ZgwAbonnement::query()
+            ->where('connection', '!=', $connectionName)
+            ->whereNotNull('abonnement_url')
+            ->pluck('abonnement_url')
+            ->all();
+
+        $onCallback = collect($api->abonnementen())
+            ->filter(fn (mixed $abonnement): bool => is_array($abonnement) && ($abonnement['callbackUrl'] ?? null) === $callbackUrl);
+
+        /** @var array<string, mixed>|null $own */
+        $own = $onCallback->first(fn (array $abonnement): bool => ! in_array($abonnement['url'] ?? null, $others, true));
+
+        return [
+            'own' => $own,
+            'claimed' => $onCallback->contains(fn (array $abonnement): bool => in_array($abonnement['url'] ?? null, $others, true)),
+        ];
+    }
+
+    /**
+     * Whether a per-municipality connection leaves its notificaties URL empty and
+     * so inherits the main connection's.
+     */
+    private function inheritsNotificatiesUrl(string $connectionName): bool
+    {
+        $municipalityId = ZgwAbonnement::municipalityIdFromConnection($connectionName);
+
+        if ($municipalityId === null) {
+            return false;
+        }
+
+        $connection = MunicipalityZgwConnection::query()
+            ->where('municipality_id', $municipalityId)
+            ->first(['notificaties_url']);
+
+        if ($connection === null) {
+            return false;
+        }
+
+        $url = $connection->notificaties_url;
+
+        return ! is_string($url) || trim($url) === '';
+    }
+
+    private static function normaliseUrl(string $url): string
+    {
+        return rtrim(strtolower(trim($url)), '/');
     }
 }

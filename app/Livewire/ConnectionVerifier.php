@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Models\MunicipalityZgwConnection;
+use App\Services\Notificaties\AbonnementCheckResult;
 use App\Services\Notificaties\AbonnementCheckStatus;
 use App\Services\Notificaties\AbonnementHealthCheck;
 use App\Services\Notificaties\AbonnementRegistrar;
 use App\Services\Notificaties\AbonnementRegistrationOutcome;
+use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
@@ -29,7 +31,7 @@ class ConnectionVerifier extends Component
     public int $connectionId;
 
     /**
-     * Per-step state. status: pending | running | success | fail | skipped | action.
+     * Per-step state. status: pending | running | success | warning | fail | skipped | action.
      *
      * @var array<string, array{status: string, message: string}>
      */
@@ -296,8 +298,38 @@ class ConnectionVerifier extends Component
             AbonnementCheckStatus::Healthy => $this->abonnementHealthy($this->trans('abonnement.healthy')),
             AbonnementCheckStatus::TokenExpiringSoon => $this->abonnementHealthy($this->trans('abonnement.expiring_soon')),
             AbonnementCheckStatus::NoNotificatiesUrl => $this->abonnementBlocked(),
+            AbonnementCheckStatus::NotificatiesUrlInherited,
+            AbonnementCheckStatus::NotificatiesInstanceInUse,
+            AbonnementCheckStatus::SharedAbonnement => $this->abonnementShared($result),
             default => $this->abonnementNeedsRegister(),
         };
+    }
+
+    /**
+     * Another connection holds the abonnement on this connection's Notificaties
+     * API, or claims the same abonnement. Registering cannot fix either (it would
+     * take the other connection's abonnement over), so no register button is
+     * offered.
+     *
+     * Sharing an instance is a supported set-up: notifications then arrive through
+     * the other connection's abonnement, so it is reported as a warning and does
+     * not block the verification. Two rows claiming one abonnement is a fault and
+     * fails it. The other connection is only named when it is the main one, so a
+     * municipality never learns about another municipality's connection.
+     */
+    private function abonnementShared(AbonnementCheckResult $result): void
+    {
+        $owner = $result->otherConnection === ZgwConnectionResolver::DEFAULT_CONNECTION
+            ? $this->trans('abonnement.owner.main')
+            : $this->trans('abonnement.owner.other');
+
+        $isFault = $result->status === AbonnementCheckStatus::SharedAbonnement;
+
+        $this->steps['abonnement'] = ['status' => $isFault ? 'fail' : 'warning', 'message' => __(
+            'municipality/resources/zgw_connection.actions.verify.abonnement.'.$result->status->translationKey(),
+            ['owner' => $owner],
+        )];
+        $this->finish(! $isFault);
     }
 
     private function abonnementHealthy(string $message): void

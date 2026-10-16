@@ -13,5 +13,10 @@ enum AbonnementRegistrationOutcome
     case Created;
     case Updated;
     case SkippedNoNotificatiesUrl;
+    /**
+     * Not registered: another connection already holds the abonnement on this
+     * connection's Notificaties API (see {@see SharedNotificatiesInstance}).
+     */
+    case RefusedSharedInstance;
     case DryRun;
 }

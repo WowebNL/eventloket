@@ -216,6 +216,53 @@ it('offers a register button and registers the abonnement', function () {
     expect(ZgwAbonnement::where('connection', $this->name)->exists())->toBeTrue();
 });
 
+it('does not offer to register an abonnement on the notificaties api it inherits from main', function () {
+    // Registering here would put this connection's token on main's abonnement,
+    // after which main's notifications are attributed to this connection.
+    config()->set('zgw.connections.main.urls.notificaties', 'https://nc-main.example.com/api/v1/');
+    $this->connection->updateQuietly(['notificaties_url' => null]);
+
+    Http::fake(array_merge(fakeApiReads(), [
+        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
+            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
+            200,
+        ),
+    ]));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('steps.abonnement.status', 'warning')
+        ->assertSet('needsRegister', false)
+        ->assertSee(__('municipality/resources/zgw_connection.actions.verify.abonnement.notificaties_url_inherited'))
+        ->assertSet('success', true);
+
+    Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'nc-main.example.com'));
+    expect(ZgwAbonnement::where('connection', $this->name)->exists())->toBeFalse();
+});
+
+it('fails the abonnement step when another connection stores the same abonnement', function () {
+    $aboUrl = healthyAbonnement($this->connection->municipality_id, $this->name);
+    ZgwAbonnement::factory()->create(['connection' => 'main', 'abonnement_url' => $aboUrl]);
+
+    Http::fake(array_merge(fakeApiReads(), [
+        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
+            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
+            200,
+        ),
+    ]));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('steps.abonnement.status', 'fail')
+        ->assertSet('needsRegister', false)
+        ->assertSee(__('municipality/resources/zgw_connection.actions.verify.abonnement.shared_abonnement', [
+            'owner' => __('municipality/resources/zgw_connection.actions.verify.abonnement.owner.main'),
+        ]))
+        ->assertSet('success', false);
+
+    expect($this->connection->refresh()->last_verified_at)->toBeNull();
+});
+
 it('forbids verifying a connection of another municipality', function () {
     // A managing user, but of a different municipality than the connection.
     $this->actingAs(managingUser(Municipality::factory()->create()->id));
