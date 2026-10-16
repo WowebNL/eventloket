@@ -7,7 +7,6 @@ use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\AbonnementCheckStatus;
 use App\Services\Notificaties\AbonnementHealthCheck;
 use App\Services\Notificaties\AbonnementRegistrar;
-use App\Services\Notificaties\AbonnementRegistrationOutcome;
 use App\Services\Notificaties\NotificatiesApi;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
@@ -17,6 +16,9 @@ use Illuminate\Support\Facades\Http;
  * Every connection subscribes with the same callback URL, and the webhook token
  * on an abonnement identifies the connection a notification is attributed to.
  * These tests cover connections whose Notificaties API is the same instance.
+ *
+ * Statuses and outcomes are compared by name so that each test fails on its own
+ * assertion, not on a missing case, when run against code without them.
  */
 
 const MAIN_NC = 'https://nc-main.example.com/api/v1/';
@@ -200,7 +202,7 @@ it('keeps main\'s notifications attributed to main when a municipality on the sa
     expect(attributedConnection($instance->authOf($remoteUrl)))->toBe('main')
         ->and(ZgwAbonnement::where('connection', 'main')->value('abonnement_url'))->toBe($remoteUrl)
         ->and(ZgwAbonnement::where('connection', $municipality)->exists())->toBeFalse()
-        ->and($outcome)->toBe(AbonnementRegistrationOutcome::RefusedSharedInstance);
+        ->and($outcome->name)->toBe('RefusedSharedInstance');
 })->with([
     'notificaties url inherited from main' => [null],
     'notificaties url set to main\'s instance' => [MAIN_NC],
@@ -230,9 +232,9 @@ it('leaves the abonnement with the connection that registered first when two mun
     $first = municipalityConnection(OWN_NC);
     $second = municipalityConnection(OWN_NC);
 
-    expect(registrar()->register($first))->toBe(AbonnementRegistrationOutcome::Created)
-        ->and(registrar()->register($second))->toBe(AbonnementRegistrationOutcome::RefusedSharedInstance)
-        ->and(registrar()->register($first))->toBe(AbonnementRegistrationOutcome::Updated);
+    expect(registrar()->register($first)->name)->toBe('Created')
+        ->and(registrar()->register($second)->name)->toBe('RefusedSharedInstance')
+        ->and(registrar()->register($first)->name)->toBe('Updated');
 
     expect($instance->abonnementen)->toHaveCount(1)
         ->and(attributedConnection($instance->authOf(array_key_first($instance->abonnementen))))->toBe($first);
@@ -254,7 +256,7 @@ it('refuses to register when another connection holds our abonnement on the inst
         'client_id' => 'client-alias',
     ]);
 
-    expect(registrar()->register($municipality))->toBe(AbonnementRegistrationOutcome::RefusedSharedInstance);
+    expect(registrar()->register($municipality)->name)->toBe('RefusedSharedInstance');
 
     expect($instance->authOf(OWN_NC.'abonnement/alias'))->toBe('Bearer '.sharedInstanceJwt('tok-alias', 'client-alias'))
         ->and($instance->abonnementen)->toHaveCount(1);
@@ -311,7 +313,7 @@ describe('health check', function () {
 
         $result = app(AbonnementHealthCheck::class)->run('main');
 
-        expect($result->status)->toBe(AbonnementCheckStatus::SharedAbonnement)
+        expect($result->status->name)->toBe('SharedAbonnement')
             ->and($result->status->isDanger())->toBeTrue()
             ->and($result->otherConnection)->toBe($municipality);
     });
@@ -326,7 +328,7 @@ describe('health check', function () {
 
         $result = app(AbonnementHealthCheck::class)->run('main');
 
-        expect($result->status)->toBe(AbonnementCheckStatus::AuthMismatch)
+        expect($result->status->name)->toBe('AuthMismatch')
             ->and($result->status->isDanger())->toBeTrue();
     });
 
@@ -341,17 +343,18 @@ describe('health check', function () {
         expect(app(AbonnementHealthCheck::class)->run('main')->status)->toBe(AbonnementCheckStatus::Healthy);
     });
 
-    it('reports a municipality connection on main\'s instance instead of asking to register it', function (?string $notificatiesUrl, AbonnementCheckStatus $expected) {
+    it('reports a municipality connection on main\'s instance instead of asking to register it', function (?string $notificatiesUrl, string $expected) {
         Http::fake();
         $municipality = municipalityConnection($notificatiesUrl);
 
         $result = app(AbonnementHealthCheck::class)->run($municipality);
 
-        expect($result->status)->toBe($expected)
+        expect($result->status->name)->toBe($expected)
+            ->and($result->status->isDanger())->toBeTrue()
             ->and($result->otherConnection)->toBe('main');
         Http::assertNothingSent();
     })->with([
-        'inherited' => [null, AbonnementCheckStatus::NotificatiesUrlInherited],
-        'explicitly the same' => [MAIN_NC, AbonnementCheckStatus::NotificatiesInstanceInUse],
+        'inherited' => [null, 'NotificatiesUrlInherited'],
+        'explicitly the same' => [MAIN_NC, 'NotificatiesInstanceInUse'],
     ]);
 });
