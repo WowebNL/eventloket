@@ -11,6 +11,8 @@ use App\Services\Notificaties\NotificatiesApi;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Woweb\Zgw\Facades\Zgw;
+use Woweb\Zgw\ZgwManager;
 
 /*
  * Every connection subscribes with the same callback URL, and the webhook token
@@ -23,6 +25,7 @@ use Illuminate\Support\Facades\Http;
 
 const MAIN_NC = 'https://nc-main.example.com/api/v1/';
 const OWN_NC = 'https://nc-own.example.com/api/v1/';
+const NEW_NC = 'https://nc-new.example.com/api/v1/';
 
 /**
  * A minimal, stateful Notificaties API: it keeps the abonnementen it was given,
@@ -299,6 +302,95 @@ describe('findRemote', function () {
         expect(registrar()->findRemote($this->api, $this->callback, $this->municipality)['url'] ?? null)
             ->toBe(OWN_NC.'abonnement/unclaimed');
     });
+});
+
+/**
+ * Point a municipality connection at another notificaties URL, the way an admin
+ * edit does, and drop the cached ZGW connections so the new URL is used.
+ */
+function moveNotificatiesUrl(MunicipalityZgwConnection $model, string $connectionName, string $url): void
+{
+    $model->update(['notificaties_url' => $url]);
+    config()->set("zgw.connections.{$connectionName}", $model->fresh()->buildConfig());
+    app()->forgetInstance(ZgwManager::class);
+    Zgw::clearResolvedInstance(ZgwManager::class);
+}
+
+describe('stored abonnement on another instance', function () {
+    it('registers on the new instance after a municipality moves its notificaties url', function () {
+        $old = new FakeNotificatiesInstance(OWN_NC);
+        $new = new FakeNotificatiesInstance(NEW_NC);
+        fakeNotificatiesInstances($old, $new);
+        $municipality = municipalityConnection(OWN_NC);
+        expect(registrar()->register($municipality)->name)->toBe('Created');
+
+        moveNotificatiesUrl(MunicipalityZgwConnection::query()->firstOrFail(), $municipality, NEW_NC);
+        $sentBefore = count(Http::recorded());
+
+        $outcome = registrar()->register($municipality);
+
+        expect($outcome->name)->toBe('Created')
+            ->and($new->abonnementen)->toHaveCount(1)
+            ->and(attributedConnection($new->authOf(array_key_first($new->abonnementen))))->toBe($municipality)
+            ->and(ZgwAbonnement::where('connection', $municipality)->value('abonnement_url'))->toBe(array_key_first($new->abonnementen));
+
+        // Nothing of this registration went to the previous instance.
+        $toOld = collect(Http::recorded())
+            ->slice($sentBefore)
+            ->filter(fn (array $pair): bool => str_starts_with($pair[0]->url(), OWN_NC));
+        expect($toOld)->toBeEmpty();
+    });
+
+    it('does not take main\'s abonnement over when a municipality that inherited the url fills in its own', function () {
+        $mainInstance = new FakeNotificatiesInstance(MAIN_NC);
+        $ownInstance = new FakeNotificatiesInstance(OWN_NC);
+        fakeNotificatiesInstances($mainInstance, $ownInstance);
+
+        // The state an earlier registration could leave behind: main and the
+        // municipality (which inherited main's notificaties url) both store
+        // main's abonnement, and main's host is reachable for the municipality.
+        registrar()->register('main');
+        $mainAbonnement = (string) ZgwAbonnement::where('connection', 'main')->value('abonnement_url');
+        $model = MunicipalityZgwConnection::factory()->create([
+            'notificaties_url' => null,
+            'allowed_hosts' => ['https://nc-main.example.com'],
+        ]);
+        $municipality = 'gemeente_'.$model->municipality_id;
+        ZgwAbonnement::factory()->create([
+            'connection' => $municipality,
+            'abonnement_url' => $mainAbonnement,
+            'notificaties_base_url' => MAIN_NC,
+        ]);
+
+        moveNotificatiesUrl($model, $municipality, OWN_NC);
+
+        expect(registrar()->register($municipality)->name)->toBe('Created')
+            ->and(attributedConnection($mainInstance->authOf($mainAbonnement)))->toBe('main')
+            ->and($ownInstance->abonnementen)->toHaveCount(1)
+            ->and(attributedConnection($ownInstance->authOf(array_key_first($ownInstance->abonnementen))))->toBe($municipality);
+    });
+});
+
+it('lets main register on its own instance when a municipality row holds the abonnement there', function () {
+    $mainInstance = new FakeNotificatiesInstance(MAIN_NC);
+    fakeNotificatiesInstances($mainInstance);
+    $mainInstance->seed(MAIN_NC.'abonnement/1', registrar()->callbackUrl(), 'Bearer '.sharedInstanceJwt('tok-m', 'client-m'));
+    $municipality = municipalityConnection(null);
+    ZgwAbonnement::factory()->create([
+        'connection' => $municipality,
+        'abonnement_url' => MAIN_NC.'abonnement/1',
+        'notificaties_base_url' => MAIN_NC,
+        'client_id' => 'client-m',
+        'token_id' => 'tok-m',
+    ]);
+
+    expect(registrar()->register('main')->name)->toBe('Updated')
+        ->and($mainInstance->abonnementen)->toHaveCount(1)
+        ->and(attributedConnection($mainInstance->authOf(MAIN_NC.'abonnement/1')))->toBe('main');
+
+    // The municipality row still claims the same abonnement, which the health
+    // check reports instead of offering to register again.
+    expect(app(AbonnementHealthCheck::class)->run('main')->status->name)->toBe('SharedAbonnement');
 });
 
 describe('health check', function () {
