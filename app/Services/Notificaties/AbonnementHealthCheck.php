@@ -57,7 +57,7 @@ class AbonnementHealthCheck
             return new AbonnementCheckResult(AbonnementCheckStatus::SharedAbonnement, otherConnection: $sharer);
         }
 
-        $remote = $this->resolveRemote($api, $local);
+        $remote = $this->resolveRemote($api, $baseUrl, $local);
 
         if ($remote === null) {
             return new AbonnementCheckResult(AbonnementCheckStatus::RemoteMissing);
@@ -89,13 +89,19 @@ class AbonnementHealthCheck
     /**
      * Read the remote abonnement back, preferring a direct GET on the stored url
      * and falling back to a callback-url match in the list. Any read failure (a
-     * 404, an unreachable host) means it is effectively missing.
+     * 404, an unreachable host) means it is effectively missing, and so does a
+     * stored url on another instance than the configured one (the notificaties
+     * URL changed since it was registered).
      *
      * @return array<string, mixed>|null
      */
-    private function resolveRemote(NotificatiesApi $api, ZgwAbonnement $local): ?array
+    private function resolveRemote(NotificatiesApi $api, string $baseUrl, ZgwAbonnement $local): ?array
     {
         if (is_string($local->abonnement_url) && $local->abonnement_url !== '') {
+            if (! AbonnementRegistrar::isOnInstance($local->abonnement_url, $baseUrl)) {
+                return null;
+            }
+
             try {
                 $remote = $api->show($local->abonnement_url);
 

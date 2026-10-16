@@ -230,7 +230,11 @@ class AbonnementRegistrar
     {
         $stored = ZgwAbonnement::query()->where('connection', $connectionName)->value('abonnement_url');
 
-        if (is_string($stored) && $stored !== '') {
+        // A stored abonnement only counts when it lives on the instance this
+        // connection is configured for now. After the notificaties URL changed,
+        // the stored one belongs to the previous instance (possibly another
+        // connection's), so it is neither read nor patched.
+        if (is_string($stored) && $stored !== '' && self::isOnInstance($stored, $api->baseUrl())) {
             try {
                 $remote = $api->show($stored);
 
@@ -288,6 +292,15 @@ class AbonnementRegistrar
         $url = $connection->notificaties_url;
 
         return ! is_string($url) || trim($url) === '';
+    }
+
+    /**
+     * Whether an abonnement URL belongs to the Notificaties API at the given base
+     * URL.
+     */
+    public static function isOnInstance(string $abonnementUrl, string $baseUrl): bool
+    {
+        return str_starts_with(strtolower(trim($abonnementUrl)), self::normaliseUrl($baseUrl).'/');
     }
 
     private static function normaliseUrl(string $url): string
