@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Jobs\Notificaties\RenewZgwAbonnementen;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\AbonnementCheckStatus;
 use App\Services\Notificaties\AbonnementHealthCheck;
 use App\Services\Notificaties\AbonnementRegistrar;
 use App\Services\Notificaties\NotificatiesApi;
+use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -449,4 +451,30 @@ describe('health check', function () {
         'inherited' => [null, 'NotificatiesUrlInherited'],
         'explicitly the same' => [MAIN_NC, 'NotificatiesInstanceInUse'],
     ]);
+});
+
+it('renews a shared abonnement only for the connection that owns it', function () {
+    $instance = new FakeNotificatiesInstance(MAIN_NC);
+    fakeNotificatiesInstances($instance);
+    registrar()->register('main');
+    $abonnement = (string) ZgwAbonnement::where('connection', 'main')->value('abonnement_url');
+
+    // A duplicate row an earlier registration could leave behind: a
+    // municipality that inherited main's notificaties url stores the same
+    // abonnement. Both are inside the renewal window.
+    $municipality = municipalityConnection(null);
+    ZgwAbonnement::factory()->create([
+        'connection' => $municipality,
+        'abonnement_url' => $abonnement,
+        'notificaties_base_url' => MAIN_NC,
+        'expires_at' => now()->addDay(),
+    ]);
+    ZgwAbonnement::where('connection', 'main')->update(['expires_at' => now()->addDay()]);
+    $municipalityTokenBefore = ZgwAbonnement::where('connection', $municipality)->value('token_id');
+
+    (new RenewZgwAbonnementen)->handle(app(WebhookTokenIssuer::class), registrar());
+
+    expect(attributedConnection($instance->authOf($abonnement)))->toBe('main')
+        ->and(ZgwAbonnement::where('connection', $municipality)->value('token_id'))->toBe($municipalityTokenBefore)
+        ->and(ZgwAbonnement::where('connection', 'main')->value('expires_at')->isAfter(now()->addMonth()))->toBeTrue();
 });
