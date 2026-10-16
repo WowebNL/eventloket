@@ -250,12 +250,18 @@ class AbonnementRegistrar
             }
         }
 
+        // The main connection owns the abonnement on its own instance, also when
+        // another connection's row still stores it (a state earlier registrations
+        // could leave behind). It may take that abonnement back; every other
+        // connection must leave abonnementen stored by someone else alone.
         /** @var list<string> $others */
-        $others = ZgwAbonnement::query()
-            ->where('connection', '!=', $connectionName)
-            ->whereNotNull('abonnement_url')
-            ->pluck('abonnement_url')
-            ->all();
+        $others = $connectionName === ZgwConnectionResolver::DEFAULT_CONNECTION
+            ? []
+            : ZgwAbonnement::query()
+                ->where('connection', '!=', $connectionName)
+                ->whereNotNull('abonnement_url')
+                ->pluck('abonnement_url')
+                ->all();
 
         $onCallback = collect($api->abonnementen())
             ->filter(fn (mixed $abonnement): bool => is_array($abonnement) && ($abonnement['callbackUrl'] ?? null) === $callbackUrl);
