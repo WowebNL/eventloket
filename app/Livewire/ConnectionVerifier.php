@@ -129,6 +129,16 @@ class ConnectionVerifier extends Component
             return;
         }
 
+        // Refused because another connection already subscribed on this
+        // instance. The health check cannot always see that (the other
+        // connection may reach the instance under another URL), so show the
+        // shared-instance explanation here instead of offering the button again.
+        if ($outcome === AbonnementRegistrationOutcome::RefusedSharedInstance) {
+            $this->abonnementShared(new AbonnementCheckResult(AbonnementCheckStatus::NotificatiesInstanceInUse));
+
+            return;
+        }
+
         $this->runAbonnementStep();
     }
 
