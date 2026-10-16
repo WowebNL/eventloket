@@ -250,6 +250,29 @@ class ZgwConnectionResolver
     }
 
     /**
+     * The one connection that certainly serves this url, or null when that
+     * cannot be decided.
+     *
+     * Unlike {@see forUrl()}, which answers "main" for anything it cannot place,
+     * this keeps "it is main" and "I do not know" apart. An unknown host has no
+     * candidate and a host shared by several connections has more than one; both
+     * are undecided. Callers that are about to do something irreversible should
+     * use this and refuse on null, rather than read a fallback as permission.
+     */
+    public function soleConnectionForUrl(string $url): ?string
+    {
+        $host = $this->host($url);
+
+        if ($host === null) {
+            return null;
+        }
+
+        $candidates = $this->candidatesForHost($host);
+
+        return count($candidates) === 1 ? $candidates[0] : null;
+    }
+
+    /**
      * Resolve which connection an incoming notification belongs to, without
      * contacting any ZGW instance.
      *

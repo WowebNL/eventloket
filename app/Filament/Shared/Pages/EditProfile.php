@@ -8,6 +8,8 @@ use App\Models\NotificationPreference;
 use App\Notifications\AdviceReminder;
 use App\Notifications\AssignedToAdviceThread;
 use App\Notifications\AssignedToZaak;
+use App\Notifications\DestructionListReadyForReview;
+use App\Notifications\DestructionListReviewed;
 use App\Notifications\NewAdviceThread;
 use App\Notifications\NewAdviceThreadMessage;
 use App\Notifications\NewOrganiserThread;
@@ -96,7 +98,13 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 ZaakStatusChanged::class,
                 NewZaakDocument::class,
                 Result::class,
-            ]
+            ],
+            Role::ArchiveCoordinator => [
+                DestructionListReviewed::class,
+            ],
+            Role::ArchiveReviewer => [
+                DestructionListReadyForReview::class,
+            ],
         };
     }
 
