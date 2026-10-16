@@ -282,7 +282,7 @@ describe('findRemote', function () {
         $this->instance->seed(OWN_NC.'abonnement/other', $this->callback, 'Bearer other');
         $this->instance->seed(OWN_NC.'abonnement/own', $this->callback, 'Bearer own');
         ZgwAbonnement::factory()->create(['connection' => 'main', 'abonnement_url' => OWN_NC.'abonnement/other']);
-        ZgwAbonnement::factory()->create(['connection' => $this->municipality, 'abonnement_url' => OWN_NC.'abonnement/own']);
+        ZgwAbonnement::factory()->create(['connection' => $this->municipality, 'notificaties_base_url' => OWN_NC, 'abonnement_url' => OWN_NC.'abonnement/own']);
 
         expect(registrar()->findRemote($this->api, $this->callback, $this->municipality)['url'] ?? null)
             ->toBe(OWN_NC.'abonnement/own');
@@ -299,7 +299,7 @@ describe('findRemote', function () {
         $this->instance->seed(OWN_NC.'abonnement/other', $this->callback, 'Bearer other');
         $this->instance->seed(OWN_NC.'abonnement/unclaimed', $this->callback, 'Bearer unclaimed');
         ZgwAbonnement::factory()->create(['connection' => 'main', 'abonnement_url' => OWN_NC.'abonnement/other']);
-        ZgwAbonnement::factory()->create(['connection' => $this->municipality, 'abonnement_url' => OWN_NC.'abonnement/gone']);
+        ZgwAbonnement::factory()->create(['connection' => $this->municipality, 'notificaties_base_url' => OWN_NC, 'abonnement_url' => OWN_NC.'abonnement/gone']);
 
         expect(registrar()->findRemote($this->api, $this->callback, $this->municipality)['url'] ?? null)
             ->toBe(OWN_NC.'abonnement/unclaimed');
@@ -402,7 +402,7 @@ describe('health check', function () {
         $municipality = municipalityConnection(OWN_NC);
 
         $instance->seed(MAIN_NC.'abonnement/1', registrar()->callbackUrl(), 'Bearer x');
-        ZgwAbonnement::factory()->create(['connection' => 'main', 'abonnement_url' => MAIN_NC.'abonnement/1']);
+        ZgwAbonnement::factory()->create(['connection' => 'main', 'notificaties_base_url' => MAIN_NC, 'abonnement_url' => MAIN_NC.'abonnement/1']);
         ZgwAbonnement::factory()->create(['connection' => $municipality, 'abonnement_url' => MAIN_NC.'abonnement/1']);
 
         $result = app(AbonnementHealthCheck::class)->run('main');
@@ -418,7 +418,7 @@ describe('health check', function () {
             'auth' => 'Bearer '.sharedInstanceJwt('tok-someone-else', 'client-someone-else'),
             'kanalen' => array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => []], AbonnementRegistrar::KANALEN),
         ], 200)]);
-        ZgwAbonnement::factory()->create(['connection' => 'main', 'abonnement_url' => MAIN_NC.'abonnement/1', 'token_id' => 'tok-own']);
+        ZgwAbonnement::factory()->create(['connection' => 'main', 'notificaties_base_url' => MAIN_NC, 'abonnement_url' => MAIN_NC.'abonnement/1', 'token_id' => 'tok-own']);
 
         $result = app(AbonnementHealthCheck::class)->run('main');
 
@@ -432,7 +432,7 @@ describe('health check', function () {
             'auth' => 'Bearer '.sharedInstanceJwt('tok-own', 'client-own'),
             'kanalen' => array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => []], AbonnementRegistrar::KANALEN),
         ], 200)]);
-        ZgwAbonnement::factory()->create(['connection' => 'main', 'abonnement_url' => MAIN_NC.'abonnement/1', 'token_id' => 'tok-own']);
+        ZgwAbonnement::factory()->create(['connection' => 'main', 'notificaties_base_url' => MAIN_NC, 'abonnement_url' => MAIN_NC.'abonnement/1', 'token_id' => 'tok-own']);
 
         expect(app(AbonnementHealthCheck::class)->run('main')->status)->toBe(AbonnementCheckStatus::Healthy);
     });
@@ -477,4 +477,46 @@ it('renews a shared abonnement only for the connection that owns it', function (
     expect(attributedConnection($instance->authOf($abonnement)))->toBe('main')
         ->and(ZgwAbonnement::where('connection', $municipality)->value('token_id'))->toBe($municipalityTokenBefore)
         ->and(ZgwAbonnement::where('connection', 'main')->value('expires_at')->isAfter(now()->addMonth()))->toBeTrue();
+});
+
+describe('instance spelled differently by the api', function () {
+    // The same instance as MAIN_NC, configured with an explicit default port.
+    // The Notificaties API returns abonnement URLs in its own spelling.
+    beforeEach(function () {
+        config()->set('zgw.connections.main.urls.notificaties', 'https://nc-main.example.com:443/api/v1/');
+    });
+
+    it('keeps renewing the abonnement', function () {
+        $instance = new FakeNotificatiesInstance(MAIN_NC);
+        fakeNotificatiesInstances($instance);
+        $issued = app(WebhookTokenIssuer::class)->issue();
+        $instance->seed(MAIN_NC.'abonnement/1', registrar()->callbackUrl(), 'Bearer '.$issued->token);
+        ZgwAbonnement::factory()->create([
+            'connection' => 'main',
+            'notificaties_base_url' => 'https://nc-main.example.com:443/api/v1/',
+            'abonnement_url' => MAIN_NC.'abonnement/1',
+            'token_id' => $issued->tokenId,
+            'client_id' => $issued->clientId,
+            'expires_at' => now()->addDay(),
+        ]);
+
+        (new RenewZgwAbonnementen)->handle(app(WebhookTokenIssuer::class), registrar());
+
+        expect(ZgwAbonnement::where('connection', 'main')->value('token_id'))->not->toBe($issued->tokenId)
+            ->and(attributedConnection($instance->authOf(MAIN_NC.'abonnement/1')))->toBe('main');
+    });
+
+    it('reports the abonnement as healthy', function () {
+        $instance = new FakeNotificatiesInstance(MAIN_NC);
+        fakeNotificatiesInstances($instance);
+        $instance->seed(MAIN_NC.'abonnement/1', registrar()->callbackUrl(), 'Bearer x');
+        ZgwAbonnement::factory()->create([
+            'connection' => 'main',
+            'notificaties_base_url' => 'https://nc-main.example.com:443/api/v1/',
+            'abonnement_url' => MAIN_NC.'abonnement/1',
+            'expires_at' => now()->addMonths(6),
+        ]);
+
+        expect(app(AbonnementHealthCheck::class)->run('main')->status->name)->toBe('Healthy');
+    });
 });

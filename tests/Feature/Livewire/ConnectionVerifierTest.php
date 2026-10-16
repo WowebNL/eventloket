@@ -67,6 +67,7 @@ function healthyAbonnement(int $municipalityId, string $name): string
     ZgwAbonnement::factory()->create([
         'connection' => $name,
         'municipality_id' => $municipalityId,
+        'notificaties_base_url' => GEM.'/notificaties/api/v1/',
         'abonnement_url' => $aboUrl,
         'expires_at' => now()->addYear(),
     ]);

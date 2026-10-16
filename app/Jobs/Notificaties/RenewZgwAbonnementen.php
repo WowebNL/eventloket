@@ -61,8 +61,8 @@ class RenewZgwAbonnementen implements ShouldQueue
     /**
      * Whether this row may rotate the token on its stored abonnement. A row
      * whose connection is refused on its Notificaties API (another connection
-     * owns the abonnement there), or whose stored abonnement is not on the
-     * instance it is configured for now, would otherwise put its token on an
+     * owns the abonnement there), or that was registered on another instance
+     * than the one it is configured for now, would otherwise put its token on an
      * abonnement that is not its own, and the attribution of every notification
      * on it would flip at each renewal.
      */
@@ -71,7 +71,7 @@ class RenewZgwAbonnementen implements ShouldQueue
         $baseUrl = (new NotificatiesApi($abonnement->connection))->baseUrl();
 
         return $registrar->sharedInstance($abonnement->connection, $baseUrl) === null
-            && AbonnementRegistrar::isOnInstance((string) $abonnement->abonnement_url, $baseUrl);
+            && AbonnementRegistrar::registeredOnInstance($abonnement, $baseUrl);
     }
 
     private function renew(ZgwAbonnement $abonnement, WebhookTokenIssuer $issuer): void

@@ -228,13 +228,14 @@ class AbonnementRegistrar
      */
     private function locateRemote(NotificatiesApi $api, string $callbackUrl, string $connectionName): array
     {
-        $stored = ZgwAbonnement::query()->where('connection', $connectionName)->value('abonnement_url');
+        $row = ZgwAbonnement::query()->where('connection', $connectionName)->first();
+        $stored = $row?->abonnement_url;
 
-        // A stored abonnement only counts when it lives on the instance this
-        // connection is configured for now. After the notificaties URL changed,
-        // the stored one belongs to the previous instance (possibly another
-        // connection's), so it is neither read nor patched.
-        if (is_string($stored) && $stored !== '' && self::isOnInstance($stored, $api->baseUrl())) {
+        // A stored abonnement only counts when it was registered on the instance
+        // this connection is configured for now. After the notificaties URL
+        // changed, the stored one belongs to the previous instance (possibly
+        // another connection's), so it is neither read nor patched.
+        if ($row !== null && is_string($stored) && $stored !== '' && self::registeredOnInstance($row, $api->baseUrl())) {
             try {
                 $remote = $api->show($stored);
 
@@ -301,12 +302,17 @@ class AbonnementRegistrar
     }
 
     /**
-     * Whether an abonnement URL belongs to the Notificaties API at the given base
-     * URL.
+     * Whether a row was registered on the Notificaties API at the given base URL.
+     *
+     * Compares the base URL stored at registration with the configured one, both
+     * in our own spelling. The abonnement URL itself is not compared: the
+     * Notificaties API returns it in its own spelling (another host name for the
+     * same instance, an explicit default port), which says nothing about whether
+     * the configuration changed.
      */
-    public static function isOnInstance(string $abonnementUrl, string $baseUrl): bool
+    public static function registeredOnInstance(ZgwAbonnement $row, string $baseUrl): bool
     {
-        return str_starts_with(strtolower(trim($abonnementUrl)), self::normaliseUrl($baseUrl).'/');
+        return self::normaliseUrl($row->notificaties_base_url) === self::normaliseUrl($baseUrl);
     }
 
     private static function normaliseUrl(string $url): string
