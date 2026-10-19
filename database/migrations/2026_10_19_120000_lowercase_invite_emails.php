@@ -75,9 +75,9 @@ return new class extends Migration
     private function lowercaseUnambiguousEmails(string $table, array $scope): void
     {
         DB::table($table)
-            ->whereRaw('email <> LOWER(email)')
+            ->whereRaw('email <> '.$this->asciiLower('email'))
             ->whereNotExists(fn (Builder $query) => $this->otherRowWithSameAddress($query, $table, $scope))
-            ->update(['email' => DB::raw('LOWER(email)')]);
+            ->update(['email' => DB::raw($this->asciiLower('email'))]);
     }
 
     /**
@@ -90,16 +90,28 @@ return new class extends Migration
         $query->selectRaw('1')
             ->from($table, 'other')
             ->whereColumn('other.id', '<>', "{$table}.id")
-            ->whereRaw("LOWER(other.email) = LOWER({$table}.email)");
+            ->whereRaw($this->asciiLower('other.email').' = '.$this->asciiLower("{$table}.email"));
 
         foreach ($scope as $column) {
             $query->whereColumn("other.{$column}", "{$table}.{$column}");
         }
     }
 
+    /**
+     * SQL that lowercases only the ASCII letters of a column, as PHP's
+     * strtolower() does in the models. PostgreSQL's LOWER() also folds other
+     * letters under a UTF-8 locale, which would store a different address
+     * than the application does. The column is always one of the constant
+     * names in this class, never input.
+     */
+    private function asciiLower(string $column): string
+    {
+        return "translate({$column}, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')";
+    }
+
     private function logRemainingMixedCase(string $table): void
     {
-        $remaining = DB::table($table)->whereRaw('email <> LOWER(email)')->count();
+        $remaining = DB::table($table)->whereRaw('email <> '.$this->asciiLower('email'))->count();
 
         if ($remaining > 0) {
             Log::warning('Invites left with a mixed case email address, because another live invite holds the same address', [

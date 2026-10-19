@@ -59,6 +59,16 @@ test('it lowercases invite addresses that do not collide', function () {
         ->and(inviteEmail('advisory_invites', $advisoryInvite))->toBe('mixed.advisor@example.com');
 });
 
+test('it only lowercases ASCII letters, like the application does', function () {
+    $invite = rawInvite('municipality_invites', 'Émile.Ödegaard@Example.com', ['role' => 'reviewer']);
+
+    lowercaseInviteEmailsMigration()->up();
+
+    expect(inviteEmail('municipality_invites', $invite))
+        ->toBe(strtolower('Émile.Ödegaard@Example.com'))
+        ->toBe('Émile.Ödegaard@example.com');
+});
+
 test('it deletes an expired invite that collides and lowercases the live one', function () {
     $organisation = Organisation::factory()->create();
     $expiredAt = now()->subDays(config('invites.expiration_days') + 1);
