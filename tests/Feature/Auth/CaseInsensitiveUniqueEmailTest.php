@@ -54,6 +54,29 @@ test('organiser registration rejects an existing address in different case', fun
     expect(User::count())->toBe(1);
 });
 
+test('organiser registration treats the address of a soft deleted account as taken', function () {
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+
+    User::factory()->create([
+        'email' => 'deleted.account@example.com',
+        'role' => Role::Organiser,
+    ])->delete();
+
+    livewire(Register::class)
+        ->fillForm([
+            'first_name' => 'Test',
+            'last_name' => 'User',
+            'email' => 'Deleted.Account@Example.com',
+            'phone' => '0612345678',
+            'password' => 'Password123!',
+            'passwordConfirmation' => 'Password123!',
+        ])
+        ->call('register')
+        ->assertHasFormErrors(['email' => UniqueUserEmail::class]);
+
+    expect(User::withTrashed()->count())->toBe(2);
+});
+
 test('own profile rejects changing the address to another account\'s address in different case', function () {
     Filament::setCurrentPanel(Filament::getPanel('admin'));
 
