@@ -17,6 +17,7 @@ use App\Notifications\NewZaakDocument;
 use App\Notifications\Result;
 use App\Notifications\ZaakReleased;
 use App\Notifications\ZaakStatusChanged;
+use App\Rules\UniqueUserEmail;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Component;
@@ -37,6 +38,17 @@ class EditProfile extends \Filament\Auth\Pages\EditProfile
                 $this->getPasswordConfirmationFormComponent(),
                 $this->getNotificationPreferencesComponent(),
             ]);
+    }
+
+    protected function getEmailFormComponent(): Component
+    {
+        return TextInput::make('email')
+            ->label(__('filament-panels::auth/pages/edit-profile.form.email.label'))
+            ->email()
+            ->required()
+            ->maxLength(255)
+            ->rule(UniqueUserEmail::forField())
+            ->live(debounce: 500);
     }
 
     public static function getFirstNameFormComponent(): Component

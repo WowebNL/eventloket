@@ -4,9 +4,11 @@ namespace App\Filament\Organiser\Pages;
 
 use App\Enums\Role;
 use App\Models\Users\OrganiserUser;
+use App\Rules\UniqueUserEmail;
 use DanHarrin\LivewireRateLimiting\Exceptions\TooManyRequestsException;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\RateLimiter;
 
@@ -29,6 +31,16 @@ class Register extends \Filament\Auth\Pages\Register
                 $this->getPasswordFormComponent()->helperText(app()->isProduction() ? __('organiser/pages/auth/register.form.password.helper_text') : null),
                 $this->getPasswordConfirmationFormComponent(),
             ]);
+    }
+
+    protected function getEmailFormComponent(): Component
+    {
+        return TextInput::make('email')
+            ->label(__('filament-panels::auth/pages/register.form.email.label'))
+            ->email()
+            ->required()
+            ->maxLength(255)
+            ->rule(UniqueUserEmail::forField());
     }
 
     protected function mutateFormDataBeforeRegister(array $data): array
