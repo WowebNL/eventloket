@@ -31,8 +31,13 @@ const NEW_NC = 'https://nc-new.example.com/api/v1/';
 
 /**
  * A minimal, stateful Notificaties API: it keeps the abonnementen it was given,
- * lists them to any caller and lets any caller patch them, and (like Open
- * Notificaties) never returns the write-only auth value.
+ * lists them to any caller and lets any caller patch or delete them, and (like
+ * Open Notificaties) never returns the write-only auth value.
+ *
+ * A tenant-scoped instance instead keeps the abonnementen of every ZGW client
+ * apart, the way a OneGround Notificaties API separates tenants by client id: a
+ * caller only lists, reads, patches and deletes the abonnementen its own client
+ * created.
  */
 final class FakeNotificatiesInstance
 {
@@ -41,25 +46,28 @@ final class FakeNotificatiesInstance
 
     private int $sequence = 0;
 
-    public function __construct(public readonly string $base) {}
+    public function __construct(public readonly string $base, private readonly bool $tenantScoped = false) {}
 
     /** Put an abonnement on the instance as if someone registered it earlier. */
-    public function seed(string $url, string $callbackUrl, string $auth): void
+    public function seed(string $url, string $callbackUrl, string $auth, string $tenant = ''): void
     {
-        $this->abonnementen[$url] = ['url' => $url, 'callbackUrl' => $callbackUrl, 'auth' => $auth, 'kanalen' => self::kanalen()];
+        $this->abonnementen[$url] = ['url' => $url, 'callbackUrl' => $callbackUrl, 'auth' => $auth, 'kanalen' => self::kanalen(), 'tenant' => $tenant];
     }
 
     public function handle(Request $request): mixed
     {
         $url = $request->url();
+        $tenant = $this->tenantScoped ? self::zgwClientId($request) : '';
 
         if ($url === $this->base.'abonnement') {
             if ($request->method() === 'GET') {
+                $visible = $this->visibleTo($tenant);
+
                 return Http::response([
-                    'count' => count($this->abonnementen),
+                    'count' => count($visible),
                     'next' => null,
                     'previous' => null,
-                    'results' => array_values(array_map(self::public(...), $this->abonnementen)),
+                    'results' => array_values(array_map(self::public(...), $visible)),
                 ], 200);
             }
 
@@ -69,13 +77,20 @@ final class FakeNotificatiesInstance
                 'callbackUrl' => $request['callbackUrl'],
                 'auth' => $request['auth'],
                 'kanalen' => self::kanalen(),
+                'tenant' => $tenant,
             ];
 
             return Http::response(self::public($this->abonnementen[$created]), 201);
         }
 
-        if (! isset($this->abonnementen[$url])) {
+        if (! isset($this->visibleTo($tenant)[$url])) {
             return Http::response(['detail' => 'Niet gevonden.'], 404);
+        }
+
+        if ($request->method() === 'DELETE') {
+            unset($this->abonnementen[$url]);
+
+            return Http::response(null, 204);
         }
 
         if ($request->method() === 'PATCH') {
@@ -83,6 +98,33 @@ final class FakeNotificatiesInstance
         }
 
         return Http::response(self::public($this->abonnementen[$url]), 200);
+    }
+
+    /**
+     * The abonnementen the given ZGW client created on a tenant-scoped instance.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function ofTenant(string $tenant): array
+    {
+        return array_filter($this->abonnementen, fn (array $abonnement): bool => $abonnement['tenant'] === $tenant);
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function visibleTo(string $tenant): array
+    {
+        return $this->tenantScoped ? $this->ofTenant($tenant) : $this->abonnementen;
+    }
+
+    /** The client id claim of the ZGW JWT the request authenticates with. */
+    private static function zgwClientId(Request $request): string
+    {
+        $jwt = (string) preg_replace('/^Bearer\s+/', '', $request->header('Authorization')[0] ?? '');
+        $claims = json_decode((string) base64_decode(strtr(explode('.', $jwt)[1] ?? '', '-_', '+/'), true), true);
+
+        return is_array($claims) && is_string($claims['client_id'] ?? null) ? $claims['client_id'] : '';
     }
 
     /** The auth value currently set on the remote abonnement with the given URL. */
@@ -97,7 +139,7 @@ final class FakeNotificatiesInstance
      */
     private static function public(array $abonnement): array
     {
-        unset($abonnement['auth']);
+        unset($abonnement['auth'], $abonnement['tenant']);
 
         return $abonnement;
     }
@@ -167,10 +209,12 @@ function fakeNotificatiesInstances(FakeNotificatiesInstance ...$instances): void
 /**
  * A municipality connection with the given notificaties URL (null inherits the
  * main one), with its runtime config registered the way the resolver does.
+ *
+ * @param  array<string, mixed>  $attributes
  */
-function municipalityConnection(?string $notificatiesUrl): string
+function municipalityConnection(?string $notificatiesUrl, array $attributes = []): string
 {
-    $connection = MunicipalityZgwConnection::factory()->create(['notificaties_url' => $notificatiesUrl]);
+    $connection = MunicipalityZgwConnection::factory()->create(['notificaties_url' => $notificatiesUrl, ...$attributes]);
     $name = 'gemeente_'.$connection->municipality_id;
 
     config()->set("zgw.connections.{$name}", $connection->buildConfig());
@@ -518,5 +562,146 @@ describe('instance spelled differently by the api', function () {
         ]);
 
         expect(app(AbonnementHealthCheck::class)->run('main')->status->name)->toBe('Healthy');
+    });
+});
+
+/**
+ * Seed an abonnement for each of two OneGround connections on the same
+ * notificaties URL, each in the tenant of its own client id, the way their
+ * registrations leave it.
+ *
+ * @return array{0: string, 1: string}
+ */
+function seedOneGroundTenants(FakeNotificatiesInstance $instance): array
+{
+    $names = [];
+
+    foreach (['tenant-a-client', 'tenant-b-client'] as $index => $clientId) {
+        $name = municipalityConnection(OWN_NC, ['is_oneground' => true, 'client_id' => $clientId]);
+        $issued = app(WebhookTokenIssuer::class)->issue();
+        $url = OWN_NC.'abonnement/seeded-'.$index;
+        $instance->seed($url, registrar()->callbackUrl(), 'Bearer '.$issued->token, $clientId);
+        ZgwAbonnement::factory()->create([
+            'connection' => $name,
+            'notificaties_base_url' => OWN_NC,
+            'abonnement_url' => $url,
+            'token_id' => $issued->tokenId,
+            'client_id' => $issued->clientId,
+            'expires_at' => now()->addDay(),
+        ]);
+        $names[] = $name;
+    }
+
+    return [$names[0], $names[1]];
+}
+
+/*
+ * A OneGround Notificaties API keeps tenants apart by ZGW client id: a client
+ * only sees and receives the abonnementen it created itself. Connections with
+ * their own client id on such an instance are therefore separate subscribers,
+ * even when their notificaties URL is the same.
+ */
+describe('oneground connections on a shared notificaties url', function () {
+    beforeEach(function () {
+        $this->instance = new FakeNotificatiesInstance(OWN_NC, tenantScoped: true);
+        fakeNotificatiesInstances($this->instance);
+    });
+
+    it('gives each connection with its own client id its own abonnement', function () {
+        $first = municipalityConnection(OWN_NC, ['is_oneground' => true, 'client_id' => 'tenant-a-client']);
+        $second = municipalityConnection(OWN_NC, ['is_oneground' => true, 'client_id' => 'tenant-b-client']);
+
+        expect(registrar()->register($first)->name)->toBe('Created')
+            ->and(registrar()->register($second)->name)->toBe('Created')
+            // A refresh of either keeps its own abonnement.
+            ->and(registrar()->register($first)->name)->toBe('Updated')
+            ->and(registrar()->register($second)->name)->toBe('Updated');
+
+        $ofFirst = $this->instance->ofTenant('tenant-a-client');
+        $ofSecond = $this->instance->ofTenant('tenant-b-client');
+
+        expect($ofFirst)->toHaveCount(1)
+            ->and($ofSecond)->toHaveCount(1)
+            ->and(attributedConnection($this->instance->authOf((string) array_key_first($ofFirst))))->toBe($first)
+            ->and(attributedConnection($this->instance->authOf((string) array_key_first($ofSecond))))->toBe($second)
+            ->and(ZgwAbonnement::where('connection', $first)->value('abonnement_url'))->toBe(array_key_first($ofFirst))
+            ->and(ZgwAbonnement::where('connection', $second)->value('abonnement_url'))->toBe(array_key_first($ofSecond));
+    });
+
+    it('renews each connection\'s own abonnement', function () {
+        [$first, $second] = seedOneGroundTenants($this->instance);
+        $tokensBefore = ZgwAbonnement::query()->pluck('token_id', 'connection')->all();
+
+        (new RenewZgwAbonnementen)->handle(app(WebhookTokenIssuer::class), registrar());
+
+        expect(ZgwAbonnement::where('connection', $first)->value('token_id'))->not->toBe($tokensBefore[$first])
+            ->and(ZgwAbonnement::where('connection', $second)->value('token_id'))->not->toBe($tokensBefore[$second])
+            ->and(attributedConnection($this->instance->authOf(OWN_NC.'abonnement/seeded-0')))->toBe($first)
+            ->and(attributedConnection($this->instance->authOf(OWN_NC.'abonnement/seeded-1')))->toBe($second);
+    });
+
+    it('reports each connection\'s own abonnement as healthy', function () {
+        [$first, $second] = seedOneGroundTenants($this->instance);
+        ZgwAbonnement::query()->update(['expires_at' => now()->addMonths(6)]);
+
+        expect(app(AbonnementHealthCheck::class)->run($first)->status->name)->toBe('Healthy')
+            ->and(app(AbonnementHealthCheck::class)->run($second)->status->name)->toBe('Healthy');
+    });
+
+    it('leaves the other connection\'s abonnement alone when one is removed', function () {
+        $first = municipalityConnection(OWN_NC, ['is_oneground' => true, 'client_id' => 'tenant-a-client']);
+        $second = municipalityConnection(OWN_NC, ['is_oneground' => true, 'client_id' => 'tenant-b-client']);
+        registrar()->register($first);
+        registrar()->register($second);
+        $firstUrl = (string) ZgwAbonnement::where('connection', $first)->value('abonnement_url');
+        $secondUrl = (string) ZgwAbonnement::where('connection', $second)->value('abonnement_url');
+
+        $this->artisan('app:list-zgw-abonnementen', ['--connection' => $first, '--delete' => $firstUrl, '--force' => true])
+            ->assertSuccessful();
+
+        expect($this->instance->ofTenant('tenant-a-client'))->toBeEmpty()
+            ->and(ZgwAbonnement::where('connection', $first)->exists())->toBeFalse()
+            ->and($secondUrl)->not->toBe('')
+            ->and($this->instance->ofTenant('tenant-b-client'))->toHaveKey($secondUrl)
+            ->and(ZgwAbonnement::where('connection', $second)->value('abonnement_url'))->toBe($secondUrl)
+            ->and(attributedConnection($this->instance->authOf($secondUrl)))->toBe($second);
+    });
+
+    it('gives a connection that inherits main\'s url its own abonnement when it has its own client id', function () {
+        $mainInstance = new FakeNotificatiesInstance(MAIN_NC, tenantScoped: true);
+        fakeNotificatiesInstances($mainInstance);
+        $municipality = municipalityConnection(null, ['is_oneground' => true, 'client_id' => 'tenant-a-client']);
+
+        expect(registrar()->register('main')->name)->toBe('Created')
+            ->and(registrar()->register($municipality)->name)->toBe('Created');
+
+        $ofMain = $mainInstance->ofTenant((string) config('zgw.connections.main.client_id'));
+        $ofMunicipality = $mainInstance->ofTenant('tenant-a-client');
+
+        expect($ofMain)->toHaveCount(1)
+            ->and($ofMunicipality)->toHaveCount(1)
+            ->and(attributedConnection($mainInstance->authOf((string) array_key_first($ofMain))))->toBe('main')
+            ->and(attributedConnection($mainInstance->authOf((string) array_key_first($ofMunicipality))))->toBe($municipality);
+    });
+
+    it('keeps one abonnement when the connections share a client id', function () {
+        $first = municipalityConnection(OWN_NC, ['is_oneground' => true, 'client_id' => 'tenant-a-client']);
+        $second = municipalityConnection(OWN_NC, ['is_oneground' => true, 'client_id' => 'tenant-a-client']);
+
+        expect(registrar()->register($first)->name)->toBe('Created')
+            ->and(registrar()->register($second)->name)->toBe('RefusedSharedInstance')
+            ->and($this->instance->abonnementen)->toHaveCount(1);
+    });
+
+    it('keeps one abonnement per url for connections that are not oneground', function () {
+        $plain = new FakeNotificatiesInstance(OWN_NC);
+        fakeNotificatiesInstances($plain);
+        $first = municipalityConnection(OWN_NC, ['client_id' => 'tenant-a-client']);
+        $second = municipalityConnection(OWN_NC, ['client_id' => 'tenant-b-client']);
+
+        expect(registrar()->register($first)->name)->toBe('Created')
+            ->and(registrar()->register($second)->name)->toBe('RefusedSharedInstance')
+            ->and($plain->abonnementen)->toHaveCount(1)
+            ->and(app(AbonnementHealthCheck::class)->run($second)->status->name)->toBe('NotificatiesInstanceInUse');
     });
 });
