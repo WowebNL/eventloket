@@ -18,6 +18,12 @@ use Illuminate\Database\Eloquent\Model;
  *
  * Soft deleted accounts count as taken, because the unique index still holds
  * their address.
+ *
+ * The lookup is a plain equality on the column, so it compares the way the
+ * unique index does on each supported database. PostgreSQL matches the stored
+ * lowercase address exactly. MySQL's default collations also match addresses
+ * that differ in non-ASCII case or accents, and so does its unique index. The
+ * rule therefore never reports an address as free that the index would reject.
  */
 final class UniqueUserEmail implements ValidationRule
 {

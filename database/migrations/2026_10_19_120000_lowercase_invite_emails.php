@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +24,14 @@ use Illuminate\Support\Facades\Log;
  *    are left as they are and counted in the log. Picking which pending
  *    invite to drop is not something a migration should decide, and they
  *    expire on their own.
+ *
+ * The lowercase address and the grouping are computed in PHP with
+ * strtolower(), the function the models use, instead of in SQL. That keeps
+ * the result identical on every supported database: PostgreSQL's and MySQL's
+ * LOWER() also fold non-ASCII letters, MySQL has no translate(), and MySQL's
+ * default collations compare case and accent insensitively. The database only
+ * receives plain lookups, and deletes and updates by primary key. The invite
+ * tables are small, so reading their addresses into memory is cheap.
  */
 return new class extends Migration
 {
@@ -40,16 +47,14 @@ return new class extends Migration
         'organisation_invites' => ['organisation_id'],
     ];
 
+    private const CHUNK_SIZE = 1000;
+
     public function up(): void
     {
         $expiredBefore = now()->subDays(config('invites.expiration_days'));
 
         foreach (self::TABLES as $table => $scope) {
-            DB::transaction(function () use ($table, $scope, $expiredBefore) {
-                $this->deleteExpiredCaseDuplicates($table, $scope, $expiredBefore);
-                $this->lowercaseUnambiguousEmails($table, $scope);
-                $this->logRemainingMixedCase($table);
-            });
+            DB::transaction(fn () => $this->normalise($table, $scope, $expiredBefore));
         }
     }
 
@@ -61,63 +66,131 @@ return new class extends Migration
     /**
      * @param  list<string>  $scope
      */
-    private function deleteExpiredCaseDuplicates(string $table, array $scope, DateTimeInterface $expiredBefore): void
+    private function normalise(string $table, array $scope, DateTimeInterface $expiredBefore): void
     {
-        DB::table($table)
-            ->where('created_at', '<=', $expiredBefore)
-            ->whereExists(fn (Builder $query) => $this->otherRowWithSameAddress($query, $table, $scope))
-            ->delete();
-    }
+        $groups = $this->groupByLowercaseAddress($table, $scope);
 
-    /**
-     * @param  list<string>  $scope
-     */
-    private function lowercaseUnambiguousEmails(string $table, array $scope): void
-    {
-        DB::table($table)
-            ->whereRaw('email <> '.$this->asciiLower('email'))
-            ->whereNotExists(fn (Builder $query) => $this->otherRowWithSameAddress($query, $table, $scope))
-            ->update(['email' => DB::raw($this->asciiLower('email'))]);
-    }
+        $expired = $this->expiredIds($table, $this->idsInClashingGroups($groups), $expiredBefore);
 
-    /**
-     * Another row in the same table and scope whose address only differs in case.
-     *
-     * @param  list<string>  $scope
-     */
-    private function otherRowWithSameAddress(Builder $query, string $table, array $scope): void
-    {
-        $query->selectRaw('1')
-            ->from($table, 'other')
-            ->whereColumn('other.id', '<>', "{$table}.id")
-            ->whereRaw($this->asciiLower('other.email').' = '.$this->asciiLower("{$table}.email"));
-
-        foreach ($scope as $column) {
-            $query->whereColumn("other.{$column}", "{$table}.{$column}");
+        foreach (array_chunk($expired, self::CHUNK_SIZE) as $ids) {
+            DB::table($table)->whereIn('id', $ids)->delete();
         }
-    }
 
-    /**
-     * SQL that lowercases only the ASCII letters of a column, as PHP's
-     * strtolower() does in the models. PostgreSQL's LOWER() also folds other
-     * letters under a UTF-8 locale, which would store a different address
-     * than the application does. The column is always one of the constant
-     * names in this class, never input.
-     */
-    private function asciiLower(string $column): string
-    {
-        return "translate({$column}, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')";
-    }
+        $expired = array_flip($expired);
+        $remainingMixedCase = 0;
 
-    private function logRemainingMixedCase(string $table): void
-    {
-        $remaining = DB::table($table)->whereRaw('email <> '.$this->asciiLower('email'))->count();
+        foreach ($groups as $group) {
+            $rows = array_filter($group, fn (array $row): bool => ! isset($expired[$row['id']]));
 
-        if ($remaining > 0) {
+            if (count($rows) === 1) {
+                $row = reset($rows);
+
+                if ($row['email'] !== strtolower($row['email'])) {
+                    DB::table($table)->where('id', $row['id'])->update(['email' => strtolower($row['email'])]);
+                }
+
+                continue;
+            }
+
+            foreach ($rows as $row) {
+                if ($row['email'] !== strtolower($row['email'])) {
+                    $remainingMixedCase++;
+                }
+            }
+        }
+
+        if ($remainingMixedCase > 0) {
             Log::warning('Invites left with a mixed case email address, because another live invite holds the same address', [
                 'table' => $table,
-                'count' => $remaining,
+                'count' => $remainingMixedCase,
             ]);
         }
+    }
+
+    /**
+     * The rows of a table grouped by their scope and lowercase address, so each
+     * group holds the rows that would collide on the unique index once
+     * lowercased.
+     *
+     * @param  list<string>  $scope
+     * @return array<string, list<array{id: int, email: string}>>
+     */
+    private function groupByLowercaseAddress(string $table, array $scope): array
+    {
+        $groups = [];
+
+        $rows = DB::table($table)
+            ->select(['id', 'email', ...$scope])
+            ->lazyById(self::CHUNK_SIZE);
+
+        foreach ($rows as $row) {
+            $groups[$this->groupKey($row, $scope)][] = [
+                'id' => (int) $row->id,
+                'email' => (string) $row->email,
+            ];
+        }
+
+        return $groups;
+    }
+
+    /**
+     * @param  list<string>  $scope
+     */
+    private function groupKey(object $row, array $scope): string
+    {
+        $parts = [];
+
+        foreach ($scope as $column) {
+            // A unique index never matches on NULL, so such a row cannot
+            // collide with another one.
+            if ($row->{$column} === null) {
+                return 'row:'.$row->id;
+            }
+
+            $parts[] = (string) $row->{$column};
+        }
+
+        $parts[] = strtolower((string) $row->email);
+
+        return json_encode($parts, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param  array<string, list<array{id: int, email: string}>>  $groups
+     * @return list<int>
+     */
+    private function idsInClashingGroups(array $groups): array
+    {
+        $ids = [];
+
+        foreach ($groups as $group) {
+            if (count($group) > 1) {
+                array_push($ids, ...array_column($group, 'id'));
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    private function expiredIds(string $table, array $ids, DateTimeInterface $expiredBefore): array
+    {
+        $expired = [];
+
+        foreach (array_chunk($ids, self::CHUNK_SIZE) as $chunk) {
+            $found = DB::table($table)
+                ->whereIn('id', $chunk)
+                ->where('created_at', '<=', $expiredBefore)
+                ->pluck('id')
+                ->map(fn (mixed $id): int => (int) $id)
+                ->all();
+
+            array_push($expired, ...$found);
+        }
+
+        return $expired;
     }
 };

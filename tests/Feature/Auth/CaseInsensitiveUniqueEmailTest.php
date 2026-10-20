@@ -24,7 +24,9 @@ use App\Models\Organisation;
 use App\Models\User;
 use App\Rules\UniqueUserEmail;
 use Filament\Facades\Filament;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
 use function Pest\Livewire\livewire;
@@ -217,4 +219,30 @@ test('the advisory users form accepts the edited user\'s own address in differen
         ->assertHasNoTableActionErrors();
 
     expect($advisor->refresh()->email)->toBe('advisory.member@example.com');
+});
+
+test('the rule agrees with the unique index on an address that only differs in a non-ASCII letter', function () {
+    User::factory()->create([
+        'email' => 'élise.account@example.com',
+        'role' => Role::Organiser,
+    ]);
+
+    // strtolower() keeps the É, so this is not the stored address byte for
+    // byte. Whether it counts as taken depends on the database collation; the
+    // rule has to give the same answer as the unique index either way.
+    $candidate = 'Élise.Account@Example.com';
+
+    $rejectedByRule = Validator::make(['email' => $candidate], ['email' => [new UniqueUserEmail]])->fails();
+
+    try {
+        DB::transaction(fn () => User::factory()->create([
+            'email' => $candidate,
+            'role' => Role::Organiser,
+        ]));
+        $rejectedByIndex = false;
+    } catch (UniqueConstraintViolationException) {
+        $rejectedByIndex = true;
+    }
+
+    expect($rejectedByRule)->toBe($rejectedByIndex);
 });

@@ -42,6 +42,21 @@ function inviteEmail(string $table, int $id): ?string
     return DB::table($table)->where('id', $id)->value('email');
 }
 
+/**
+ * Whether the database compares the two addresses as equal. PostgreSQL
+ * compares them exactly. MySQL's default collations ignore case and accents,
+ * so its unique index already rejects the second address and rows that only
+ * differ that way cannot exist there.
+ */
+function databaseTreatsAsSameAddress(string $first, string $second): bool
+{
+    if (DB::getDriverName() !== 'mysql') {
+        return false;
+    }
+
+    return (bool) DB::scalar('select ? = ?', [$first, $second]);
+}
+
 test('it lowercases invite addresses that do not collide', function () {
     $organisation = Organisation::factory()->create();
     $advisory = Advisory::factory()->create();
@@ -69,7 +84,49 @@ test('it only lowercases ASCII letters, like the application does', function () 
         ->toBe('Émile.Ödegaard@example.com');
 });
 
+test('it leaves non-ASCII letters untouched in every invite table', function () {
+    $organisation = Organisation::factory()->create();
+    $advisory = Advisory::factory()->create();
+    $address = 'ÉLISE.Ångström@Example.ORG';
+
+    $invites = [
+        'admin_invites' => rawInvite('admin_invites', $address),
+        'advisory_invites' => rawInvite('advisory_invites', $address, ['advisory_id' => $advisory->id, 'role' => 'member']),
+        'municipality_invites' => rawInvite('municipality_invites', $address, ['role' => 'reviewer']),
+        'organisation_invites' => rawInvite('organisation_invites', $address, ['organisation_id' => $organisation->id, 'role' => 'member']),
+    ];
+
+    lowercaseInviteEmailsMigration()->up();
+
+    foreach ($invites as $table => $id) {
+        expect(inviteEmail($table, $id))
+            ->toBe(strtolower($address))
+            ->toBe('Élise.Ångström@example.org')
+            ->not->toBe(mb_strtolower($address));
+    }
+});
+
+test('it does not treat addresses that only differ in a non-ASCII letter as colliding', function () {
+    if (databaseTreatsAsSameAddress('élise.test@example.com', 'Élise.test@example.com')) {
+        $this->markTestSkipped('The collation already treats these addresses as the same, so the unique index rejects the second row.');
+    }
+
+    $expiredAt = now()->subDays(config('invites.expiration_days') + 1);
+
+    $expired = rawInvite('municipality_invites', 'élise.test@example.com', ['role' => 'reviewer', 'created_at' => $expiredAt]);
+    $live = rawInvite('municipality_invites', 'Élise.Test@Example.com', ['role' => 'reviewer']);
+
+    lowercaseInviteEmailsMigration()->up();
+
+    expect(inviteEmail('municipality_invites', $expired))->toBe('élise.test@example.com')
+        ->and(inviteEmail('municipality_invites', $live))->toBe('Élise.test@example.com');
+});
+
 test('it deletes an expired invite that collides and lowercases the live one', function () {
+    if (databaseTreatsAsSameAddress('duplicate@example.com', 'Duplicate@Example.com')) {
+        $this->markTestSkipped('The collation already treats these addresses as the same, so the unique index rejects the second row.');
+    }
+
     $organisation = Organisation::factory()->create();
     $expiredAt = now()->subDays(config('invites.expiration_days') + 1);
 
@@ -83,6 +140,10 @@ test('it deletes an expired invite that collides and lowercases the live one', f
 });
 
 test('it keeps live invites that collide as they are', function () {
+    if (databaseTreatsAsSameAddress('Pending@Example.com', 'pending@example.com')) {
+        $this->markTestSkipped('The collation already treats these addresses as the same, so the unique index rejects the second row.');
+    }
+
     $first = rawInvite('municipality_invites', 'Pending@Example.com', ['role' => 'reviewer']);
     $second = rawInvite('municipality_invites', 'pending@example.com', ['role' => 'reviewer']);
 
