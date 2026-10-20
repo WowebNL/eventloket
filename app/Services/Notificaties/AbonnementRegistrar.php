@@ -7,6 +7,7 @@ namespace App\Services\Notificaties;
 use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\ZgwAbonnement;
+use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\URL;
@@ -107,6 +108,15 @@ class AbonnementRegistrar
      * other connection is refused when its notificaties URL is inherited from
      * main, points at main's instance, or points at an instance on which an
      * earlier registered connection holds the abonnement.
+     *
+     * Only connections that are subscribers of the same instance count. A
+     * OneGround Notificaties API binds each ZGW client id to its tenant, so
+     * connections with different client ids there each get their own
+     * abonnement: when either of two connections on the same URL is a OneGround
+     * connection and their client ids differ, neither refuses the other. Should
+     * such an instance still list another client's abonnement on our callback,
+     * registration refuses a second one (see locateRemote()), so it falls back
+     * to a single abonnement.
      */
     public function sharedInstance(string $connectionName, string $baseUrl): ?SharedNotificatiesInstance
     {
@@ -114,14 +124,17 @@ class AbonnementRegistrar
             return null;
         }
 
-        if ($this->inheritsNotificatiesUrl($connectionName)) {
+        $ownSubscriber = $this->subscriberOf($connectionName);
+        $sharesMainSubscriber = self::sameSubscriber($ownSubscriber, $this->subscriberOf(ZgwConnectionResolver::DEFAULT_CONNECTION));
+
+        if ($sharesMainSubscriber && $this->inheritsNotificatiesUrl($connectionName)) {
             return new SharedNotificatiesInstance(ZgwConnectionResolver::DEFAULT_CONNECTION, inherited: true);
         }
 
         $instance = self::normaliseUrl($baseUrl);
         $mainUrl = config('zgw.connections.'.ZgwConnectionResolver::DEFAULT_CONNECTION.'.urls.notificaties');
 
-        if (is_string($mainUrl) && $mainUrl !== '' && self::normaliseUrl($mainUrl) === $instance) {
+        if ($sharesMainSubscriber && is_string($mainUrl) && $mainUrl !== '' && self::normaliseUrl($mainUrl) === $instance) {
             return new SharedNotificatiesInstance(ZgwConnectionResolver::DEFAULT_CONNECTION, inherited: false);
         }
 
@@ -136,7 +149,8 @@ class AbonnementRegistrar
             ->when($ownId !== null, fn ($query) => $query->where('id', '<', $ownId))
             ->orderBy('id')
             ->get(['connection', 'notificaties_base_url'])
-            ->first(fn (ZgwAbonnement $row): bool => self::normaliseUrl($row->notificaties_base_url) === $instance);
+            ->first(fn (ZgwAbonnement $row): bool => self::normaliseUrl($row->notificaties_base_url) === $instance
+                && self::sameSubscriber($ownSubscriber, $this->subscriberOf($row->connection)));
 
         return $owner === null ? null : new SharedNotificatiesInstance($owner->connection, inherited: false);
     }
@@ -299,6 +313,61 @@ class AbonnementRegistrar
         $url = $connection->notificaties_url;
 
         return ! is_string($url) || trim($url) === '';
+    }
+
+    /**
+     * Who a connection subscribes as on its Notificaties API: whether it is a
+     * OneGround connection, and the ZGW client id it authenticates with.
+     *
+     * Read from the stored connection rather than the runtime config, because
+     * the other connections compared here need not be resolved in this request.
+     * An empty client id is inherited from main, as in
+     * {@see MunicipalityZgwConnection::buildConfig()}.
+     *
+     * @return array{oneground: bool, clientId: string}
+     */
+    private function subscriberOf(string $connectionName): array
+    {
+        $mainClientId = (string) config('zgw.connections.'.ZgwConnectionResolver::DEFAULT_CONNECTION.'.client_id', '');
+        $municipalityId = ZgwAbonnement::municipalityIdFromConnection($connectionName);
+
+        $connection = $municipalityId === null
+            ? null
+            : MunicipalityZgwConnection::query()
+                ->where('municipality_id', $municipalityId)
+                ->first(['is_oneground', 'client_id']);
+
+        if ($connection === null) {
+            return [
+                'oneground' => ZgwConnectionConfig::isOneGround($connectionName),
+                'clientId' => (string) config("zgw.connections.{$connectionName}.client_id", $mainClientId),
+            ];
+        }
+
+        $clientId = $connection->client_id;
+
+        return [
+            'oneground' => (bool) $connection->is_oneground,
+            'clientId' => is_string($clientId) && $clientId !== '' ? $clientId : $mainClientId,
+        ];
+    }
+
+    /**
+     * Whether two connections on the same Notificaties URL receive the same
+     * notifications through one abonnement. That holds unless either is a
+     * OneGround connection and their client ids differ, since such an instance
+     * binds each client id to its own tenant.
+     *
+     * @param  array{oneground: bool, clientId: string}  $a
+     * @param  array{oneground: bool, clientId: string}  $b
+     */
+    private static function sameSubscriber(array $a, array $b): bool
+    {
+        if (! $a['oneground'] && ! $b['oneground']) {
+            return true;
+        }
+
+        return $a['clientId'] === $b['clientId'];
     }
 
     /**
