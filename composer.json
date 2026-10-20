@@ -20,8 +20,7 @@
         "phiki/phiki": "^2.0",
         "sentry/sentry-laravel": "^4.25",
         "spatie/laravel-activitylog": "^4.10",
-        "woweb/laravel-zgw-client": "^1.2",
-        "woweb/openzaak": "dev-main"
+        "woweb/laravel-zgw-client": "^1.3"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^4.2",
@@ -37,12 +36,6 @@
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-laravel": "^4.0",
         "pestphp/pest-plugin-livewire": "^4.0"
-    },
-    "repositories": {
-        "woweb/openzaak": {
-            "type": "vcs",
-            "url": "git@github.com:WowebNL/laravel-openzaak.git"
-        }
     },
     "autoload": {
         "psr-4": {

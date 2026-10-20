@@ -12,11 +12,10 @@ namespace App\Support\Zgw;
  * the Kadaster, OSM tile servers and a Slack webhook; the webhook in particular carries its
  * secret in the URL path, so logging failures of "anything outgoing" would leak a credential.
  *
- * Two configuration shapes are read, so the resolver keeps working when the application moves
- * from the single-connection woweb/openzaak package to the multi-connection
- * woweb/laravel-zgw-client package:
- *  - woweb/openzaak: one base URL plus optional per-API overrides;
- *  - woweb/laravel-zgw-client: `zgw.connections.<name>.urls.<api>`, which is also the shape
+ * Two configuration shapes are read:
+ *  - config/openzaak.php: the legacy single-connection settings, one base URL plus optional
+ *    per-API overrides;
+ *  - config/zgw.php: `zgw.connections.<name>.urls.<api>`, which is also the shape
  *    runtime-registered connections are written into.
  */
 final class ZgwEndpoints
