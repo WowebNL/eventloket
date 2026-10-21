@@ -224,15 +224,23 @@ class UploadDocumentAction
             ->visibility('private')
             ->storeFileNamesIn('file_name')
             ->live()
-            ->afterStateUpdated(function (?string $state, Get $get, Set $set): void {
-                if ($state === null) {
+            ->afterStateUpdated(function (TemporaryUploadedFile|string|null $state, Get $get, Set $set): void {
+                if ($state === null || $state === '') {
                     return;
                 }
                 if ($get('titel') !== null && $get('titel') !== '') {
                     return;
                 }
-                $fileName = $get('file_name');
-                $name = is_string($fileName) ? $fileName : basename($state);
+                // Until the form is submitted the state is a Livewire temporary
+                // upload. Its path is a random temporary file name, and the
+                // stored file names are only written on submit, so the name the
+                // browser sent is the only source of the original file name.
+                if ($state instanceof TemporaryUploadedFile) {
+                    $name = $state->getClientOriginalName();
+                } else {
+                    $fileName = $get('file_name');
+                    $name = is_string($fileName) ? $fileName : basename($state);
+                }
                 $set('titel', pathinfo($name, PATHINFO_FILENAME));
             });
 
