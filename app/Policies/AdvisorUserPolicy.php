@@ -134,6 +134,17 @@ class AdvisorUserPolicy
     }
 
     /**
+     * Determine whether the user can bulk delete models.
+     *
+     * This only decides whether the bulk action is offered at all. Every selected
+     * record is still checked against delete() by the bulk action itself.
+     */
+    public function deleteAny(User $user): bool
+    {
+        return $this->viewAny($user);
+    }
+
+    /**
      * Determine whether the user can restore the model.
      */
     public function restore(User $user, AdvisorUser $advisorUser): bool

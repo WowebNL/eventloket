@@ -105,7 +105,14 @@ class AdvisorUserTable
                         ->failureNotificationTitle(fn (int $successCount): string => $successCount > 0
                             ? __('resources/advisor_user.actions.detach.notifications.partially_detached.title')
                             : __('resources/advisor_user.actions.detach.notifications.none_detached.title')),
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        // Authorize every selected record against the same policy as the single
+                        // delete action, and never include the acting user, which that action hides.
+                        ->authorizeIndividualRecords(function (AdvisorUser $record): bool {
+                            $user = auth()->user();
+
+                            return $user !== null && $record->isNot($user) && $user->can('delete', $record);
+                        }),
                 ]),
             ]);
     }
