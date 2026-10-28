@@ -4,9 +4,11 @@ namespace App\Policies;
 
 use App\Enums\AdvisoryRole;
 use App\Enums\Role;
+use App\Models\Advisory;
 use App\Models\User;
 use App\Models\Users\AdvisorUser;
 use App\Models\Users\MunicipalityUser;
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\DB;
 
 class AdvisorUserPolicy
@@ -21,7 +23,12 @@ class AdvisorUserPolicy
         }
 
         if ($user instanceof AdvisorUser) {
-            return $user->advisories()->wherePivot('role', AdvisoryRole::Admin)->exists();
+            // Advisor users are listed per advisory, so being an admin of some other
+            // advisory is not enough: the user must be an admin of the current one.
+            $tenant = Filament::getTenant();
+
+            return $tenant instanceof Advisory
+                && $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
         }
 
         return false;
