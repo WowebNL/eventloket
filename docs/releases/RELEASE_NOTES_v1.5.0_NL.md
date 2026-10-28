@@ -36,7 +36,7 @@ Omdat een zaaktype nu voor meerdere soorten aanvragen kan staan, zegt het zaakty
 * De kolom en het filter "Gemeente" zie je nu in alle lijsten die zaken van meerdere gemeenten kunnen tonen, dus ook als organisator en als adviseur. Alleen in de lijst met zaken in de omgeving van een gemeente staan ze er niet, omdat je daar al binnen één gemeente werkt.
 * De inbox met adviesvragen voor adviseurs toont het aanvraagtype.
 * Op de pagina van een zaak staat het aanvraagtype naast het zaaktype.
-* De CSV-export en de GeoJSON-export uit de kalender bevatten het aanvraagtype naast het zaaktype en de gemeente.
+* De CSV-export en de GeoJSON-export uit de kalender bevatten het aanvraagtype naast het zaaktype en de gemeente. Organisatoren hebben deze exports niet.
 
 De kolom "Zaaktype" in de lijst met zaken is standaard verborgen. Zie daarvoor "Wat is er weg of anders".
 
@@ -174,8 +174,6 @@ Wil je op je profielpagina tweestapsverificatie met een authenticator-app instel
 ### Voor organisatoren
 
 **Niets.** Krijg je een melding dat een nieuwe versie van een document niet is opgeslagen, neem dan contact op met de gemeente.
-
-Lees je de CSV-export uit de kalender in een eigen programma in, kijk dan na of de kolommen nog kloppen: er is een kolom "Aanvraagtype" bijgekomen.
 
 ### Voor gemeenten, behandelaars en adviseurs
 
