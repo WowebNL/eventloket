@@ -78,6 +78,32 @@ test('advisory member who is an admin of another advisory is forbidden from the 
         ->assertForbidden();
 });
 
+// --- Access checks without an advisory context ---
+
+test('settings cluster and advisor users resource deny access without a current advisory', function () {
+    $this->actingAs($this->adminAdvisor);
+
+    expect(Filament::getTenant())->toBeNull()
+        ->and(SettingsCluster::canAccess())->toBeFalse()
+        ->and(AdvisorUserResource::canAccess())->toBeFalse();
+});
+
+test('settings cluster and advisor users resource deny access to a user that is not an advisor', function () {
+    $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+    Filament::setTenant($this->advisory);
+
+    expect(SettingsCluster::canAccess())->toBeFalse()
+        ->and(AdvisorUserResource::canAccess())->toBeFalse();
+});
+
+test('a user that is not an advisor is forbidden from the advisor users list page', function () {
+    $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+    Filament::setTenant($this->advisory);
+
+    livewire(ListAdvisorUsers::class)
+        ->assertForbidden();
+});
+
 test('advisor users list shows existing advisory members', function () {
     $this->actingAs($this->adminAdvisor);
     Filament::setTenant($this->advisory);
