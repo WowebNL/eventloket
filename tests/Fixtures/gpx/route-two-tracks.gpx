@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Fixture" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata>
+    <name>Fixture route</name>
+    <desc>Synthetic coordinates, not a recorded route.</desc>
+  </metadata>
+  <wpt lat="50.8000" lon="5.6000">
+    <name>Start marker</name>
+  </wpt>
+  <trk>
+    <name>Track one</name>
+    <desc>Two segments.</desc>
+    <trkseg>
+      <trkpt lat="50.8000" lon="5.6000"><ele>50.0</ele><time>2026-01-01T10:00:00Z</time></trkpt>
+      <trkpt lat="50.8100" lon="5.6100"><ele>51.0</ele></trkpt>
+      <trkpt lat="50.8200" lon="5.6200"><ele>52.0</ele></trkpt>
+    </trkseg>
+    <trkseg>
+      <trkpt lat="50.8300" lon="5.6300"/>
+      <trkpt lat="50.8400" lon="5.6400"/>
+      <trkpt lat="50.8500" lon="5.6500"/>
+    </trkseg>
+  </trk>
+  <trk>
+    <name>Track two</name>
+    <trkseg>
+      <trkpt lat="50.9000" lon="5.7000"/>
+      <trkpt lat="50.9100" lon="5.7100"/>
+    </trkseg>
+  </trk>
+  <rte>
+    <name>Planned route</name>
+    <rtept lat="51.0000" lon="5.8000"/>
+    <rtept lat="51.0100" lon="5.8100"/>
+  </rte>
+</gpx>
