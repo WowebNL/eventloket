@@ -96,7 +96,7 @@ return [
         ],
         'show_bestanden_tab_read_only_for_advisories' => [
             'label' => 'Bestanden tonen aan adviesdiensten met inzage in alle zaken (alleen lezen)',
-            'helper' => 'Alleen te kiezen als het tabblad bestanden uit staat. Adviesdiensten die alle zaken mogen inzien, zien dan bij zaken van deze koppeling het tabblad bestanden. Ze kunnen bestanden bekijken en downloaden, maar geen bestanden toevoegen en geen nieuwe versie maken. Welke bestanden ze zien, volgt het maximaal zichtbare niveau van de rolgroep adviseur. Andere adviesdiensten, behandelaars en beheerders zien het tabblad niet. Zet u het tabblad bestanden weer aan, dan gaat deze instelling vanzelf uit.',
+            'helper' => 'Alleen te kiezen als het tabblad bestanden uit staat. Adviesdiensten met "Alle zaken inzien" zien dan bij zaken van deze koppeling het tabblad bestanden, ook als ze niet aan uw gemeente gekoppeld zijn. Ze kunnen bestanden bekijken en downloaden, maar geen bestanden toevoegen en geen nieuwe versie maken. Welke bestanden ze zien, volgt het maximaal zichtbare niveau van de rolgroep adviseur. Andere adviesdiensten, behandelaars en beheerders zien het tabblad niet. Zet u het tabblad bestanden weer aan, dan gaat deze instelling vanzelf uit.',
         ],
         'show_adviesvragen_tab' => [
             'label' => 'Tabblad adviesvragen tonen',
