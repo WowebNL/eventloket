@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ZaakDocumentAccess;
 use App\Http\Requests\DocumentRequest;
+use App\Models\Users\AdvisorUser;
 use App\Models\Zaak;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
@@ -20,6 +22,18 @@ class DocumentController extends Controller
         $document = $zaak->documenten->firstWhere('uuid', $documentuuid);
 
         abort_if($document === null, 404);
+
+        // An advisor without access to the documents of the zaak may only open a
+        // document that another tab shows them (an attachment in their own advice
+        // question, or a besluit document). Anything else gets the same 404 as
+        // an unknown document, for the reason given above.
+        $user = $request->user();
+        abort_if(
+            $user instanceof AdvisorUser
+                && $zaak->documentAccessFor($user) === ZaakDocumentAccess::None
+                && ! $zaak->advisorCanOpenDocumentOutsideTab($user, $document),
+            404,
+        );
 
         $validated = $request->validated();
         $requestedVersion = isset($validated['version']) ? (int) $validated['version'] : null;
