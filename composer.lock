@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "8d4a57153650db6e368115d5da13d9fb",
+    "content-hash": "4f4036cee74281c503b6e0d9d452d175",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -11134,16 +11134,16 @@
         },
         {
             "name": "woweb/laravel-zgw-client",
-            "version": "v1.2.3",
+            "version": "v1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/WowebNL/laravel-zgw-client.git",
-                "reference": "8fb792973ceb88b5d76454d0090409e1b847c697"
+                "reference": "563ed5494cf3f72f62a1826ace42d31996cdf165"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/8fb792973ceb88b5d76454d0090409e1b847c697",
-                "reference": "8fb792973ceb88b5d76454d0090409e1b847c697",
+                "url": "https://api.github.com/repos/WowebNL/laravel-zgw-client/zipball/563ed5494cf3f72f62a1826ace42d31996cdf165",
+                "reference": "563ed5494cf3f72f62a1826ace42d31996cdf165",
                 "shasum": ""
             },
             "require": {
@@ -11201,53 +11201,9 @@
             ],
             "support": {
                 "issues": "https://github.com/WowebNL/laravel-zgw-client/issues",
-                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.2.3"
+                "source": "https://github.com/WowebNL/laravel-zgw-client/tree/v1.3.0"
             },
-            "time": "2026-07-14T12:53:43+00:00"
-        },
-        {
-            "name": "woweb/openzaak",
-            "version": "dev-main",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/WowebNL/laravel-openzaak.git",
-                "reference": "c883993eb137bed532f71a620fa4ef0fff4f49b1"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/WowebNL/laravel-openzaak/zipball/c883993eb137bed532f71a620fa4ef0fff4f49b1",
-                "reference": "c883993eb137bed532f71a620fa4ef0fff4f49b1",
-                "shasum": ""
-            },
-            "default-branch": true,
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Woweb\\Openzaak\\OpenzaakServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Woweb\\Openzaak\\": "src/"
-                }
-            },
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Woweb B.V.",
-                    "email": "info@woweb.nl"
-                }
-            ],
-            "description": "A laravel wrapper for the Open Zaak API",
-            "support": {
-                "source": "https://github.com/WowebNL/laravel-openzaak/tree/main",
-                "issues": "https://github.com/WowebNL/laravel-openzaak/issues"
-            },
-            "time": "2026-08-24T12:41:25+00:00"
+            "time": "2026-10-20T19:03:26+00:00"
         }
     ],
     "packages-dev": [
@@ -15229,9 +15185,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "woweb/openzaak": 20
-    },
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
