@@ -2,8 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Enums\AdvisoryRole;
+use App\Enums\Role;
+use App\Enums\ZaakDocumentAccess;
+use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
+use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Illuminate\Database\QueryException;
@@ -195,4 +200,39 @@ test('a write outside the model cannot combine the bestanden tab with read-only 
         ->where('id', $connection->id)
         ->update(['show_bestanden_tab' => true]))
         ->toThrow(QueryException::class, 'municipality_zgw_connections_read_only_docs_need_tab_off');
+});
+
+test('document access follows the tab for every role while the tab is shown', function () {
+    $zaak = zaakForConnection(['show_bestanden_tab' => true]);
+
+    foreach ([Role::Advisor, Role::Organiser, Role::Reviewer, Role::Admin, Role::KoppelingBeheerder] as $role) {
+        expect($zaak->documentAccessFor(User::factory()->create(['role' => $role])))->toBe(ZaakDocumentAccess::Full);
+    }
+});
+
+test('document access with the tab off gives read-only only to an advisory that may view any zaak', function () {
+    $zaak = zaakForConnection(['show_bestanden_tab' => false, 'show_bestanden_tab_read_only_for_advisories' => true]);
+
+    $withAccess = User::factory()->create(['role' => Role::Advisor]);
+    Advisory::factory()->create(['can_view_any_zaak' => true])->users()->attach($withAccess, ['role' => AdvisoryRole::Member]);
+
+    $withoutAccess = User::factory()->create(['role' => Role::Advisor]);
+    Advisory::factory()->create(['can_view_any_zaak' => false])->users()->attach($withoutAccess, ['role' => AdvisoryRole::Member]);
+
+    expect($zaak->documentAccessFor(User::query()->findOrFail($withAccess->id)))->toBe(ZaakDocumentAccess::ReadOnly)
+        ->and($zaak->documentAccessFor(User::query()->findOrFail($withoutAccess->id)))->toBe(ZaakDocumentAccess::None)
+        ->and($zaak->documentAccessFor(User::factory()->create(['role' => Role::Organiser])))->toBe(ZaakDocumentAccess::SubmissionOnly);
+
+    foreach ([Role::Reviewer, Role::Coordinator, Role::MunicipalityAdmin, Role::Admin, Role::KoppelingBeheerder] as $role) {
+        expect($zaak->documentAccessFor(User::factory()->create(['role' => $role])))->toBe(ZaakDocumentAccess::None);
+    }
+});
+
+test('document access with the tab off and the opt-in off gives no advisory read-only access', function () {
+    $zaak = zaakForConnection(['show_bestanden_tab' => false]);
+
+    $advisor = User::factory()->create(['role' => Role::Advisor]);
+    Advisory::factory()->create(['can_view_any_zaak' => true])->users()->attach($advisor, ['role' => AdvisoryRole::Member]);
+
+    expect($zaak->documentAccessFor(User::query()->findOrFail($advisor->id)))->toBe(ZaakDocumentAccess::None);
 });
