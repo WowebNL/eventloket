@@ -673,7 +673,9 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ])
-                                    ->visible(fn (Zaak $record) => $record->showsTab('bestanden')),
+                                    // Not showsTab() alone: with the tab off, advisories that
+                                    // may view any zaak can still get it read-only.
+                                    ->visible(fn (Zaak $record) => $record->documentAccessFor(auth()->user())->showsDocumentsTab()),
                                 Tab::make('Organisatievragen')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
