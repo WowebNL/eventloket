@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Support;
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\DetermineAanvraagType;
 
@@ -86,6 +87,19 @@ final class ExtraQuestions
     public static function fieldKey(array $question): string
     {
         return self::FIELD_PREFIX.((string) ($question['id'] ?? ''));
+    }
+
+    /**
+     * Whether this question is asked on the given aanvraag path. A question
+     * without a path filter is asked on every path.
+     *
+     * @param  array<string, mixed>  $question
+     */
+    public static function appliesTo(array $question, ZaaktypeRole $role): bool
+    {
+        $paths = self::pathsFor($question);
+
+        return $paths === [] || in_array($role->value, $paths, true);
     }
 
     /**

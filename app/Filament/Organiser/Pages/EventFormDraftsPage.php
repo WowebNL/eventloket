@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Enums\MunicipalityFormQuestionType;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftLimitReached;
 use App\EventForm\Persistence\DraftStore;
@@ -12,6 +14,7 @@ use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\ExtraQuestions;
+use App\Models\MunicipalityFormQuestion;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -212,6 +215,71 @@ class EventFormDraftsPage extends Page implements HasTable
         $prefill->setVariable(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD, 'Ja');
         $prefill->setVariable(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD, $vooraankondiging->id);
         $prefill->setVariable(Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD, $vooraankondiging->public_id);
+
+        $this->restoreExtraQuestionAnswers($prefill, $vooraankondiging);
+    }
+
+    /**
+     * The generic prefill drops every answer to the municipality's own extra
+     * questions, because a plain copy can end up at another municipality with
+     * different questions. A conversion is the same event at the same
+     * municipality, so the answers given in the vooraankondiging are put back.
+     *
+     * Only answers to questions the municipality of the vooraankondiging
+     * still has active, matched on question id, and only for questions that
+     * are asked on the vergunning path. A choice answer keeps only the options
+     * the question still offers, so an option that was removed in the meantime
+     * is not carried over.
+     */
+    private function restoreExtraQuestionAnswers(FormState $prefill, Zaak $vooraankondiging): void
+    {
+        $sourceValues = $vooraankondiging->form_state_snapshot['values'] ?? null;
+        $municipality = $vooraankondiging->municipality;
+
+        if (! is_array($sourceValues) || $municipality === null) {
+            return;
+        }
+
+        $questions = $municipality->formQuestions()->where('is_active', true)->get();
+
+        foreach ($questions as $question) {
+            $applies = ExtraQuestions::appliesTo(
+                ['show_for_aanvraag_types' => $question->show_for_aanvraag_types],
+                ZaaktypeRole::Vergunning,
+            );
+            if (! $applies) {
+                continue;
+            }
+
+            $key = ExtraQuestions::fieldKey(['id' => $question->id]);
+            if (! array_key_exists($key, $sourceValues)) {
+                continue;
+            }
+
+            $answer = $this->stillValidAnswer($question, $sourceValues[$key]);
+            if ($answer !== null) {
+                $prefill->setField($key, $answer);
+            }
+        }
+    }
+
+    /**
+     * The copied answer in the shape the question currently expects, or null
+     * when nothing of it is still answerable.
+     *
+     * @return string|list<string>|null
+     */
+    private function stillValidAnswer(MunicipalityFormQuestion $question, mixed $answer): string|array|null
+    {
+        $options = is_array($question->options) ? $question->options : [];
+
+        return match ($question->type) {
+            MunicipalityFormQuestionType::Text => is_string($answer) && trim($answer) !== '' ? $answer : null,
+            MunicipalityFormQuestionType::Radio => is_string($answer) && in_array($answer, $options, true) ? $answer : null,
+            MunicipalityFormQuestionType::Checkboxes => is_array($answer)
+                ? (array_values(array_filter($answer, fn (mixed $option): bool => is_string($option) && in_array($option, $options, true))) ?: null)
+                : null,
+        };
     }
 
     /**
