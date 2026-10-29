@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Filament\Organiser\Pages;
 
+use App\Enums\MunicipalityFormQuestionType;
+use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftLimitReached;
 use App\EventForm\Persistence\DraftStore;
@@ -12,6 +14,7 @@ use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\Schema\Steps\Vragenboom2Step;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\ExtraQuestions;
+use App\Models\MunicipalityFormQuestion;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -25,17 +28,15 @@ use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 
 /**
- * Keuzescherm vóór het evenementformulier: toont de automatisch
- * opgeslagen concepten van de ingelogde organisator zodat 'ie kan
- * doorgaan waar 'ie gebleven was, een concept kan weggooien of een
- * nieuwe (parallelle) aanvraag kan starten. Zonder concepten wordt
- * direct een vers concept aangemaakt en doorgestuurd naar het
- * formulier — de gebruiker merkt dit scherm dan niet op.
+ * Selection screen in front of the event form: shows the autosaved drafts
+ * of the logged-in organiser, so they can continue where they left off,
+ * discard a draft or start a new (parallel) aanvraag. Without drafts a fresh
+ * draft is created right away and the user is sent on to the form, so they
+ * never notice this screen.
  *
- * Het `?prefill_from_zaak=`-contract ("Nieuwe aanvraag met deze
- * gegevens" op een ingediende zaak) landt ook hier: de prefill wordt
- * in een níéuw concept gezet zodat bestaande concepten nooit worden
- * overschreven.
+ * The `?prefill_from_zaak=` contract ("Nieuwe aanvraag met deze gegevens" on
+ * a submitted zaak) lands here as well: the prefill goes into a new draft, so
+ * existing drafts are never overwritten.
  */
 class EventFormDraftsPage extends Page implements HasTable
 {
@@ -86,9 +87,9 @@ class EventFormDraftsPage extends Page implements HasTable
                 return;
             }
 
-            // `bron=hergebruik` laat het formulier een passende melding
-            // tonen ("gegevens van een eerdere aanvraag") i.p.v. de
-            // gewone "Concept hervat"-melding.
+            // `bron=hergebruik` makes the form show a matching notification
+            // (data from an earlier aanvraag) instead of the regular
+            // "Concept hervat" one.
             $this->redirect(
                 EventFormPage::getUrl(['draft' => $draft, 'bron' => 'hergebruik']),
                 navigate: false,
@@ -98,8 +99,8 @@ class EventFormDraftsPage extends Page implements HasTable
         }
 
         if ($store->listFor($user, $tenant)->isEmpty()) {
-            // Geen concepten: sla het keuzescherm over en start direct
-            // een vers concept. create() kan hier niet op de cap stuiten.
+            // No drafts: skip the selection screen and start a fresh draft
+            // right away. create() cannot hit the cap here.
             $draft = $store->create($user, $tenant, FormState::empty());
             $this->redirect(EventFormPage::getUrl(['draft' => $draft]), navigate: false);
         }
@@ -116,9 +117,9 @@ class EventFormDraftsPage extends Page implements HasTable
                     ->weight('semibold'),
                 TextColumn::make('current_step_key')
                     ->label('Voortgang')
-                    // Per concept, want de stap "Aanvullende vragen" telt
-                    // alleen mee wanneer de gemeente van dat concept er
-                    // vragen voor heeft ingesteld.
+                    // Per draft, because the "Aanvullende vragen" step only
+                    // counts when the municipality of that draft has
+                    // configured questions for it.
                     ->formatStateUsing(function (?string $state, Draft $record): string {
                         $uuids = EventFormSchema::stepUuidsInOrder($this->draftHasAanvullendeVragen($record));
 
@@ -128,8 +129,8 @@ class EventFormDraftsPage extends Page implements HasTable
                             count($uuids),
                         );
                     })
-                    // Zonder default rendert Filament een lege cel bij
-                    // null-state en wordt formatStateUsing overgeslagen.
+                    // Without a default Filament renders an empty cell for a
+                    // null state and skips formatStateUsing.
                     ->default(''),
                 TextColumn::make('updated_at')
                     ->label('Laatst bewerkt')
@@ -212,10 +213,75 @@ class EventFormDraftsPage extends Page implements HasTable
         $prefill->setVariable(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD, 'Ja');
         $prefill->setVariable(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD, $vooraankondiging->id);
         $prefill->setVariable(Vragenboom2Step::VOORAANKONDIGING_ZAAKNUMMER_FIELD, $vooraankondiging->public_id);
+
+        $this->restoreExtraQuestionAnswers($prefill, $vooraankondiging);
     }
 
     /**
-     * 1-based positie van een step-UUID in de wizard; onbekend/leeg = stap 1.
+     * The generic prefill drops every answer to the municipality's own extra
+     * questions, because a plain copy can end up at another municipality with
+     * different questions. A conversion is the same event at the same
+     * municipality, so the answers given in the vooraankondiging are put back.
+     *
+     * Only answers to questions the municipality of the vooraankondiging
+     * still has active, matched on question id, and only for questions that
+     * are asked on the vergunning path. A choice answer keeps only the options
+     * the question still offers, so an option that was removed in the meantime
+     * is not carried over.
+     */
+    private function restoreExtraQuestionAnswers(FormState $prefill, Zaak $vooraankondiging): void
+    {
+        $sourceValues = $vooraankondiging->form_state_snapshot['values'] ?? null;
+        $municipality = $vooraankondiging->municipality;
+
+        if (! is_array($sourceValues) || $municipality === null) {
+            return;
+        }
+
+        $questions = $municipality->formQuestions()->where('is_active', true)->get();
+
+        foreach ($questions as $question) {
+            $applies = ExtraQuestions::appliesTo(
+                ['show_for_aanvraag_types' => $question->show_for_aanvraag_types],
+                ZaaktypeRole::Vergunning,
+            );
+            if (! $applies) {
+                continue;
+            }
+
+            $key = ExtraQuestions::fieldKey(['id' => $question->id]);
+            if (! array_key_exists($key, $sourceValues)) {
+                continue;
+            }
+
+            $answer = $this->stillValidAnswer($question, $sourceValues[$key]);
+            if ($answer !== null) {
+                $prefill->setField($key, $answer);
+            }
+        }
+    }
+
+    /**
+     * The copied answer in the shape the question currently expects, or null
+     * when nothing of it is still answerable.
+     *
+     * @return string|list<string>|null
+     */
+    private function stillValidAnswer(MunicipalityFormQuestion $question, mixed $answer): string|array|null
+    {
+        $options = is_array($question->options) ? $question->options : [];
+
+        return match ($question->type) {
+            MunicipalityFormQuestionType::Text => is_string($answer) && trim($answer) !== '' ? $answer : null,
+            MunicipalityFormQuestionType::Radio => is_string($answer) && in_array($answer, $options, true) ? $answer : null,
+            MunicipalityFormQuestionType::Checkboxes => is_array($answer)
+                ? (array_values(array_filter($answer, fn (mixed $option): bool => is_string($option) && in_array($option, $options, true))) ?: null)
+                : null,
+        };
+    }
+
+    /**
+     * 1-based position of a step UUID in the wizard; unknown or empty is step 1.
      *
      * @param  list<string>  $uuids
      */
@@ -231,9 +297,9 @@ class EventFormDraftsPage extends Page implements HasTable
     }
 
     /**
-     * Of de wizard voor dit concept de stap "Aanvullende vragen" bevat.
-     * Zelfde bepaling als `EventFormPage::hasAanvullendeVragen()`, maar op
-     * de opgeslagen state van het concept.
+     * Whether the wizard for this draft contains the "Aanvullende vragen"
+     * step. Same check as `EventFormPage::hasAanvullendeVragen()`, but on the
+     * stored state of the draft.
      */
     private function draftHasAanvullendeVragen(Draft $draft): bool
     {
@@ -255,16 +321,16 @@ class EventFormDraftsPage extends Page implements HasTable
                 'U heeft het maximum van %d concepten bereikt. Verwijder eerst een concept om een nieuwe aanvraag te starten.',
                 DraftStore::MAX_DRAFTS,
             ))
-            // Blijft staan tot de gebruiker 'm zelf wegklikt — de tekst is
-            // te lang om binnen de standaard auto-dismiss te lezen.
+            // Stays until the user dismisses it: the text is too long to read
+            // within the default auto-dismiss.
             ->persistent()
             ->send();
     }
 
     /**
-     * Cap-melding specifiek voor "Nieuwe aanvraag met deze gegevens":
-     * maakt expliciet dat ook hergebruik een nieuw concept nodig heeft
-     * en dus niet kan zolang het maximum openstaat.
+     * Cap notification specific to "Nieuwe aanvraag met deze gegevens": makes
+     * explicit that reuse needs a new draft as well, so it is not possible
+     * while the maximum is reached.
      */
     private function notifyLimitReachedForHergebruik(): void
     {
@@ -275,8 +341,8 @@ class EventFormDraftsPage extends Page implements HasTable
                 'Een nieuwe aanvraag met gegevens van een eerdere aanvraag wordt als nieuw concept gestart, en u heeft al het maximum van %d openstaande concepten. Verwijder hieronder eerst een concept dat u niet meer nodig heeft en probeer het daarna opnieuw.',
                 DraftStore::MAX_DRAFTS,
             ))
-            // Blijft staan tot de gebruiker 'm zelf wegklikt — de tekst is
-            // te lang om binnen de standaard auto-dismiss te lezen.
+            // Stays until the user dismisses it: the text is too long to read
+            // within the default auto-dismiss.
             ->persistent()
             ->send();
     }
