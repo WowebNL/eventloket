@@ -63,6 +63,7 @@ test('renews an abonnement whose token expires within the window', function () {
 
     $abonnement = ZgwAbonnement::factory()->create([
         'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
         'token_id' => 'old-token',
         'expires_at' => now()->addDays(5),
@@ -87,6 +88,7 @@ test('leaves an abonnement whose token expires far in the future untouched', fun
 
     ZgwAbonnement::factory()->create([
         'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
         'token_id' => 'old-token',
         'expires_at' => now()->addMonths(6),
@@ -104,6 +106,7 @@ test('a failing renewal is caught and leaves the stored token unchanged', functi
 
     ZgwAbonnement::factory()->create([
         'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
         'token_id' => 'old-token',
         'expires_at' => now()->addDays(5),
@@ -122,6 +125,7 @@ test('retires the previous webhook client after a successful renewal', function 
 
     ZgwAbonnement::factory()->create([
         'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
         'token_id' => 'old-token',
         'client_id' => $previousClient->getKey(),
@@ -145,6 +149,7 @@ test('retires the just-issued client when the renewal patch fails', function () 
 
     ZgwAbonnement::factory()->create([
         'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
         'token_id' => 'old-token',
         'expires_at' => now()->addDays(5),

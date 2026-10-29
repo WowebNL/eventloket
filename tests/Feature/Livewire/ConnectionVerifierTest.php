@@ -67,6 +67,7 @@ function healthyAbonnement(int $municipalityId, string $name): string
     ZgwAbonnement::factory()->create([
         'connection' => $name,
         'municipality_id' => $municipalityId,
+        'notificaties_base_url' => GEM.'/notificaties/api/v1/',
         'abonnement_url' => $aboUrl,
         'expires_at' => now()->addYear(),
     ]);
@@ -214,6 +215,93 @@ it('offers a register button and registers the abonnement', function () {
         ->assertSet('needsRegister', false);
 
     expect(ZgwAbonnement::where('connection', $this->name)->exists())->toBeTrue();
+});
+
+it('does not offer to register an abonnement on the notificaties api it inherits from main', function () {
+    // Registering here would put this connection's token on main's abonnement,
+    // after which main's notifications are attributed to this connection.
+    config()->set('zgw.connections.main.urls.notificaties', 'https://nc-main.example.com/api/v1/');
+    $this->connection->updateQuietly(['notificaties_url' => null]);
+
+    Http::fake(array_merge(fakeApiReads(), [
+        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
+            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
+            200,
+        ),
+    ]));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('steps.abonnement.status', 'warning')
+        ->assertSet('needsRegister', false)
+        ->assertSee(__('municipality/resources/zgw_connection.actions.verify.abonnement.notificaties_url_inherited'))
+        ->assertSet('success', true);
+
+    Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'nc-main.example.com'));
+    expect(ZgwAbonnement::where('connection', $this->name)->exists())->toBeFalse();
+});
+
+it('fails the abonnement step when another connection stores the same abonnement', function () {
+    $aboUrl = healthyAbonnement($this->connection->municipality_id, $this->name);
+    ZgwAbonnement::factory()->create(['connection' => 'main', 'abonnement_url' => $aboUrl]);
+
+    Http::fake(array_merge(fakeApiReads(), [
+        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
+            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
+            200,
+        ),
+    ]));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('steps.abonnement.status', 'fail')
+        ->assertSet('needsRegister', false)
+        ->assertSee(__('municipality/resources/zgw_connection.actions.verify.abonnement.shared_abonnement', [
+            'owner' => __('municipality/resources/zgw_connection.actions.verify.abonnement.owner.main'),
+        ]))
+        ->assertSet('success', false);
+
+    expect($this->connection->refresh()->last_verified_at)->toBeNull();
+});
+
+it('explains a refused registration when another connection subscribed on the same instance under another url', function () {
+    $base = GEM.'/notificaties/api/v1/';
+    $otherAbonnement = $base.'abonnement/other';
+
+    // Another connection reaches this instance through an alias and has
+    // already subscribed there, so the instance-url check cannot see it.
+    ZgwAbonnement::factory()->create([
+        'connection' => 'gemeente_999999',
+        'notificaties_base_url' => 'https://alias.example.com/notificaties/api/v1/',
+        'abonnement_url' => $otherAbonnement,
+    ]);
+
+    Http::fake(array_merge(fakeApiReads(), [
+        GEM.'/catalogi/api/v1/catalogussen*' => Http::response(
+            ['count' => 1, 'next' => null, 'previous' => null, 'results' => [['url' => GEM.'/catalogi/api/v1/catalogussen/1']]],
+            200,
+        ),
+        $base.'abonnement' => Http::response([
+            'count' => 1,
+            'next' => null,
+            'previous' => null,
+            'results' => [['url' => $otherAbonnement, 'callbackUrl' => app(AbonnementRegistrar::class)->callbackUrl()]],
+        ], 200),
+    ]));
+
+    livewire(ConnectionVerifier::class, ['connection' => $this->connection])
+        ->call('start')
+        ->assertSet('needsRegister', true)
+        ->call('register')
+        ->assertSet('steps.abonnement.status', 'warning')
+        ->assertSet('needsRegister', false)
+        ->assertSee(__('municipality/resources/zgw_connection.actions.verify.abonnement.notificaties_instance_in_use', [
+            'owner' => __('municipality/resources/zgw_connection.actions.verify.abonnement.owner.other'),
+        ]))
+        ->assertSet('success', true);
+
+    Http::assertNotSent(fn (Request $request) => in_array($request->method(), ['POST', 'PATCH'], true)
+        && str_starts_with($request->url(), $base));
 });
 
 it('forbids verifying a connection of another municipality', function () {
