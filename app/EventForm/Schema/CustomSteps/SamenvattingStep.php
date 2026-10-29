@@ -65,7 +65,11 @@ final class SamenvattingStep
      */
     private static function renderHtml(FormState $state): string
     {
-        $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
+        // Rendered inside the organiser's request, so tile downloads for the
+        // map backgrounds use the short interactive timeout.
+        $sections = app(SubmissionReport::class)
+            ->forInteractiveRequest()
+            ->build($state, EventFormSchema::stepsForReport());
         $risicoClassificatie = $state->get('risicoClassificatie');
         $indieningstermijnStatus = $state->get('indieningstermijnStatus');
 

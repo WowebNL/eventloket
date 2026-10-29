@@ -18,6 +18,7 @@ use App\EventForm\State\FormState;
 use Filament\Forms\Components\Checkbox;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Support\Facades\Http;
 
 function samenvattingChildren(Step $step): array
 {
@@ -170,4 +171,38 @@ test('Samenvatting toont leeg-melding wanneer geen velden zijn ingevuld', functi
     $html = samenvattingHtml(FormState::empty());
 
     expect($html)->toContain('U heeft nog geen velden ingevuld');
+});
+
+test('the summary renders map backgrounds with the short request timeout', function () {
+    // The summary is rendered synchronously while the organiser waits, so a
+    // slow tile service must not be given the longer background timeout.
+    $timeouts = [];
+    Http::fake(function ($request, array $options) use (&$timeouts) {
+        $timeouts[] = $options['timeout'] ?? null;
+
+        return Http::response('', 404);
+    });
+
+    samenvattingHtml(new FormState(values: [
+        'locatieSOpKaart' => [
+            'lat' => 50.85,
+            'lng' => 5.69,
+            'geojson' => [
+                'type' => 'FeatureCollection',
+                'features' => [[
+                    'type' => 'Feature',
+                    'geometry' => [
+                        'type' => 'Polygon',
+                        'coordinates' => [[
+                            [5.69, 50.85], [5.70, 50.85],
+                            [5.70, 50.86], [5.69, 50.86], [5.69, 50.85],
+                        ]],
+                    ],
+                ]],
+            ],
+        ],
+    ]));
+
+    expect($timeouts)->not->toBeEmpty('no tile was requested, so this test proves nothing')
+        ->and(array_unique($timeouts))->toBe([3]);
 });
