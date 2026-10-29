@@ -6,6 +6,8 @@ use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 
 function zaakForConnection(array $connectionAttributes = [], bool $withConnection = true, bool $active = true): Zaak
 {
@@ -144,4 +146,53 @@ test('a zaak on a main-fallback zaaktype keeps the default behaviour', function 
     expect($zaak->zgwConnectionName())->toBe('main')
         ->and($zaak->showsTab('bestanden'))->toBeTrue()
         ->and($zaak->behandelaarCanChangeStatus())->toBeTrue();
+});
+
+test('a connection does not offer read-only documents for advisories by default', function () {
+    $municipality = Municipality::factory()->create();
+
+    // A row written without the column, as every row that existed before it.
+    DB::table('municipality_zgw_connections')->insert([
+        'municipality_id' => $municipality->id,
+        'show_bestanden_tab' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $connection = MunicipalityZgwConnection::query()->where('municipality_id', $municipality->id)->firstOrFail();
+
+    expect($connection->show_bestanden_tab_read_only_for_advisories)->toBeFalse();
+});
+
+test('switching the bestanden tab on through the model switches read-only documents for advisories off', function () {
+    $connection = MunicipalityZgwConnection::factory()->bestandenReadOnlyForAdvisories()->create();
+
+    $connection->update(['show_bestanden_tab' => true]);
+
+    expect($connection->fresh())
+        ->show_bestanden_tab->toBeTrue()
+        ->show_bestanden_tab_read_only_for_advisories->toBeFalse();
+});
+
+test('a new connection that leaves the tab at its default cannot store read-only documents for advisories', function () {
+    $municipality = Municipality::factory()->create();
+
+    // The tab column defaults to shown, so the opt-in is dropped on create.
+    $connection = MunicipalityZgwConnection::query()->create([
+        'municipality_id' => $municipality->id,
+        'show_bestanden_tab_read_only_for_advisories' => true,
+    ]);
+
+    expect($connection->fresh())
+        ->show_bestanden_tab->toBeTrue()
+        ->show_bestanden_tab_read_only_for_advisories->toBeFalse();
+});
+
+test('a write outside the model cannot combine the bestanden tab with read-only documents for advisories', function () {
+    $connection = MunicipalityZgwConnection::factory()->bestandenReadOnlyForAdvisories()->create();
+
+    expect(fn () => DB::table('municipality_zgw_connections')
+        ->where('id', $connection->id)
+        ->update(['show_bestanden_tab' => true]))
+        ->toThrow(QueryException::class, 'municipality_zgw_connections_read_only_docs_need_tab_off');
 });
