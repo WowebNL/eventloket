@@ -118,7 +118,28 @@ test('Samenvatting toont een titel "Samenvatting" bovenaan', function () {
         ->and($html)->toContain('Samenvatting');
 });
 
+/**
+ * A minimal valid 256x256 PNG tile, defined here so this file also runs on
+ * its own.
+ */
+function samenvattingTilePng(): string
+{
+    $image = imagecreatetruecolor(256, 256);
+    imagefill($image, 0, 0, imagecolorallocate($image, 200, 220, 240));
+
+    ob_start();
+    imagepng($image);
+    $png = (string) ob_get_clean();
+    imagedestroy($image);
+
+    return $png;
+}
+
 test('Samenvatting rendert kaart-SVG voor Map-state met geojson, niet de raw geojson-tekst', function () {
+    // The basemap is faked and any other request is refused, so this test
+    // never reaches the real tile service.
+    Http::preventStrayRequests();
+    Http::fake(['*' => Http::response(samenvattingTilePng(), 200)]);
     // De PDF rendert al een kaartje voor ingetekende polygonen (zie
     // `SubmissionReport::renderGeoJsonSvg()`). De Samenvatting deed dat
     // nog niet en toonde daardoor een onleesbare "Polygon (5 punten)"-
@@ -148,7 +169,8 @@ test('Samenvatting rendert kaart-SVG voor Map-state met geojson, niet de raw geo
         ],
     ]));
 
-    expect($html)->toContain('<img')
+    expect(Http::recorded())->not->toBeEmpty('the faked tile service was not used')
+        ->and($html)->toContain('<img')
         ->and($html)->toContain('data:image/svg+xml')
         ->and($html)->not->toContain('Polygon (5 punten)');
 });
