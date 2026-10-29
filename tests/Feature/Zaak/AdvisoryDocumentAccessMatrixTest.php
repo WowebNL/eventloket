@@ -10,6 +10,7 @@ use App\Enums\ThreadType;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Filament\Shared\Resources\Zaken\Pages\ViewZaak;
+use App\Livewire\Thread\MessageForm;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Advisory;
 use App\Models\Message;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Tests\Fakes\ZgwHttpFake;
 use Woweb\Zgw\Data\Generated\Catalogi\BesluitTypeData;
 
@@ -302,6 +304,24 @@ describe('documents another tab shows to an advisor without document access', fu
 
         $this->get(documentRoute($zaak, 'doc-bijlage', 'view'))->assertOk();
         $this->get(documentRoute($zaak, 'doc-bijlage'))->assertOk();
+        $this->get(documentRoute($zaak, 'doc-gewoon'))->assertNotFound();
+    });
+
+    test('an advisor cannot attach a document to a message by setting the attachments directly', function () {
+        $zaak = matrixZaak(['show_bestanden_tab' => false]);
+        [$advisor, $advisory] = matrixAdvisor($zaak, inzage: false, vraag: false);
+        $thread = matrixAdviceThread($zaak, $advisory);
+        $thread->assignedUsers()->attach($advisor);
+
+        $this->actingAs($advisor);
+        $this->get(documentRoute($zaak, 'doc-gewoon'))->assertNotFound();
+
+        expect(fn () => livewire(MessageForm::class, ['thread' => $thread])
+            ->set('documents', [['url' => matrixDocument('doc-gewoon')->url, 'versie' => 1]])
+            ->call('submit'))
+            ->toThrow(CannotUpdateLockedPropertyException::class);
+
+        expect(Message::query()->whereJsonContains('documents', [['url' => matrixDocument('doc-gewoon')->url]])->exists())->toBeFalse();
         $this->get(documentRoute($zaak, 'doc-gewoon'))->assertNotFound();
     });
 
