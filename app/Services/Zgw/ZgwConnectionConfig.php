@@ -36,6 +36,29 @@ class ZgwConnectionConfig
     ];
 
     /**
+     * The roles the floor below applies to.
+     *
+     * @var array<int, Role>
+     */
+    private const ARCHIVE_ROLES = [
+        Role::ArchiveCoordinator,
+        Role::ArchiveReviewer,
+    ];
+
+    /**
+     * The least an archive role may be allowed to see, whatever a connection
+     * configures for the gemeente group it belongs to.
+     *
+     * An archivist decides whether a zaak may be destroyed and signs a permanent
+     * statement about what went, so they have to be able to establish what they
+     * are destroying. That is why they see document content at the highest level
+     * on our own OpenZaak, and a koppelingbeheerder cannot take that away by
+     * narrowing the gemeente group on their connection. Widening is fine; this
+     * only sets the bottom.
+     */
+    public const ARCHIVE_VISIBILITY_FLOOR = DocumentVertrouwelijkheden::Confidentieel;
+
+    /**
      * The wire format of each date formaat a catalogus eigenschap can carry,
      * as PHP date format strings. Both directions use this one table.
      *
@@ -151,10 +174,32 @@ class ZgwConnectionConfig
         $max = self::documentVisibilityMaxForRole($connectionName, $role);
 
         if ($max !== null) {
-            return DocumentVertrouwelijkheden::atMost($max);
+            return DocumentVertrouwelijkheden::atMost(self::applyArchiveFloor($role, $max));
         }
 
         return DocumentVertrouwelijkheden::fromUserRole($role);
+    }
+
+    /**
+     * Raise a configured maximum to {@see ARCHIVE_VISIBILITY_FLOOR} for the
+     * archive roles. Any other role, or a maximum that already reaches the
+     * floor, is returned unchanged.
+     */
+    private static function applyArchiveFloor(Role $role, string $max): string
+    {
+        if (! in_array($role, self::ARCHIVE_ROLES, true)) {
+            return $max;
+        }
+
+        $floor = self::ARCHIVE_VISIBILITY_FLOOR->value;
+        $configured = DocumentVertrouwelijkheden::rank($max);
+        $minimum = DocumentVertrouwelijkheden::rank($floor);
+
+        if ($configured === null || $minimum === null) {
+            return $max;
+        }
+
+        return $configured >= $minimum ? $max : $floor;
     }
 
     /**
