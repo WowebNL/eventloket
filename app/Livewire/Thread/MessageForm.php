@@ -49,6 +49,14 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
     public ?array $data = [];
 
+    /**
+     * The documents attached to the message being written. Only the attach
+     * action adds to this list, on the server; it is locked so a client cannot
+     * replace it before the message is stored.
+     *
+     * @var array<int, array{url: string, versie: int}>
+     */
+    #[Locked]
     public array $documents = [];
 
     protected $listeners = ['thread-updated' => '$refresh'];

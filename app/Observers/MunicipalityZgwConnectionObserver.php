@@ -25,6 +25,7 @@ class MunicipalityZgwConnectionObserver
     public function saving(MunicipalityZgwConnection $connection): void
     {
         $this->deactivateOnCriticalChange($connection);
+        $this->dropReadOnlyDocumentsWhenTabIsShown($connection);
     }
 
     public function saved(MunicipalityZgwConnection $connection): void
@@ -56,6 +57,22 @@ class MunicipalityZgwConnectionObserver
 
         $connection->activated_at = null;
         $connection->last_verified_at = null;
+    }
+
+    /**
+     * Read-only documents for advisories only exist while the bestanden tab is
+     * off. Switching the tab (back) on therefore switches the opt-in off in the
+     * same write, so the combination is never stored. A write that bypasses the
+     * model is caught by a database constraint instead.
+     *
+     * A new row that does not set the tab gets the column default, which shows
+     * the tab, so an unset tab counts as shown here.
+     */
+    private function dropReadOnlyDocumentsWhenTabIsShown(MunicipalityZgwConnection $connection): void
+    {
+        if ($connection->show_bestanden_tab ?? true) {
+            $connection->show_bestanden_tab_read_only_for_advisories = false;
+        }
     }
 
     public function deleted(MunicipalityZgwConnection $connection): void
