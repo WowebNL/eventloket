@@ -41,14 +41,29 @@ enum AbonnementCheckStatus
 
     public function isWarning(): bool
     {
-        return in_array($this, [self::NoNotificatiesUrl, self::KanalenMismatch, self::TokenExpiringSoon], true);
+        return in_array($this, [
+            self::NoNotificatiesUrl,
+            self::NotificatiesUrlInherited,
+            self::NotificatiesInstanceInUse,
+            self::KanalenMismatch,
+            self::TokenExpiringSoon,
+        ], true);
+    }
+
+    /**
+     * Whether this connection receives its notifications through the abonnement
+     * another connection holds on the same Notificaties API. That is the
+     * intended set-up of one abonnement per instance, not a fault: the check of
+     * the connection that holds the abonnement watches the delivery.
+     */
+    public function isDeliveredThroughAnotherConnection(): bool
+    {
+        return $this === self::NotificatiesUrlInherited || $this === self::NotificatiesInstanceInUse;
     }
 
     public function isDanger(): bool
     {
         return in_array($this, [
-            self::NotificatiesUrlInherited,
-            self::NotificatiesInstanceInUse,
             self::NoLocalRecord,
             self::SharedAbonnement,
             self::RemoteMissing,

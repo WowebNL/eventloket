@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Exceptions\NotificatiesHealthException;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\ZgwAbonnement;
 use App\Models\ZgwWebhookIngressState;
 use App\Services\Notificaties\AbonnementRegistrar;
@@ -156,5 +157,44 @@ it('reports a remote abonnement that can no longer be read', function () {
 
     Exceptions::assertReported(
         fn (NotificatiesHealthException $e): bool => str_contains($e->getMessage(), 'remote_missing'),
+    );
+});
+
+/**
+ * A municipality connection on main's Notificaties API, either by leaving its
+ * notificaties url empty or by naming main's url.
+ */
+function municipalityOnMainInstance(?string $notificatiesUrl): void
+{
+    MunicipalityZgwConnection::factory()->active()->create(['notificaties_url' => $notificatiesUrl]);
+}
+
+it('stays silent about a municipality that receives its notifications through main', function (?string $notificatiesUrl) {
+    registeredAbonnement();
+    fakeNotificatiesRemote();
+    municipalityOnMainInstance($notificatiesUrl);
+
+    $this->artisan('app:check-zgw-notificaties')->assertSuccessful();
+
+    Exceptions::assertNothingReported();
+})->with([
+    'inherited url' => [null],
+    'main url named explicitly' => ['https://nc.example.com/api/v1/'],
+]);
+
+it('still reports two connections that store the same abonnement', function () {
+    $main = registeredAbonnement();
+    fakeNotificatiesRemote();
+
+    ZgwAbonnement::factory()->create([
+        'connection' => 'gemeente_999',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
+        'abonnement_url' => $main->abonnement_url,
+    ]);
+
+    $this->artisan('app:check-zgw-notificaties')->assertFailed();
+
+    Exceptions::assertReported(
+        fn (NotificatiesHealthException $e): bool => str_contains($e->getMessage(), 'shared_abonnement'),
     );
 });

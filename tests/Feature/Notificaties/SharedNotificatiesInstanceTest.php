@@ -507,7 +507,8 @@ describe('health check', function () {
         $result = app(AbonnementHealthCheck::class)->run($municipality);
 
         expect($result->status->name)->toBe($expected)
-            ->and($result->status->isDanger())->toBeTrue()
+            ->and($result->status->isDanger())->toBeFalse()
+            ->and($result->status->isWarning())->toBeTrue()
             ->and($result->otherConnection)->toBe('main');
         Http::assertNothingSent();
     })->with([
