@@ -34,7 +34,7 @@ class MunicipalityAdminUserInviteAction
                     ->required()
                     ->rules([
                         fn () => function (string $attribute, $value, Closure $fail) {
-                            if (MunicipalityInvite::where('email', $value)->exists()) {
+                            if (MunicipalityInvite::whereEmail($value)->exists()) {
                                 $fail(__('municipality/resources/municipality_admin.actions.invite.form.email.validation.already_invited'));
                             }
                         },

@@ -1,7 +1,7 @@
 # ZGW-koppelingbeheer
 
-Versie: 1.2
-<br>Datum: 21-08-2026
+Versie: 1.5
+<br>Datum: 15-10-2026
 <br>Door: Michel Verhoeven
 
 Dit document beschrijft hoe een functioneel beheerder een ZGW-koppeling voor een gemeente opzet en onderhoudt in Eventloket. Het legt uit hoe de beheeromgeving werkt en geeft een volledig stappenplan, inclusief wat er aan de externe zaaksysteem-applicatie (bijvoorbeeld Open Zaak of OneGround) klaargezet moet worden.
@@ -144,9 +144,58 @@ De aangemaakte API-client moet voldoende rechten (autorisaties/scopes) hebben op
 
 - Aanmaken, lezen en bijwerken van zaken.
 - Lezen van de catalogi (zaaktypen, statustypen, roltypen, resultaattypen, eigenschappen, informatieobjecttypen).
-- Aanmaken, lezen en bijwerken van documenten.
+- Aanmaken, lezen, vergrendelen en bijwerken van documenten.
+- Lezen van de audittrail van documenten.
 - Aanmaken en lezen van besluiten.
-- Rechten om notificatie-abonnementen te registreren en te ontvangen.
+- Rechten om notificatie-abonnementen te registreren en te beheren (`notificaties.consumeren`, zie de tabel Notificaties API hieronder).
+
+Een autorisatie geldt in de ZGW-standaard niet voor een hele API, maar voor een zaaktype (Zaken API), een informatieobjecttype (Documenten API) of een besluittype (Besluiten API). Bij zaken en documenten hoort er ook een maximale vertrouwelijkheidaanduiding bij. Ken de scopes daarom toe voor alle zaaktypen, informatieobjecttypen en besluittypen die de koppeling gebruikt, en kies een maximale vertrouwelijkheid die minstens zo hoog is als het hoogste niveau dat Eventloket bij het uploaden meegeeft (zie [sectie 5.6](#56-vertrouwelijkheid)).
+
+#### Scopes per API
+
+De tabellen hieronder noemen per scope de aanroep in Eventloket die hem nodig heeft. De scopenamen zijn die uit de ZGW-standaard; een zaaksysteem kan ze in zijn eigen beheerscherm anders tonen.
+
+**Zaken API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `zaken.aanmaken` | Het aanmaken van de zaak bij het indienen van een aanvraag (`POST /zaken`), en van deelzaken bij een doorkomst. |
+| `zaken.lezen` | Het ophalen van zaken, statussen, zaakeigenschappen en de documenten bij een zaak (`GET`). |
+| `zaken.bijwerken` | Het bijwerken van de zaak (`PATCH /zaken/{uuid}`, zoals de einddatum en de zaakgeometrie), het vastleggen, wijzigen en verwijderen van zaakeigenschappen, het vastleggen van rollen, zaakobjecten en resultaten, en het koppelen van documenten aan de zaak (`POST /zaakinformatieobjecten`). De standaard accepteert voor het koppelen van documenten ook `zaken.aanmaken`. |
+| `zaken.statussen.toevoegen` | Het zetten van een nieuwe status (`POST /statussen`), bijvoorbeeld bij het afronden van een zaak. De standaard accepteert voor deze aanroep ook `zaken.aanmaken`. |
+| `zaken.verwijderen` | Alleen nodig als bij het verwijderen van een zaak in Eventloket ook gekozen wordt voor verwijderen in het zaaksysteem (`DELETE /zaken/{uuid}`). |
+
+**Catalogi API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `catalogi.lezen` | Het lezen van zaaktypen, statustypen, roltypen, resultaattypen, eigenschappen en informatieobjecttypen. |
+| `catalogi.schrijven` | Niet nodig voor een koppeling met een extern zaaksysteem. Drie beheercommando's schrijven naar de catalogus, maar alleen naar de eigen standaardkoppeling van Eventloket; bij een andere koppeling controleren ze alleen (lezen): `app:import-doorkomst-zaaktypen` (`POST /zaaktypen`, `/statustypen`, `/roltypen`, `/resultaattypen`, `/eigenschappen`, `/zaaktype-informatieobjecttypen` en `POST /zaaktypen/{uuid}/publish`), `app:sync-zaaktype-eigenschappen` (`POST /eigenschappen`) en `app:sync-deelzaaktypen` (`PATCH /zaaktypen/{uuid}`). |
+
+**Documenten API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `documenten.aanmaken` | Het uploaden van documenten: de aanvraag-PDF, de formulierbijlagen, "Nieuw bestand toevoegen" en documenten bij een deelzaak (`POST /enkelvoudiginformatieobjecten`). |
+| `documenten.lezen` | Het tonen en downloaden van documenten, ook een eerdere versie (`GET`, `/download`). |
+| `documenten.lock` | "Nieuwe versie" van een bestaand document, op het tabblad Bestanden en bij een bericht. Eventloket vergrendelt het document eerst (`POST /enkelvoudiginformatieobjecten/{uuid}/lock`) en ontgrendelt het daarna weer (`POST .../unlock`). |
+| `documenten.bijwerken` | "Nieuwe versie" van een bestaand document: het opslaan van de nieuwe inhoud (`PATCH /enkelvoudiginformatieobjecten/{uuid}`). |
+| `audittrails.lezen` | De knop "Audit trail" bij een document op het tabblad Bestanden (`GET /enkelvoudiginformatieobjecten/{uuid}/audittrail`). |
+
+**Let op bij "Nieuwe versie".** Dat documenten aanmaken lukt, zegt niets over `documenten.lock` en `documenten.bijwerken`: dat zijn aparte scopes. Ontbreken ze voor het informatieobjecttype van het document, of ligt de vertrouwelijkheid van het document boven het toegestane maximum, dan weigert het zaaksysteem de vergrendeling, doorgaans met HTTP 403. Bij zo'n weigering krijgt de gebruiker de melding dat het zaaksysteem geen toestemming geeft om een nieuwe versie te maken. Een organisator leest daarbij dat hij contact moet opnemen met de gemeente; in de andere portalen staat dat de beheerder van de zaaksysteemkoppeling dit moet nakijken. Er wordt dan geen nieuwe versie opgeslagen.
+
+**Besluiten API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `besluiten.aanmaken` | Het vastleggen van een besluit bij het afronden van een zaak (`POST /besluiten`) en het koppelen van documenten aan dat besluit (`POST /besluitinformatieobjecten`). |
+| `besluiten.lezen` | Het tonen van de besluiten en de besluitdocumenten bij een zaak (`GET`). |
+
+**Notificaties API**
+
+| Scope | Nodig voor |
+|-------|------------|
+| `notificaties.consumeren` | Het registreren en beheren van het abonnement van Eventloket. Opvragen (`GET /abonnement` en `GET` op het abonnement) bij **Abonnement registreren** en de abonnementcontrole in **Verbinding controleren**, en bij `app:register-zgw-abonnementen` en `app:list-zgw-abonnementen`. Aanmaken (`POST /abonnement`) bij registreren. Bijwerken (`PATCH` op het abonnement) bij opnieuw registreren en bij het dagelijks vernieuwen van het token. Verwijderen (`DELETE` op het abonnement) bij `app:list-zgw-abonnementen --delete=<url>`. Voor het opvragen accepteert de standaard ook `notificaties.publiceren`. |
 
 Zonder de juiste autorisaties lukt de verbinding technisch wel, maar mislukt het aanmaken van een zaak later alsnog. Test daarom altijd ook met een echte proefaanvraag (zie [sectie 10](#10-eindcontrole-met-een-proefaanvraag)).
 
@@ -160,6 +209,8 @@ Eventloket verwacht dat er in de catalogi zaaktypen bestaan voor de verschillend
 | Melding | Een meldingsplichtig (klein) evenement. |
 | Vooraankondiging | Een vooraankondiging van een evenement. |
 | Doorkomst | Een doorkomst van een route (optocht of wedstrijd) door de gemeente. |
+
+Een gemeente kiest zelf of ze per rol een eigen zaaktype gebruikt, of één zaaktype voor meerdere rollen (tot en met één zaaktype voor alle vier). Eventloket legt bij elke zaak vast om welke rol het gaat, en houdt de rollen daardoor ook op een gedeeld zaaktype uit elkaar. In het zaaksysteem zelf is dat onderscheid bij een gedeeld zaaktype alleen te zien via de eigenschap `aanvraag_type` (zie de tabel hieronder). Een gedeeld zaaktype heeft één set statustypen en resultaattypen, en autorisaties in het zaaksysteem gelden per zaaktype; houd daar rekening mee bij de keuze.
 
 Zorg dat elk zaaktype dat de gemeente wil gebruiken bestaat en gepubliceerd is, en dat het beschikt over:
 
@@ -183,16 +234,20 @@ De onderstaande tabel toont alle eigenschappen die Eventloket bij een zaak kan a
 | `eind_afbouw` | Einddatum en -tijd van de afbouw | datum_tijd | 14 |
 | `naam_evenement` | Naam van het evenement | tekst | 255 |
 | `types_evenement` | Soort(en) evenement | tekst | 255 |
-| `aanwezigen` | Aantal verwachte aanwezigen | getal | 9 |
+| `aanwezigen` | Maximum aantal personen dat op enig moment tegelijk aanwezig is (bij een vooraankondiging het opgegeven aantal verwachte aanwezigen) | getal | 9 |
 | `risico_classificatie` | Risicoclassificatie van het evenement | tekst | 255 |
 | `locaties_evenement` | Namen van de locatie(s), kommagescheiden | tekst | 255 |
-| `intern_zaaknummer` | Het interne zaaknummer dat Eventloket aan de zaak toekent | tekst | 255 |
+| `aanvraag_type` | Soort aanvraag: `Vergunning`, `Melding`, `Vooraankondiging` of `Doorkomst` | tekst | 255 |
+
+De eigenschap `intern_zaaknummer` is niet nodig voor een koppeling. Vult een behandelaar het interne zaaknummer in, dan schrijft Eventloket het naar het zaaksysteem als het zaaktype die eigenschap kent; anders blijft het alleen in Eventloket.
 
 Toelichting bij de formaten:
 
 - **Datums.** Datumvelden krijgen het formaat datum_tijd; de waarde wordt aangeleverd als `jjjjmmdduummss` (lengte 14).
 - **Getal.** Het aantal aanwezigen wordt als geheel getal aangeleverd; een lengte van 9 cijfers is ruim voldoende.
 - **Tekst.** Voor de tekstvelden is een lengte van 255 karakters de veilige keuze; dit is ook de lengte die Eventloket in de eigen hoofdkoppeling gebruikt.
+- **Soort aanvraag.** `aanvraag_type` krijgt altijd een van de vier waarden uit de tabel, met hoofdletter. Een deelzaak voor een doorkomst krijgt `Doorkomst`, ook als de hoofdzaak een vergunning is. De eigenschap is vooral nuttig als meerdere rollen hetzelfde zaaktype gebruiken: dan kan het zaaksysteem er op filteren en rapporteren.
+- **Risicoclassificatie.** Een deelzaak voor een doorkomst krijgt de risicoclassificatie en de toelichting van de hoofdzaak niet, omdat die beoordeling hoort bij het evenement op de hoofdzaak. Bestaande deelzaken houden wat ze al hebben.
 
 Alle eigenschappen zijn optioneel; ontbreekt een eigenschap in het zaaktype, dan wordt die waarde overgeslagen (zie ook [sectie 7](#7-zaaktype-koppelingen-instellen)). Gebruik voor elke eigenschap een kardinaliteit van 1.
 
@@ -252,7 +307,7 @@ Datums in zaakeigenschappen hebben geen instelling nodig. Eventloket leest per e
 In deze sectie bepaal je hoe Eventloket zaken van deze koppeling toont en notificeert. De standaardwaarden houden het volledige gedrag aan; pas ze alleen aan als de werkwijze van de gemeente daarom vraagt.
 
 - **Dit is een OneGround koppeling.** Standaard uit. Zet dit aan wanneer de koppeling naar een OneGround (Rx.Mission) zaaksysteem wijst. OneGround wijkt op een paar punten af van de ZGW-standaard en dit vinkje schakelt het bijbehorende gedrag in. De globale locatie van een evenement wordt dan als kale tekst meegestuurd in plaats van als object, en het intrekken door een organisator wordt geblokkeerd (zie de instelling hieronder). Zet dit vinkje aan als eerste stap bij het inrichten van een OneGround-koppeling. De volledige lijst van OneGround-bijzonderheden staat in [OneGround aandachtspunten](oneground-aandachtspunten.md).
-- **Status niet wijzigbaar door behandelaar.** Als dit aan staat, kan de behandelaar de status van een zaak niet vanuit Eventloket wijzigen en de zaak niet afronden. De status wordt dan volledig in het zaaksysteem beheerd. Of de organisator een aanvraag kan intrekken regel je apart met de instelling "Intrekken door organisator toestaan".
+- **Het blok Acties verbergen.** Als dit aan staat, toont Eventloket het blok Acties niet bij een zaak. De behandelaar kan de status dan niet meer wijzigen, de risicoclassificatie niet meer aanpassen en de zaak niet meer afronden via Eventloket; dat gebeurt dan via het gekoppelde zaaksysteem. Ook het interne zaaknummer is dan niet meer vanuit Eventloket te bewerken. Of de organisator een aanvraag kan intrekken regel je apart met de instelling "Intrekken door organisator toestaan".
 - **Tabblad besluiten tonen.** Toont het tabblad Besluiten bij een zaak.
 - **Tabblad bestanden tonen.** Toont het tabblad Bestanden. Bij uitschakelen ziet de organisator nog wel de eigen aanvraag-bestanden, maar kunnen er geen nieuwe bestanden bijkomen.
 - **Tabblad adviesvragen tonen.** Toont het tabblad Adviesvragen bij een zaak.
@@ -331,7 +386,7 @@ Maak per gebruikte type in Eventloket (Vergunning, vooraankondiging, melding en 
 1. Klik op de knop om een nieuwe zaaktype-koppeling aan te maken.
 2. Vul de sectie **Zaaktype** in:
    - **Zaaktype Eventloket.** Kies de rol (Vergunning, Melding, Vooraankondiging of Doorkomst). Elke rol kan per gemeente maar één keer gekoppeld worden. Deze keuze kan na aanmaken niet meer gewijzigd worden.
-   - **Zaaktype ZGW.** Kies het bijbehorende zaaktype uit de catalogi van het externe zaaksysteem.
+   - **Zaaktype ZGW.** Kies het bijbehorende zaaktype uit de catalogi van het externe zaaksysteem. Hetzelfde zaaktype mag bij meerdere rollen gekozen worden (zie [sectie 4.4](#44-richt-de-zaaktypecatalogus-in)). Elke rol houdt dan een eigen koppeling, met eigen eigenschappen, flow-blockers en gedrag; Eventloket gebruikt voor een zaak altijd de koppeling van de rol van die zaak.
 
 ![Het formulier Zaaktype-koppeling met de sectie Zaaktype en het geopende menu Zaaktype ZGW](../assets/zgw-koppelingbeheer/zaaktype-koppeling.webp)
 
@@ -441,6 +496,7 @@ Een geslaagde verbindingstest bewijst dat Eventloket het zaaksysteem kan bereike
    - De beginstatus correct is gezet.
 3. Controleer in Eventloket dat de zaak zichtbaar is in het gemeentepaneel en dat de status klopt.
 4. Test zonodig een statuswijziging in het zaaksysteem en controleer of die via notificaties terugkomt in Eventloket.
+5. Staat het tabblad Bestanden aan, voeg daar dan een nieuwe versie toe aan een document van de testaanvraag. Het indienen gebruikt alleen het aanmaken van documenten; deze stap test ook `documenten.lock` en `documenten.bijwerken` (zie [sectie 4.3](#43-ken-de-juiste-autorisaties-scopes-toe)).
 
 Pas als deze proef slaagt is de koppeling volledig bruikbaar.
 
@@ -497,7 +553,7 @@ Gebruik deze checklist als samenvatting bij het opzetten van een nieuwe gemeente
 
 - [ ] De vijf tot zes ZGW-API-componenten zijn actief; de base-URL's zijn genoteerd (met versiepad en afsluitende slash).
 - [ ] Er is een API-client aangemaakt; client-ID en een client-secret van minimaal 32 tekens zijn genoteerd.
-- [ ] De client heeft autorisaties voor zaken, catalogi, documenten, besluiten en notificaties.
+- [ ] De client heeft autorisaties voor zaken, catalogi, documenten, besluiten en notificaties, voor documenten ook `documenten.lock` en `documenten.bijwerken` (zie [sectie 4.3](#43-ken-de-juiste-autorisaties-scopes-toe)).
 - [ ] De zaaktypen bestaan en zijn gepubliceerd, met de juiste eigenschappen, statustypen, roltypen, resultaattypen en documenttypen.
 - [ ] De Notificaties API is bereikbaar (indien statusupdates gewenst zijn).
 

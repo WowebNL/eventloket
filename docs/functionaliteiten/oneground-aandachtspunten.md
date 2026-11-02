@@ -89,13 +89,13 @@ De volledige uitleg staat in de sectie over doorkomsten in [ZGW-koppelingbeheer]
 
 - **null beschrijving op documenten.** OneGround geeft de beschrijving van een document als `null` terug, waar Open Zaak een lege tekst teruggeeft. Eventloket accepteert beide, zodat het inlezen van een document niet vastloopt.
 - **Lengte van de naam van de contactpersoon.** OneGround houdt voor `contactpersoonRol.naam` een maximum van 40 tekens aan, waar de gedeelde Open Zaak 200 tekens accepteert. Staat het vinkje **Dit is een OneGround koppeling** aan, dan kort Eventloket die naam in tot 40 tekens in plaats van 200. Welke velden verder worden ingekort of weggelaten richting het zaaksysteem staat in [Veldbegrenzingen richting het zaaksysteem](veldbegrenzingen-zaaksysteem.md).
-- **Per-koppeling instellingen.** OneGround wijkt genoeg af dat een gemeente vaak een aangepast gedrag wil. Op de ZGW-koppeling staan daarvoor schakelaars: de status niet wijzigbaar maken door de behandelaar (de status wordt dan volledig in het zaaksysteem beheerd), losse tabbladen (besluiten, bestanden, adviesvragen, organisatievragen) verbergen, en alle notificaties onderdrukken op de ontvangstbevestiging na. Standaard staan die zo dat het gedrag gelijk blijft aan de hoofdkoppeling. Stel ze alleen af als de werkwijze van de gemeente daarom vraagt.
+- **Per-koppeling instellingen.** OneGround wijkt genoeg af dat een gemeente vaak een aangepast gedrag wil. Op de ZGW-koppeling staan daarvoor schakelaars: het blok Acties verbergen (de status, de risicoclassificatie en de afronding worden dan volledig in het zaaksysteem beheerd), losse tabbladen (besluiten, bestanden, adviesvragen, organisatievragen) verbergen, en alle notificaties onderdrukken op de ontvangstbevestiging na. Standaard staan die zo dat het gedrag gelijk blijft aan de hoofdkoppeling. Stel ze alleen af als de werkwijze van de gemeente daarom vraagt.
 
 ---
 
 ## Samenvatting van in te stellen punten voor OneGround
 
 - Zet **Dit is een OneGround koppeling** aan. Dat blokkeert meteen het intrekken door de organisator (punt 1) en zorgt dat de globale locatie in het OneGround-formaat wordt meegestuurd (punt 6).
-- Overweeg **Status niet wijzigbaar door behandelaar** als de gemeente de status volledig in OneGround beheert (punt 8).
+- Overweeg **Het blok Acties verbergen** als de gemeente de status volledig in OneGround beheert (punt 8).
 - Controleer bij het inrichten van de zaaktype-koppeling dat de eigenschappen en documenttypen goed laden (punt 5). Dat is meteen de bevestiging dat de juiste zaaktype-versie is gekozen.
 - Voer altijd een proefaanvraag uit en controleer dat de zaak, de eigenschappen, de aanvrager, de documenten en de beginstatus correct in OneGround terechtkomen (zie de eindcontrole in [ZGW-koppelingbeheer](zgw-koppelingbeheer.md)).

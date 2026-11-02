@@ -150,10 +150,7 @@ This writes `storage/app/version.json`, which is served by `/__version`.
 
 ## Contributing
 
-1. Create a feature branch from the `main` branch
-2. Make your changes
-3. Run the pre-commit checks
-4. Open a pull request
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to report bugs and vulnerabilities, how pull requests and reviews work, and which commit conventions and code standards apply.
 
 ## License
 

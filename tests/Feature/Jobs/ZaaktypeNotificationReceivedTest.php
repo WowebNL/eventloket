@@ -181,10 +181,14 @@ test('a republish re-points the hidden-results selection without a manual re-sav
 
     (new ZaaktypeNotificationReceived(zaaktypeNotification($v2)))->handle(app(ZaaktypeRefresher::class));
 
-    // Both the stored selection and the map the calendar and the zaken list
-    // filter on now name the current version's url.
+    // Both the stored selection and the rules the calendar filters on now name
+    // the current version's url, and nothing else is hidden anywhere: one rule
+    // for the role of the koppeling, one for zaken without that role.
     expect($mapping->refresh()->hidden_resultaat_types)->toBe([$newHidden])
-        ->and(Zaaktype::effectiveHiddenResultaatTypesMap())->toBe([$zaaktype->id => [$newHidden]]);
+        ->and(Zaaktype::effectiveHiddenResultaatTypeRules())->toBe([
+            ['zaaktype_id' => $zaaktype->id, 'role' => ZaaktypeRole::Vergunning->value, 'except_roles' => [], 'hidden' => [$newHidden]],
+            ['zaaktype_id' => $zaaktype->id, 'role' => null, 'except_roles' => [ZaaktypeRole::Vergunning->value], 'hidden' => [$newHidden]],
+        ]);
 
     Notification::assertNothingSent();
 });

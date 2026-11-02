@@ -237,3 +237,29 @@ test('advisory invite cannot be accepted by wrong user', function () {
         'role' => AdvisoryRole::Member,
     ]);
 });
+
+test('admin cannot invite an advisor again in different casing', function () {
+    // Arrange
+    $this->actingAs($this->admin);
+    Filament::setTenant($this->municipality);
+
+    AdvisoryInvite::create([
+        'advisory_id' => $this->advisory->id,
+        'email' => 'jan.fransen@gemeente.nl',
+        'role' => AdvisoryRole::Member,
+        'token' => Str::uuid(),
+    ]);
+
+    // Act & Assert - the check matches the stored lowercase address instead of
+    // letting the insert collide on the unique constraint
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $this->advisory,
+        'pageClass' => EditAdvisory::class,
+    ])
+        ->callTableAction('invite', null, [
+            'email' => 'Jan.Fransen@Gemeente.nl',
+        ])
+        ->assertHasTableActionErrors(['email']);
+
+    expect(AdvisoryInvite::count())->toBe(1);
+});

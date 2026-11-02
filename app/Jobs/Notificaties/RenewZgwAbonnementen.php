@@ -7,11 +7,8 @@ namespace App\Jobs\Notificaties;
 use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\NotificatiesApi;
 use App\Services\Notificaties\WebhookTokenIssuer;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
+use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -25,7 +22,7 @@ use Throwable;
  */
 class RenewZgwAbonnementen implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Queueable;
 
     /**
      * Renew this many days before the token actually expires.

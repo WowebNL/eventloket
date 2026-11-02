@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\ZaaktypeRole;
 use App\Filament\Shared\Imports\ZaakImporter;
 use App\Models\Municipality;
+use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use Carbon\Carbon;
@@ -478,4 +480,43 @@ test('fillRecord sets optional fields to null', function () {
     expect($referenceData->risico_classificatie)->toBeNull()
         ->and($referenceData->naam_locatie_eveneme)->toBeNull()
         ->and($referenceData->resultaat)->toBeNull();
+});
+
+test('fillRecord stores the imported type as the role of the zaak when roles share a zaaktype', function () {
+    $municipality = Municipality::factory()->create(['brk_identification' => 'GM0001']);
+
+    // Vooraankondiging is koppeld first, so a role derived from the zaaktype
+    // alone would say vooraankondiging for every zaak on it.
+    foreach ([ZaaktypeRole::Vooraankondiging, ZaaktypeRole::Melding] as $role) {
+        MunicipalityZaaktypeMapping::create([
+            'municipality_id' => $municipality->id,
+            'role' => $role,
+            'zaaktype_identificatie' => 'SYN-GEDEELD',
+        ]);
+    }
+
+    Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'identificatie' => 'SYN-GEDEELD',
+        'name' => 'Melding of vooraankondiging evenement',
+    ]);
+
+    $importer = createImporterWithData([
+        'municipality_code' => 'GM0001',
+        'type' => 'melding',
+        'submission_date' => '19/02/2026',
+        'start_date' => '20/02/2026',
+        'end_date' => '21/02/2026',
+        'status' => 'Ontvangen',
+        'event_name' => 'Synthetisch evenement',
+        'organisation_name' => 'Synthetische organisatie',
+        'expected_visitors' => '100',
+        'event_type' => 'Concert',
+    ]);
+
+    $importer->fillRecord();
+    $zaak = getImporterRecord($importer);
+
+    expect($zaak->role)->toBe(ZaaktypeRole::Melding)
+        ->and($zaak->effectiveRole())->toBe(ZaaktypeRole::Melding);
 });

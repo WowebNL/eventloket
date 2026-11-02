@@ -186,7 +186,7 @@ final class VergunningaanvraagVervolgvragenStep
                         Repeater::make('tenten')
                             ->label('Welke tenten plaatst u?')
                             ->minItems(1)
-                            ->addActionLabel('Wilt u nog een tent toevoegen?')
+                            ->addActionLabel('Wilt u (nog) een tent toevoegen?')
                             ->schema([
                                 TextInput::make('tentnummer')
                                     ->label('Tentnummer')
@@ -222,7 +222,7 @@ final class VergunningaanvraagVervolgvragenStep
                         Repeater::make('podia')
                             ->label('Welke podia plaatst u?')
                             ->minItems(1)
-                            ->addActionLabel('Wilt u podium toevoegen?')
+                            ->addActionLabel('Wilt u (nog) een podium toevoegen?')
                             ->schema([
                                 TextInput::make('podiumnummer')
                                     ->label('Podium nummer')
@@ -245,7 +245,7 @@ final class VergunningaanvraagVervolgvragenStep
                         Repeater::make('overkappingen')
                             ->label('Welke overkappingen plaatst u?')
                             ->minItems(1)
-                            ->addActionLabel('Nog een overkapping toevoegen')
+                            ->addActionLabel('Wilt u (nog) een overkapping toevoegen?')
                             ->schema([
                                 TextInput::make('overkappingnummer')
                                     ->label('Overkapping nummer')

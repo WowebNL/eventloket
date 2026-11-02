@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Submit;
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
 use App\EventForm\Support\LocationKinds;
 
@@ -27,7 +28,31 @@ use App\EventForm\Support\LocationKinds;
 final class ZaakeigenschappenMap
 {
     /**
+     * Optional eigenschap carrying the kind of aanvraag (vergunning, melding,
+     * vooraankondiging, doorkomst). Lets a zaaksysteem tell the kinds apart
+     * when several of them share one zaaktype. Like every eigenschap it is
+     * only written when the catalogus of the zaaktype defines it.
+     */
+    public const AANVRAAG_TYPE = 'aanvraag_type';
+
+    /**
+     * Eigenschap carrying the maximum number of people present at the event
+     * at any one time. Its value is derived by `aanwezigen()`, not read from a
+     * single field.
+     */
+    public const AANWEZIGEN = 'aanwezigen';
+
+    /** Field asked in the full aanvraag: the maximum number present at once. */
+    public const MAXIMUM_AANWEZIGEN_FIELD = 'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX';
+
+    /** Field asked in a vooraankondiging, which skips the full aanvraag steps. */
+    public const VOORAANKONDIGING_AANWEZIGEN_FIELD = 'aantalVerwachteAanwezigen';
+
+    /**
      * @var array<string, string> eigenschap-naam → FormState-veld-key
+     *
+     * `aanwezigen` is listed for its position only: its value comes from
+     * `aanwezigen()`, which picks the field that belongs to the kind of aanvraag.
      */
     private const EIGENSCHAPPEN = [
         'start_evenement' => 'EvenementStart',
@@ -38,7 +63,7 @@ final class ZaakeigenschappenMap
         'eind_afbouw' => 'AfbouwEind',
         'naam_evenement' => 'watIsDeNaamVanHetEvenementVergunning',
         'types_evenement' => 'soortEvenement',
-        'aanwezigen' => 'aantalVerwachteAanwezigen',
+        self::AANWEZIGEN => self::MAXIMUM_AANWEZIGEN_FIELD,
         'risico_classificatie' => 'risicoClassificatie',
     ];
 
@@ -51,7 +76,7 @@ final class ZaakeigenschappenMap
      */
     public static function logicalKeys(): array
     {
-        return [...array_keys(self::EIGENSCHAPPEN), 'locaties_evenement'];
+        return [...array_keys(self::EIGENSCHAPPEN), 'locaties_evenement', self::AANVRAAG_TYPE];
     }
 
     /**
@@ -71,13 +96,15 @@ final class ZaakeigenschappenMap
      * Entries met lege waarde worden weggelaten — OF's `AddZaakeigenschappenZGW`
      * sloeg lege waarden al over op regel 50-51 van de oude job.
      *
+     * The aanvraagtype is added when the role of the zaak is passed.
+     *
      * @return list<array<string, scalar|array<int|string, mixed>>>
      */
-    public function buildEigenschappen(FormState $state): array
+    public function buildEigenschappen(FormState $state, ?ZaaktypeRole $role = null): array
     {
         $out = [];
         foreach (self::EIGENSCHAPPEN as $eigenschap => $key) {
-            $value = $state->get($key);
+            $value = $eigenschap === self::AANWEZIGEN ? self::aanwezigen($state) : $state->get($key);
             if ($value === null || $value === '' || $value === []) {
                 continue;
             }
@@ -89,7 +116,43 @@ final class ZaakeigenschappenMap
             $out[] = ['locaties_evenement' => $locaties];
         }
 
+        if ($role !== null) {
+            $out[] = [self::AANVRAAG_TYPE => self::aanvraagTypeWaarde($role)];
+        }
+
         return $out;
+    }
+
+    /**
+     * The value written to the aanvraagtype eigenschap: the Dutch label of the
+     * role. Fixed to Dutch so the stored value does not depend on the locale
+     * of the process that happens to write it.
+     */
+    public static function aanvraagTypeWaarde(ZaaktypeRole $role): string
+    {
+        return (string) __("enums/zaaktype_role.{$role->value}", [], 'nl');
+    }
+
+    /**
+     * The number of people present: the maximum present at any one time.
+     *
+     * A full aanvraag asks for it in the event questions; a vooraankondiging
+     * skips those steps and asks for it on the first step instead, so the kind
+     * of aanvraag decides which field counts. The submitted state only holds
+     * the field of the chosen path; picking by kind keeps the mapping right for
+     * a state that was not cleaned up. There is no fallback to the other path's
+     * field: its value would answer a question that was not asked.
+     *
+     * Both the zaakeigenschap and the local reference data read this, so the
+     * zaaksysteem and Eventloket always hold the same number.
+     */
+    public static function aanwezigen(FormState $state): mixed
+    {
+        $field = $state->get('waarvoorWiltUEventloketGebruiken') === 'vooraankondiging'
+            ? self::VOORAANKONDIGING_AANWEZIGEN_FIELD
+            : self::MAXIMUM_AANWEZIGEN_FIELD;
+
+        return $state->get($field);
     }
 
     private function buildLocatiesEvenement(FormState $state): ?string

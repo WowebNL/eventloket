@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Jobs\Zaak;
 
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -37,7 +36,7 @@ class SetInitialStatusZGW implements ShouldQueue
         $connection = Zgw::connection($this->zaak->zgwConnectionName());
 
         $statustypen = $connection->catalogi()->statustypen()->index(['zaaktype' => $zaaktype])->collect();
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $mapping = $this->zaak->zaaktypeMapping();
         $initieel = ZaaktypeBlueprint::initialStatustype($mapping, $statustypen);
 
         if (! $initieel) {

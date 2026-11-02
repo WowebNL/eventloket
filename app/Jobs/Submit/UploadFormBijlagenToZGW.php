@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs\Submit;
 
 use App\EventForm\Schema\EventFormSchema;
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
@@ -241,7 +240,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
             );
         }
 
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $mapping = $this->zaak->zaaktypeMapping();
         $chosen = ZaaktypeBlueprint::bijlageInformatieobjecttype($mapping, $types);
 
         if (! $chosen || ! $chosen->url) {

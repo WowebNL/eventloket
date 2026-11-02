@@ -8,13 +8,13 @@
     je verwacht dat een ingetekend polygon meteen tot een
     gemeente-detect leidt.
 
-    We voegen daarom een dunne Alpine-listener toe op `pm:create`,
-    `pm:edit` en `pm:remove` van de leaflet-map die — nadat de dotswan-
-    handler zijn deferred set heeft gedaan — `$wire.$commit()` aanroept.
-    Dat dwingt een onmiddellijke roundtrip naar de server af, waarna
-    `ServiceFetcher::fetchInGemeentenResponse` (vanuit
-    `AlsBoolEnIsNietGelijkAanNone` rule) de getekende polygon door de
-    intersect-check haalt en `inGemeentenResponse` bijwerkt.
+    We therefore add thin Alpine listeners on `pm:create` and `pm:remove`
+    of the Leaflet map, and on `pm:edit` of the FeatureGroup that holds the
+    drawn shapes (Geoman does not fire `pm:edit` on the map). They write the
+    state and call `$wire.$commit()`. That forces an immediate roundtrip to
+    the server, after which `ServiceFetcher::fetchInGemeentenResponse` (via
+    `EventFormPage::triggerFetchesFor`) runs the drawn shape through the
+    intersect check and updates `inGemeentenResponse`.
 
     Daarnaast zetten we GeoMan op Nederlands via `map.pm.setLang('nl')`
     zodat de toolbar-tooltips ("Klik om eerste hoekpunt te plaatsen",
@@ -481,8 +481,39 @@
                 }).addTo(map);
                 mapEl.__featureGroup = fg;
 
-                if (initialGeoJson.features && initialGeoJson.features.length) {
+                // The map can be created while it has no size, for example
+                // when a prefilled draft opens on an earlier wizard step and
+                // the location step is still hidden. Leaflet only measures its
+                // container on a window resize, so it would keep the empty
+                // size after the step is shown: no tiles and a fit at the
+                // minimum zoom. Watch the container instead, tell Leaflet the
+                // new size and fit the shapes once the map can be seen.
+                const hasSize = () => mapEl.clientWidth > 0 && mapEl.clientHeight > 0;
+                const fitToShapes = () => {
+                    if (!fg.getLayers().length) return;
                     try { map.fitBounds(fg.getBounds()); } catch (e) { /* empty bounds */ }
+                };
+                let fitPending = false;
+                if (window.ResizeObserver) {
+                    new ResizeObserver(() => {
+                        if (!hasSize()) return;
+                        const size = map.getSize();
+                        if (size.x !== mapEl.clientWidth || size.y !== mapEl.clientHeight) {
+                            map.invalidateSize();
+                        }
+                        if (fitPending) {
+                            fitPending = false;
+                            fitToShapes();
+                        }
+                    }).observe(mapEl);
+                }
+
+                if (initialGeoJson.features && initialGeoJson.features.length) {
+                    if (hasSize() || !window.ResizeObserver) {
+                        fitToShapes();
+                    } else {
+                        fitPending = true;
+                    }
                 } else {
                     // Nieuw leeg item in een Repeater: overneem center + zoom van het
                     // meest recente sibling-item. Filament gebruikt UUIDs als repeater-keys,
@@ -561,10 +592,13 @@
                     if (e.layer.pm) {
                         e.layer.pm.enable({ allowSelfIntersection: false });
                     }
-                    e.layer.on('pm:edit', syncToState);
                     syncToState();
                 });
-                map.on('pm:edit', syncToState);
+                // Geoman fires pm:edit on the edited layer and its parent
+                // groups, never on the map. Listening on the FeatureGroup
+                // covers both the shapes loaded from the state and the ones
+                // drawn in this session (pm:create adds those to fg).
+                fg.on('pm:edit', syncToState);
                 map.on('pm:remove', (e) => {
                     if (e.layer && fg.hasLayer(e.layer)) {
                         fg.removeLayer(e.layer);

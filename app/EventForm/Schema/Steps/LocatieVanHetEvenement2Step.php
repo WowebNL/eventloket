@@ -19,12 +19,14 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Support\Exceptions\Halt;
 use Illuminate\Support\Str;
+use LogicException;
 
 /**
  * @openforms-step-uuid 2186344f-9821-45d1-bd52-9900ae15fcb6
@@ -87,9 +89,9 @@ final class LocatieVanHetEvenement2Step
                     ])
                     ->required()
                     ->live()
-                    ->afterStateUpdated(function (Get $get, Set $set, ?array $state): void {
+                    ->afterStateUpdated(function (CheckboxList $component, Get $get, Set $set, ?array $state): void {
                         if (in_array('gebouw', $state ?? [], true) && empty($get('adresVanDeGebouwEn'))) {
-                            $set('adresVanDeGebouwEn', [(string) Str::uuid() => []]);
+                            self::addFilledRepeaterItem($component, 'adresVanDeGebouwEn');
                         }
 
                         if (in_array('buiten', $state ?? [], true) && empty($get('locatieSOpKaart'))) {
@@ -291,9 +293,32 @@ final class LocatieVanHetEvenement2Step
     }
 
     /**
-     * Statustekst onder de Route-fieldset: één gemeente of twee
-     * verschillende. Wordt alleen gerenderd zodra `inGemeentenResponse.line`
-     * gevuld is (zie de `->hidden(...)` op de bijbehorende InfoText).
+     * Adds a first item to a sibling repeater the way the repeater's own add
+     * action does: the item's child schema is filled, so every field in it has
+     * its key in the state from the start. An item seeded as an empty array
+     * only gains its keys one by one while the organiser types, and Livewire
+     * then sends each newly added key as an update of the enclosing object
+     * instead of the field itself, which skips that field's
+     * `afterStateUpdated` callbacks.
+     */
+    private static function addFilledRepeaterItem(Component $sibling, string $repeaterName): void
+    {
+        $repeater = $sibling->getContainer()->getComponentByStatePath($repeaterName, withHidden: true);
+
+        if (! $repeater instanceof Repeater) {
+            throw new LogicException("Repeater [{$repeaterName}] not found next to [{$sibling->getStatePath()}].");
+        }
+
+        $uuid = $repeater->generateUuid() ?? (string) Str::uuid();
+
+        $repeater->rawState([$uuid => []]);
+        $repeater->getChildSchema($uuid)?->fill();
+    }
+
+    /**
+     * Status text below the route fieldset: one municipality or two
+     * different ones. Only rendered once `inGemeentenResponse.line` is
+     * filled (see the `->hidden(...)` on the matching InfoText).
      */
     private static function renderRouteStatus(FormState $state): string
     {

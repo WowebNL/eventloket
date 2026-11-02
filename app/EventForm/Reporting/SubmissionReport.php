@@ -474,7 +474,7 @@ final class SubmissionReport
         // zeker bij meerdere geüploade bestanden per veld.
         $files = null;
         if ($component instanceof FileUpload) {
-            $files = $this->extractFileNames($rawValue);
+            $files = $this->extractFileNames($rawValue, $state->get("{$key}_namen"));
             if ($files === [] && $value === '') {
                 return null;
             }
@@ -508,32 +508,64 @@ final class SubmissionReport
     }
 
     /**
+     * @param  mixed  $originalNames  the sibling `{field}_namen` state
      * @return list<string>
      */
-    private function extractFileNames(mixed $value): array
+    private function extractFileNames(mixed $value, mixed $originalNames = null): array
     {
         if ($value instanceof UploadedFile) {
             return [$value->getClientOriginalName()];
         }
         if (is_string($value) && $value !== '') {
-            return [basename($value)];
+            return [$this->displayFileName($value, $originalNames)];
         }
         if (! is_array($value)) {
             return [];
         }
+        $originalNames = $this->originalNamesForList($value, $originalNames);
 
         $names = [];
         foreach ($value as $entry) {
             if ($entry instanceof UploadedFile) {
                 $names[] = $entry->getClientOriginalName();
             } elseif (is_string($entry) && $entry !== '') {
-                $names[] = basename($entry);
+                $names[] = $this->displayFileName($entry, $originalNames);
             } elseif (is_array($entry) && isset($entry['name']) && is_string($entry['name'])) {
                 $names[] = $entry['name'];
             }
         }
 
         return $names;
+    }
+
+    /**
+     * The name to show for a stored upload. Uploaded files are stored under a
+     * generated name, and the name the user uploaded the file with is kept in
+     * the sibling `{field}_namen` state: a string for a single-file field, a
+     * map of stored path to original name for a multi-file field. Fall back to
+     * the stored file name when no original name is known (older snapshots).
+     */
+    private function displayFileName(string $path, mixed $originalNames): string
+    {
+        if (is_string($originalNames) && $originalNames !== '') {
+            return $originalNames;
+        }
+        if (is_array($originalNames) && isset($originalNames[$path]) && is_string($originalNames[$path]) && $originalNames[$path] !== '') {
+            return $originalNames[$path];
+        }
+
+        return basename($path);
+    }
+
+    /**
+     * A single original name only belongs to a list holding a single file; for
+     * a longer list it cannot be matched to an entry, so it is ignored.
+     *
+     * @param  array<int|string, mixed>  $value
+     */
+    private function originalNamesForList(array $value, mixed $originalNames): mixed
+    {
+        return is_string($originalNames) && count($value) !== 1 ? null : $originalNames;
     }
 
     /**
@@ -964,7 +996,7 @@ final class SubmissionReport
             $component instanceof DateTimePicker => $this->humanDateTime($value),
             $component instanceof CheckboxList => $this->renderCheckboxListValue($component, $value),
             $component instanceof Radio, $component instanceof Select => $this->renderSelectValue($component, $value, $stubLivewire),
-            $component instanceof FileUpload => $this->renderFiles($value),
+            $component instanceof FileUpload => $this->renderFiles($value, $state->get("{$key}_namen")),
             $component instanceof Textarea, $component instanceof TextInput => (string) $value,
             default => is_scalar($value) ? (string) $value : $this->renderMixed($value),
         };
@@ -1112,19 +1144,21 @@ final class SubmissionReport
             ->implode(', ');
     }
 
-    private function renderFiles(mixed $value): string
+    /** @param  mixed  $originalNames  the sibling `{field}_namen` state */
+    private function renderFiles(mixed $value, mixed $originalNames = null): string
     {
         if ($value instanceof UploadedFile) {
             return $value->getClientOriginalName();
         }
         if (! is_array($value)) {
-            return is_string($value) ? basename($value) : '';
+            return is_string($value) && $value !== '' ? $this->displayFileName($value, $originalNames) : '';
         }
+        $originalNames = $this->originalNamesForList($value, $originalNames);
 
         return collect($value)
             ->map(fn ($v) => $v instanceof UploadedFile
                 ? $v->getClientOriginalName()
-                : (is_string($v) ? basename($v) : (is_array($v) ? ($v['name'] ?? '') : '')))
+                : (is_string($v) ? $this->displayFileName($v, $originalNames) : (is_array($v) ? ($v['name'] ?? '') : '')))
             ->filter()
             ->implode(', ');
     }
