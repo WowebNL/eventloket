@@ -63,15 +63,21 @@ class EventloketDataDestroyer
         ];
 
         $entry['data_object_status'] = $this->deleteDataObject($zaak);
-        $this->deleteLocalData($zaak);
 
-        // firstOrCreate on the unique zgw_zaak_url: a replayed notification for
-        // a zaak we already cleaned up must not add a second row, which would
-        // put the same zaak on two reports.
-        return ZaakDestructionLog::firstOrCreate(
-            ['zgw_zaak_url' => $zaakUrl],
-            $entry,
-        );
+        // The local data only goes together with the row that records it. If
+        // writing that row fails, the removal is rolled back and the failure
+        // surfaces, so a retry finds the zaak again instead of a silent gap.
+        return DB::transaction(function () use ($zaak, $zaakUrl, $entry): ZaakDestructionLog {
+            $this->deleteLocalData($zaak);
+
+            // firstOrCreate on the unique zgw_zaak_url: a replayed notification
+            // for a zaak we already cleaned up must not add a second row, which
+            // would put the same zaak on two reports.
+            return ZaakDestructionLog::firstOrCreate(
+                ['zgw_zaak_url' => $zaakUrl],
+                $entry,
+            );
+        });
     }
 
     /**
