@@ -249,7 +249,7 @@ FORWARD_PGSQL_PORT=5433
 
 ### Open ZaakJWT authentication errors (401/403)
 
-JWT tokens verlopen na 1 uur. De `woweb/openzaak` package genereert automatisch nieuwe tokens per request, dus dit zou geen probleem moeten zijn. Als het toch optreedt:
+JWT tokens verlopen na 1 uur. De `woweb/laravel-zgw-client` package genereert automatisch nieuwe tokens per request, dus dit zou geen probleem moeten zijn. Als het toch optreedt:
 - Controleer of `OPENZAAK_CLIENT_ID` en `OPENZAAK_CLIENT_SECRET` overeenkomen met de geregistreerde Applicatie in Open Zaak
 - Controleer of de Applicatie de juiste scopes heeft (beheer autorisaties in admin)
 

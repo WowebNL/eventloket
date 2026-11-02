@@ -1,10 +1,11 @@
 <?php
 
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Openzaak;
+use Woweb\Zgw\Exceptions\ApiRequestException;
+use Woweb\Zgw\Exceptions\ValidationException;
+use Woweb\Zgw\Facades\Zgw;
 
 beforeEach(function () {
     // Write to a null handler: the assertions read the MessageLogged events, not a log file.
@@ -248,11 +249,13 @@ test('a failed call to a host that is not a ZGW api is not logged', function () 
     expect($records)->toBe([]);
 });
 
-test('a failed call through the openzaak package is logged and still throws the same exception', function () {
+test('a failed call through the zgw client is logged and still throws the client exception', function () {
     config([
-        'openzaak.client_id' => 'eventloket',
-        'openzaak.client_secret' => str_repeat('s', 32),
-        'openzaak.user_jwt' => false,
+        'zgw.connections.main' => [
+            'urls' => ['zaken' => 'https://zgw.example.com/zaken/api/v1/'],
+            'client_id' => 'eventloket',
+            'client_secret' => str_repeat('s', 32),
+        ],
     ]);
 
     Http::fake(['https://zgw.example.com/*' => Http::response(
@@ -265,15 +268,15 @@ test('a failed call through the openzaak package is logged and still throws the 
 
     $records = recordedLogs(function () use (&$exception) {
         try {
-            app(Openzaak::class)->zaken()->statussen()->store(['zaak' => 'https://zgw.example.com/zaken/api/v1/zaken/1234']);
-        } catch (RequestException $e) {
+            Zgw::connection('main')->zaken()->statussen()->store(['zaak' => 'https://zgw.example.com/zaken/api/v1/zaken/1234']);
+        } catch (ApiRequestException $e) {
             $exception = $e;
         }
     });
 
-    expect($exception)->toBeInstanceOf(RequestException::class)
-        ->and($exception->response->status())->toBe(400)
-        ->and($exception->getMessage())->toStartWith('HTTP request returned status code 400')
+    expect($exception)->toBeInstanceOf(ValidationException::class)
+        ->and($exception->getResponse()->status())->toBe(400)
+        ->and($exception->getMessage())->toBe('ZGW API request failed validation [400].')
         ->and(zgwErrorLogs($records))->toHaveCount(1)
         ->and(zgwErrorLogs($records)[0]['context']['error']['invalid_params'])->toBe([
             ['name' => 'statustype', 'code' => 'invalid', 'reason' => 'Ongeldig statustype.'],
