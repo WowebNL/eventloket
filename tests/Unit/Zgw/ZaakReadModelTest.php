@@ -35,7 +35,11 @@ it('does not recognise a zaakobject that only mentions the objects api in its qu
 });
 
 it('does not recognise a host that merely starts with the objects api host', function () {
-    expect(zaakWithZaakobjecten(['https://objects.example.com.aanvaller.org/api/v2/objects/1'])->data_object_url)
+    // Configured without a trailing slash, so a substring match on the
+    // configured url would take this one.
+    Config::set('openzaak.objectsapi.url', 'https://objects.example.com');
+
+    expect(zaakWithZaakobjecten(['https://objects.example.com.elsewhere.example.org/api/v2/objects/1'])->data_object_url)
         ->toBeNull();
 });
 
