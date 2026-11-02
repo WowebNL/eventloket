@@ -2,6 +2,7 @@
 
 namespace App\Services\Archiving;
 
+use App\Exceptions\DataObjectHostNotAllowedException;
 use App\Exceptions\ZaakConnectionNotDestructibleException;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaakReadModel;
@@ -238,6 +239,9 @@ class ZaakDestructionService
      * The Objects API is outside the ZGW standard and therefore outside the ZGW
      * client, so it carries no host allowlist of its own and the check below
      * stands in for one.
+     *
+     * @throws DataObjectHostNotAllowedException when the url is not on the
+     *                                           configured Objects API
      */
     public function deleteDataObject(string $url): void
     {
@@ -253,7 +257,7 @@ class ZaakDestructionService
                 'objects_host' => $objectsHost,
             ]);
 
-            return;
+            throw new DataObjectHostNotAllowedException($url, $urlHost, $objectsHost);
         }
 
         $this->validateDeleteResponse(

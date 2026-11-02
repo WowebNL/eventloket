@@ -38,6 +38,9 @@ return [
         'items' => [
             'label' => 'Vernietigde zaken',
         ],
+        'data_object_status' => [
+            'label' => 'Formulierinzending-object',
+        ],
     ],
 
     'actions' => [

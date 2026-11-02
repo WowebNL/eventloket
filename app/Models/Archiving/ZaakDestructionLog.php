@@ -2,6 +2,7 @@
 
 namespace App\Models\Archiving;
 
+use App\Enums\DataObjectDestructionStatus;
 use App\Models\Municipality;
 use Database\Factories\Archiving\ZaakDestructionLogFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,6 +19,7 @@ use Illuminate\Support\Carbon;
  * night. Every field is a snapshot: the zaak no longer exists on either side.
  *
  * @property Carbon $destroyed_at
+ * @property ?DataObjectDestructionStatus $data_object_status
  * @property ?Carbon $reported_at
  * @property ?string $zaaknummer
  * @property ?string $zaaktype_naam
@@ -38,6 +40,7 @@ class ZaakDestructionLog extends Model
         'zaaknummer',
         'zaaktype_naam',
         'destroyed_at',
+        'data_object_status',
         'destruction_report_id',
         'reported_at',
     ];
@@ -47,6 +50,7 @@ class ZaakDestructionLog extends Model
         return [
             'destroyed_at' => 'datetime',
             'reported_at' => 'datetime',
+            'data_object_status' => DataObjectDestructionStatus::class,
         ];
     }
 
@@ -85,6 +89,7 @@ class ZaakDestructionLog extends Model
             'zgw_zaak_url' => $this->zgw_zaak_url,
             'zgw_connection' => $this->zgw_connection,
             'destroyed_at' => $this->destroyed_at->toIso8601String(),
+            'data_object_status' => $this->data_object_status?->value,
         ];
     }
 }

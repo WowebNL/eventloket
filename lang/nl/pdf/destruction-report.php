@@ -31,5 +31,6 @@ return [
         'bewaartermijn' => 'Bewaartermijn',
         'archiefactiedatum' => 'Archiefactiedatum',
         'status' => 'Status',
+        'data_object_status' => 'Formulierinzending-object',
     ],
 ];

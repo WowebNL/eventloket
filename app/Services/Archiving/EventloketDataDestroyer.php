@@ -2,6 +2,8 @@
 
 namespace App\Services\Archiving;
 
+use App\Enums\DataObjectDestructionStatus;
+use App\Exceptions\DataObjectHostNotAllowedException;
 use App\Models\Archiving\ZaakDestructionLog;
 use App\Models\Message;
 use App\Models\Thread;
@@ -25,7 +27,9 @@ use Throwable;
  * "destroy" notification, so an external instance and our own behave alike.
  *
  * Writes exactly one {@see ZaakDestructionLog} row per zaak, which is the only
- * evidence left afterwards and what the nightly report is built from.
+ * evidence left afterwards and what the nightly report is built from. The row
+ * records what happened to the form submission object, so the report never
+ * claims a removal that did not take place.
  *
  * Idempotent: a zaak that has already been destroyed is a no-op, so a replayed
  * notification costs nothing.
@@ -58,7 +62,7 @@ class EventloketDataDestroyer
             'destroyed_at' => now(),
         ];
 
-        $this->deleteDataObject($zaak);
+        $entry['data_object_status'] = $this->deleteDataObject($zaak);
         $this->deleteLocalData($zaak);
 
         // firstOrCreate on the unique zgw_zaak_url: a replayed notification for
@@ -75,21 +79,29 @@ class EventloketDataDestroyer
      * it belongs to this side of the destruction rather than to the zaakdata.
      *
      * A failure here must not strand the rest: the local data is the larger
-     * exposure, and the object can be cleaned up separately.
+     * exposure, and the object can be cleaned up separately. What happened is
+     * returned instead, so the log row and the report can say so.
      */
-    private function deleteDataObject(Zaak $zaak): void
+    private function deleteDataObject(Zaak $zaak): DataObjectDestructionStatus
     {
         if (! $zaak->data_object_url) {
-            return;
+            return DataObjectDestructionStatus::NotPresent;
         }
 
         try {
             $this->zgw->deleteDataObject($zaak->data_object_url);
+        } catch (DataObjectHostNotAllowedException $exception) {
+            // Already logged as a warning by the service; nothing was sent.
+            return DataObjectDestructionStatus::Refused;
         } catch (Throwable $exception) {
             report($exception);
 
             Log::error("Destroying the form submission object of zaak [{$zaak->public_id}] failed: ".$exception->getMessage());
+
+            return DataObjectDestructionStatus::Failed;
         }
+
+        return DataObjectDestructionStatus::Deleted;
     }
 
     private function deleteLocalData(Zaak $zaak): void

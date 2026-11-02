@@ -98,6 +98,7 @@
                     <th>{{ __('pdf/destruction-report.columns.zaaktype') }}</th>
                     <th>{{ __('pdf/destruction-report.fields.connection') }}</th>
                     <th>{{ __('pdf/destruction-report.fields.destroyed_at') }}</th>
+                    <th>{{ __('pdf/destruction-report.columns.data_object_status') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -107,6 +108,8 @@
                         <td>{{ $item['zaaktype'] }}</td>
                         <td>{{ $item['zgw_connection'] }}</td>
                         <td>{{ \Illuminate\Support\Carbon::parse($item['destroyed_at'])->format('d-m-Y H:i') }}</td>
+                        {{-- Reports written before the status was recorded have no value here. --}}
+                        <td>{{ \App\Enums\DataObjectDestructionStatus::tryFrom((string) ($item['data_object_status'] ?? ''))?->getLabel() }}</td>
                     </tr>
                 @endforeach
             </tbody>

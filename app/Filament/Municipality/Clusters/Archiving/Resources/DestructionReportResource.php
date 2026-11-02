@@ -2,6 +2,7 @@
 
 namespace App\Filament\Municipality\Clusters\Archiving\Resources;
 
+use App\Enums\DataObjectDestructionStatus;
 use App\Enums\DestructionReportType;
 use App\Filament\Municipality\Clusters\Archiving;
 use App\Filament\Municipality\Clusters\Archiving\Actions\RegenerateDestructionReportAction;
@@ -85,6 +86,10 @@ class DestructionReportResource extends Resource
                             ->label(__('municipality/resources/destruction_list.items.columns.status.label'))
                             ->visible(fn (?string $state): bool => filled($state))
                             ->formatStateUsing(fn (string $state): string => __("enums/destruction_item_status.{$state}.label")),
+                        TextEntry::make('data_object_status')
+                            ->label(__('municipality/resources/destruction_report.columns.data_object_status.label'))
+                            ->visible(fn (?string $state): bool => filled($state))
+                            ->formatStateUsing(fn (string $state): string => DataObjectDestructionStatus::tryFrom($state)?->getLabel() ?? $state),
                     ]),
             ]);
     }

@@ -2,6 +2,7 @@
 
 namespace Database\Factories\Archiving;
 
+use App\Enums\DataObjectDestructionStatus;
 use App\Models\Archiving\ZaakDestructionLog;
 use App\Models\Municipality;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -25,6 +26,7 @@ class ZaakDestructionLogFactory extends Factory
             'zaaknummer' => 'ZAAK-'.fake()->unique()->numberBetween(1000, 9999),
             'zaaktype_naam' => 'Evenementenvergunning',
             'destroyed_at' => now(),
+            'data_object_status' => DataObjectDestructionStatus::Deleted,
             'reported_at' => null,
         ];
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\DataObjectHostNotAllowedException;
 use App\Exceptions\ZaakConnectionNotDestructibleException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
@@ -172,7 +173,8 @@ test('a url on a host shared by two connections is refused', function () {
 test('the objects api credential is not sent to a host that is not the objects api', function () {
     Http::fake();
 
-    app(ZaakDestructionService::class)->deleteDataObject('https://ergens-anders.example.org/api/v2/objects/1');
+    expect(fn () => app(ZaakDestructionService::class)->deleteDataObject('https://ergens-anders.example.org/api/v2/objects/1'))
+        ->toThrow(DataObjectHostNotAllowedException::class);
 
     Http::assertNothingSent();
 });
