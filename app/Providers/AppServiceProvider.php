@@ -17,11 +17,15 @@ use Filament\Support\Facades\FilamentView;
 use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Passport\Passport;
@@ -117,6 +121,25 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Carbon::mixin(new CarbonBusinessDaysMixin);
+
+        // Bounds how often a single client address can reach the public Open
+        // Notificaties webhook, ahead of anything that touches the database. The
+        // limit of 120 calls per minute is an assumption, not a measurement:
+        // legitimate traffic comes in bursts when many objects change at once,
+        // and this is meant to sit well above such a burst. Revisit it once real
+        // delivery volumes are known. A refused call is logged, so a limit that
+        // turns out too low shows up in the application log rather than only at
+        // the sender. Only the address and the path are logged, never a header.
+        RateLimiter::for('open-notifications', fn (Request $request): Limit => Limit::perMinute(120)
+            ->by($request->ip())
+            ->response(function (Request $request, array $headers) {
+                Log::warning('Throttled Open Notificaties webhook call.', [
+                    'ip' => $request->ip(),
+                    'path' => $request->path(),
+                ]);
+
+                return response()->json(['message' => 'Too Many Attempts.'], 429, $headers);
+            }));
 
         // NotifySlackOfFailedJob, LogZgwRequest and LogZgwErrorResponse are
         // registered automatically by Laravel's event discovery (they live in
