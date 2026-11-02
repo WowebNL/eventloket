@@ -6,6 +6,7 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Services\Archiving\ZaakDestructionService;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
 
@@ -184,4 +185,22 @@ test('the form submission object is deleted on the configured objects api host',
     app(ZaakDestructionService::class)->deleteDataObject($url);
 
     Http::assertSent(fn ($request) => $request->method() === 'DELETE' && $request->url() === $url);
+});
+
+test('the form submission object is deleted with the objects api token and coordinate systems', function () {
+    Http::fake();
+
+    Config::set('openzaak.objectsapi.api_token', 'test-token');
+    Config::set('openzaak.objectsapi.accept_crs', 'EPSG:28992');
+    Config::set('openzaak.objectsapi.content_crs', 'EPSG:28992');
+
+    $url = rtrim((string) config('openzaak.objectsapi.url'), '/').'/api/v2/objects/1';
+
+    app(ZaakDestructionService::class)->deleteDataObject($url);
+
+    Http::assertSent(fn ($request) => $request->method() === 'DELETE'
+        && $request->url() === $url
+        && $request->header('Authorization') === ['Token test-token']
+        && $request->header('Accept-Crs') === ['EPSG:28992']
+        && $request->header('Content-Crs') === ['EPSG:28992']);
 });

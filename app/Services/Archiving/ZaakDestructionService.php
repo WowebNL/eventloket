@@ -10,7 +10,6 @@ use App\Services\Zgw\ZgwResource;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Woweb\Openzaak\Connection\ObjectsApiConnection;
 use Woweb\Zgw\Connection\ZgwConnection;
 use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefnominatie;
 use Woweb\Zgw\Exceptions\ApiRequestException;
@@ -29,8 +28,8 @@ use Woweb\Zgw\Facades\Zgw;
  * Every step treats a 404 as success, so a partially failed destruction can
  * be retried safely.
  *
- * The Objects API is the one call that still goes through woweb/openzaak: it is
- * not part of the ZGW standard and the ZGW client does not cover it.
+ * The Objects API is not part of the ZGW standard and the ZGW client does not
+ * cover it, so that one call is made directly over HTTP.
  */
 class ZaakDestructionService
 {
@@ -236,9 +235,9 @@ class ZaakDestructionService
     /**
      * Delete the form submission object in the Objects API.
      *
-     * Still on woweb/openzaak: the Objects API is outside the ZGW standard and
-     * therefore outside the ZGW client, so it carries no host allowlist of its
-     * own and the check below stands in for one.
+     * The Objects API is outside the ZGW standard and therefore outside the ZGW
+     * client, so it carries no host allowlist of its own and the check below
+     * stands in for one.
      */
     public function deleteDataObject(string $url): void
     {
@@ -259,8 +258,24 @@ class ZaakDestructionService
 
         $this->validateDeleteResponse(
             $url,
-            Http::withHeaders((new ObjectsApiConnection)->getHeaders())->delete($url),
+            Http::withHeaders($this->objectsApiHeaders())->delete($url),
         );
+    }
+
+    /**
+     * The headers the Objects API expects: its token, the coordinate reference
+     * systems for geometry in the request and the response, and JSON.
+     *
+     * @return array<string, string>
+     */
+    private function objectsApiHeaders(): array
+    {
+        return [
+            'Authorization' => 'Token '.(string) config('openzaak.objectsapi.api_token'),
+            'Accept-Crs' => (string) config('openzaak.objectsapi.accept_crs'),
+            'Content-Crs' => (string) config('openzaak.objectsapi.content_crs'),
+            'Content-Type' => 'application/json',
+        ];
     }
 
     private function validateDeleteResponse(string $url, Response $response): void
