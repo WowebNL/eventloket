@@ -945,3 +945,163 @@ test('een kaart met een onverwacht groot tegelraster wordt niet opgehaald', func
 
     expect(Http::recorded())->toBeEmpty();
 });
+
+/**
+ * Two maps at zoom 16 whose bounding boxes lie exactly two tiles apart from
+ * west to east, so their 3x3 tile grids share one column: drawing the first
+ * map caches three of the nine tiles the second one needs.
+ */
+function stateWithTwoMapsSharingATileColumn(): FormState
+{
+    $tileWidth = 360 / (1 << 16);
+    $rows = [];
+
+    foreach ([0, 2 * $tileWidth] as $i => $shift) {
+        $lng = 5.69 + $shift;
+        $lat = 50.85;
+
+        $rows[] = [
+            'naamVanDeLocatieKaart' => 'Locatie '.$i,
+            'buitenLocatieVanHetEvenement' => [
+                'lat' => $lat,
+                'lng' => $lng,
+                'geojson' => [
+                    'type' => 'FeatureCollection',
+                    'features' => [[
+                        'type' => 'Feature',
+                        'geometry' => [
+                            'type' => 'Polygon',
+                            'coordinates' => [[
+                                [$lng, $lat],
+                                [$lng + 0.002, $lat],
+                                [$lng + 0.002, $lat + 0.002],
+                                [$lng, $lat + 0.002],
+                                [$lng, $lat],
+                            ]],
+                        ],
+                    ]],
+                ],
+            ],
+        ];
+    }
+
+    return new FormState(values: ['locatieSOpKaart' => $rows]);
+}
+
+/**
+ * The decoded SVG of every map in the report, in report order.
+ *
+ * @param  list<array{title: string, entries: list<array<string, mixed>>}>  $sections
+ * @return list<string>
+ */
+function decodedMapSvgs(array $sections): array
+{
+    $svgs = [];
+    foreach ($sections as $section) {
+        foreach ($section['entries'] as $entry) {
+            foreach ([$entry, ...($entry['sub'] ?? [])] as $candidate) {
+                if (! empty($candidate['svg']) && preg_match('/base64,([^"]+)/', $candidate['svg'], $m)) {
+                    $svgs[] = (string) base64_decode($m[1]);
+                }
+            }
+        }
+    }
+
+    return $svgs;
+}
+
+test('a map whose tiles are only partly available falls back to the plain background', function () {
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
+    // A budget of exactly one map: the first map spends all nine downloads,
+    // the second finds three of its tiles in the cache and the budget refuses
+    // the other six.
+    Config::set('maps.tiles.report.max_tiles_per_map', 9);
+    Config::set('maps.tiles.report.max_background_maps', 1);
+
+    $sections = app(SubmissionReport::class)->build(
+        stateWithTwoMapsSharingATileColumn(),
+        [LocatieVanHetEvenement2Step::make()],
+    );
+
+    $svgs = decodedMapSvgs($sections);
+    $plain = '<rect width="512" height="512" fill="#fafafa"/>';
+
+    expect($svgs)->toHaveCount(2)
+        ->and(count(Http::recorded()))->toBe(9)
+        // The first map is complete and keeps its background.
+        ->and($svgs[0])->toContain('<image href="data:image/png;base64,')
+        ->and($svgs[0])->not->toContain($plain)
+        // The second map gets no half-filled mosaic, but the plain background.
+        ->and($svgs[1])->not->toContain('<image ')
+        ->and($svgs[1])->toContain($plain);
+});
+
+test('a map that is fully cached keeps its background when the budget is spent', function () {
+    Http::fake(['*' => Http::response(fakeTilePng(), 200)]);
+
+    Config::set('maps.tiles.report.max_tiles_per_map', 9);
+    Config::set('maps.tiles.report.max_background_maps', 1);
+
+    // The same map twice: the second one is served from the cache entirely,
+    // so dropping incomplete mosaics must not cost it its background.
+    $state = stateWithDistinctMaps(1);
+    $row = $state->get('locatieSOpKaart')[0];
+    $state = new FormState(values: ['locatieSOpKaart' => [$row, $row]]);
+
+    $svgs = decodedMapSvgs(app(SubmissionReport::class)->build(
+        $state,
+        [LocatieVanHetEvenement2Step::make()],
+    ));
+
+    expect($svgs)->toHaveCount(2)
+        ->and(count(Http::recorded()))->toBe(9)
+        ->and($svgs[0])->toContain('<image href="data:image/png;base64,')
+        ->and($svgs[1])->toContain('<image href="data:image/png;base64,');
+});
+
+test('an unreachable tile service costs one request per report, not one per tile', function () {
+    $attempts = 0;
+    Http::fake(function ($request) use (&$attempts) {
+        $attempts++;
+
+        return Http::failedConnection('Operation timed out')($request);
+    });
+
+    $report = app(SubmissionReport::class);
+    $sections = $report->build(stateWithDistinctMaps(5), [LocatieVanHetEvenement2Step::make()]);
+
+    // The first timeout stops every further tile request in this report, while
+    // all five maps still render on the plain background.
+    $svgs = decodedMapSvgs($sections);
+    expect($attempts)->toBe(1)
+        ->and($svgs)->toHaveCount(5);
+    foreach ($svgs as $svg) {
+        expect($svg)->toContain('<rect width="512" height="512" fill="#fafafa"/>')
+            ->and($svg)->not->toContain('<image ');
+    }
+
+    // The next report tries again, once, so a recovered service is picked up.
+    $report->build(stateWithDistinctMaps(5), [LocatieVanHetEvenement2Step::make()]);
+    expect($attempts)->toBe(2);
+});
+
+test('tile downloads use the short timeout only when rendered inside a request', function () {
+    $timeouts = [];
+    Http::fake(function ($request, array $options) use (&$timeouts) {
+        $timeouts[] = $options['timeout'] ?? null;
+
+        return Http::response(fakeTilePng(), 200);
+    });
+
+    app(SubmissionReport::class)->build(stateWithDistinctMaps(1), [LocatieVanHetEvenement2Step::make()]);
+    $background = array_unique($timeouts);
+
+    $timeouts = [];
+    app(SubmissionReport::class)->forInteractiveRequest()->build(stateWithDistinctMaps(2), [LocatieVanHetEvenement2Step::make()]);
+    $interactive = array_unique($timeouts);
+
+    expect($background)->toBe([(int) config('maps.tiles.report.timeout')])
+        ->and($interactive)->toBe([3])
+        ->and((int) config('maps.tiles.report.request_timeout'))->toBe(3);
+});

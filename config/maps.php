@@ -84,9 +84,19 @@ return [
             'cache_ttl' => (int) env('MAP_TILES_CACHE_TTL', 86400),
 
             /*
-             * Request timeout per tile, in seconds.
+             * Request timeout per tile, in seconds, when the report is
+             * rendered in the background (the submission PDF).
              */
             'timeout' => (int) env('MAP_TILES_TIMEOUT', 8),
+
+            /*
+             * Request timeout per tile, in seconds, when the report is
+             * rendered while a user waits on the response (the summary step of
+             * the form). Kept short so a slow tile service cannot hold up the
+             * page; the first failure also stops further tile requests for
+             * that report.
+             */
+            'request_timeout' => (int) env('MAP_TILES_REQUEST_TIMEOUT', 3),
 
             /*
              * A 512x512 canvas drawn from 256x256 tiles needs at most a 3x3

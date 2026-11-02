@@ -73,12 +73,48 @@ final class SubmissionReport
     private int $tileRequests = 0;
 
     /**
+     * Set once a tile download fails at the transport level (a timeout or a
+     * refused connection) while building the current report.
+     *
+     * A tile service that does not answer will not answer the next tile
+     * either, so after the first such failure the report stops asking and
+     * draws the remaining maps on a plain background. That turns the worst
+     * case of an unreachable service from one timeout per tile in the budget
+     * into a single timeout per report.
+     */
+    private bool $tileServiceUnavailable = false;
+
+    /**
+     * Timeout per tile download in seconds, or null for the default from the
+     * configuration. Set through {@see self::forInteractiveRequest()}.
+     */
+    private ?int $tileTimeout = null;
+
+    /**
+     * A copy of this report builder for use while a user waits on the
+     * response, such as the summary step of the form.
+     *
+     * Rendering there is synchronous, so a slow tile service holds up the
+     * page. This copy uses the shorter request timeout from the
+     * configuration; background rendering (the submission PDF) keeps the
+     * default timeout.
+     */
+    public function forInteractiveRequest(): self
+    {
+        $copy = clone $this;
+        $copy->tileTimeout = (int) config('maps.tiles.report.request_timeout');
+
+        return $copy;
+    }
+
+    /**
      * @param  list<Step>  $steps
      * @return list<array{title: string, entries: list<array{label: string, value: string}>}>
      */
     public function build(FormState $state, array $steps): array
     {
         $this->tileRequests = 0;
+        $this->tileServiceUnavailable = false;
         $sections = [];
 
         foreach ($steps as $step) {
@@ -707,6 +743,13 @@ final class SubmissionReport
      * the caller then falls back to a plain background. That fallback is the
      * graceful degradation, so a report always renders.
      *
+     * The mosaic is all or nothing. As soon as one tile that belongs on the
+     * canvas cannot be drawn (refused by the budget, skipped because the tile
+     * service is unavailable, or not delivered), the whole mosaic is dropped.
+     * A map with only part of its background would be harder to read than a
+     * plain one, and it can happen precisely at the budget limit, when some
+     * tiles of a map come from the cache and the others are refused.
+     *
      * @return array{0: ?string, 1: array{0: float, 1: float}}
      */
     private function fetchTileMosaic(float $lat, float $lng, int $zoom, int $canvas): array
@@ -751,12 +794,13 @@ final class SubmissionReport
                     continue;
                 }
                 $tilePng = $this->fetchTile(Basemap::tileUrlFor($zoom, $tx, $ty));
-                if ($tilePng === null) {
-                    continue;
-                }
-                $tile = @imagecreatefromstring($tilePng);
+                $tile = $tilePng !== null ? @imagecreatefromstring($tilePng) : false;
                 if ($tile === false) {
-                    continue;
+                    // Stop here as well: the mosaic is dropped anyway, so the
+                    // remaining tiles would only spend budget and requests.
+                    imagedestroy($mosaic);
+
+                    return [null, $originPx];
                 }
                 imagecopy($mosaic, $tile, $offsetX + $dx * $tileSize, $offsetY + $dy * $tileSize, 0, 0, $tileSize, $tileSize);
                 imagedestroy($tile);
@@ -785,6 +829,10 @@ final class SubmissionReport
         $ttl = (int) config('maps.tiles.report.cache_ttl');
 
         return Cache::remember($cacheKey, $ttl, function () use ($url): ?string {
+            if ($this->tileServiceUnavailable) {
+                return null;
+            }
+
             if ($this->tileRequests >= $this->maxTileRequestsPerReport()) {
                 return null;
             }
@@ -794,13 +842,15 @@ final class SubmissionReport
             try {
                 $response = Http::withHeaders([
                     'User-Agent' => (string) config('maps.tiles.report.user_agent'),
-                ])->timeout((int) config('maps.tiles.report.timeout'))->get($url);
+                ])->timeout($this->tileTimeout ?? (int) config('maps.tiles.report.timeout'))->get($url);
 
                 if ($response->successful()) {
                     return $response->body();
                 }
             } catch (\Throwable) {
-                // Silent fallback: the caller renders without a background.
+                // No answer at all, so stop asking for the rest of this report.
+                // The caller renders without a background.
+                $this->tileServiceUnavailable = true;
             }
 
             return null;
