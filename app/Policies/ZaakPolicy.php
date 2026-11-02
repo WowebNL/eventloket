@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
+use App\Enums\ZaakDocumentAccess;
 use App\Models\User;
 use App\Models\Users\AdvisorUser;
 use App\Models\Users\OrganiserUser;
@@ -67,6 +68,13 @@ class ZaakPolicy
     public function uploadDocument(User $user, Zaak $zaak)
     {
         if ($user instanceof AdvisorUser) {
+            // Without the documents tab an advisor never adds documents through
+            // it, also not with read-only access. Attachments to a message in an
+            // advice question follow their own route and are not decided here.
+            if ($zaak->documentAccessFor($user) !== ZaakDocumentAccess::Full) {
+                return false;
+            }
+
             $advisoryIds = $zaak->adviceThreads
                 ->where('advice_status', '!=', AdviceStatus::Concept)
                 ->pluck('advisory_id');
