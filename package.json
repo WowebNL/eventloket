@@ -10,11 +10,11 @@
         "walkthrough:report": "playwright show-report test-results/playwright-report"
     },
     "devDependencies": {
-        "@playwright/test": "^1.63.0",
+        "@playwright/test": "^1.64.1",
         "@tailwindcss/typography": "^0.5.16",
         "@tailwindcss/vite": "^4.3.3",
         "axios": "^1.20.0",
-        "concurrently": "^10.0.5",
+        "concurrently": "^10.0.6",
         "json-logic-js": "^2.0.5",
         "laravel-vite-plugin": "^3.2.0",
         "leaflet": "^1.9.4",
