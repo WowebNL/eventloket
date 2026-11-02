@@ -292,15 +292,22 @@ final class DocumentUploadType
     }
 
     /**
-     * Confirms that a file is a genuine GPX document by inspecting its bytes.
+     * Confirms that a file is a genuine GPX document by inspecting its leading
+     * bytes.
+     *
+     * This is a check over the start of the file, not over the whole of it:
+     * every condition below is evaluated against the first chunk only.
      *
      * GPX is an XML dialect, so we require an XML prologue, the <gpx> root
      * element and the mandatory Topografix GPX namespace. Requiring all three
      * means a plain text/xml file (which we intentionally keep off the
      * allowlist) cannot pass by accident, while every schema-valid GPX export
      * does.
+     *
+     * Public so that anything else reading a GPX document can apply the exact
+     * same check first, and can never be more permissive than the upload rule.
      */
-    private static function looksLikeGpx(string $path): bool
+    public static function looksLikeGpx(string $path): bool
     {
         if ($path === '') {
             return false;
@@ -338,7 +345,10 @@ final class DocumentUploadType
         }
 
         // Never accept documents that declare a DOCTYPE: real GPX files carry
-        // none, and refusing them avoids XML entity-expansion tricks.
+        // none. Note that this, like every check in this method, only sees the
+        // leading bytes read above, so it says nothing about the rest of the
+        // file. Anything that goes on to parse the document has to refuse a
+        // declaration itself.
         if (preg_match('/<!DOCTYPE/i', $head) === 1) {
             return false;
         }
