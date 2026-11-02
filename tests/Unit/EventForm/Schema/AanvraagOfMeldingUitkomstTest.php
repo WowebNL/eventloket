@@ -87,3 +87,46 @@ describe('Nieuw ReportQuestion-pad (use_new_report_questions === true)', functio
         expect(AanvraagOfMeldingStep::meldingTekstHidden($state))->toBeTrue();
     });
 });
+
+describe('Regressiegrendel op de naad', function () {
+    // `meldingTekstHidden()` now leans on the derived `isMelding` instead
+    // of on FormFieldVisibility. The only legacy assertion above runs on an
+    // empty state, which is hidden under either implementation, so it
+    // proves nothing about the branch that was rewritten. These pin the
+    // cases where the text is actually shown or withheld.
+
+    test('legacy: wegen-afsluiten Nee zonder Nee-antwoorden toont de melding-tekst', function () {
+        $state = new FormState(values: [
+            'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+        ]);
+
+        expect(AanvraagOfMeldingStep::meldingTekstHidden($state))->toBeFalse()
+            ->and(AanvraagOfMeldingStep::contentGoNextHidden($state))->toBeTrue();
+    });
+
+    test('legacy: wegen-afsluiten Nee met een Nee elders verbergt de melding-tekst', function () {
+        // A deliberate behaviour change. This state is reachable through
+        // the interface: the visibility rule of the road-closure question
+        // is a disjunction rather than a cascade, so it can be answered
+        // while a 'Nee' stands elsewhere. The form used to show both
+        // "a permit is needed" and "a report suffices" there. A 'Nee' on a
+        // scan question means it is not a report, so that text stays away.
+        $state = new FormState(values: [
+            'isHetAantalAanwezigenBijUwEvenementMinderDanSdf' => 'Nee',
+            'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+        ]);
+
+        expect($state->get('isVergunningaanvraag'))->toBeTrue()
+            ->and(AanvraagOfMeldingStep::meldingTekstHidden($state))->toBeTrue()
+            ->and(AanvraagOfMeldingStep::contentGoNextHidden($state))->toBeFalse();
+    });
+
+    test('legacy: wegen-afsluiten Ja verbergt de melding-tekst', function () {
+        $state = new FormState(values: [
+            'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Ja',
+        ]);
+
+        expect(AanvraagOfMeldingStep::meldingTekstHidden($state))->toBeTrue()
+            ->and(AanvraagOfMeldingStep::contentGoNextHidden($state))->toBeFalse();
+    });
+});
