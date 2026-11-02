@@ -74,6 +74,9 @@ test('retires the previous client when re-registering an existing abonnement', f
         'client_id' => $previousClient->getKey(),
     ]);
 
+    // The stored abonnement is gone on the remote side, so a fresh one is made.
+    Http::fake(['https://nc.example.com/api/v1/abonnement/abc' => Http::response(['detail' => 'Niet gevonden.'], 404)]);
+
     $this->artisan('app:register-zgw-abonnementen --connection=main')->assertSuccessful();
 
     $abonnement = ZgwAbonnement::where('connection', 'main')->first();

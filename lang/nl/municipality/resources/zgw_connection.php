@@ -186,6 +186,13 @@ return [
                 'expiring_soon' => 'Het abonnement werkt. Het token verloopt binnenkort en wordt automatisch vernieuwd.',
                 'needs_register' => 'Er is nog geen geldig abonnement geregistreerd.',
                 'no_notificaties_url' => 'Deze koppeling heeft geen Notificaties API-URL, dus er kan geen abonnement geregistreerd worden.',
+                'notificaties_url_inherited' => 'Deze koppeling heeft geen eigen Notificaties API-URL en gebruikt die van de hoofdkoppeling, waar het abonnement van de hoofdkoppeling staat. Per Notificaties API kan maar één koppeling een abonnement hebben, dus voor deze koppeling wordt geen eigen abonnement geregistreerd en komen meldingen binnen via dat van de hoofdkoppeling. Heeft deze koppeling een eigen Notificaties API, vul dan die URL in.',
+                'notificaties_instance_in_use' => 'Op de Notificaties API van deze koppeling staat al het abonnement van :owner. Per Notificaties API kan maar één koppeling een abonnement hebben, dus voor deze koppeling wordt geen eigen abonnement geregistreerd en komen meldingen binnen via dat van :owner.',
+                'shared_abonnement' => 'Het abonnement van deze koppeling is ook bij :owner vastgelegd. Meldingen kunnen daardoor aan de verkeerde koppeling worden toegeschreven. Neem contact op met de beheerder.',
+                'owner' => [
+                    'main' => 'de hoofdkoppeling',
+                    'other' => 'een andere koppeling',
+                ],
                 'register' => 'Abonnement registreren',
                 'error' => 'Er ging iets mis bij het controleren of registreren van het abonnement. Probeer het later opnieuw.',
             ],

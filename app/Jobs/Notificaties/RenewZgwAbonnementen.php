@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs\Notificaties;
 
 use App\Models\ZgwAbonnement;
+use App\Services\Notificaties\AbonnementRegistrar;
 use App\Services\Notificaties\NotificatiesApi;
 use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,15 +30,23 @@ class RenewZgwAbonnementen implements ShouldQueue
      */
     public const RENEW_WINDOW_DAYS = 14;
 
-    public function handle(WebhookTokenIssuer $issuer): void
+    public function handle(WebhookTokenIssuer $issuer, AbonnementRegistrar $registrar): void
     {
         $threshold = now()->addDays(self::RENEW_WINDOW_DAYS);
 
         ZgwAbonnement::query()
             ->expiringBefore($threshold)
             ->get()
-            ->each(function (ZgwAbonnement $abonnement) use ($issuer): void {
+            ->each(function (ZgwAbonnement $abonnement) use ($issuer, $registrar): void {
                 try {
+                    if (! $this->ownsAbonnement($abonnement, $registrar)) {
+                        Log::warning('ZGW abonnement niet vernieuwd: deze connectie is niet de eigenaar van het abonnement op haar Notificaties API. Verwijder de dubbele rij; de verbindingstest van de eigenaar meldt welke.', [
+                            'connection' => $abonnement->connection,
+                        ]);
+
+                        return;
+                    }
+
                     $this->renew($abonnement, $issuer);
                 } catch (Throwable $exception) {
                     Log::error('ZGW abonnement vernieuwen mislukt.', [
@@ -47,6 +56,22 @@ class RenewZgwAbonnementen implements ShouldQueue
                     ]);
                 }
             });
+    }
+
+    /**
+     * Whether this row may rotate the token on its stored abonnement. A row
+     * whose connection is refused on its Notificaties API (another connection
+     * owns the abonnement there), or that was registered on another instance
+     * than the one it is configured for now, would otherwise put its token on an
+     * abonnement that is not its own, and the attribution of every notification
+     * on it would flip at each renewal.
+     */
+    private function ownsAbonnement(ZgwAbonnement $abonnement, AbonnementRegistrar $registrar): bool
+    {
+        $baseUrl = (new NotificatiesApi($abonnement->connection))->baseUrl();
+
+        return $registrar->sharedInstance($abonnement->connection, $baseUrl) === null
+            && AbonnementRegistrar::registeredOnInstance($abonnement, $baseUrl);
     }
 
     private function renew(ZgwAbonnement $abonnement, WebhookTokenIssuer $issuer): void
