@@ -246,18 +246,18 @@ class ZaakDestructionService
     public function deleteDataObject(string $url): void
     {
         // The credential goes nowhere but the configured Objects API. This url
-        // is stored on the zaak and derived from a ZGW response, so its host is
-        // checked rather than taken on trust.
-        $objectsHost = ZaakReadModel::hostOf((string) config('openzaak.objectsapi.url'));
-        $urlHost = ZaakReadModel::hostOf($url);
+        // is stored on the zaak and derived from a ZGW response, so its origin
+        // (scheme, host and port) is checked rather than taken on trust.
+        $objectsOrigin = ZaakReadModel::originOf((string) config('openzaak.objectsapi.url'));
+        $urlOrigin = ZaakReadModel::originOf($url);
 
-        if ($objectsHost === null || $urlHost !== $objectsHost) {
-            Log::warning('Refused to delete a data object on a host that is not the configured Objects API.', [
-                'url_host' => $urlHost,
-                'objects_host' => $objectsHost,
+        if ($objectsOrigin === null || $urlOrigin !== $objectsOrigin) {
+            Log::warning('Refused to delete a data object on an origin that is not the configured Objects API.', [
+                'url_origin' => $urlOrigin,
+                'objects_origin' => $objectsOrigin,
             ]);
 
-            throw new DataObjectHostNotAllowedException($url, $urlHost, $objectsHost);
+            throw new DataObjectHostNotAllowedException($url, $urlOrigin, $objectsOrigin);
         }
 
         $this->validateDeleteResponse(

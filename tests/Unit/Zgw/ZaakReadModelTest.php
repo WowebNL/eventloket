@@ -58,3 +58,10 @@ it('has no data object when the objects api is not configured', function () {
     expect(zaakWithZaakobjecten(['https://objects.example.com/api/v2/objects/abc'])->data_object_url)
         ->toBeNull();
 });
+
+it('does not recognise another scheme or port on the objects api host', function (string $url) {
+    expect(zaakWithZaakobjecten([$url])->data_object_url)->toBeNull();
+})->with([
+    'plain http' => 'http://objects.example.com/api/v2/objects/abc',
+    'other port' => 'https://objects.example.com:8443/api/v2/objects/abc',
+]);
