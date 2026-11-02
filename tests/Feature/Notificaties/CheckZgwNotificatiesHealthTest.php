@@ -47,6 +47,7 @@ function registeredAbonnement(array $attributes = []): ZgwAbonnement
     return ZgwAbonnement::factory()->create(array_merge([
         'connection' => 'main',
         'municipality_id' => null,
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => HEALTHCHECK_ABO_URL,
         'token_id' => $token->getKey(),
         'expires_at' => now()->addYear(),

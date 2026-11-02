@@ -13,6 +13,8 @@ use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
+use Laravel\Passport\Token;
 use Woweb\Zgw\Facades\Zgw;
 use Woweb\Zgw\ZgwManager;
 
@@ -183,15 +185,28 @@ function attributedConnection(?string $auth): ?string
 
 /**
  * Fake the token endpoint and the given Notificaties instances. Every issued
- * token gets its own id and carries the client it was issued to.
+ * token gets its own id, carries the client it was issued to, and is stored the
+ * way Passport stores it, so a check that looks the token up finds a real one.
  */
 function fakeNotificatiesInstances(FakeNotificatiesInstance ...$instances): void
 {
     $issued = 0;
     $fakes = [
         rtrim((string) config('app.url'), '/').'/oauth/token' => function (Request $request) use (&$issued) {
+            $tokenId = 'tok-'.(++$issued).'-'.Str::lower(Str::random(8));
+
+            Token::create([
+                'id' => $tokenId,
+                'user_id' => null,
+                'client_id' => (string) $request['client_id'],
+                'name' => WebhookTokenIssuer::APPLICATION_NAME,
+                'scopes' => array_values(array_filter(explode(' ', (string) $request['scope']))),
+                'revoked' => false,
+                'expires_at' => now()->addYear(),
+            ]);
+
             return Http::response([
-                'access_token' => sharedInstanceJwt('tok-'.(++$issued), (string) $request['client_id']),
+                'access_token' => sharedInstanceJwt($tokenId, (string) $request['client_id']),
                 'token_type' => 'Bearer',
                 'expires_in' => 31536000,
             ], 200);
@@ -470,12 +485,17 @@ describe('health check', function () {
     });
 
     it('stays healthy when the remote abonnement presents the connection\'s own token', function () {
-        Http::fake([MAIN_NC.'abonnement/1' => Http::response([
-            'url' => MAIN_NC.'abonnement/1',
-            'auth' => 'Bearer '.sharedInstanceJwt('tok-own', 'client-own'),
-            'kanalen' => array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => []], AbonnementRegistrar::KANALEN),
-        ], 200)]);
-        ZgwAbonnement::factory()->create(['connection' => 'main', 'notificaties_base_url' => MAIN_NC, 'abonnement_url' => MAIN_NC.'abonnement/1', 'token_id' => 'tok-own']);
+        $instance = new FakeNotificatiesInstance(MAIN_NC);
+        fakeNotificatiesInstances($instance);
+        $issued = app(WebhookTokenIssuer::class)->issue();
+        $instance->seed(MAIN_NC.'abonnement/1', registrar()->callbackUrl(), 'Bearer '.$issued->token);
+        ZgwAbonnement::factory()->create([
+            'connection' => 'main',
+            'notificaties_base_url' => MAIN_NC,
+            'abonnement_url' => MAIN_NC.'abonnement/1',
+            'token_id' => $issued->tokenId,
+            'client_id' => $issued->clientId,
+        ]);
 
         expect(app(AbonnementHealthCheck::class)->run('main')->status)->toBe(AbonnementCheckStatus::Healthy);
     });
@@ -552,11 +572,14 @@ describe('instance spelled differently by the api', function () {
     it('reports the abonnement as healthy', function () {
         $instance = new FakeNotificatiesInstance(MAIN_NC);
         fakeNotificatiesInstances($instance);
-        $instance->seed(MAIN_NC.'abonnement/1', registrar()->callbackUrl(), 'Bearer x');
+        $issued = app(WebhookTokenIssuer::class)->issue();
+        $instance->seed(MAIN_NC.'abonnement/1', registrar()->callbackUrl(), 'Bearer '.$issued->token);
         ZgwAbonnement::factory()->create([
             'connection' => 'main',
             'notificaties_base_url' => 'https://nc-main.example.com:443/api/v1/',
             'abonnement_url' => MAIN_NC.'abonnement/1',
+            'token_id' => $issued->tokenId,
+            'client_id' => $issued->clientId,
             'expires_at' => now()->addMonths(6),
         ]);
 

@@ -126,6 +126,7 @@ test('reports a failed renewal instead of only logging it', function () {
 
     ZgwAbonnement::factory()->create([
         'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
         'token_id' => 'old-token',
         'expires_at' => now()->addDays(5),
@@ -145,6 +146,7 @@ test('reports nothing when every renewal succeeds', function () {
 
     ZgwAbonnement::factory()->create([
         'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
         'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
         'token_id' => 'old-token',
         'expires_at' => now()->addDays(5),
