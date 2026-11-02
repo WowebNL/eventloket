@@ -273,7 +273,7 @@ it('re-points a hidden-results selection at the current zaaktype version so the 
     expect($mapping->refresh()->hidden_resultaat_types)->toBe(["{$base}/resultaattypen/new-1"]);
 });
 
-it('refuses a second koppeling on the same zaaktype', function () {
+it('allows several roles to be koppeld to the same zaaktype', function () {
     fakeCatalogus();
 
     MunicipalityZaaktypeMapping::create([
@@ -288,9 +288,10 @@ it('refuses a second koppeling on the same zaaktype', function () {
             'zaaktype_identificatie' => 'EVT-1',
         ])
         ->call('create')
-        ->assertHasFormErrors(['zaaktype_identificatie']);
+        ->assertHasNoFormErrors();
 
-    expect(MunicipalityZaaktypeMapping::count())->toBe(1);
+    expect(MunicipalityZaaktypeMapping::where('zaaktype_identificatie', 'EVT-1')->pluck('role')->map->value->sort()->values()->all())
+        ->toBe([ZaaktypeRole::Vergunning->value, ZaaktypeRole::Vooraankondiging->value]);
 });
 
 it('allows a zaaktype that is only koppeld by another municipality', function () {

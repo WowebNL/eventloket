@@ -261,3 +261,80 @@ test('koppelt aan een bron die alleen via de koppeling een vooraankondiging is',
 
     expect(ZaakRelatie::sole()->gerelateerde_zaak_id)->toBe($bron->id);
 });
+
+/**
+ * A municipality that koppelt several roles to one zaaktype. The order of the
+ * koppelingen decides which one a lookup by zaaktype alone would land on, so
+ * each test puts a different role first.
+ *
+ * @param  list<ZaaktypeRole>  $rollen  koppeld in this order
+ * @return array{organisation: Organisation, zaaktype: Zaaktype}
+ */
+function gedeeldZaaktypeVoorKoppelen(array $rollen): array
+{
+    $organisation = Organisation::factory()->create();
+    $municipality = Municipality::factory()->create();
+
+    foreach ($rollen as $rol) {
+        MunicipalityZaaktypeMapping::create([
+            'municipality_id' => $municipality->id,
+            'role' => $rol,
+            'zaaktype_identificatie' => 'SYN-GEDEELD',
+        ]);
+    }
+
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'identificatie' => 'SYN-GEDEELD',
+        'name' => 'Evenement behandelen',
+        'role' => null,
+        'is_active' => true,
+    ]);
+
+    return compact('organisation', 'zaaktype');
+}
+
+test('koppelt aan een vooraankondiging die haar zaaktype deelt met andere aanvraagtypen', function () {
+    ['organisation' => $organisation, 'zaaktype' => $zaaktype] = gedeeldZaaktypeVoorKoppelen([
+        ZaaktypeRole::Vergunning,
+        ZaaktypeRole::Vooraankondiging,
+    ]);
+
+    $bron = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktype->id,
+        'role' => ZaaktypeRole::Vooraankondiging,
+        'organisation_id' => $organisation->id,
+    ]);
+    $aanvraag = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktype->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'organisation_id' => $organisation->id,
+    ]);
+
+    app(KoppelVooraankondiging::class)->execute(vergunningStateMetKoppeling($bron->id), $aanvraag, $organisation);
+
+    expect(ZaakRelatie::sole()->gerelateerde_zaak_id)->toBe($bron->id);
+});
+
+test('koppelt niet aan een melding op een zaaktype dat ook voor vooraankondigingen dient', function () {
+    ['organisation' => $organisation, 'zaaktype' => $zaaktype] = gedeeldZaaktypeVoorKoppelen([
+        ZaaktypeRole::Vooraankondiging,
+        ZaaktypeRole::Melding,
+        ZaaktypeRole::Vergunning,
+    ]);
+
+    $bron = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktype->id,
+        'role' => ZaaktypeRole::Melding,
+        'organisation_id' => $organisation->id,
+    ]);
+    $aanvraag = Zaak::factory()->create([
+        'zaaktype_id' => $zaaktype->id,
+        'role' => ZaaktypeRole::Vergunning,
+        'organisation_id' => $organisation->id,
+    ]);
+
+    app(KoppelVooraankondiging::class)->execute(vergunningStateMetKoppeling($bron->id), $aanvraag, $organisation);
+
+    expect(ZaakRelatie::count())->toBe(0);
+});

@@ -115,9 +115,10 @@ class DocumentNotificationReceived implements ShouldQueue
                     return;
                 }
 
-                // Only notify for finalised documents (no concepts), and for a
-                // besluitdocument only once the besluit's verzenddatum is reached.
-                if (! $informatieobject->isVastgesteld() || ! $this->besluitVerzenddatumReached($connection, $informatieobject)) {
+                // Only notify for finalised documents (no concepts, no expired
+                // content), and for a besluitdocument only once the besluit's
+                // verzenddatum is reached.
+                if (! $informatieobject->isZichtbaar() || ! $this->besluitVerzenddatumReached($connection, $informatieobject)) {
                     $zaak->clearZgwCache();
 
                     return;

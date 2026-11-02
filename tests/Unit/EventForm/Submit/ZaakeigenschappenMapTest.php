@@ -15,7 +15,9 @@
  * jobs precies hetzelfde blijven werken.
  */
 
+use App\Enums\ZaaktypeRole;
 use App\EventForm\State\FormState;
+use App\EventForm\Submit\MapFormStateToReferenceData;
 use App\EventForm\Submit\ZaakeigenschappenMap;
 
 beforeEach(function () {
@@ -32,7 +34,8 @@ test('de 11 OF-eigenschappen worden als {naam: waarde}-entries geëmitteerd', fu
         'AfbouwEind' => '2026-06-14T19:30',
         'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest Testlaan',
         'soortEvenement' => 'Buurtfeest',
-        'aantalVerwachteAanwezigen' => 80,
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '80',
         'risicoClassificatie' => 'A',
     ]);
 
@@ -50,7 +53,7 @@ test('de 11 OF-eigenschappen worden als {naam: waarde}-entries geëmitteerd', fu
         'eind_afbouw' => '2026-06-14T19:30',
         'naam_evenement' => 'Buurtfeest Testlaan',
         'types_evenement' => 'Buurtfeest',
-        'aanwezigen' => 80,
+        'aanwezigen' => '80',
         'risico_classificatie' => 'A',
     ]);
 });
@@ -293,4 +296,96 @@ test('geen mening: zonder waarVindtHetEvenementPlaats telt elke soort mee (ongew
     ]);
 
     expect($this->map->buildEventLocation($state))->toHaveKeys(['multipolygons', 'line', 'bag_addresses', 'name']);
+});
+
+test('het aanvraagtype gaat mee als eigenschap wanneer de rol van de zaak bekend is', function () {
+    $state = new FormState(values: ['watIsDeNaamVanHetEvenementVergunning' => 'Synthetisch evenement']);
+
+    $plat = collect($this->map->buildEigenschappen($state, ZaaktypeRole::Vooraankondiging))->mapWithKeys(fn ($e) => $e)->all();
+
+    expect($plat)->toMatchArray([
+        ZaakeigenschappenMap::AANVRAAG_TYPE => 'Vooraankondiging',
+        'naam_evenement' => 'Synthetisch evenement',
+    ])
+        // It is a logical key like the others, so a koppeling can map it to a
+        // naam of its own catalogus.
+        ->and(ZaakeigenschappenMap::logicalKeys())->toContain(ZaakeigenschappenMap::AANVRAAG_TYPE);
+});
+
+test('zonder rol blijft het aanvraagtype weg', function () {
+    $state = new FormState(values: ['watIsDeNaamVanHetEvenementVergunning' => 'Synthetisch evenement']);
+
+    $namen = collect($this->map->buildEigenschappen($state))->map(fn ($e) => key($e))->all();
+
+    expect($namen)->not->toContain(ZaakeigenschappenMap::AANVRAAG_TYPE);
+});
+
+/**
+ * The aanwezigen eigenschap carries the maximum number of people present at
+ * any one time, the same number Eventloket keeps in its reference data. A
+ * full aanvraag asks for it in the event questions, a vooraankondiging on the
+ * first step.
+ *
+ * @return array{eigenschap: mixed, reference: ?string}
+ */
+function aanwezigenVoor(array $values): array
+{
+    $state = new FormState(values: $values);
+    $plat = collect((new ZaakeigenschappenMap)->buildEigenschappen($state))->mapWithKeys(fn ($e) => $e)->all();
+    $reference = (new MapFormStateToReferenceData)->build($state, 'Ontvangen', 'https://example.invalid/statustypen/1');
+
+    return ['eigenschap' => $plat['aanwezigen'] ?? null, 'reference' => $reference->aanwezigen];
+}
+
+test('a full aanvraag sends the maximum number present as aanwezigen', function () {
+    $result = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '1500',
+    ]);
+
+    expect($result['eigenschap'])->toBe('1500')
+        ->and($result['reference'])->toBe('1500');
+});
+
+test('a vooraankondiging sends the number asked on the first step as aanwezigen', function () {
+    $result = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'aantalVerwachteAanwezigen' => '300',
+    ]);
+
+    expect($result['eigenschap'])->toBe('300')
+        ->and($result['reference'])->toBe('300');
+});
+
+test('a value left in the field of the other path does not count', function () {
+    // The submitted state only holds the field of the chosen path; a state that
+    // was not cleaned up still maps to the field of its own path.
+    $vooraankondiging = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        'aantalVerwachteAanwezigen' => '300',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '1500',
+    ]);
+    $vergunning = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'aantalVerwachteAanwezigen' => '300',
+        'watIsHetMaximaalAanwezigeAantalPersonenDatOpEnigMomentAanwezigKanZijnBijUwEvenementX' => '1500',
+    ]);
+
+    expect($vooraankondiging)->toBe(['eigenschap' => '300', 'reference' => '300'])
+        ->and($vergunning)->toBe(['eigenschap' => '1500', 'reference' => '1500']);
+});
+
+test('a full aanvraag does not fall back to the vooraankondiging field', function () {
+    $result = aanwezigenVoor([
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        'aantalVerwachteAanwezigen' => '300',
+    ]);
+
+    expect($result)->toBe(['eigenschap' => null, 'reference' => null]);
+});
+
+test('without any number the aanwezigen eigenschap is left out', function () {
+    $result = aanwezigenVoor(['waarvoorWiltUEventloketGebruiken' => 'evenement']);
+
+    expect($result)->toBe(['eigenschap' => null, 'reference' => null]);
 });

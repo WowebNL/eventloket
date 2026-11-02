@@ -42,7 +42,7 @@ test('effectiveTriggersRouteCheck falls back to the row value without an overrid
     expect($zaaktype->effectiveTriggersRouteCheck())->toBeTrue();
 });
 
-test('effectiveHiddenResultaatTypesMap uses the row base and the blueprint override', function () {
+test('effectiveHiddenResultaatTypeRules uses the row base and the blueprint override', function () {
     $municipality = Municipality::factory()->create();
 
     $adminRow = Zaaktype::factory()->create([
@@ -65,10 +65,18 @@ test('effectiveHiddenResultaatTypesMap uses the row base and the blueprint overr
         'hidden_resultaat_types' => ['https://x/result/new'],
     ]);
 
-    $map = Zaaktype::effectiveHiddenResultaatTypesMap();
+    $rules = collect(Zaaktype::effectiveHiddenResultaatTypeRules());
 
-    expect($map[$adminRow->id])->toBe(['https://x/result/1'])
-        ->and($map[$ownRow->id])->toBe(['https://x/result/new']);
+    // Without a koppeling every zaak of the zaaktype gets the row value.
+    expect($rules->where('zaaktype_id', $adminRow->id)->values()->all())->toBe([
+        ['zaaktype_id' => $adminRow->id, 'role' => null, 'except_roles' => [], 'hidden' => ['https://x/result/1']],
+    ])
+        // With one, the koppeling overrides it for its own role and, as the
+        // only koppeling of the zaaktype, for zaken without a stored role.
+        ->and($rules->where('zaaktype_id', $ownRow->id)->values()->all())->toBe([
+            ['zaaktype_id' => $ownRow->id, 'role' => 'vergunning', 'except_roles' => [], 'hidden' => ['https://x/result/new']],
+            ['zaaktype_id' => $ownRow->id, 'role' => null, 'except_roles' => ['vergunning'], 'hidden' => ['https://x/result/new']],
+        ]);
 });
 
 test('saving a koppeling for an own-instance gemeente creates the local zaaktype row immediately', function () {

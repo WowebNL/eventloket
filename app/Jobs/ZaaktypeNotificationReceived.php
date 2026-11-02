@@ -149,7 +149,7 @@ class ZaaktypeNotificationReceived implements ShouldBeUnique, ShouldQueue
         if ($identificatie !== null) {
             // Only mapped zaaktypen can carry aanvragen; the rest of an external
             // catalogus is none of our concern (mirrors MappedZaaktypeSync).
-            if (! $mapped->contains($identificatie)) {
+            if ($mapped->doesntContain($identificatie)) {
                 Log::debug('Zaaktype notification for an unmapped identificatie ignored.', $this->context($connectionName, $identificatie));
 
                 return;

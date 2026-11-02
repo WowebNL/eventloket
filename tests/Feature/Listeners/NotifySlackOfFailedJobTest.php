@@ -37,7 +37,7 @@ test('sends slack notification with correct payload when webhook url is configur
             && str_contains($body['text'], 'App\\Jobs\\TestJob')
             && str_contains($body['text'], 'default')
             && $body['attachments'][0]['color'] === 'danger'
-            && $body['attachments'][0]['title'] === 'Something went wrong';
+            && $body['attachments'][0]['title'] === RuntimeException::class;
     });
 });
 
@@ -60,28 +60,38 @@ test('slack message includes queue name', function () {
     Http::assertSent(fn ($request) => str_contains($request->data()['text'], '`high`'));
 });
 
-test('slack message includes stack trace in attachment', function () {
+test('slack message carries only the exception class, source and environment', function () {
     config(['services.slack.horizon_webhook_url' => $this->webhookUrl]);
-    Http::fake([$this->webhookUrl => Http::response('ok', 200)]);
-
-    (new NotifySlackOfFailedJob)->handle(makeFailedJobEvent(message: 'Unique error XYZ'));
-
-    Http::assertSent(function ($request) {
-        $attachment = $request->data()['attachments'][0];
-
-        return $attachment['title'] === 'Unique error XYZ'
-            && isset($attachment['text'])
-            && isset($attachment['ts']);
-    });
-});
-
-test('stack trace is truncated to 2900 characters', function () {
-    config(['services.slack.horizon_webhook_url' => $this->webhookUrl]);
+    config(['app.env' => 'testing']);
     Http::fake([$this->webhookUrl => Http::response('ok', 200)]);
 
     (new NotifySlackOfFailedJob)->handle(makeFailedJobEvent());
 
-    Http::assertSent(fn ($request) => strlen($request->data()['attachments'][0]['text']) <= 2900);
+    Http::assertSent(function ($request) {
+        $attachment = $request->data()['attachments'][0];
+        $fields = collect($attachment['fields'])->pluck('value', 'title');
+
+        return $attachment['title'] === RuntimeException::class
+            && str_starts_with($fields['Source'], 'tests/Feature/Listeners/NotifySlackOfFailedJobTest.php:')
+            && $fields['Environment'] === 'testing'
+            && isset($attachment['ts']);
+    });
+});
+
+test('slack message leaves out the exception message and stack trace', function () {
+    config(['services.slack.horizon_webhook_url' => $this->webhookUrl]);
+    Http::fake([$this->webhookUrl => Http::response('ok', 200)]);
+
+    (new NotifySlackOfFailedJob)->handle(makeFailedJobEvent(message: 'Could not notify synthetic.person@example.test'));
+
+    Http::assertSent(function ($request) {
+        $body = json_encode($request->data());
+
+        return ! str_contains($body, 'synthetic.person@example.test')
+            && ! str_contains($body, 'Could not notify')
+            && ! str_contains($body, '#0 ')
+            && ! array_key_exists('text', $request->data()['attachments'][0]);
+    });
 });
 
 test('a dispatched job failed event sends exactly one slack notification', function () {

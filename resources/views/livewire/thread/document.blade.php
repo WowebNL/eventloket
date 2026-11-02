@@ -1,4 +1,12 @@
 <x-filament::card :compact="true">
+    @if ($this->document === null)
+    <div class="flex gap-2 items-center">
+        <x-heroicon-s-document class="shrink-0 size-8 text-gray-300"/>
+        <p class="text-sm text-gray-500">
+            {{ __('resources/zaak.documents.no_longer_available') }}
+        </p>
+    </div>
+    @else
     <div class="flex gap-4 flex-col sm:flex-row justify-between">
         <div class="flex gap-2 items-center">
             <x-heroicon-s-document class="shrink-0 size-8 text-gray-400"/>
@@ -25,4 +33,5 @@
         <span class="inline-block size-0.5 mx-1 bg-gray-400 rounded-full align-middle"></span>
         <span>Type: {{ $this->zaak->zaaktype->document_types->firstWhere('url', $this->document->informatieobjecttype)->omschrijving ?? ''  }}</span>
     </p>
+    @endif
 </x-filament::card>

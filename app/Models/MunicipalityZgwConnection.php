@@ -8,6 +8,7 @@ use App\Observers\MunicipalityZgwConnectionObserver;
 use App\Services\Zgw\ZgwConnectionResolver;
 use Database\Factories\MunicipalityZgwConnectionFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -172,7 +173,8 @@ class MunicipalityZgwConnection extends Model
      *
      * @param  Builder<MunicipalityZgwConnection>  $query
      */
-    public function scopeActive(Builder $query): void
+    #[Scope]
+    protected function active(Builder $query): void
     {
         $query->whereNotNull('activated_at');
     }

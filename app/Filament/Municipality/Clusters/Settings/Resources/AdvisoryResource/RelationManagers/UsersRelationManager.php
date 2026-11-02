@@ -95,7 +95,7 @@ class UsersRelationManager extends RelationManager
                                     /** @var Advisory $advisory */
                                     $advisory = $this->ownerRecord;
 
-                                    if (AdvisoryInvite::where('advisory_id', $advisory->id)->where('email', $value)->exists()) {
+                                    if (AdvisoryInvite::where('advisory_id', $advisory->id)->whereEmail($value)->exists()) {
                                         $fail(__('admin/resources/advisory.actions.invite.form.email.validation.already_invited'));
                                     }
                                 },

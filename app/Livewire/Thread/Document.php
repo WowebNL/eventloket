@@ -30,11 +30,23 @@ class Document extends Component implements HasActions, HasSchemas
     #[Locked]
     public int $latestVersion;
 
-    private Informatieobject $document;
+    /**
+     * Null when the document is no longer among the documents the caller may
+     * see: it was removed from the zaak, is not (or no longer) established, or
+     * is not visible to this role. The thread then says so instead of failing.
+     */
+    private ?Informatieobject $document;
 
     public function mount(): void
     {
         $this->document = $this->zaak->documenten->firstWhere('url', $this->documentUrl);
+
+        if ($this->document === null) {
+            $this->latestVersion = $this->versie;
+
+            return;
+        }
+
         $this->latestVersion = (int) $this->document->versie;
 
         if ((int) $this->document->versie !== $this->versie) {

@@ -6,7 +6,6 @@ namespace App\Jobs\Zaak;
 
 use App\EventForm\State\FormState;
 use App\EventForm\Submit\ZaakeigenschappenMap;
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Normalizers\OpenFormsNormalizer;
 use App\Services\Zgw\ZaakReadModel;
@@ -50,9 +49,9 @@ class AddZaakeigenschappenZGW implements ShouldQueue
             ->collect()
             ->map(fn ($eigenschap) => EigenschapData::from($eigenschap));
 
-        $eigenschappen = $map->buildEigenschappen($state);
+        $eigenschappen = $map->buildEigenschappen($state, $this->zaak->effectiveRole());
 
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($this->zaak->zaaktype);
+        $mapping = $this->zaak->zaaktypeMapping();
 
         foreach ($eigenschappen as $eigenschap) {
             // The logical key maps to the concrete eigenschap naam in this

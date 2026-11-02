@@ -147,7 +147,13 @@ final class TijdenStep
                             ->label(Label::render('Wat is de start datum en tijd van de opbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(today())
-                            ->maxDate(fn (Get $get) => $get('OpbouwEind') ?: $get('EvenementStart'))
+                            // The build-up and take-down pickers are bounded by
+                            // the event only, never by their sibling field. With
+                            // sibling bounds, a period that still holds old dates
+                            // (a copied application, or an event moved later)
+                            // locks both pickers. The order within a period is
+                            // enforced by the rules below.
+                            ->maxDate(fn (Get $get) => $get('EvenementStart'))
                             ->beforeOrEqual('OpbouwEind')
                             ->validationMessages([
                                 'before_or_equal' => 'De starttijd van de opbouw moet op of voor de eindtijd opbouw liggen.',
@@ -168,7 +174,7 @@ final class TijdenStep
                         EventDateTimePicker::make('OpbouwEind')
                             ->label(Label::render('Wat is de eind datum en tijd van de opbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
-                            ->minDate(fn (Get $get) => $get('OpbouwStart') ?: today())
+                            ->minDate(today())
                             ->maxDate(fn (Get $get) => $get('EvenementStart'))
                             ->beforeOrEqual('EvenementStart')
                             ->rule(PeriodeDuurRule::voor('OpbouwStart'))
@@ -218,7 +224,6 @@ final class TijdenStep
                             ->label(Label::render('Wat is de start datum en tijdstip van de afbouw uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
                             ->minDate(fn (Get $get) => $get('EvenementEind') ?: today())
-                            ->maxDate(fn (Get $get) => $get('AfbouwEind'))
                             ->afterOrEqual('EvenementEind')
                             ->validationMessages([
                                 'after_or_equal' => 'De starttijd van de afbouw moet op of na de einddatum van het evenement liggen.',
@@ -239,7 +244,7 @@ final class TijdenStep
                         EventDateTimePicker::make('AfbouwEind')
                             ->label(Label::render('Wat is de eind datum en tijdstip van de afbouw van uw evenement {{ watIsDeNaamVanHetEvenementVergunning }}?'))
                             ->seconds(false)
-                            ->minDate(fn (Get $get) => $get('AfbouwStart') ?: $get('EvenementEind'))
+                            ->minDate(fn (Get $get) => $get('EvenementEind') ?: today())
                             ->afterOrEqual('AfbouwStart')
                             ->rule(PeriodeDuurRule::voor('AfbouwStart'))
                             ->validationMessages([

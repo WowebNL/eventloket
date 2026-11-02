@@ -16,6 +16,7 @@ use App\Models\Municipality;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Str;
@@ -160,4 +161,114 @@ test('an eigenschap the koppeling does not translate keeps being ignored', funct
 
     // Nothing to translate it onto, so the stored value simply stays put.
     expect($zaak->refresh()->reference_data->risico_classificatie)->toBe('A');
+});
+
+/*
+ * Date and date-time eigenschappen travel in the compact ZGW wire formats
+ * (YYYYMMDD for a `datum`, YYYYMMDDHHMMSS for a `datum_tijd`). The reference
+ * data stores ISO 8601 and is queried as text, so a value read back from the
+ * zaaksysteem has to be turned back into ISO 8601 before it is merged.
+ */
+test('date-time eigenschappen read back in the ZGW wire format are stored as ISO 8601', function () {
+    $zaakUrl = fakeZaakWithEigenschappen([
+        'start_evenement' => '20261003140000',
+        'eind_evenement' => '20261004230000',
+        'start_opbouw' => '20261002080000',
+        'eind_opbouw' => '20261003120000',
+        'start_afbouw' => '20261005000000',
+        'eind_afbouw' => '20261205173000',
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zaakUrl,
+    ]);
+
+    UpdateZaakReferenceData::handle($zaak);
+
+    $stored = json_decode($zaak->refresh()->getRawOriginal('reference_data'), true);
+
+    expect($stored['start_evenement'])->toBe('2026-10-03T14:00:00+02:00')
+        ->and($stored['eind_evenement'])->toBe('2026-10-04T23:00:00+02:00')
+        ->and($stored['start_opbouw'])->toBe('2026-10-02T08:00:00+02:00')
+        ->and($stored['eind_opbouw'])->toBe('2026-10-03T12:00:00+02:00')
+        ->and($stored['start_afbouw'])->toBe('2026-10-05T00:00:00+02:00')
+        // Wall-clock time in Europe/Amsterdam, so winter time gets its own offset.
+        ->and($stored['eind_afbouw'])->toBe('2026-12-05T17:30:00+01:00');
+});
+
+test('a date eigenschap read back in the ZGW wire format keeps the stored time of that day', function () {
+    $zaakUrl = fakeZaakWithEigenschappen([
+        'start_evenement' => '20261003',
+        'eind_evenement' => '20261006',
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zaakUrl,
+        'reference_data' => new ZaakReferenceData(
+            registratiedatum: '2026-09-01T09:00:00+02:00',
+            status_name: 'Ontvangen',
+            statustype_url: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/statustypen/1',
+            start_evenement: '2026-10-03T14:00:00+02:00',
+            eind_evenement: '2026-10-04T23:00:00+02:00',
+        ),
+    ]);
+
+    UpdateZaakReferenceData::handle($zaak);
+
+    $stored = json_decode($zaak->refresh()->getRawOriginal('reference_data'), true);
+
+    // Same day as stored: the date carries no time, so the stored time stays.
+    expect($stored['start_evenement'])->toBe('2026-10-03T14:00:00+02:00')
+        // Another day: the date wins, at the start of that day.
+        ->and($stored['eind_evenement'])->toBe('2026-10-06T00:00:00+02:00');
+});
+
+test('date-time eigenschappen that are already ISO 8601 are stored unchanged', function () {
+    $zaakUrl = fakeZaakWithEigenschappen([
+        'start_evenement' => '2026-10-03T14:00:00+02:00',
+        'eind_evenement' => '2026-10-04T23:00:00+02:00',
+    ]);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zaakUrl,
+    ]);
+
+    UpdateZaakReferenceData::handle($zaak);
+
+    $stored = json_decode($zaak->refresh()->getRawOriginal('reference_data'), true);
+
+    expect($stored['start_evenement'])->toBe('2026-10-03T14:00:00+02:00')
+        ->and($stored['eind_evenement'])->toBe('2026-10-04T23:00:00+02:00');
+});
+
+test('a date-time eigenschap under a translated naam is stored as ISO 8601 too', function () {
+    $zaakUrl = fakeZaakWithEigenschappen(['4.start' => '20261003140000']);
+
+    mapEigenschappen($this->municipality, ['start_evenement' => '4.start']);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zaakUrl,
+    ]);
+
+    UpdateZaakReferenceData::handle($zaak);
+
+    expect(json_decode($zaak->refresh()->getRawOriginal('reference_data'), true)['start_evenement'])
+        ->toBe('2026-10-03T14:00:00+02:00');
+});
+
+test('a text eigenschap that happens to look like a wire date is left alone', function () {
+    $zaakUrl = fakeZaakWithEigenschappen(['intern_zaaknummer' => '20261003140000']);
+
+    $zaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'zgw_zaak_url' => $zaakUrl,
+    ]);
+
+    UpdateZaakReferenceData::handle($zaak);
+
+    expect($zaak->refresh()->reference_data->intern_zaaknummer)->toBe('20261003140000');
 });

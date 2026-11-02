@@ -324,6 +324,55 @@ test('Bijlagen-stap: FileUpload-velden krijgen een `files`-array per bestandsvra
         ->and($bijlagen['files'] ?? [])->toBe(['draaiboek.pdf', 'situatietekening.pdf']);
 });
 
+test('uploads show the original file name from the `_namen` state, not the stored name', function () {
+    // Uploads are stored under a generated name; the name the file was uploaded
+    // with lives in the sibling `{field}_namen` state (a string for a single-file
+    // field, a map of stored path to original name for a multi-file field).
+    $state = new FormState(values: [
+        'veiligheidsplan' => 'event-form-uploads/org/01J0000000000000000000000A.pdf',
+        'veiligheidsplan_namen' => 'Safety plan.pdf',
+        'bijlagen1' => [
+            'event-form-uploads/org/01J0000000000000000000000B.pdf',
+            'event-form-uploads/org/01J0000000000000000000000C.pdf',
+        ],
+        'bijlagen1_namen' => [
+            'event-form-uploads/org/01J0000000000000000000000B.pdf' => 'Script.pdf',
+            'event-form-uploads/org/01J0000000000000000000000C.pdf' => 'Site drawing.pdf',
+        ],
+    ]);
+
+    $entries = app(SubmissionReport::class)->build($state, [BijlagenStep::make()])[0]['entries'];
+
+    $veiligheidsplan = collect($entries)->first(fn ($e) => str_contains(strtolower($e['label'] ?? ''), 'veiligheidsplan'));
+    expect($veiligheidsplan['files'] ?? [])->toBe(['Safety plan.pdf'])
+        ->and($veiligheidsplan['value'])->toBe('Safety plan.pdf');
+
+    $bijlagen = collect($entries)->first(fn ($e) => str_contains(strtolower($e['label'] ?? ''), 'overige bijlagen'));
+    expect($bijlagen['files'] ?? [])->toBe(['Script.pdf', 'Site drawing.pdf'])
+        ->and($bijlagen['value'])->toBe('Script.pdf, Site drawing.pdf');
+
+    expect(json_encode($entries))->not->toContain('01J0000000000000000000000');
+});
+
+test('an upload without a known original name falls back to the stored file name', function () {
+    // A multi-file field whose name map misses one of the paths shows the
+    // stored name for that file only.
+    $state = new FormState(values: [
+        'bijlagen1' => [
+            'event-form-uploads/org/01J0000000000000000000000B.pdf',
+            'event-form-uploads/org/01J0000000000000000000000C.pdf',
+        ],
+        'bijlagen1_namen' => [
+            'event-form-uploads/org/01J0000000000000000000000B.pdf' => 'Script.pdf',
+        ],
+    ]);
+
+    $entries = app(SubmissionReport::class)->build($state, [BijlagenStep::make()])[0]['entries'];
+
+    $bijlagen = collect($entries)->first(fn ($e) => str_contains(strtolower($e['label'] ?? ''), 'overige bijlagen'));
+    expect($bijlagen['files'] ?? [])->toBe(['Script.pdf', '01J0000000000000000000000C.pdf']);
+});
+
 test('Type-aanvraag-stap: lege state → geen entry, geen sectie', function () {
     // Niemand heeft iets ingevuld → niets te zeggen over het type
     // aanvraag. Geen lege sectie tonen.

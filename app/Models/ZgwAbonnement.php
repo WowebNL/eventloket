@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Database\Factories\ZgwAbonnementFactory;
+use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -66,7 +67,8 @@ class ZgwAbonnement extends Model
      *
      * @param  Builder<ZgwAbonnement>  $query
      */
-    public function scopeExpiringBefore(Builder $query, \DateTimeInterface $moment): void
+    #[Scope]
+    protected function expiringBefore(Builder $query, \DateTimeInterface $moment): void
     {
         $query->whereNotNull('abonnement_url')
             ->whereNotNull('expires_at')

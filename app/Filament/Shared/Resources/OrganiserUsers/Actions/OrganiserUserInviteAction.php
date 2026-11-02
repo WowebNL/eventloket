@@ -35,7 +35,7 @@ class OrganiserUserInviteAction
                             return function (string $attribute, $value, Closure $fail) use ($organisation) {
                                 $org = $organisation ?? static::getOrganisation();
 
-                                if (OrganisationInvite::where('organisation_id', $org->id)->where('email', $value)->exists()) {
+                                if (OrganisationInvite::where('organisation_id', $org->id)->whereEmail($value)->exists()) {
                                     $fail(__('organiser/resources/user.actions.invite.form.email.validation.already_invited'));
                                 }
                             };

@@ -665,3 +665,93 @@ test('the zaken list still shows a vooraankondiging that was replaced', function
         ->filterTable('workingstock', 'all')
         ->assertCanSeeTableRecords([$vooraankondiging, $aanvraag]);
 });
+
+/**
+ * A zaaktype that a municipality koppelt to several roles, with a zaak per
+ * role. Vergunning is koppeld first, so a lookup by zaaktype alone lands on it.
+ *
+ * @param  array<string, array<string, mixed>>  $perRole  role value => extra koppeling columns
+ * @return array<string, Zaak> role value => zaak
+ */
+function kalenderZakenOpGedeeldZaaktype(Municipality $municipality, Organisation $organisation, array $perRole, ?string $resultaattypeUrl = null): array
+{
+    foreach ($perRole as $role => $columns) {
+        MunicipalityZaaktypeMapping::create([
+            'municipality_id' => $municipality->id,
+            'role' => $role,
+            'zaaktype_identificatie' => 'SYN-GEDEELD',
+            ...$columns,
+        ]);
+    }
+
+    $zaaktype = Zaaktype::factory()->create([
+        'municipality_id' => $municipality->id,
+        'identificatie' => 'SYN-GEDEELD',
+        'name' => 'Evenement behandelen',
+        'role' => null,
+    ]);
+
+    $zaken = [];
+    foreach (array_keys($perRole) as $role) {
+        $zaken[$role] = Zaak::factory()->create([
+            'zaaktype_id' => $zaaktype->id,
+            'role' => $role,
+            'organisation_id' => $organisation->id,
+            'reference_data' => new ZaakReferenceData(
+                start_evenement: now()->toString(),
+                eind_evenement: now()->addDay()->toString(),
+                registratiedatum: now()->toString(),
+                status_name: 'Afgehandeld',
+                statustype_url: 'https://example.com/statustype/1',
+                resultaat: $resultaattypeUrl ? 'Ingetrokken' : null,
+                resultaattype_url: $resultaattypeUrl,
+                naam_evenement: "Synthetisch {$role}",
+            ),
+        ]);
+    }
+
+    return $zaken;
+}
+
+test('admin calendar widget applies zaaktype filter on the role of the zaak when roles share a zaaktype', function () {
+    $zaken = kalenderZakenOpGedeeldZaaktype($this->municipality, $this->organisation, [
+        ZaaktypeRole::Vergunning->value => [],
+        ZaaktypeRole::Melding->value => [],
+    ]);
+
+    $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    livewire(AdminCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->callAction('filter', data: [
+            'zaaktype_roles' => [ZaaktypeRole::Melding->value],
+        ])
+        ->assertCanSeeTableRecords([$zaken[ZaaktypeRole::Melding->value]])
+        ->assertCanNotSeeTableRecords([$zaken[ZaaktypeRole::Vergunning->value]]);
+});
+
+test('calendar widget hides resultaat types per role when roles share a zaaktype', function () {
+    $hidden = 'https://example.com/resultaattype/ingetrokken';
+
+    // Only the melding koppeling hides this resultaattype; the vergunning
+    // koppeling, which a lookup by zaaktype alone would pick, does not.
+    $zaken = kalenderZakenOpGedeeldZaaktype($this->municipality, $this->organisation, [
+        ZaaktypeRole::Vergunning->value => ['hidden_resultaat_types' => []],
+        ZaaktypeRole::Melding->value => ['hidden_resultaat_types' => [$hidden]],
+    ], resultaattypeUrl: $hidden);
+
+    $user = User::factory()->create(['role' => Role::MunicipalityAdmin]);
+    $this->municipality->users()->attach($user);
+
+    $this->actingAs($user);
+    Filament::setCurrentPanel(Filament::getPanel('municipality'));
+    Filament::setTenant($this->municipality);
+
+    livewire(MunicipalityCalendarWidget::class)
+        ->callAction('toggleView')
+        ->assertSet('viewMode', 'table')
+        ->assertCanSeeTableRecords([$zaken[ZaaktypeRole::Vergunning->value]])
+        ->assertCanNotSeeTableRecords([$zaken[ZaaktypeRole::Melding->value]]);
+});

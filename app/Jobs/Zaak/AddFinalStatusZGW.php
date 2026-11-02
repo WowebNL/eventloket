@@ -2,7 +2,6 @@
 
 namespace App\Jobs\Zaak;
 
-use App\Models\MunicipalityZaaktypeMapping;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\ValueObjects\FinishZaakObject;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,7 +28,7 @@ class AddFinalStatusZGW implements ShouldQueue
         $connection = Zgw::connection($zaak->zgwConnectionName());
 
         $statustypen = $connection->catalogi()->statustypen()->index(['zaaktype' => $zaak->openzaak->zaaktype])->collect();
-        $mapping = MunicipalityZaaktypeMapping::forZaaktype($zaak->zaaktype);
+        $mapping = $zaak->zaaktypeMapping();
         $eind = ZaaktypeBlueprint::eindStatustype($mapping, $statustypen);
 
         if (! $eind) {

@@ -19,6 +19,11 @@ class BaseEventExporter extends Exporter
                 ->label(__('resources/zaak.columns.naam_evenement.label')),
             ExportColumn::make('public_id')
                 ->label(__('resources/zaak.columns.public_id.label')),
+            ExportColumn::make('role')
+                ->label(__('resources/zaak.columns.aanvraag_type.label'))
+                // The effective role: a zaaktype may serve several kinds of
+                // aanvraag, so the zaaktype column alone does not tell which.
+                ->state(fn (Event $record): ?string => $record->effectiveRole()?->getLabel()),
             ExportColumn::make('zaaktype.name')
                 ->label(__('resources/zaak.columns.zaaktype.label')),
             ExportColumn::make('reference_data.risico_classificatie')
