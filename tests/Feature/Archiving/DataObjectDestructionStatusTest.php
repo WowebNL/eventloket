@@ -51,7 +51,13 @@ function zaakWithDataObject(Zaaktype $zaaktype, string $suffix, ?string $dataObj
 function fakeZaakGoneAndObjectsApi(int $objectsStatus): void
 {
     Http::fake([
-        'objects.example.com/*' => Http::response($objectsStatus === 204 ? null : ['detail' => 'x'], $objectsStatus),
+        // Followed, a redirect would become a GET that answers 200.
+        'objects.example.com/api/v2/objects/moved' => Http::response(['url' => 'moved'], 200),
+        'objects.example.com/*' => Http::response(
+            $objectsStatus === 204 || $objectsStatus === 301 ? null : ['detail' => 'x'],
+            $objectsStatus,
+            $objectsStatus === 301 ? ['Location' => 'https://objects.example.com/api/v2/objects/moved'] : [],
+        ),
         '*' => Http::response(['detail' => 'not found'], 404),
     ]);
 }
@@ -75,6 +81,7 @@ dataset('data object outcomes', [
     'not present' => [204, null, DataObjectDestructionStatus::NotPresent],
     'refused' => [204, 'https://elsewhere.example.org/api/v2/objects/a', DataObjectDestructionStatus::Refused],
     'failed' => [500, 'https://objects.example.com/api/v2/objects/a', DataObjectDestructionStatus::Failed],
+    'redirected' => [301, 'https://objects.example.com/api/v2/objects/a', DataObjectDestructionStatus::Failed],
 ]);
 
 test('the outcome for the form submission object is recorded on the one log row', function (int $objectsStatus, ?string $dataObjectUrl, DataObjectDestructionStatus $expected) {

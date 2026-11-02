@@ -7,6 +7,7 @@ use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Services\Archiving\ZaakDestructionService;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
@@ -230,3 +231,18 @@ test('an explicit default port is the same objects api origin', function () {
 
     Http::assertSentCount(1);
 });
+
+test('a redirected delete of the form submission object is not followed and counts as a failure', function (int $status) {
+    Config::set('openzaak.objectsapi.url', 'https://objects.example.com/');
+
+    // Followed, the redirect would become a GET that answers 200.
+    Http::fake([
+        'objects.example.com/api/v2/objects/moved' => Http::response(['url' => 'moved'], 200),
+        'objects.example.com/*' => Http::response(null, $status, ['Location' => 'https://objects.example.com/api/v2/objects/moved']),
+    ]);
+
+    expect(fn () => app(ZaakDestructionService::class)->deleteDataObject('https://objects.example.com/api/v2/objects/1'))
+        ->toThrow(RequestException::class);
+
+    Http::assertSentCount(1);
+})->with([301, 302, 303]);

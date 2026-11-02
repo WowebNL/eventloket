@@ -8,6 +8,7 @@ use App\Models\Zaak;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -262,7 +263,8 @@ class ZaakDestructionService
 
         $this->validateDeleteResponse(
             $url,
-            Http::withHeaders($this->objectsApiHeaders())->delete($url),
+            // A followed redirect turns the DELETE into a GET, so it is not followed.
+            Http::withoutRedirecting()->withHeaders($this->objectsApiHeaders())->delete($url),
         );
     }
 
@@ -289,10 +291,14 @@ class ZaakDestructionService
             return;
         }
 
-        if ($response->failed()) {
-            Log::error("Destruction delete of [{$url}] failed: {$response->body()}");
-            $response->throw();
+        if ($response->successful()) {
+            return;
         }
+
+        // Anything else, a redirect included, means the object was not deleted.
+        Log::error("Destruction delete of [{$url}] failed with status {$response->status()}: {$response->body()}");
+
+        throw new RequestException($response);
     }
 
     private function zgw(): ZgwConnection
