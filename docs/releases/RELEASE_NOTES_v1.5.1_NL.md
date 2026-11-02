@@ -4,7 +4,7 @@
 
 ---
 
-Staat bij een koppeling het tabblad bestanden uit, dan kan een koppelingbeheerder met een nieuwe schakelaar adviesdiensten met inzage in alle zaken de documenten toch laten inzien, zonder dat ze iets kunnen toevoegen. Zonder die schakelaar wordt het uitzetten van het tabblad strenger: adviesdiensten openen documenten van zo'n zaak dan alleen nog via hun eigen adviesvraag of via een besluit. Staat het tabblad bestanden aan, dan verandert er niets. Verder krijgt een bijlage in een bericht weer de naam van het bestand als titel, en krijg je een duidelijke melding als een e-mailadres al in gebruik is.
+Staat bij een koppeling het tabblad bestanden uit, dan kan een koppelingbeheerder met een nieuwe schakelaar adviesdiensten met inzage in alle zaken de documenten toch laten inzien, zonder dat ze iets kunnen toevoegen. Zonder die schakelaar wordt het uitzetten van het tabblad strenger: adviesdiensten openen documenten van zo'n zaak dan alleen nog via hun eigen adviesvraag of via een besluit. Staat het tabblad bestanden aan, dan verandert er niets. Verder krijgt een bijlage in een bericht weer de naam van het bestand als titel, en krijg je een duidelijke melding als een e-mailadres al in gebruik is. Organisatoren zien in de lijst met zaken de kolommen "Zaaktype" en "Behandelaar" niet meer, en er zitten beveiligingsupdates in.
 
 ---
 
@@ -36,6 +36,12 @@ Staat bij een koppeling het tabblad bestanden uit, dan openen adviesdiensten zon
 
 Dat geldt ook voor een link naar een document die eerder is opgeslagen of gedeeld. Tot nu toe was het uitzetten van het tabblad vooral een keuze in het scherm; nu bepaalt het ook echt wat een adviesdienst mag openen. Moet een adviesdienst de documenten wel kunnen lezen, gebruik dan de nieuwe schakelaar hierboven.
 
+### Minder kolommen in de lijst met zaken voor organisatoren
+
+**Voor wie:** Organisatoren
+
+In de lijst met zaken, en in de lijstweergave van de kalender, zien organisatoren de kolommen "Zaaktype" en "Behandelaar" niet meer. Welk soort aanvraag een zaak is, staat in de kolom "Aanvraagtype". Omdat de kolom "Behandelaar" weg is, kun je ook niet meer zoeken op de naam van de behandelaar.
+
 ---
 
 ## 🐛 Opgeloste problemen
@@ -58,5 +64,6 @@ Gebruikte je bij het registreren, in je profiel, bij het accepteren van een uitn
 
 ## 🔧 Onder de motorkap
 
+* Beveiligingsupdates in onderdelen die Eventloket gebruikt om verzoeken te verwerken en schermen te tonen. Voor gebruikers verandert hier niets aan.
 * Bijgewerkte onderdelen die alleen bij het bouwen van de applicatie worden gebruikt, met beveiligingsupdates. Voor gebruikers verandert hier niets aan.
 * Openstaande uitnodigingen worden voortaan met een e-mailadres in kleine letters opgeslagen.
