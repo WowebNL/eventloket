@@ -25,4 +25,10 @@ return [
     'koppeling_beheerder' => [
         'label' => 'Koppeling beheerder',
     ],
+    'archive_coordinator' => [
+        'label' => 'Archiefcoördinator',
+    ],
+    'archive_reviewer' => [
+        'label' => 'Archiefbeoordelaar',
+    ],
 ];

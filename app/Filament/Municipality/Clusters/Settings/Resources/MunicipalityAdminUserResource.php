@@ -62,6 +62,8 @@ class MunicipalityAdminUserResource extends Resource
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
+                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
+                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->required(),
@@ -83,6 +85,8 @@ class MunicipalityAdminUserResource extends Resource
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                         Role::KoppelingBeheerder->value => Role::KoppelingBeheerder->getLabel(),
+                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
+                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
                     // An inline editable column saves without consulting the
                     // model policy, so the policy check is applied here.

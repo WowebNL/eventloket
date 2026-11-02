@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Zgw;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Arr;
+use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefnominatie;
+use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefstatus;
 use Woweb\Zgw\Data\Generated\Zaken\ZaakData;
 use Woweb\Zgw\Data\Generated\Zaken\ZaakEigenschapData;
 
@@ -44,6 +47,17 @@ final class ZaakReadModel implements Arrayable
     public readonly ?string $uiterlijkeEinddatumAfdoening;
 
     public readonly ?string $bronorganisatie;
+
+    /**
+     * The archiving regime the zaaksysteem holds for this zaak. Read by the
+     * archive module to decide whether a zaak may be destroyed; every other
+     * consumer can ignore these three.
+     */
+    public readonly ?Archiefnominatie $archiefnominatie;
+
+    public readonly ?Archiefstatus $archiefstatus;
+
+    public readonly ?CarbonImmutable $archiefactiedatum;
 
     /** @var array<string, mixed>|null */
     public readonly ?array $zaakgeometrie;
@@ -97,14 +111,25 @@ final class ZaakReadModel implements Arrayable
         $this->bronorganisatie = isset($raw['bronorganisatie']) ? (string) $raw['bronorganisatie'] : null;
         $this->zaakgeometrie = $dto->zaakgeometrie?->value;
 
+        // Taken from the DTO rather than $raw: the package already casts these
+        // to their enums and to a CarbonImmutable.
+        $this->archiefnominatie = $dto->archiefnominatie;
+        $this->archiefstatus = $dto->archiefstatus;
+        $this->archiefactiedatum = $dto->archiefactiedatum;
+
         $this->status = $expand['status'] ?? null;
         $this->status_name = Arr::get($expand, 'status._expand.statustype.omschrijving');
         $this->statustype_url = Arr::get($expand, 'status._expand.statustype.url');
 
-        $this->data_object_url = Arr::first(
+        // Matched on host, not as a substring: only a url actually served by
+        // the Objects API is a zaakobject of ours. One that merely mentions it
+        // somewhere, in a query string say, is a different host.
+        $objectsHost = self::hostOf((string) config('openzaak.objectsapi.url'));
+
+        $this->data_object_url = $objectsHost === null ? null : (Arr::first(
             $expand['zaakobjecten'] ?? [],
-            fn ($item) => isset($item['object']) && str_contains((string) $item['object'], (string) config('openzaak.objectsapi.url'))
-        )['object'] ?? null;
+            fn ($item) => isset($item['object']) && self::hostOf((string) $item['object']) === $objectsHost
+        )['object'] ?? null);
 
         $this->eigenschappen = array_map(
             fn (array $eigenschap) => ZaakEigenschapData::from($eigenschap),
@@ -127,6 +152,16 @@ final class ZaakReadModel implements Arrayable
         $this->resultaattype = Arr::get($expand, 'resultaat._expand.resultaattype');
 
         $this->zaakAddresses = $this->extractEventAddresses($expand['zaakobjecten'] ?? []);
+    }
+
+    /**
+     * The lowercased host of a url, or null when it has none.
+     */
+    public static function hostOf(string $url): ?string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? strtolower($host) : null;
     }
 
     /**
@@ -185,6 +220,9 @@ final class ZaakReadModel implements Arrayable
             'uiterlijkeEinddatumAfdoening' => $this->uiterlijkeEinddatumAfdoening,
             'resultaat' => $this->resultaat,
             'resultaattype' => $this->resultaattype,
+            'archiefnominatie' => $this->archiefnominatie?->value,
+            'archiefstatus' => $this->archiefstatus?->value,
+            'archiefactiedatum' => $this->archiefactiedatum?->toDateString(),
         ];
     }
 }
