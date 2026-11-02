@@ -6,7 +6,7 @@ return [
     'eventloket_data' => [
         'title' => 'Verklaring van vernietiging Eventloket-gegevens',
         'intro' => 'Dit rapport legt vast welke gegevens Eventloket zelf over onderstaande zaken bewaarde en heeft vernietigd, '
-            .'nadat het zaaksysteem meldde dat de zaak daar is vernietigd. De zaakgegevens zelf zijn in dat zaaksysteem vernietigd '
+            .'nadat het zaaksysteem bevestigde dat de zaak daar is vernietigd. De zaakgegevens zelf zijn in dat zaaksysteem vernietigd '
             .'en worden daar verantwoord. Dit rapport wordt permanent bewaard.',
         'items_heading' => 'Zaken waarvan de Eventloket-gegevens zijn vernietigd',
         'counts_value' => ':total zaken',

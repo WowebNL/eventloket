@@ -28,7 +28,7 @@ return [
     | destroyed in the zaaksysteem and accounted for by the other report.
     |
     */
-    'eventloket_destruction_method' => 'Permanente verwijdering van de Eventloket-gegevens (threads, berichten, notificaties, logboek en het formulierinzending-object), na melding dat de zaak in het zaaksysteem is vernietigd',
+    'eventloket_destruction_method' => 'Permanente verwijdering van de Eventloket-gegevens (threads, berichten, notificaties, logboek en, waar aanwezig, het formulierinzending-object; zie per zaak), nadat het zaaksysteem bevestigde dat de zaak is vernietigd',
 
     /*
     |--------------------------------------------------------------------------

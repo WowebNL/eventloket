@@ -124,9 +124,9 @@ test('the report shows per zaak whether the form submission object was removed',
     $html = view('pdf.destruction-report', ['report' => $report])->render();
 
     expect($html)->toContain('Formulierinzending-object')
-        ->toContain('niet verwijderd (fout)')
-        ->toContain('niet verwijderd (geweigerd)')
-        ->toContain('niet aanwezig');
+        ->toContain('Niet verwijderd (fout)')
+        ->toContain('Niet verwijderd (geweigerd)')
+        ->toContain('Niet aanwezig');
 });
 
 test('a report written before the status was recorded renders without it', function () {

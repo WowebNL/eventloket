@@ -2,15 +2,15 @@
 
 return [
     'deleted' => [
-        'label' => 'verwijderd',
+        'label' => 'Verwijderd',
     ],
     'not_present' => [
-        'label' => 'niet aanwezig',
+        'label' => 'Niet aanwezig',
     ],
     'refused' => [
-        'label' => 'niet verwijderd (geweigerd)',
+        'label' => 'Niet verwijderd (geweigerd)',
     ],
     'failed' => [
-        'label' => 'niet verwijderd (fout)',
+        'label' => 'Niet verwijderd (fout)',
     ],
 ];
