@@ -317,7 +317,6 @@ test('a coordinator of a municipality on its own zgw instance sees reports but c
     livewire(ListDestructionLists::class)
         ->assertActionHidden('create');
 
-    // And the route behind it is shut, so a hand-typed url gets nowhere.
     // And the route behind it is shut, so a hand-typed url gets nowhere:
     // CreateRecord::mount() aborts on the resource's canCreate().
     livewire(CreateDestructionList::class)
