@@ -8,6 +8,7 @@ use App\Filament\Shared\Resources\AdvisorUsers\Actions\AdvisorUserPendingInvites
 use App\Mail\AdvisoryInviteMail;
 use App\Models\Advisory;
 use App\Models\AdvisoryInvite;
+use App\Rules\UniqueUserEmail;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\AttachAction;
@@ -55,7 +56,7 @@ class UsersRelationManager extends RelationManager
                     ->email()
                     ->required()
                     ->maxLength(255)
-                    ->unique('users', 'email'),
+                    ->rule(UniqueUserEmail::forField()),
                 TextInput::make('phone')
                     ->label(__('admin/resources/organisation.user.form.phone.label'))
                     ->maxLength(20),
