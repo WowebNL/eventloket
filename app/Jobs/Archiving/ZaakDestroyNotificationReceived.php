@@ -39,7 +39,24 @@ class ZaakDestroyNotificationReceived implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * An inconclusive read of the source is rethrown so the job is retried. The
+     * attempts are spread out so a short outage of the zaaksysteem does not use
+     * them all up within seconds.
+     */
+    public int $tries = 4;
+
     public function __construct(private OpenNotification $notification) {}
+
+    /**
+     * Seconds to wait before each retry: one minute, ten minutes, one hour.
+     *
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [60, 600, 3600];
+    }
 
     public function handle(EventloketDataDestroyer $destroyer): void
     {
