@@ -4,13 +4,17 @@ namespace App\Models;
 
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
+use App\Enums\ThreadType;
+use App\Enums\ZaakDocumentAccess;
 use App\Enums\ZaakRelatieType;
 use App\Enums\ZaaktypeRole;
 use App\Models\Threads\AdviceThread;
 use App\Models\Threads\OrganiserThread;
+use App\Models\Users\AdvisorUser;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
+use App\Policies\ZaakPolicy;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
@@ -269,6 +273,86 @@ class Zaak extends Model implements Eventable
             'organisatievragen' => $connection->show_organisatievragen_tab,
             default => true,
         };
+    }
+
+    /**
+     * What the given user may do with the documents of this zaak. The single
+     * place that decides whether the documents tab is shown and whether the
+     * document routes may serve a document outside it.
+     *
+     * - The documents tab is shown for the connection (always on main): full
+     *   access, with the policies deciding what the user may do, as before.
+     * - The organiser, with the tab off: only the application files.
+     * - An advisor in an advisory that may view any zaak, on a connection with
+     *   the tab off and read-only documents for advisories on: read-only. Like
+     *   {@see ZaakPolicy::view()} this follows the user's advisories, not the
+     *   current tenant.
+     * - Anyone else, with the tab off: no documents tab.
+     */
+    public function documentAccessFor(User $user): ZaakDocumentAccess
+    {
+        if ($this->showsTab('bestanden')) {
+            return ZaakDocumentAccess::Full;
+        }
+
+        if ($user instanceof OrganiserUser) {
+            return ZaakDocumentAccess::SubmissionOnly;
+        }
+
+        if ($user instanceof AdvisorUser
+            && $this->zgwConnectionModel()?->show_bestanden_tab_read_only_for_advisories === true
+            && $user->advisories->where('can_view_any_zaak', true)->isNotEmpty()) {
+            return ZaakDocumentAccess::ReadOnly;
+        }
+
+        return ZaakDocumentAccess::None;
+    }
+
+    /**
+     * Whether an advisor without access to the documents of this zaak may
+     * still open this document, because another tab shows it to them: an
+     * attachment to a message in a (non-concept) advice question of one of
+     * their own advisories on this zaak, while the advice questions tab is
+     * shown, or a document of a besluit they can see, while the besluiten tab
+     * is shown.
+     *
+     * The document is expected to come from {@see documenten}, so the
+     * vertrouwelijkheid filter for the role has already been applied.
+     */
+    public function advisorCanOpenDocumentOutsideTab(AdvisorUser $user, Informatieobject $document): bool
+    {
+        if ($this->showsTab('adviesvragen') && $this->isAttachedToOwnAdviceQuestion($user, $document)) {
+            return true;
+        }
+
+        return $this->showsTab('besluiten') && $this->isDocumentOfVisibleBesluit($document);
+    }
+
+    private function isAttachedToOwnAdviceQuestion(AdvisorUser $user, Informatieobject $document): bool
+    {
+        $advisoryIds = $user->advisories->pluck('id');
+
+        if ($advisoryIds->isEmpty()) {
+            return false;
+        }
+
+        return Message::query()
+            ->whereJsonContains('documents', [['url' => $document->url]])
+            ->whereHas('thread', fn (Builder $thread) => $thread
+                ->where('zaak_id', $this->getKey())
+                ->where('type', ThreadType::Advice)
+                ->where('advice_status', '!=', AdviceStatus::Concept)
+                ->whereIn('advisory_id', $advisoryIds))
+            ->exists();
+    }
+
+    private function isDocumentOfVisibleBesluit(Informatieobject $document): bool
+    {
+        return $this->besluitenForDisplay()->besluiten->contains(
+            fn (Besluit $besluit): bool => (bool) $besluit->besluitDocumenten?->contains(
+                fn (Informatieobject $besluitDocument): bool => $besluitDocument->uuid === $document->uuid
+            )
+        );
     }
 
     /**

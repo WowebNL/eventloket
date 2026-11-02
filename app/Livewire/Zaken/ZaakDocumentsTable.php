@@ -3,9 +3,11 @@
 namespace App\Livewire\Zaken;
 
 use App\Enums\Role;
+use App\Enums\ZaakDocumentAccess;
 use App\Filament\Shared\Resources\Zaken\Actions\DownloadDocumentsAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
+use App\Models\Users\AdvisorUser;
 use App\Models\Zaak;
 use App\Services\Zgw\SubmissionDocumentDetector;
 use App\ValueObjects\ZGW\Informatieobject;
@@ -46,6 +48,16 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     #[Locked]
     public bool $submissionOnly = false;
 
+    /**
+     * Read-only mode for an advisory that may view any zaak, when the bestanden
+     * tab is disabled for the connection but read-only documents for
+     * advisories are enabled: documents can be viewed and downloaded, but no
+     * files or versions can be added. Derived from the zaak in mount(), never
+     * passed in from outside.
+     */
+    #[Locked]
+    public bool $readOnly = false;
+
     public bool $hasDocuments = false;
 
     /**
@@ -69,6 +81,14 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     {
         $this->zaak = $zaak;
         $this->submissionOnly = $submissionOnly;
+
+        $access = $zaak->documentAccessFor(auth()->user());
+
+        // The tab is hidden for an advisor without document access; refusing
+        // the component as well keeps it from being loaded on its own.
+        abort_if(auth()->user() instanceof AdvisorUser && $access === ZaakDocumentAccess::None, 403);
+
+        $this->readOnly = $access === ZaakDocumentAccess::ReadOnly;
     }
 
     #[On('refreshTable')]
@@ -144,7 +164,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                 // versie" appear for everyone. hidden() is a separate condition
                 // that is AND-ed with that check.
                 NewDocumentVersionAction::make($this->zaak)
-                    ->hidden(fn (): bool => $this->submissionOnly),
+                    ->hidden(fn (): bool => $this->submissionOnly || $this->readOnly),
                 ActionGroup::make([
                     Action::make('downloaden')
                     // ->label(__('municipality/resources/zaak.actions.download.label'))
@@ -199,7 +219,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
             ])
             ->headerActions([
                 UploadDocumentAction::make($this->zaak)
-                    ->visible(fn (): bool => ! $this->submissionOnly),
+                    ->visible(fn (): bool => ! $this->submissionOnly && ! $this->readOnly),
             ])
             ->toolbarActions([
                 DownloadDocumentsAction::make($this->zaak),

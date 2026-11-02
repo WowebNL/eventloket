@@ -8,6 +8,7 @@ use App\Enums\Role;
 use App\Jobs\Zaak\CreateDocumentsZipJob;
 use App\Livewire\Zaken\ZaakDocumentsTable;
 use App\Models\Municipality;
+use App\Models\MunicipalityZgwConnection;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
@@ -248,4 +249,30 @@ test('the bulk download takes the file names of the selection along', function (
             'vier-uuid' => 'vier.pdf',
         ],
     );
+});
+
+test('the organiser keeps the submission-only view when read-only documents for advisories are enabled', function () {
+    $municipality = Municipality::factory()->create();
+    MunicipalityZgwConnection::factory()->active()->bestandenReadOnlyForAdvisories()->create([
+        'municipality_id' => $municipality->id,
+    ]);
+    $zaak = Zaak::factory()->create([
+        'organisation_id' => $this->organisation->id,
+        'zaaktype_id' => Zaaktype::factory()->create([
+            'municipality_id' => $municipality->id,
+            'connection' => "gemeente_{$municipality->id}",
+        ])->id,
+        'zgw_zaak_url' => null,
+    ]);
+
+    $organiser = User::factory()->create(['role' => Role::Organiser]);
+    $this->organisation->users()->attach($organiser, ['role' => OrganisationRole::Admin->value]);
+
+    $this->actingAs($organiser);
+
+    expect($zaak->showsTab('bestanden'))->toBeFalse();
+
+    livewire(ZaakDocumentsTable::class, ['zaak' => $zaak, 'submissionOnly' => ! $zaak->showsTab('bestanden')])
+        ->assertSet('submissionOnly', true)
+        ->assertTableActionHidden('upload');
 });
