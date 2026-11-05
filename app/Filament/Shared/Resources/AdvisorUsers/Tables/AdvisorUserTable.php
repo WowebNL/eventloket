@@ -38,6 +38,9 @@ class AdvisorUserTable
                     ->label(__('resources/advisor_user.columns.role.label'))
                     ->options(AdvisoryRole::class)
                     ->selectablePlaceholder(false)
+                    // The last admin cannot be demoted, for the same reason they cannot be detached.
+                    // Filament also refuses a state update for a disabled column on the server.
+                    ->disabled(fn (AdvisorUser $record): bool => self::isLastAdminOf($record, $advisory))
                     /** @phpstan-ignore-next-line */
                     ->getStateUsing(fn (AdvisorUser $record) => $record->advisories()->wherePivot('advisory_id', $advisory->id)->first()?->pivot->role)
                     ->updateStateUsing(function (AdvisorUser $record, string $state) use ($advisory): void {
@@ -151,5 +154,10 @@ class AdvisorUserTable
     private static function isAdminOf(AdvisorUser $record, Advisory $advisory): bool
     {
         return $record->canAccessAdvisory($advisory->id, as: AdvisoryRole::Admin);
+    }
+
+    private static function isLastAdminOf(AdvisorUser $record, Advisory $advisory): bool
+    {
+        return self::isAdminOf($record, $advisory) && $advisory->adminUsers()->count() <= 1;
     }
 }
