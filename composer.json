@@ -19,7 +19,7 @@
         "laravel/tinker": "^3.0",
         "phiki/phiki": "^2.0",
         "sentry/sentry-laravel": "^4.25",
-        "spatie/laravel-activitylog": "^4.10",
+        "spatie/laravel-activitylog": "^5.1",
         "woweb/laravel-zgw-client": "^1.2",
         "woweb/openzaak": "dev-main"
     },
