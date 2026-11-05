@@ -321,6 +321,51 @@ test('a refused lock from the message form shows the permission message and atta
     assertUploadRemoved();
 });
 
+test('a version attached through the message form is stored with the message', function () {
+    $documentUrl = cachedDocument(REJECTED_DOCUMENT_UUID)->url;
+    $documentBody = array_merge(cachedDocument(REJECTED_DOCUMENT_UUID)->toArray(), ['versie' => 2]);
+
+    // After storing the version the zaak's documents are read again, so the
+    // list and the document itself are served as well.
+    Http::fake([
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/*/lock' => Http::response(['lock' => 'lock-string-123'], 200),
+        ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/*/unlock' => Http::response(null, 204),
+        ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten*' => Http::response(ZgwHttpFake::envelope([
+            ['url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaakinformatieobjecten/1', 'zaak' => $this->zaak->zgw_zaak_url, 'informatieobject' => $documentUrl],
+        ]), 200),
+        $documentUrl => fn (Request $request) => $request->method() === 'GET'
+            ? Http::response($documentBody, 200)
+            : Http::response([], 200),
+        ZgwHttpFake::$baseUrl.'*' => Http::response([], 200),
+    ]);
+
+    LaravelNotification::fake();
+
+    $thread = OrganiserThread::forceCreate([
+        'zaak_id' => $this->zaak->id,
+        'type' => ThreadType::Organiser,
+        'created_by' => $this->organiser->id,
+        'title' => 'Test thread',
+    ]);
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    Filament::setTenant($this->organisation);
+
+    livewire(MessageForm::class, ['thread' => $thread])
+        ->callAction('attach', data: [
+            'type' => 'version',
+            'existing_document' => REJECTED_DOCUMENT_UUID,
+            ...versionData(),
+        ])
+        ->assertHasNoActionErrors()
+        ->assertNotified('Nieuwe versie toegevoegd')
+        ->assertSet('documents', [['url' => $documentUrl, 'versie' => 2]])
+        ->call('submit');
+
+    expect($thread->messages()->sole()->documents->map->toArray()->all())
+        ->toBe([['url' => $documentUrl, 'versie' => 2]]);
+});
+
 test('a failing unlock after a stored version is reported while the user sees the success', function () {
     Http::fake([
         ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/*/lock' => Http::response(['lock' => 'lock-string-123'], 200),

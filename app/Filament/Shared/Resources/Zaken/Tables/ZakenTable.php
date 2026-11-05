@@ -69,7 +69,10 @@ class ZakenTable
                     // Hidden by default: a zaaktype may serve several kinds of
                     // aanvraag, so the aanvraagtype column is the one that tells
                     // them apart. Still available through the column toggle.
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    // Left out of the organiser list, which identifies the
+                    // kind of aanvraag by the aanvraagtype column alone.
+                    ->hidden(fn (): bool => self::isOrganiserPanel()),
                 TextColumn::make('created_at')
                     ->dateTime(config('app.date_format'))
                     ->label(__('resources/zaak.columns.registratiedatum.label'))
@@ -86,7 +89,11 @@ class ZakenTable
                     ->sortable()
                     ->toggleable()
                     ->searchable()
-                    ->forceSearchCaseInsensitive(),
+                    ->forceSearchCaseInsensitive()
+                    // Left out of the organiser list. Organisers keep the
+                    // handled-by column above, which is a different field:
+                    // the user who last set a status, not the assigned reviewer.
+                    ->hidden(fn (): bool => self::isOrganiserPanel()),
                 TextColumn::make('reference_data.risico_classificatie')
                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
                     ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
@@ -289,5 +296,14 @@ class ZakenTable
     private static function isMunicipalityPanel(): bool
     {
         return Filament::getCurrentPanel()?->getId() === 'municipality';
+    }
+
+    /**
+     * Whether the list is shown in the organiser panel, used for both the
+     * zaken list and the list mode of the organiser calendar.
+     */
+    private static function isOrganiserPanel(): bool
+    {
+        return Filament::getCurrentPanel()?->getId() === 'organiser';
     }
 }

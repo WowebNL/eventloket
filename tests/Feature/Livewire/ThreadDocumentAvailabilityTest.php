@@ -110,8 +110,9 @@ test('the message form skips a selected document that is no longer visible', fun
     $this->municipality->users()->attach($reviewer);
     $this->actingAs($reviewer);
 
-    livewire(MessageForm::class, ['thread' => $thread])
-        ->set('documents', [['url' => $this->documentUrl, 'versie' => 1]])
+    // The attached documents are locked, so they are handed in at mount as the
+    // attach action would have set them on the server.
+    livewire(MessageForm::class, ['thread' => $thread, 'documents' => [['url' => $this->documentUrl, 'versie' => 1]]])
         ->assertOk()
         ->assertDontSee('attached.pdf');
 })->with([

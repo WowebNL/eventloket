@@ -2,6 +2,7 @@
 
 namespace App\Filament\Shared\Resources\Zaken\Actions;
 
+use App\Enums\ZaakDocumentAccess;
 use App\Jobs\Zaak\CreateDocumentsZipJob;
 use App\Models\Zaak;
 use Filament\Actions\BulkAction;
@@ -28,6 +29,9 @@ class DownloadDocumentsAction
                 ['count' => $records->count()],
             ))
             ->modalSubmitActionLabel(__('Downloaden'))
+            // The same rule as the documents tab and the document route: only a
+            // user with some access to the documents of the zaak gets the zip.
+            ->authorize(fn (): bool => $zaak->documentAccessFor(auth()->user()) !== ZaakDocumentAccess::None)
             ->action(function (Collection $records, BulkAction $action) use ($zaak): void {
                 $selected = $records->filter(fn (array $record): bool => filled($record['uuid'] ?? null));
                 $uuids = $selected->pluck('uuid')->values()->all();
