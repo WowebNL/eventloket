@@ -50,16 +50,15 @@ class UploadDocumentAction
                 $fileNames = (array) ($data['file_names'] ?? []);
                 $metadata = array_values((array) ($data['document_metadata'] ?? []));
 
-                // In production Filament stores files before firing the action, so
-                // $data['files'] holds the final storage paths. In test context the
-                // FileUpload state is bypassed, so we fall back to the path stored
-                // per-entry in the repeater (set explicitly in tests).
-                $storedPaths = array_values(array_filter((array) ($data['files'] ?? [])));
-                if (empty($storedPaths)) {
-                    $storedPaths = array_values(array_filter(
-                        array_map(fn (array $entry) => (string) ($entry['path'] ?? ''), $metadata),
-                    ));
-                }
+                // Filament stores the uploads before firing the action, so
+                // $data['files'] holds their storage paths. Only those paths are
+                // used, and only when every value is one: no other submitted
+                // value may point the job at a file, and without a stored
+                // upload there is nothing to queue.
+                $storedPaths = DocumentUploadType::ensureStoredUploadPaths(
+                    (array) ($data['files'] ?? []),
+                    "mountedActions.{$action->getNestingIndex()}.data.files",
+                );
 
                 $fileData = [];
                 foreach ($storedPaths as $index => $path) {
@@ -112,9 +111,11 @@ class UploadDocumentAction
             ->maxSize(61440) // 60MB per file
             ->mimeTypeMap(config('app.document_mime_type_mappings'))
             ->rule(DocumentUploadType::fileUploadRule())
-            ->directory('documents')
+            ->directory(DocumentUploadType::STORED_UPLOAD_DIRECTORY)
             ->visibility('private')
             ->storeFileNamesIn('file_names')
+            // Only accept files uploaded in this request.
+            ->preventFilePathTampering()
             ->live()
             ->afterStateUpdated(function (?array $state, Set $set, Get $get): void {
                 if (empty($state)) {
@@ -182,7 +183,6 @@ class UploadDocumentAction
         }
 
         $metadataFields[] = Hidden::make('_temp_path');
-        $metadataFields[] = Hidden::make('path');
 
         $fields[] = Repeater::make('document_metadata')
             ->label(__('Documenten'))
@@ -220,9 +220,11 @@ class UploadDocumentAction
             ->maxSize(61440) // 60MB
             ->mimeTypeMap(config('app.document_mime_type_mappings'))
             ->rule(DocumentUploadType::fileUploadRule())
-            ->directory('documents')
+            ->directory(DocumentUploadType::STORED_UPLOAD_DIRECTORY)
             ->visibility('private')
             ->storeFileNamesIn('file_name')
+            // Only accept a file uploaded in this request.
+            ->preventFilePathTampering()
             ->live()
             ->afterStateUpdated(function (TemporaryUploadedFile|string|null $state, Get $get, Set $set): void {
                 if ($state === null || $state === '') {
@@ -288,9 +290,14 @@ class UploadDocumentAction
     /**
      * Upload a single document to OpenZaak and link it to the zaak.
      * Preserved for backward compatibility with tests and other callers.
+     *
+     * $fileErrorKey is where a validation error on the file lands, so a
+     * caller in a form passes the state path of its upload field.
      */
-    public static function uploadDocument(array $data, Zaak $zaak): Informatieobject
+    public static function uploadDocument(array $data, Zaak $zaak, string $fileErrorKey = 'file'): Informatieobject
     {
+        [$data['file']] = DocumentUploadType::ensureStoredUploadPaths([$data['file'] ?? null], $fileErrorKey);
+
         $connectionName = $zaak->zgwConnectionName();
         $connection = Zgw::connection($connectionName);
 

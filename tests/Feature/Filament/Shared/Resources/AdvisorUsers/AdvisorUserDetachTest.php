@@ -141,3 +141,99 @@ test('admin relation manager bulk detach still removes the users from the adviso
     expect(advisoryPivotExists($this->advisory->id, $this->sharedAdvisor->id))->toBeFalse()
         ->and(advisoryPivotExists($this->otherAdvisory->id, $this->sharedAdvisor->id))->toBeTrue();
 });
+
+// --- Self and last admin guards ---
+
+test('advisor panel detach is hidden for the acting user', function () {
+    // The acting admin belongs to two advisories and is not the only admin here, so only the
+    // self guard can hide the action.
+    $this->otherAdvisory->users()->attach($this->adminAdvisor, ['role' => AdvisoryRole::Member]);
+    $secondAdmin = User::factory()->create(['role' => Role::Advisor]);
+    $this->advisory->users()->attach($secondAdmin, ['role' => AdvisoryRole::Admin]);
+
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->adminAdvisor);
+    Filament::setTenant($this->advisory);
+
+    livewire(ListAdvisorUsers::class)
+        ->assertTableActionHidden('detach', $this->adminAdvisor);
+});
+
+test('advisor panel bulk detach skips the acting user', function () {
+    $this->otherAdvisory->users()->attach($this->adminAdvisor, ['role' => AdvisoryRole::Member]);
+    $secondAdmin = User::factory()->create(['role' => Role::Advisor]);
+    $this->advisory->users()->attach($secondAdmin, ['role' => AdvisoryRole::Admin]);
+
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->adminAdvisor);
+    Filament::setTenant($this->advisory);
+
+    livewire(ListAdvisorUsers::class)
+        ->callTableBulkAction('detach', [$this->adminAdvisor, $this->sharedAdvisor])
+        ->assertNotified(
+            Notification::make()
+                ->warning()
+                ->title(__('resources/advisor_user.actions.detach.notifications.partially_detached.title'))
+                ->body('<p>'.trans_choice('resources/advisor_user.actions.detach.skipped_self', 1).'</p>')
+                ->persistent(),
+        );
+
+    expect(advisoryPivotExists($this->advisory->id, $this->adminAdvisor->id))->toBeTrue()
+        ->and(advisoryPivotExists($this->advisory->id, $this->sharedAdvisor->id))->toBeFalse();
+});
+
+test('detach is hidden for the last admin of an advisory', function () {
+    // The shared advisor is the only admin of the other advisory.
+    $this->otherAdvisory->users()->updateExistingPivot($this->sharedAdvisor->id, ['role' => AdvisoryRole::Admin]);
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $this->otherAdvisory,
+        'pageClass' => EditAdvisory::class,
+    ])
+        ->assertTableActionHidden('detach', $this->sharedAdvisor);
+});
+
+test('advisor panel detach stays available for an admin when another admin remains', function () {
+    $this->advisory->users()->updateExistingPivot($this->sharedAdvisor->id, ['role' => AdvisoryRole::Admin]);
+
+    Filament::setCurrentPanel(Filament::getPanel('advisor'));
+    $this->actingAs($this->adminAdvisor);
+    Filament::setTenant($this->advisory);
+
+    livewire(ListAdvisorUsers::class)
+        ->callTableAction('detach', $this->sharedAdvisor)
+        ->assertHasNoTableActionErrors();
+
+    expect(advisoryPivotExists($this->advisory->id, $this->sharedAdvisor->id))->toBeFalse();
+});
+
+test('bulk detach keeps the last admin of an advisory', function () {
+    // Two admins in the other advisory, both also in this advisory: detaching both from the
+    // other advisory would leave it without an admin.
+    $this->otherAdvisory->users()->updateExistingPivot($this->sharedAdvisor->id, ['role' => AdvisoryRole::Admin]);
+    $secondShared = User::factory()->create(['role' => Role::Advisor]);
+    $this->advisory->users()->attach($secondShared, ['role' => AdvisoryRole::Member]);
+    $this->otherAdvisory->users()->attach($secondShared, ['role' => AdvisoryRole::Admin]);
+
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+    $this->actingAs(User::factory()->create(['role' => Role::Admin]));
+
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $this->otherAdvisory,
+        'pageClass' => EditAdvisory::class,
+    ])
+        ->callTableBulkAction('detach', [$this->sharedAdvisor, $secondShared])
+        ->assertNotified(
+            Notification::make()
+                ->warning()
+                ->title(__('resources/advisor_user.actions.detach.notifications.partially_detached.title'))
+                ->body('<p>'.trans_choice('resources/advisor_user.actions.detach.skipped_last_admin', 1).'</p>')
+                ->persistent(),
+        );
+
+    expect(advisoryPivotExists($this->otherAdvisory->id, $this->sharedAdvisor->id))->toBeFalse()
+        ->and(advisoryPivotExists($this->otherAdvisory->id, $secondShared->id))->toBeTrue();
+});

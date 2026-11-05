@@ -17,6 +17,7 @@ use App\Services\Zgw\ZgwConnectionConfig;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -78,9 +79,10 @@ test('upload action dispatches UploadDocumentsJob with file data', function () {
     Queue::fake();
     Storage::fake('local');
 
-    $paths = ['documents/file1.pdf', 'documents/file2.pdf'];
-    Storage::put($paths[0], '%PDF-1.4 first file');
-    Storage::put($paths[1], '%PDF-1.4 second file');
+    $uploads = [
+        UploadedFile::fake()->createWithContent('file1.pdf', '%PDF-1.4 first file'),
+        UploadedFile::fake()->createWithContent('file2.pdf', '%PDF-1.4 second file'),
+    ];
 
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
@@ -115,24 +117,28 @@ test('upload action dispatches UploadDocumentsJob with file data', function () {
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => $paths,
+            'files' => $uploads,
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $paths[0], 'titel' => 'Contract', 'informatieobjecttype' => $documentTypeUrl],
-                ['_temp_path' => '/tmp/php2', 'path' => $paths[1], 'titel' => 'Bijlage', 'informatieobjecttype' => $documentTypeUrl],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Contract', 'informatieobjecttype' => $documentTypeUrl],
+                ['_temp_path' => '/tmp/php2', 'titel' => 'Bijlage', 'informatieobjecttype' => $documentTypeUrl],
             ],
         ])
         ->assertHasNoTableActionErrors();
 
-    Queue::assertPushed(UploadDocumentsJob::class, function (UploadDocumentsJob $job) use ($zaak, $paths, $documentTypeUrl) {
+    // The job gets the paths the uploads were stored under, so it reads the
+    // uploaded content.
+    Queue::assertPushed(UploadDocumentsJob::class, function (UploadDocumentsJob $job) use ($zaak, $documentTypeUrl) {
         return $job->zaak->id === $zaak->id
             && count($job->files) === 2
-            && $job->files[0]['path'] === $paths[0]
+            && str_starts_with($job->files[0]['path'], 'documents/')
+            && Storage::get($job->files[0]['path']) === '%PDF-1.4 first file'
             && $job->files[0]['titel'] === 'Contract'
-            && $job->files[0]['original_name'] === basename($paths[0]) // basename: storeFileNamesIn is not processed in test context
+            && $job->files[0]['original_name'] === 'file1.pdf'
             && $job->files[0]['informatieobjecttype'] === $documentTypeUrl
-            && $job->files[1]['path'] === $paths[1]
+            && str_starts_with($job->files[1]['path'], 'documents/')
+            && Storage::get($job->files[1]['path']) === '%PDF-1.4 second file'
             && $job->files[1]['titel'] === 'Bijlage'
-            && $job->files[1]['original_name'] === basename($paths[1])
+            && $job->files[1]['original_name'] === 'file2.pdf'
             && $job->files[1]['informatieobjecttype'] === $documentTypeUrl;
     });
 });
@@ -197,8 +203,7 @@ test('coordinator can choose the confidentiality level when uploading documents'
     Queue::fake();
     Storage::fake('local');
 
-    $path = 'documents/coordinator-file.pdf';
-    Storage::put($path, '%PDF-1.4 coordinator file');
+    $upload = UploadedFile::fake()->createWithContent('coordinator-file.pdf', '%PDF-1.4 coordinator file');
 
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
@@ -233,10 +238,10 @@ test('coordinator can choose the confidentiality level when uploading documents'
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'vertrouwelijkheidaanduiding' => DocumentVertrouwelijkheden::Confidentieel->value,
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Intern advies', 'informatieobjecttype' => $documentTypeUrl],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Intern advies', 'informatieobjecttype' => $documentTypeUrl],
             ],
         ])
         ->assertHasNoTableActionErrors();
@@ -389,8 +394,7 @@ test('a coordinator upload writes the derived level chosen on a municipal connec
     Queue::fake();
     Storage::fake('local');
 
-    $path = 'documents/coordinator-file.pdf';
-    Storage::put($path, '%PDF-1.4 coordinator file');
+    $upload = UploadedFile::fake()->createWithContent('coordinator-file.pdf', '%PDF-1.4 coordinator file');
 
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
@@ -422,10 +426,10 @@ test('a coordinator upload writes the derived level chosen on a municipal connec
     // "Deel met de adviseur" is the beperkt_openbaar rung on this connection.
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'vertrouwelijkheidaanduiding' => 'beperkt_openbaar',
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Advies', 'informatieobjecttype' => $documentTypeUrl],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Advies', 'informatieobjecttype' => $documentTypeUrl],
             ],
         ])
         ->assertHasNoTableActionErrors();
@@ -465,8 +469,7 @@ test('an organiser upload on a connection with maxima lands on openbaar', functi
     Queue::fake();
     Storage::fake('local');
 
-    $path = 'documents/organiser-file.pdf';
-    Storage::put($path, '%PDF-1.4 organiser file');
+    $upload = UploadedFile::fake()->createWithContent('organiser-file.pdf', '%PDF-1.4 organiser file');
 
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
@@ -482,9 +485,9 @@ test('an organiser upload on a connection with maxima lands on openbaar', functi
     // below every group's maximum and the upload is visible to all of them.
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Draaiboek', 'informatieobjecttype' => $documentTypeUrl],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Draaiboek', 'informatieobjecttype' => $documentTypeUrl],
             ],
         ])
         ->assertHasNoTableActionErrors();
@@ -502,8 +505,7 @@ test('an organiser upload on the default connection stays visible to the gemeent
     Queue::fake();
     Storage::fake('local');
 
-    $path = 'documents/organiser-file.pdf';
-    Storage::put($path, '%PDF-1.4 organiser file');
+    $upload = UploadedFile::fake()->createWithContent('organiser-file.pdf', '%PDF-1.4 organiser file');
 
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
@@ -522,9 +524,9 @@ test('an organiser upload on the default connection stays visible to the gemeent
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Draaiboek', 'informatieobjecttype' => $documentTypeUrl],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Draaiboek', 'informatieobjecttype' => $documentTypeUrl],
             ],
         ])
         ->assertHasNoTableActionErrors();
@@ -554,8 +556,7 @@ test('an upload without the select applies the upload default of the connection'
     Queue::fake();
     Storage::fake('local');
 
-    $path = 'documents/coordinator-file.pdf';
-    Storage::put($path, '%PDF-1.4 coordinator file');
+    $upload = UploadedFile::fake()->createWithContent('coordinator-file.pdf', '%PDF-1.4 coordinator file');
 
     $zgwZaakUrl = ZgwHttpFake::fakeSingleZaak();
     $documentTypeUrl = ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1';
@@ -600,9 +601,9 @@ test('an upload without the select applies the upload default of the connection'
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Intern advies', 'informatieobjecttype' => $documentTypeUrl],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Intern advies', 'informatieobjecttype' => $documentTypeUrl],
             ],
         ])
         ->assertHasNoTableActionErrors();
