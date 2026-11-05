@@ -6,6 +6,7 @@ use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\Enums\ThreadType;
+use App\Livewire\Thread\MessageForm;
 use App\Models\Message;
 use App\Models\Municipality;
 use App\Models\Organisation;
@@ -16,8 +17,14 @@ use App\Models\Zaaktype;
 use App\Support\Documents\DocumentVersionAuthorizer;
 use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Facades\Filament;
+use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\Fakes\ZgwHttpFake;
+
+use function Pest\Livewire\livewire;
 
 /**
  * The thread attach flow ("Nieuwe versie van bestaand bestand") must honour the
@@ -127,4 +134,52 @@ test('a reviewer from the municipality may not version the organiser-owned docum
     // Cross-group: a municipality user is not in the organiser's group, so the
     // thread attach flow must not offer or accept the organiser-owned document.
     expect(DocumentVersionAuthorizer::canAddVersion($reviewer, $this->zaak, 'own-doc-uuid'))->toBeFalse();
+});
+
+/**
+ * A document the user may version on one zaak must not be versioned through
+ * the attach flow of another zaak, even when the same group created it.
+ */
+test('a document of another zaak may not be versioned', function () {
+    $otherZaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/2',
+    ]);
+    Cache::forever("zaak.{$otherZaak->id}.documenten", collect([
+        makeThreadDocument('other-zaak-doc-uuid', 'Document van een andere zaak'),
+    ]));
+    logCreated($this->organiser, $otherZaak, 'other-zaak-doc-uuid');
+
+    expect(DocumentVersionAuthorizer::canAddVersion($this->organiser, $otherZaak, 'other-zaak-doc-uuid'))->toBeTrue()
+        ->and(DocumentVersionAuthorizer::canAddVersion($this->organiser, $this->zaak, 'other-zaak-doc-uuid'))->toBeFalse();
+});
+
+/**
+ * The select only offers documents of the thread's zaak, so the attach flow
+ * refuses the other document before anything reaches the Documenten API.
+ */
+test('the attach flow refuses a new version of a document of another zaak', function () {
+    Storage::fake('local');
+
+    $otherZaak = Zaak::factory()->create([
+        'zaaktype_id' => $this->zaaktype->id,
+        'organisation_id' => $this->organisation->id,
+        'zgw_zaak_url' => ZgwHttpFake::$baseUrl.'/zaken/api/v1/zaken/2',
+    ]);
+    Cache::forever("zaak.{$otherZaak->id}.documenten", collect([
+        makeThreadDocument('other-zaak-doc-uuid', 'Document van een andere zaak'),
+    ]));
+    logCreated($this->organiser, $otherZaak, 'other-zaak-doc-uuid');
+
+    livewire(MessageForm::class, ['thread' => $this->thread])
+        ->callAction('attach', data: [
+            'type' => 'version',
+            'existing_document' => 'other-zaak-doc-uuid',
+            'titel' => 'Bijgewerkt document',
+            'file' => UploadedFile::fake()->createWithContent('new-version.pdf', '%PDF-1.4 new version'),
+        ])
+        ->assertHasActionErrors(['existing_document']);
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/enkelvoudiginformatieobjecten/other-zaak-doc-uuid'));
 });
