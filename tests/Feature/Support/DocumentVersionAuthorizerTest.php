@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\AdvisoryRole;
+use App\Enums\DocumentVertrouwelijkheden;
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
 use App\Models\Advisory;
@@ -12,6 +13,8 @@ use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Support\Documents\DocumentVersionAuthorizer;
+use App\ValueObjects\ZGW\Informatieobject;
+use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
     $this->organisation = Organisation::factory()->create(['type' => 'business']);
@@ -21,7 +24,33 @@ beforeEach(function () {
         'organisation_id' => $this->organisation->id,
         'zaaktype_id' => $this->zaaktype->id,
     ]);
+
+    // Both documents belong to the zaak; the documents come from the cache, so
+    // checking membership makes no ZGW call.
+    Cache::forever("zaak.{$this->zaak->id}.documenten", collect([
+        authorizerTestDocument('doc-uuid'),
+        authorizerTestDocument('aanvraag-uuid'),
+    ]));
 });
+
+function authorizerTestDocument(string $uuid): Informatieobject
+{
+    return new Informatieobject(
+        uuid: $uuid,
+        url: 'https://zgw.example.com/documenten/api/v1/enkelvoudiginformatieobjecten/'.$uuid,
+        creatiedatum: now()->toIso8601String(),
+        titel: 'Document',
+        vertrouwelijkheidaanduiding: DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+        auteur: 'Test',
+        versie: 1,
+        bestandsnaam: 'document.pdf',
+        inhoud: 'base64content',
+        beschrijving: 'Test beschrijving',
+        informatieobjecttype: 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/1',
+        formaat: 'application/pdf',
+        locked: false,
+    );
+}
 
 /**
  * Log a 'created' document activity attributing $creator as the author of the
