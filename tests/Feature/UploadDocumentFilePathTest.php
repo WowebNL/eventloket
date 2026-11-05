@@ -15,6 +15,7 @@ use App\Models\Threads\OrganiserThread;
 use App\Models\User;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
+use App\ValueObjects\ZGW\Informatieobject;
 use Filament\Facades\Filament;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
@@ -234,3 +235,109 @@ test('a fresh upload is accepted in the message form', function () {
     expect(Storage::allFiles('documents'))->toBe([]);
     Storage::assertExists(STORED_FILE_ELSEWHERE);
 });
+
+/**
+ * A value in the upload state that is not a string never names a fresh
+ * upload. It must not end up as a path on the disk, and when no stored upload
+ * is left the action must not run at all. Files whose names match those
+ * values sit on the disk, so a value that did become a path would be read.
+ */
+const SCALAR_NAMED_CONTENT = '%PDF-1.4 content of a file named like a scalar';
+
+dataset('upload values that are not a path', [
+    'an integer' => [123],
+    'a float' => [1.5],
+    'true' => [true],
+    'false' => [false],
+]);
+
+function putFilesNamedLikeScalars(): void
+{
+    foreach (['123', '1.5', '1'] as $name) {
+        Storage::put($name, SCALAR_NAMED_CONTENT);
+    }
+}
+
+function assertFilesNamedLikeScalarsExist(): void
+{
+    foreach (['123', '1.5', '1'] as $name) {
+        Storage::assertExists($name);
+    }
+}
+
+function versionableDocument(string $uuid): Informatieobject
+{
+    return new Informatieobject(
+        uuid: $uuid,
+        url: ZgwHttpFake::$baseUrl.'/documenten/api/v1/enkelvoudiginformatieobjecten/'.$uuid,
+        creatiedatum: now()->toIso8601String(),
+        titel: 'Eigen document',
+        vertrouwelijkheidaanduiding: DocumentVertrouwelijkheden::Zaakvertrouwelijk->value,
+        auteur: 'Test',
+        versie: 1,
+        bestandsnaam: 'eigen-document.pdf',
+        inhoud: 'base64content',
+        beschrijving: 'Test beschrijving',
+        informatieobjecttype: ZgwHttpFake::$baseUrl.'/catalogi/api/v1/informatieobjecttypen/1',
+        formaat: 'application/pdf',
+        locked: false,
+    );
+}
+
+test('an upload value that is not a path is refused in the documents table', function (mixed $value) {
+    Queue::fake();
+    putFilesNamedLikeScalars();
+
+    $component = livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->callTableAction('upload', data: [
+            'files' => [$value],
+            'document_metadata' => [
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Bijlage'],
+            ],
+        ]);
+
+    Queue::assertNotPushed(UploadDocumentsJob::class);
+    assertFilesNamedLikeScalarsExist();
+    $component->assertHasTableActionErrors(['files']);
+})->with('upload values that are not a path');
+
+test('an upload value that is not a path is refused in the message form', function (mixed $value) {
+    LaravelNotification::fake();
+    putFilesNamedLikeScalars();
+
+    Filament::setCurrentPanel(Filament::getPanel('organiser'));
+    Filament::setTenant($this->organisation);
+
+    $component = livewire(MessageForm::class, ['thread' => uploadPathThread($this->zaak, $this->organiser)])
+        ->callAction('attach', data: [
+            'type' => 'new',
+            'titel' => 'Bijlage',
+            'file' => [$value],
+        ]);
+
+    Http::assertNotSent(documentStored());
+    assertFilesNamedLikeScalarsExist();
+    $component->assertHasActionErrors(['file']);
+})->with('upload values that are not a path');
+
+test('an upload value that is not a path is refused as a new version', function (mixed $value) {
+    putFilesNamedLikeScalars();
+
+    Cache::forever("zaak.{$this->zaak->id}.documenten", collect([versionableDocument('version-doc-uuid')]));
+    activity('document')
+        ->event('created')
+        ->causedBy($this->organiser)
+        ->performedOn($this->zaak)
+        ->withProperties(['document_uuid' => 'version-doc-uuid'])
+        ->log('created');
+
+    $component = livewire(ZaakDocumentsTable::class, ['zaak' => $this->zaak])
+        ->callTableAction('new-version', 'version-doc-uuid', data: [
+            'titel' => 'Bijgewerkt document',
+            'file' => [$value],
+        ]);
+
+    Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/enkelvoudiginformatieobjecten/version-doc-uuid'));
+    assertFilesNamedLikeScalarsExist();
+    $component->assertHasTableActionErrors(['file']);
+})->with('upload values that are not a path');

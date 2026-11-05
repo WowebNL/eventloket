@@ -52,11 +52,13 @@ class UploadDocumentAction
 
                 // Filament stores the uploads before firing the action, so
                 // $data['files'] holds their storage paths. Only those paths are
-                // used: no other submitted value may point the job at a file.
-                $storedPaths = array_values(array_filter(
+                // used, and only when every value is one: no other submitted
+                // value may point the job at a file, and without a stored
+                // upload there is nothing to queue.
+                $storedPaths = DocumentUploadType::ensureStoredUploadPaths(
                     (array) ($data['files'] ?? []),
-                    fn (mixed $path): bool => is_string($path) && $path !== '',
-                ));
+                    "mountedActions.{$action->getNestingIndex()}.data.files",
+                );
 
                 $fileData = [];
                 foreach ($storedPaths as $index => $path) {
@@ -109,7 +111,7 @@ class UploadDocumentAction
             ->maxSize(61440) // 60MB per file
             ->mimeTypeMap(config('app.document_mime_type_mappings'))
             ->rule(DocumentUploadType::fileUploadRule())
-            ->directory('documents')
+            ->directory(DocumentUploadType::STORED_UPLOAD_DIRECTORY)
             ->visibility('private')
             ->storeFileNamesIn('file_names')
             // Only accept files uploaded in this request.
@@ -218,7 +220,7 @@ class UploadDocumentAction
             ->maxSize(61440) // 60MB
             ->mimeTypeMap(config('app.document_mime_type_mappings'))
             ->rule(DocumentUploadType::fileUploadRule())
-            ->directory('documents')
+            ->directory(DocumentUploadType::STORED_UPLOAD_DIRECTORY)
             ->visibility('private')
             ->storeFileNamesIn('file_name')
             // Only accept a file uploaded in this request.
@@ -288,9 +290,14 @@ class UploadDocumentAction
     /**
      * Upload a single document to OpenZaak and link it to the zaak.
      * Preserved for backward compatibility with tests and other callers.
+     *
+     * $fileErrorKey is where a validation error on the file lands, so a
+     * caller in a form passes the state path of its upload field.
      */
-    public static function uploadDocument(array $data, Zaak $zaak): Informatieobject
+    public static function uploadDocument(array $data, Zaak $zaak, string $fileErrorKey = 'file'): Informatieobject
     {
+        [$data['file']] = DocumentUploadType::ensureStoredUploadPaths([$data['file'] ?? null], $fileErrorKey);
+
         $connectionName = $zaak->zgwConnectionName();
         $connection = Zgw::connection($connectionName);
 
