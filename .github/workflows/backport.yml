@@ -6,25 +6,32 @@ on:
     issue_comment:
         types: [created]
 
-permissions:
-    contents: write
-    pull-requests: write
+# No permissions by default; the backport job below asks for what it needs.
+permissions: {}
 
 jobs:
     backport:
+        # Comments can be written by anyone on a public repository, so the comment trigger
+        # is limited to users with a role on the repository.
         if: >
             (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
             (github.event_name == 'issue_comment' &&
               github.event.issue.pull_request &&
               github.event.comment.user.id != 97796249 &&
+              contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
               startsWith(github.event.comment.body, '/backport'))
         runs-on: ubuntu-latest
+        permissions:
+            # Push the cherry-picked branch.
+            contents: write
+            # Open the backport pull request and comment on the original one.
+            pull-requests: write
         steps:
             - name: Checkout
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
             - uses: korthout/backport-action@8560fb503c275d433c56f05a2f64850093baa9f7 # v4
               with:
                   github_token: ${{ secrets.GITHUB_TOKEN }}
-                  # label-pattern bepaalt hoe je labels heet
-                  # bijv: "backport release/1.8" of "backport-to:release/1.8"
+                  # label_pattern sets how the backport labels are named,
+                  # for example "backport release/1.8".
                   label_pattern: "^backport (?<base>.+)$"
