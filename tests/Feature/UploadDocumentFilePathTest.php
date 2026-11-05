@@ -34,7 +34,7 @@ use function Pest\Livewire\livewire;
  * disk must not be read, sent to the Documenten API as document content, or
  * deleted afterwards.
  */
-const STORED_FILE_ELSEWHERE = 'zaken/1/aanvraagformulier.pdf';
+const STORED_FILE_ELSEWHERE = 'elsewhere/unrelated.pdf';
 const STORED_FILE_ELSEWHERE_CONTENT = '%PDF-1.4 content of a file that was not uploaded here';
 const FRESH_UPLOAD_CONTENT = '%PDF-1.4 content of the fresh upload';
 
