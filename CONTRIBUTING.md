@@ -50,7 +50,7 @@ Older versions have their own `release/*` branches. The maintainers decide per c
    - `phpstan`: PHPStan static analysis;
    - `Run Unit Tests`: the Pest test suite against MySQL 8.
 4. Give the pull request a changelog label (see [Releases](#releases)), unless it was applied automatically.
-5. Wait for a review. A pull request into `main` needs at least one approving review before it can be merged. Pushing new commits dismisses an earlier approval, so the final version is always the one that was reviewed.
+5. Wait for a review. Every pull request into `main` is reviewed before it is merged, including a separate security check, and the maintainers record the outcome of the review. A maintainer merges the pull request once the required checks pass and the review has no open blocking findings. A pull request from a contributor without write access to the repository also needs an approving review from a maintainer; pushing new commits dismisses that approval, so the final version is always the one that was reviewed.
 
 Reviews look at correctness, security, quality, performance impact and maintainability. Maintainers may ask for changes, or decline a contribution that does not fit the architecture or the security requirements of the project, and will explain why.
 
