@@ -50,16 +50,13 @@ class UploadDocumentAction
                 $fileNames = (array) ($data['file_names'] ?? []);
                 $metadata = array_values((array) ($data['document_metadata'] ?? []));
 
-                // In production Filament stores files before firing the action, so
-                // $data['files'] holds the final storage paths. In test context the
-                // FileUpload state is bypassed, so we fall back to the path stored
-                // per-entry in the repeater (set explicitly in tests).
-                $storedPaths = array_values(array_filter((array) ($data['files'] ?? [])));
-                if (empty($storedPaths)) {
-                    $storedPaths = array_values(array_filter(
-                        array_map(fn (array $entry) => (string) ($entry['path'] ?? ''), $metadata),
-                    ));
-                }
+                // Filament stores the uploads before firing the action, so
+                // $data['files'] holds their storage paths. Only those paths are
+                // used: no other submitted value may point the job at a file.
+                $storedPaths = array_values(array_filter(
+                    (array) ($data['files'] ?? []),
+                    fn (mixed $path): bool => is_string($path) && $path !== '',
+                ));
 
                 $fileData = [];
                 foreach ($storedPaths as $index => $path) {
@@ -115,6 +112,8 @@ class UploadDocumentAction
             ->directory('documents')
             ->visibility('private')
             ->storeFileNamesIn('file_names')
+            // Only accept files uploaded in this request.
+            ->preventFilePathTampering()
             ->live()
             ->afterStateUpdated(function (?array $state, Set $set, Get $get): void {
                 if (empty($state)) {
@@ -182,7 +181,6 @@ class UploadDocumentAction
         }
 
         $metadataFields[] = Hidden::make('_temp_path');
-        $metadataFields[] = Hidden::make('path');
 
         $fields[] = Repeater::make('document_metadata')
             ->label(__('Documenten'))
@@ -223,6 +221,8 @@ class UploadDocumentAction
             ->directory('documents')
             ->visibility('private')
             ->storeFileNamesIn('file_name')
+            // Only accept a file uploaded in this request.
+            ->preventFilePathTampering()
             ->live()
             ->afterStateUpdated(function (TemporaryUploadedFile|string|null $state, Get $get, Set $set): void {
                 if ($state === null || $state === '') {
