@@ -5,6 +5,8 @@ use App\Models\Application;
 use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Laravel\Passport\Client;
@@ -113,6 +115,41 @@ test('a failing renewal is caught and leaves the stored token unchanged', functi
     dispatch_sync(new RenewZgwAbonnementen);
 
     expect(ZgwAbonnement::first()->token_id)->toBe('old-token');
+});
+
+test('reports a failed renewal instead of only logging it', function () {
+    Exceptions::fake();
+    Http::fake(renewStubs($this->jwt, patchStatus: 403));
+
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'token_id' => 'old-token',
+        'expires_at' => now()->addDays(5),
+    ]);
+
+    // A subscription we are not allowed to write to refuses the rotation. The
+    // job still carries on, but the failure must be reported rather than only
+    // logged, because nothing else speaks up until the current token lapses.
+    dispatch_sync(new RenewZgwAbonnementen);
+
+    Exceptions::assertReported(RequestException::class);
+});
+
+test('reports nothing when every renewal succeeds', function () {
+    Exceptions::fake();
+    Http::fake(renewStubs($this->jwt));
+
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'token_id' => 'old-token',
+        'expires_at' => now()->addDays(5),
+    ]);
+
+    dispatch_sync(new RenewZgwAbonnementen);
+
+    Exceptions::assertNothingReported();
 });
 
 test('retires the previous webhook client after a successful renewal', function () {

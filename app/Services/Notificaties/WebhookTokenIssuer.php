@@ -64,7 +64,7 @@ class WebhookTokenIssuer
 
         return new IssuedWebhookToken(
             token: $jwt,
-            tokenId: $this->parseTokenId($jwt),
+            tokenId: self::tokenIdFromJwt($jwt),
             clientId: (string) $client->getKey(),
             expiresAt: is_numeric($expiresIn) ? CarbonImmutable::now()->addSeconds((int) $expiresIn) : null,
         );
@@ -100,8 +100,12 @@ class WebhookTokenIssuer
 
     /**
      * Extract the token id (jti claim) from a Passport access token JWT.
+     *
+     * This reads the claim without verifying the signature, so the result says
+     * which token a string claims to be and nothing about whether it is genuine.
+     * Callers use it to look a token up, never to authenticate.
      */
-    private function parseTokenId(string $jwt): ?string
+    public static function tokenIdFromJwt(string $jwt): ?string
     {
         $parts = explode('.', $jwt);
 
