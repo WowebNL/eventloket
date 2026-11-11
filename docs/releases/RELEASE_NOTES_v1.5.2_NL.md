@@ -1,6 +1,6 @@
 # Eventloket versie 1.5.2: wat is er nieuw?
 
-**Releasedatum:** nog te bepalen
+**Releasedatum:** 11 november 2026
 
 ---
 
