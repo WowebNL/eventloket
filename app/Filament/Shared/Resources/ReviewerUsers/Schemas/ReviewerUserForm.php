@@ -22,6 +22,8 @@ class ReviewerUserForm
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
                         Role::Coordinator->value => Role::Coordinator->getLabel(),
                         Role::MunicipalityAdmin->value => Role::MunicipalityAdmin->getLabel(),
+                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
+                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->required(),

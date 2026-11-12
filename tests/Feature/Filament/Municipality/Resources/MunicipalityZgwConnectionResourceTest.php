@@ -170,16 +170,24 @@ it('fans the gemeente group choice out to every municipal handler role', functio
 
     $connection->refresh();
 
-    expect($connection->vertrouwelijkheid_map['visibility'])->toBe([
+    // The archive roles are part of the gemeente group: they are gemeente staff
+    // scoped to their own municipality, and deciding that a zaak may be
+    // destroyed never turns on document content, so they see what a behandelaar
+    // of the same gemeente sees and no more.
+    expect($connection->vertrouwelijkheid_map['visibility'])->toEqual([
         'reviewer' => 'confidentieel',
         'coordinator' => 'confidentieel',
         'municipality_admin' => 'confidentieel',
         'reviewer_municipality_admin' => 'confidentieel',
-    ])->and($connection->vertrouwelijkheid_map['upload_default'])->toBe([
+        'archive_coordinator' => 'confidentieel',
+        'archive_reviewer' => 'confidentieel',
+    ])->and($connection->vertrouwelijkheid_map['upload_default'])->toEqual([
         'reviewer' => 'confidentieel',
         'coordinator' => 'confidentieel',
         'municipality_admin' => 'confidentieel',
         'reviewer_municipality_admin' => 'confidentieel',
+        'archive_coordinator' => 'confidentieel',
+        'archive_reviewer' => 'confidentieel',
     ]);
 });
 
@@ -289,13 +297,15 @@ it('converts a legacy map of level sets to a maximum on save', function () {
         ],
     ]);
 
-    expect($result['vertrouwelijkheid_map']['visibility'])->toBe([
+    expect($result['vertrouwelijkheid_map']['visibility'])->toEqual([
         'organiser' => 'openbaar',
         'advisor' => 'beperkt_openbaar',
         'reviewer' => 'intern',
         'coordinator' => 'intern',
         'municipality_admin' => 'intern',
         'reviewer_municipality_admin' => 'intern',
+        'archive_coordinator' => 'intern',
+        'archive_reviewer' => 'intern',
     ]);
 });
 
