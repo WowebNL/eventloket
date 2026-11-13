@@ -95,7 +95,7 @@ function openEventInCalendar(Testable $component, string $key): Testable
             'allDay' => false,
             'styles' => [],
             'classNames' => [],
-            'extendedProps' => ['model' => Event::class, 'key' => $key],
+            'extendedProps' => signedCalendarExtendedProps(Event::class, $key),
             'display' => 'auto',
             'resourceIds' => [],
         ],
