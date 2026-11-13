@@ -198,7 +198,7 @@ test('only advisories linked to municipality are shown', function () {
     expect($component->instance())->not->toBeNull();
 });
 
-test('municipality admin can access users relation manager', function () {
+test('municipality admin is not offered the users relation manager', function () {
     $advisory = Advisory::factory()->create();
     $advisory->municipalities()->syncWithoutDetaching([$this->municipality->id]);
 
@@ -207,11 +207,16 @@ test('municipality admin can access users relation manager', function () {
     ]);
     $advisory->users()->attach($advisorUser, ['role' => AdvisoryRole::Admin]);
 
+    // The advisor user policy does not grant viewAny() to municipality users,
+    // so the edit page leaves this relation manager out and a direct request
+    // to it is refused.
+    expect(UsersRelationManager::canViewForRecord($advisory, EditAdvisory::class))->toBeFalse();
+
     livewire(UsersRelationManager::class, [
         'ownerRecord' => $advisory,
         'pageClass' => EditAdvisory::class,
     ])
-        ->assertOk();
+        ->assertForbidden();
 });
 
 test('municipality admin can access municipalities relation manager', function () {
