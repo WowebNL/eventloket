@@ -19,8 +19,16 @@ beforeEach(function () {
 
     actingAs($this->admin);
 
-    $this->sortSessionKey = (new ListUsers)->getTableSortSessionKey();
-    $this->filtersSessionKey = (new ListUsers)->getTableFiltersSessionKey();
+    // The session keys depend on the configured table, so resolve them from a
+    // mounted component. Mounting persists state as a side effect, so reset
+    // the stored state and the session before each test starts.
+    $component = livewire(ListUsers::class)->instance();
+
+    $this->sortSessionKey = $component->getTableSortSessionKey();
+    $this->filtersSessionKey = $component->getTableFiltersSessionKey();
+
+    TableState::query()->delete();
+    session()->flush();
 });
 
 test('sorting a table persists the state to the database for the user', function () {

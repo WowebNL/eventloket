@@ -13,6 +13,7 @@ use App\Filament\Shared\Resources\Zaken\ZaakResource\RelationManagers\OrganiserT
 use App\Livewire\Zaken\BesluitenInfolist;
 use App\Livewire\Zaken\DeelzakenTable;
 use App\Livewire\Zaken\ZaakDocumentsTable;
+use App\Models\Threads\OrganiserThread;
 use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
@@ -679,7 +680,11 @@ class ZaakInfolist
                                 Tab::make('Organisatievragen')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')
-                                    ->visible(fn (Zaak $record) => $record->showsTab('organisatievragen') && (Filament::getCurrentPanel()->getId() === 'municipality' || Filament::getCurrentPanel()->getId() === 'admin'))
+                                    // The embedded relation manager refuses users without viewAny(),
+                                    // so only show the tab to users it lets in.
+                                    ->visible(fn (Zaak $record) => $record->showsTab('organisatievragen')
+                                        && (Filament::getCurrentPanel()->getId() === 'municipality' || Filament::getCurrentPanel()->getId() === 'admin')
+                                        && auth()->user()?->can('viewAny', OrganiserThread::class))
                                     ->badge(function (Zaak $record) {
                                         $count = auth()->user()
                                             ->unreadMessages()

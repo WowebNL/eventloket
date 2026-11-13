@@ -18,6 +18,8 @@ class OrganiserThreadPolicy
     public function viewAny(User $user): bool
     {
         return match ($user->role) {
+            // Admins see the organiser threads on the zaak page and may view each thread.
+            Role::Admin => true,
             Role::MunicipalityAdmin, Role::ReviewerMunicipalityAdmin, Role::Coordinator, Role::Reviewer => true,
             Role::Organiser => true,
             default => false,
