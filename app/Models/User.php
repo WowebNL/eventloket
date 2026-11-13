@@ -172,7 +172,11 @@ class User extends Authenticatable implements HasAppAuthentication, HasAppAuthen
     {
         $attributes = (array) $attributes;
 
-        $class = self::resolveClassForRole(Role::from($attributes['role']));
+        // Partial rows, such as those hydrated by pluck() for an attribute
+        // with an accessor, do not carry the role; keep the current class then.
+        $class = isset($attributes['role'])
+            ? self::resolveClassForRole(Role::from($attributes['role']))
+            : static::class;
 
         $model = (new $class)->newInstance([], true);
 
