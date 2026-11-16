@@ -354,15 +354,17 @@ Een nieuwe of gewijzigde koppeling moet eerst getest worden voordat je hem kunt 
 ### 6.1 Verbinding testen
 
 1. Klik in de lijstweergave bij de koppeling op de actie **Verbinding testen**.
-2. Er opent een venster dat automatisch twee controles uitvoert:
+2. Er opent een venster dat automatisch vier controles na elkaar uitvoert. Mislukt een stap, dan worden de volgende stappen overgeslagen.
+   - **Samenhang van de endpoints.** Controleert, voordat er iets wordt aangeroepen, dat de Zaken API en de Catalogi API naar dezelfde instantie wijzen. Gebruikt de koppeling een eigen instantie maar is een van deze twee velden leeg, dan neemt dat veld de URL van de hoofdkoppeling over en mislukt deze stap.
    - **Verbinding met de ZGW-instantie.** Controleert of Eventloket het zaaksysteem kan bereiken met de opgegeven endpoints en inloggegevens.
+   - **Toegang tot de losse API's.** Doet een leesaanroep op de Zaken API, de Documenten API en de Besluiten API, en meldt welke daarvan niet leesbaar is.
    - **Notificatie-abonnement.** Controleert of er een geldig notificatie-abonnement bestaat. De test maakt het abonnement niet zelf aan. Ontbreekt het, of is het niet meer geldig (bijvoorbeeld verwijderd in het zaaksysteem, met ontbrekende kanalen of met een verlopen token), dan verschijnt de knop **Abonnement registreren**. Pas met die knop wordt het abonnement aangemaakt, waarna de stap opnieuw controleert. Heeft de koppeling geen eigen Notificaties API-URL en de hoofdkoppeling ook niet, dan meldt de stap dat er geen abonnement mogelijk is (zie [sectie 4.5](#45-bereid-notificaties-voor)).
 
 ![Het venster Verbinding controleren met de twee stappen en de knop Abonnement registreren](../assets/zgw-koppelingbeheer/verbinding-testen.webp)
 
 3. Als alle stappen slagen, wordt de datum en tijd van de geslaagde controle vastgelegd bij de koppeling ("Laatste controle"). Dat gebeurt pas als het notificatie-abonnement geregistreerd is en werkt; zolang de knop **Abonnement registreren** nog zichtbaar is, is de controle niet geslaagd. Sluit het venster.
 
-Als een stap mislukt, toont het venster een algemene foutmelding. De precieze technische oorzaak wordt niet aan de gebruiker getoond, maar wel intern gelogd. Controleer in dat geval de endpoints, de inloggegevens en de autorisaties in het zaaksysteem, en raadpleeg zonodig het ZGW-logboek (zie [sectie 12](#12-het-zgw-logboek)).
+Als een stap mislukt, toont het venster bij die stap een melding. Bij de samenhang van de endpoints en de toegang tot de losse API's noemt die melding welke velden of API's het betreft; bij de andere stappen is het een algemene foutmelding. De precieze technische oorzaak wordt niet aan de gebruiker getoond, maar wel intern gelogd. Controleer in dat geval de endpoints, de inloggegevens en de autorisaties in het zaaksysteem, en raadpleeg zonodig het ZGW-logboek (zie [sectie 12](#12-het-zgw-logboek)).
 
 ### 6.2 Activeren
 
