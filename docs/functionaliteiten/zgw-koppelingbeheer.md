@@ -255,13 +255,17 @@ Houd bij het uitbrengen van nieuwe versies van een zaaktype de namen van statust
 
 ### 4.5 Bereid notificaties voor
 
-Als de gemeente wil dat wijzigingen vanuit het zaaksysteem terugkomen in Eventloket (bijvoorbeeld wanneer een behandelaar in het zaaksysteem iets wijzigt), moet de Notificaties API beschikbaar zijn. Eventloket registreert zelf automatisch een abonnement op deze API tijdens de verbindingstest. Het abonnement omvat de kanalen zaken, besluiten, documenten en zaaktypen; via dat laatste kanaal verwerkt Eventloket ook automatisch nieuwe versies van zaaktypen (zie [sectie 9](#9-nieuwe-versies-van-een-zaaktype)). Zorg alleen dat:
+Als de gemeente wil dat wijzigingen vanuit het zaaksysteem terugkomen in Eventloket (bijvoorbeeld wanneer een behandelaar in het zaaksysteem iets wijzigt), moet de Notificaties API beschikbaar zijn en moet Eventloket daarop een abonnement hebben. Dat abonnement wordt niet automatisch aangemaakt. De verbindingstest controleert alleen of er een geldig abonnement bestaat; registreren doe je zelf met de knop **Abonnement registreren** in het venster van de verbindingstest (zie [sectie 6.1](#61-verbinding-testen)). Het abonnement omvat de kanalen zaken, besluiten, documenten en zaaktypen; via dat laatste kanaal verwerkt Eventloket ook automatisch nieuwe versies van zaaktypen (zie [sectie 9](#9-nieuwe-versies-van-een-zaaktype)). Zorg dat:
 
 - De Notificaties API bereikbaar is vanaf Eventloket.
 - De API-client rechten heeft om een abonnement te registreren.
 - De callback-URL van Eventloket bereikbaar is vanaf het zaaksysteem. Eventloket vult deze callback zelf in bij het registreren van het abonnement.
 
-Als er geen Notificaties API wordt ingevuld, blijft de rest van de koppeling gewoon werken. Automatische statusupdates vanuit het zaaksysteem en de automatische verwerking van zaaktype-wijzigingen ontbreken dan; wijzigingen aan zaaktypen worden in dat geval pas opgepikt bij een handmatige synchronisatie door een platformbeheerder.
+Een geregistreerd en werkend abonnement is een voorwaarde om de koppeling te kunnen activeren (zie [sectie 6.2](#62-activeren)).
+
+Laat je het veld Notificaties API base-URL leeg, dan neemt de koppeling de Notificaties API-URL van de hoofdkoppeling over, net als bij elk ander leeg veld (zie [Erven van de hoofdkoppeling](#erven-van-de-hoofdkoppeling)). Het abonnement komt dan niet bij het eigen zaaksysteem terecht, en Eventloket ontvangt alleen de notificaties die via de notificatiedienst van de hoofdkoppeling verstuurd worden. Gebruikt de gemeente een eigen zaaksysteem, vul dan de Notificaties API-URL van dat zaaksysteem in.
+
+Heeft ook de hoofdkoppeling geen Notificaties API-URL, dan kan er geen abonnement geregistreerd worden. De verbindingstest slaagt dan niet en de koppeling kan niet geactiveerd worden.
 
 ---
 
@@ -352,17 +356,17 @@ Een nieuwe of gewijzigde koppeling moet eerst getest worden voordat je hem kunt 
 1. Klik in de lijstweergave bij de koppeling op de actie **Verbinding testen**.
 2. Er opent een venster dat automatisch twee controles uitvoert:
    - **Verbinding met de ZGW-instantie.** Controleert of Eventloket het zaaksysteem kan bereiken met de opgegeven endpoints en inloggegevens.
-   - **Notificatie-abonnement.** Controleert of er een geldig notificatie-abonnement bestaat. Als dat er nog niet is, verschijnt de knop **Abonnement registreren** waarmee je het abonnement direct aanmaakt. Heeft de koppeling geen Notificaties API-URL, dan meldt de stap dat er geen abonnement mogelijk is.
+   - **Notificatie-abonnement.** Controleert of er een geldig notificatie-abonnement bestaat. De test maakt het abonnement niet zelf aan. Ontbreekt het, of is het niet meer geldig (bijvoorbeeld verwijderd in het zaaksysteem, met ontbrekende kanalen of met een verlopen token), dan verschijnt de knop **Abonnement registreren**. Pas met die knop wordt het abonnement aangemaakt, waarna de stap opnieuw controleert. Heeft de koppeling geen eigen Notificaties API-URL en de hoofdkoppeling ook niet, dan meldt de stap dat er geen abonnement mogelijk is (zie [sectie 4.5](#45-bereid-notificaties-voor)).
 
 ![Het venster Verbinding controleren met de twee stappen en de knop Abonnement registreren](../assets/zgw-koppelingbeheer/verbinding-testen.webp)
 
-3. Als beide stappen slagen, wordt de datum en tijd van de geslaagde controle vastgelegd bij de koppeling ("Laatste controle"). Sluit het venster.
+3. Als alle stappen slagen, wordt de datum en tijd van de geslaagde controle vastgelegd bij de koppeling ("Laatste controle"). Dat gebeurt pas als het notificatie-abonnement geregistreerd is en werkt; zolang de knop **Abonnement registreren** nog zichtbaar is, is de controle niet geslaagd. Sluit het venster.
 
 Als een stap mislukt, toont het venster een algemene foutmelding. De precieze technische oorzaak wordt niet aan de gebruiker getoond, maar wel intern gelogd. Controleer in dat geval de endpoints, de inloggegevens en de autorisaties in het zaaksysteem, en raadpleeg zonodig het ZGW-logboek (zie [sectie 12](#12-het-zgw-logboek)).
 
 ### 6.2 Activeren
 
-1. Zodra de verbinding met succes is getest, verschijnt bij de koppeling de actie **Activeren**. Deze actie is uitgeschakeld zolang er nog geen geslaagde controle is; de tooltip legt dan uit dat je eerst de verbinding moet testen.
+1. Bij een inactieve koppeling staat de actie **Activeren**. Deze actie is uitgeschakeld zolang er nog geen geslaagde controle is; de tooltip legt dan uit dat je eerst de verbinding moet testen. Een geslaagde controle vraagt ook een geregistreerd en werkend notificatie-abonnement (zie [sectie 6.1](#61-verbinding-testen)), dus activeren kan pas nadat het abonnement geregistreerd is.
 2. Klik op **Activeren** en bevestig in het venster. Vanaf dat moment worden alle nieuwe zaken van deze gemeente via haar eigen zaaksysteem verwerkt. **Let op dat je een koppeling pas activeert nadat je de zaaktype-koppelingen hebt ingesteld (zie [sectie 7](#7-zaaktype-koppelingen-instellen)).**
 
 De status van de koppeling in de lijst verspringt naar **Actief** (groen).
@@ -556,13 +560,13 @@ Gebruik deze checklist als samenvatting bij het opzetten van een nieuwe gemeente
 - [ ] Er is een API-client aangemaakt; client-ID en een client-secret van minimaal 32 tekens zijn genoteerd.
 - [ ] De client heeft autorisaties voor zaken, catalogi, documenten, besluiten en notificaties, voor documenten ook `documenten.lock` en `documenten.bijwerken` (zie [sectie 4.3](#43-ken-de-juiste-autorisaties-scopes-toe)).
 - [ ] De zaaktypen bestaan en zijn gepubliceerd, met de juiste eigenschappen, statustypen, roltypen, resultaattypen en documenttypen.
-- [ ] De Notificaties API is bereikbaar (indien statusupdates gewenst zijn).
+- [ ] De Notificaties API is bereikbaar; bij een eigen zaaksysteem is ook de base-URL daarvan genoteerd (zie [sectie 4.5](#45-bereid-notificaties-voor)).
 
 **In Eventloket:**
 
 - [ ] (Optioneel) Een koppelingbeheerder is uitgenodigd.
 - [ ] De ZGW-koppeling is aangemaakt met endpoints, inloggegevens, functies en vertrouwelijkheid.
-- [ ] De verbinding is getest en, indien nodig, het notificatie-abonnement is geregistreerd.
+- [ ] Het notificatie-abonnement is geregistreerd met de knop **Abonnement registreren** en de verbindingstest is volledig geslaagd (zie [sectie 6.1](#61-verbinding-testen)).
 - [ ] De zaaktype-koppelingen zijn ingesteld per rol (zaaktype, eigenschappen, flow-blockers, gedrag).
 - [ ] Bij een OneGround (Rx.Mission) koppeling: de instelling "Intrekken door organisator toestaan" staat uit.
 - [ ] Bij het Doorkomst-zaaktype: de route-check staat aan en de documenttypen voor aanvraag en bijlagen zijn ingesteld.
