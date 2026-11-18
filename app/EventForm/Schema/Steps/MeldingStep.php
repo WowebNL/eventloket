@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventForm\Schema\Steps;
 
+use App\EventForm\Components\IndieningstermijnInfoText;
 use App\EventForm\Components\InfoText;
 use App\EventForm\Components\JaNeeOptions;
 use App\EventForm\State\FormState;
@@ -71,6 +72,12 @@ final class MeldingStep
 
                         return ! ($get('vindenErActiviteitenPlaatsWaarvoorMogelijkBrandveiligheidseisenGelden') === 'Ja');
                     }),
+                // The risk-scan step is where a permit application learns
+                // whether it is in time. That step is skipped on this path,
+                // which left a report without any deadline at all; it gets
+                // the same block here, filled from the municipality's
+                // report deadline.
+                IndieningstermijnInfoText::make('meldingIndieningstermijnContent'),
             ]);
     }
 
