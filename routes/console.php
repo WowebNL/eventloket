@@ -36,3 +36,11 @@ Schedule::job(new RenewZgwAbonnementen)->daily();
 // covers fails without raising an exception of its own, so without this run a
 // broken notification pipeline stays indistinguishable from a quiet one.
 Schedule::command('app:check-zgw-notificaties')->dailyAt('07:00');
+
+Schedule::command('archiving:anonymise-inactive-organisers')->monthlyOn(1, '03:00');
+
+// Roll the previous day's destroyed zaken into one report per municipality
+Schedule::command('archiving:report-eventloket-destructions')->dailyAt('02:00');
+
+// Safety net for a destroy notification that never arrived, on our own OpenZaak
+Schedule::command('archiving:reconcile-destroyed-zaken')->dailyAt('01:00');

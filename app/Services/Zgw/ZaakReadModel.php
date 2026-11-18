@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Zgw;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Arr;
+use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefnominatie;
+use Woweb\Zgw\Data\Generated\Zaken\Enums\Archiefstatus;
 use Woweb\Zgw\Data\Generated\Zaken\ZaakData;
 use Woweb\Zgw\Data\Generated\Zaken\ZaakEigenschapData;
 
@@ -44,6 +47,17 @@ final class ZaakReadModel implements Arrayable
     public readonly ?string $uiterlijkeEinddatumAfdoening;
 
     public readonly ?string $bronorganisatie;
+
+    /**
+     * The archiving regime the zaaksysteem holds for this zaak. Read by the
+     * archive module to decide whether a zaak may be destroyed; every other
+     * consumer can ignore these three.
+     */
+    public readonly ?Archiefnominatie $archiefnominatie;
+
+    public readonly ?Archiefstatus $archiefstatus;
+
+    public readonly ?CarbonImmutable $archiefactiedatum;
 
     /** @var array<string, mixed>|null */
     public readonly ?array $zaakgeometrie;
@@ -97,14 +111,26 @@ final class ZaakReadModel implements Arrayable
         $this->bronorganisatie = isset($raw['bronorganisatie']) ? (string) $raw['bronorganisatie'] : null;
         $this->zaakgeometrie = $dto->zaakgeometrie?->value;
 
+        // Taken from the DTO rather than $raw: the package already casts these
+        // to their enums and to a CarbonImmutable.
+        $this->archiefnominatie = $dto->archiefnominatie;
+        $this->archiefstatus = $dto->archiefstatus;
+        $this->archiefactiedatum = $dto->archiefactiedatum;
+
         $this->status = $expand['status'] ?? null;
         $this->status_name = Arr::get($expand, 'status._expand.statustype.omschrijving');
         $this->statustype_url = Arr::get($expand, 'status._expand.statustype.url');
 
-        $this->data_object_url = Arr::first(
+        // Matched on origin, not as a substring: only a url actually served by
+        // the Objects API is a zaakobject of ours. One that merely mentions it
+        // somewhere, in a query string say, or that uses another scheme or
+        // port on the same host, is a different origin.
+        $objectsOrigin = self::originOf((string) config('openzaak.objectsapi.url'));
+
+        $this->data_object_url = $objectsOrigin === null ? null : (Arr::first(
             $expand['zaakobjecten'] ?? [],
-            fn ($item) => isset($item['object']) && str_contains((string) $item['object'], (string) config('openzaak.objectsapi.url'))
-        )['object'] ?? null;
+            fn ($item) => isset($item['object']) && self::originOf((string) $item['object']) === $objectsOrigin
+        )['object'] ?? null);
 
         $this->eigenschappen = array_map(
             fn (array $eigenschap) => ZaakEigenschapData::from($eigenschap),
@@ -127,6 +153,35 @@ final class ZaakReadModel implements Arrayable
         $this->resultaattype = Arr::get($expand, 'resultaat._expand.resultaattype');
 
         $this->zaakAddresses = $this->extractEventAddresses($expand['zaakobjecten'] ?? []);
+    }
+
+    /**
+     * The origin of a url as "scheme://host:port", lowercased and with the
+     * default port of http or https filled in, or null when the url has no
+     * scheme or host. The same comparison the ZGW client uses for its own
+     * allowlist.
+     */
+    public static function originOf(string $url): ?string
+    {
+        $parts = parse_url(trim($url));
+
+        if (! is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return null;
+        }
+
+        $scheme = strtolower($parts['scheme']);
+
+        $port = $parts['port'] ?? match ($scheme) {
+            'https' => 443,
+            'http' => 80,
+            default => null,
+        };
+
+        if ($port === null) {
+            return null;
+        }
+
+        return $scheme.'://'.strtolower($parts['host']).':'.$port;
     }
 
     /**
@@ -185,6 +240,9 @@ final class ZaakReadModel implements Arrayable
             'uiterlijkeEinddatumAfdoening' => $this->uiterlijkeEinddatumAfdoening,
             'resultaat' => $this->resultaat,
             'resultaattype' => $this->resultaattype,
+            'archiefnominatie' => $this->archiefnominatie?->value,
+            'archiefstatus' => $this->archiefstatus?->value,
+            'archiefactiedatum' => $this->archiefactiedatum?->toDateString(),
         ];
     }
 }

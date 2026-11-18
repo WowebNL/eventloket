@@ -48,3 +48,13 @@ test('the besluiten channel is classified so a zaak drops its cached besluiten',
         ->and(classify('update', 'besluiten', 'besluit'))->toBe(OpenNotificationType::BesluitChanged)
         ->and(classify('create', 'besluiten', 'besluitinformatieobject'))->toBe(OpenNotificationType::BesluitChanged);
 });
+
+test('a destroyed zaak on the zaken channel classifies as ZaakDestroyed', function () {
+    expect(classify('destroy', 'zaken', 'zaak'))->toBe(OpenNotificationType::ZaakDestroyed);
+});
+
+test('a destroyed child resource of a zaak is not a destroyed zaak', function (string $resource) {
+    // Destroying a zaak cascades in the zaaksysteem and fires a notification per
+    // child resource. Only the zaak itself means the dossier is gone.
+    expect(classify('destroy', 'zaken', $resource))->not->toBe(OpenNotificationType::ZaakDestroyed);
+})->with(['status', 'resultaat', 'rol', 'zaakobject', 'zaakinformatieobject']);

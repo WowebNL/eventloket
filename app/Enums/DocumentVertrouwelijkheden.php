@@ -57,6 +57,7 @@ enum DocumentVertrouwelijkheden: string
             Role::Reviewer => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
             Role::Admin => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
             Role::KoppelingBeheerder => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
+            Role::ArchiveCoordinator, Role::ArchiveReviewer => [self::Zaakvertrouwelijk->value, self::Vertrouwelijk->value, self::Confidentieel->value],
         };
     }
 

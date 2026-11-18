@@ -14,6 +14,8 @@ enum Role: string implements HasLabel
     case Advisor = 'advisor'; // Adviesdienst medewerker
     case Organiser = 'organiser'; // Organisator
     case KoppelingBeheerder = 'koppeling_beheerder'; // Koppeling beheerder (ZGW-connectie en mapping)
+    case ArchiveCoordinator = 'archive_coordinator'; // Archief coördinator
+    case ArchiveReviewer = 'archive_reviewer'; // Archief beoordelaar
 
     public function getLabel(): string
     {

@@ -31,6 +31,8 @@ class ReviewerUsersTable
                         Role::Reviewer->value => Role::Reviewer->getLabel(),
                         Role::Coordinator->value => Role::Coordinator->getLabel(),
                         Role::ReviewerMunicipalityAdmin->value => Role::ReviewerMunicipalityAdmin->getLabel(),
+                        Role::ArchiveCoordinator->value => Role::ArchiveCoordinator->getLabel(),
+                        Role::ArchiveReviewer->value => Role::ArchiveReviewer->getLabel(),
                     ])
                     ->selectablePlaceholder(false)
                     ->afterStateUpdated(function () {

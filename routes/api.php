@@ -1,10 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\OpenNotificationsController;
+use App\Http\Middleware\IdentifyWebhookClient;
 use App\Http\Middleware\LogOpenNotificationRejection;
 use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Support\Facades\Route;
-use Laravel\Passport\Http\Middleware\EnsureClientIsResourceOwner;
 
 // Open Forms has been removed; the wizard now lives inline in Filament and
 // uses the `app/EventForm/Services/` classes directly. The three OF pull
@@ -22,10 +22,11 @@ Route::post('/open-notifications/listen', [OpenNotificationsController::class, '
         // and host-rule rejections raised by the middleware and validation that
         // follow.
         LogOpenNotificationRejection::class,
-        // The scope this route demands is the same constant the webhook token is
-        // minted with, so the requirement and the credential cannot drift apart:
-        // raising the bar here without raising it there would turn every incoming
-        // notification into a refusal.
-        EnsureClientIsResourceOwner::class.':'.WebhookTokenIssuer::SCOPE,
+        // Identifies the calling connection from the token and demands the scope
+        // the webhook token is minted with. The requirement and the credential
+        // share one constant, so they cannot drift apart: raising the bar here
+        // without raising it there would turn every incoming notification into
+        // a refusal.
+        IdentifyWebhookClient::class.':'.WebhookTokenIssuer::SCOPE,
     ])
     ->name('api.open-notifications.listen');

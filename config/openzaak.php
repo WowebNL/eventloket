@@ -35,8 +35,16 @@ return [
         'url' => env('OPENKLANT_URL', 'https://openklant.woweb.app/'),
     ],
 
+    /*
+    | The Objects API is called directly over HTTP to delete the form
+    | submission object of a destroyed zaak, so its token and coordinate
+    | reference systems are read from here.
+    */
     'objectsapi' => [
         'url' => env('OBJECTSAPI_URL', 'https://objects-api.woweb.app/'),
+        'api_token' => env('OBJECTSAPI_TOKEN'),
+        'accept_crs' => env('OPENZAAK_ACCEPT_CRS', 'EPSG:4326'),
+        'content_crs' => env('OPENZAAK_CONTENT_CRS', 'EPSG:4326'),
     ],
 
 ];
