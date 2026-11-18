@@ -5,6 +5,7 @@ namespace App\Filament\Municipality\Clusters\Archiving\Actions;
 use App\Jobs\Archiving\GenerateDestructionReport;
 use App\Models\Archiving\DestructionList;
 use App\Models\Archiving\DestructionReport;
+use App\Services\Archiving\DestructionReportPdf;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
@@ -29,20 +30,33 @@ class RegenerateDestructionReportAction
 
                 // Only offered while there is no proof of destruction that can
                 // actually be opened: no report, or a report without its PDF.
-                return $list !== null
-                    && ! $list->report?->hasPdf()
-                    && auth()->user()->can('regenerateReport', $list);
+                if ($list !== null) {
+                    return ! $list->report?->hasPdf()
+                        && auth()->user()->can('regenerateReport', $list);
+                }
+
+                // A report with no list behind it is the generated
+                // Eventloket-data one. Its rows are already marked reported, so
+                // the nightly command will not produce it again and this is the
+                // only way back to a readable PDF.
+                return $record instanceof DestructionReport
+                    && ! $record->hasPdf()
+                    && auth()->user()->can('regenerate', $record);
             })
             ->requiresConfirmation()
             ->modalDescription(__('municipality/resources/destruction_report.actions.regenerate.modal_description'))
             ->action(function (Model $record) {
                 $list = self::destructionList($record);
 
-                if ($list === null) {
+                if ($list !== null) {
+                    GenerateDestructionReport::dispatch($list->id);
+                } elseif ($record instanceof DestructionReport) {
+                    // Rendered straight from the stored row: the report itself
+                    // is intact, only its PDF is missing.
+                    app(DestructionReportPdf::class)->store($record);
+                } else {
                     return;
                 }
-
-                GenerateDestructionReport::dispatch($list->id);
 
                 Notification::make()
                     ->title(__('municipality/resources/destruction_report.actions.regenerate.notification.title'))
@@ -52,8 +66,10 @@ class RegenerateDestructionReportAction
     }
 
     /**
-     * The list to regenerate from, whichever side the action sits on. A report
-     * whose list is gone has nothing left to rebuild from.
+     * The list to regenerate from, whichever side the action sits on, or null
+     * when the report has none. A zaakdata report is rebuilt through its list,
+     * which still holds the item snapshots; an Eventloket-data report has no
+     * list and is re-rendered from its own stored row.
      */
     private static function destructionList(Model $record): ?DestructionList
     {

@@ -1,9 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\OpenNotificationsController;
+use App\Http\Middleware\IdentifyWebhookClient;
 use App\Http\Middleware\LogOpenNotificationRejection;
 use Illuminate\Support\Facades\Route;
-use Laravel\Passport\Http\Middleware\EnsureClientIsResourceOwner;
 
 // Open Forms is verwijderd; de wizard zit nu inline in Filament en
 // gebruikt de `app/EventForm/Services/`-classes direct. De drie OF-
@@ -16,6 +16,6 @@ Route::post('/open-notifications/listen', [OpenNotificationsController::class, '
         // Runs first so it can observe (and log) auth, scope and host-rule
         // rejections raised by the middleware and validation that follow.
         LogOpenNotificationRejection::class,
-        EnsureClientIsResourceOwner::class.':notifications:receive',
+        IdentifyWebhookClient::class.':notifications:receive',
     ])
     ->name('api.open-notifications.listen');

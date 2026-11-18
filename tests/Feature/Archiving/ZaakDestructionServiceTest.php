@@ -1,11 +1,13 @@
 <?php
 
+use App\Exceptions\DataObjectHostNotAllowedException;
 use App\Exceptions\ZaakConnectionNotDestructibleException;
 use App\Models\Municipality;
 use App\Models\MunicipalityZgwConnection;
 use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Services\Archiving\ZaakDestructionService;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Tests\Fakes\ZgwHttpFake;
@@ -172,7 +174,8 @@ test('a url on a host shared by two connections is refused', function () {
 test('the objects api credential is not sent to a host that is not the objects api', function () {
     Http::fake();
 
-    app(ZaakDestructionService::class)->deleteDataObject('https://ergens-anders.example.org/api/v2/objects/1');
+    expect(fn () => app(ZaakDestructionService::class)->deleteDataObject('https://ergens-anders.example.org/api/v2/objects/1'))
+        ->toThrow(DataObjectHostNotAllowedException::class);
 
     Http::assertNothingSent();
 });
@@ -204,3 +207,42 @@ test('the form submission object is deleted with the objects api token and coord
         && $request->header('Accept-Crs') === ['EPSG:28992']
         && $request->header('Content-Crs') === ['EPSG:28992']);
 });
+
+test('the objects api credential is not sent to another scheme or port on the objects api host', function (string $url) {
+    Http::fake();
+
+    Config::set('openzaak.objectsapi.url', 'https://objects.example.com/');
+
+    expect(fn () => app(ZaakDestructionService::class)->deleteDataObject($url))
+        ->toThrow(DataObjectHostNotAllowedException::class);
+
+    Http::assertNothingSent();
+})->with([
+    'plain http' => 'http://objects.example.com/api/v2/objects/1',
+    'other port' => 'https://objects.example.com:8443/api/v2/objects/1',
+]);
+
+test('an explicit default port is the same objects api origin', function () {
+    Http::fake();
+
+    Config::set('openzaak.objectsapi.url', 'https://objects.example.com/');
+
+    app(ZaakDestructionService::class)->deleteDataObject('https://OBJECTS.example.com:443/api/v2/objects/1');
+
+    Http::assertSentCount(1);
+});
+
+test('a redirected delete of the form submission object is not followed and counts as a failure', function (int $status) {
+    Config::set('openzaak.objectsapi.url', 'https://objects.example.com/');
+
+    // Followed, the redirect would become a GET that answers 200.
+    Http::fake([
+        'objects.example.com/api/v2/objects/moved' => Http::response(['url' => 'moved'], 200),
+        'objects.example.com/*' => Http::response(null, $status, ['Location' => 'https://objects.example.com/api/v2/objects/moved']),
+    ]);
+
+    expect(fn () => app(ZaakDestructionService::class)->deleteDataObject('https://objects.example.com/api/v2/objects/1'))
+        ->toThrow(RequestException::class);
+
+    Http::assertSentCount(1);
+})->with([301, 302, 303]);

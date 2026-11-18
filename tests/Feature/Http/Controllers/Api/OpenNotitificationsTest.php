@@ -2,6 +2,7 @@
 
 use App\Jobs\ProcessOpenNotification;
 use App\Models\MunicipalityZgwConnection;
+use App\Models\ZgwAbonnement;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Passport\Client;
@@ -12,6 +13,7 @@ beforeEach(function () {
     Config::set('openzaak.url', 'https://example.com/');
 
     $client = Client::factory()->asClientCredentials()->create(['secret' => '12345678']);
+    $this->clientId = (string) $client->id;
 
     // The listen webhook requires the notifications:receive scope, so the token
     // is requested with that scope (see EnsureClientIsResourceOwner on the route).
@@ -268,4 +270,50 @@ test('een ontvangen notificatie landt in het ZGW-logboek van de gemeente', funct
         'resource' => '/zaken/api/v1/statussen/456',
         'failed' => false,
     ]);
+});
+
+test('the sender connection is taken from the token, not from the payload', function () {
+    Queue::fake();
+
+    // The abonnement row is what ties a webhook client to its connection.
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'client_id' => $this->clientId,
+    ]);
+
+    $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'destroy',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'https://example.com/zaak/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+        // Ignored: a caller does not get to say who it is.
+        'senderConnection' => 'gemeente_999',
+    ], ['Authorization' => 'Bearer '.$this->access_token])->assertStatus(200);
+
+    Queue::assertPushed(ProcessOpenNotification::class, function (ProcessOpenNotification $job): bool {
+        return (new ReflectionProperty($job, 'notification'))
+            ->getValue($job)
+            ->senderConnection === 'main';
+    });
+});
+
+test('a caller whose client matches no abonnement stays unattributed', function () {
+    Queue::fake();
+
+    $this->postJson(route('api.open-notifications.listen'), [
+        'actie' => 'destroy',
+        'kanaal' => 'zaken',
+        'resource' => 'zaak',
+        'hoofdObject' => 'https://example.com/zaak/123',
+        'resourceUrl' => 'https://example.com/zaak/123',
+        'aanmaakdatum' => now()->toIso8601String(),
+    ], ['Authorization' => 'Bearer '.$this->access_token])->assertStatus(200);
+
+    Queue::assertPushed(ProcessOpenNotification::class, function (ProcessOpenNotification $job): bool {
+        return (new ReflectionProperty($job, 'notification'))
+            ->getValue($job)
+            ->senderConnection === null;
+    });
 });

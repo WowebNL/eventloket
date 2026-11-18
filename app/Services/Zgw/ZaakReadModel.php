@@ -121,14 +121,15 @@ final class ZaakReadModel implements Arrayable
         $this->status_name = Arr::get($expand, 'status._expand.statustype.omschrijving');
         $this->statustype_url = Arr::get($expand, 'status._expand.statustype.url');
 
-        // Matched on host, not as a substring: only a url actually served by
+        // Matched on origin, not as a substring: only a url actually served by
         // the Objects API is a zaakobject of ours. One that merely mentions it
-        // somewhere, in a query string say, is a different host.
-        $objectsHost = self::hostOf((string) config('openzaak.objectsapi.url'));
+        // somewhere, in a query string say, or that uses another scheme or
+        // port on the same host, is a different origin.
+        $objectsOrigin = self::originOf((string) config('openzaak.objectsapi.url'));
 
-        $this->data_object_url = $objectsHost === null ? null : (Arr::first(
+        $this->data_object_url = $objectsOrigin === null ? null : (Arr::first(
             $expand['zaakobjecten'] ?? [],
-            fn ($item) => isset($item['object']) && self::hostOf((string) $item['object']) === $objectsHost
+            fn ($item) => isset($item['object']) && self::originOf((string) $item['object']) === $objectsOrigin
         )['object'] ?? null);
 
         $this->eigenschappen = array_map(
@@ -155,13 +156,32 @@ final class ZaakReadModel implements Arrayable
     }
 
     /**
-     * The lowercased host of a url, or null when it has none.
+     * The origin of a url as "scheme://host:port", lowercased and with the
+     * default port of http or https filled in, or null when the url has no
+     * scheme or host. The same comparison the ZGW client uses for its own
+     * allowlist.
      */
-    public static function hostOf(string $url): ?string
+    public static function originOf(string $url): ?string
     {
-        $host = parse_url($url, PHP_URL_HOST);
+        $parts = parse_url(trim($url));
 
-        return is_string($host) && $host !== '' ? strtolower($host) : null;
+        if (! is_array($parts) || empty($parts['scheme']) || empty($parts['host'])) {
+            return null;
+        }
+
+        $scheme = strtolower($parts['scheme']);
+
+        $port = $parts['port'] ?? match ($scheme) {
+            'https' => 443,
+            'http' => 80,
+            default => null,
+        };
+
+        if ($port === null) {
+            return null;
+        }
+
+        return $scheme.'://'.strtolower($parts['host']).':'.$port;
     }
 
     /**

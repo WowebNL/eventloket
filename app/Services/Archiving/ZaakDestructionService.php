@@ -2,11 +2,13 @@
 
 namespace App\Services\Archiving;
 
+use App\Exceptions\DataObjectHostNotAllowedException;
 use App\Exceptions\ZaakConnectionNotDestructibleException;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -238,27 +240,31 @@ class ZaakDestructionService
      * The Objects API is outside the ZGW standard and therefore outside the ZGW
      * client, so it carries no host allowlist of its own and the check below
      * stands in for one.
+     *
+     * @throws DataObjectHostNotAllowedException when the url is not on the
+     *                                           configured Objects API
      */
     public function deleteDataObject(string $url): void
     {
         // The credential goes nowhere but the configured Objects API. This url
-        // is stored on the zaak and derived from a ZGW response, so its host is
-        // checked rather than taken on trust.
-        $objectsHost = ZaakReadModel::hostOf((string) config('openzaak.objectsapi.url'));
-        $urlHost = ZaakReadModel::hostOf($url);
+        // is stored on the zaak and derived from a ZGW response, so its origin
+        // (scheme, host and port) is checked rather than taken on trust.
+        $objectsOrigin = ZaakReadModel::originOf((string) config('openzaak.objectsapi.url'));
+        $urlOrigin = ZaakReadModel::originOf($url);
 
-        if ($objectsHost === null || $urlHost !== $objectsHost) {
-            Log::warning('Refused to delete a data object on a host that is not the configured Objects API.', [
-                'url_host' => $urlHost,
-                'objects_host' => $objectsHost,
+        if ($objectsOrigin === null || $urlOrigin !== $objectsOrigin) {
+            Log::warning('Refused to delete a data object on an origin that is not the configured Objects API.', [
+                'url_origin' => $urlOrigin,
+                'objects_origin' => $objectsOrigin,
             ]);
 
-            return;
+            throw new DataObjectHostNotAllowedException($url, $urlOrigin, $objectsOrigin);
         }
 
         $this->validateDeleteResponse(
             $url,
-            Http::withHeaders($this->objectsApiHeaders())->delete($url),
+            // A followed redirect turns the DELETE into a GET, so it is not followed.
+            Http::withoutRedirecting()->withHeaders($this->objectsApiHeaders())->delete($url),
         );
     }
 
@@ -285,10 +291,14 @@ class ZaakDestructionService
             return;
         }
 
-        if ($response->failed()) {
-            Log::error("Destruction delete of [{$url}] failed: {$response->body()}");
-            $response->throw();
+        if ($response->successful()) {
+            return;
         }
+
+        // Anything else, a redirect included, means the object was not deleted.
+        Log::error("Destruction delete of [{$url}] failed with status {$response->status()}: {$response->body()}");
+
+        throw new RequestException($response);
     }
 
     private function zgw(): ZgwConnection

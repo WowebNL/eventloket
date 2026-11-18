@@ -11,8 +11,24 @@ return [
     | destruction report. The archive coordinator can adjust it per list
     | when confirming the destruction.
     |
+    | This report covers the zaakdata in OpenZaak only. What Eventloket itself
+    | held about the zaak is destroyed afterwards and accounted for in the
+    | separate Eventloket data report below.
+    |
     */
-    'destruction_method' => 'Permanente verwijdering van zaakgegevens uit OpenZaak en Eventloket (hard delete)',
+    'destruction_method' => 'Permanente verwijdering van zaakgegevens uit OpenZaak (hard delete)',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Eventloket data destruction method
+    |--------------------------------------------------------------------------
+    |
+    | How the data Eventloket itself held about a zaak was destroyed, included
+    | in the automatically generated Eventloket-data report. The zaakdata is
+    | destroyed in the zaaksysteem and accounted for by the other report.
+    |
+    */
+    'eventloket_destruction_method' => 'Permanente verwijdering van de Eventloket-gegevens (threads, berichten, notificaties, logboek en, waar aanwezig, het formulierinzending-object; zie per zaak), nadat het zaaksysteem bevestigde dat de zaak is vernietigd',
 
     /*
     |--------------------------------------------------------------------------

@@ -129,7 +129,7 @@ return [
         'confirm_destruction' => [
             'label' => 'Vernietiging bevestigen',
             'modal_heading' => 'Vernietiging definitief bevestigen',
-            'modal_description' => 'Let op: dit kan niet ongedaan worden gemaakt. Alle zaken op deze lijst worden permanent vernietigd in OpenZaak en Eventloket, inclusief documenten, besluiten en berichten.',
+            'modal_description' => 'Let op: dit kan niet ongedaan worden gemaakt. Alle zaken op deze lijst worden permanent vernietigd in OpenZaak. Daarna worden de bijbehorende Eventloket-gegevens permanent verwijderd, zodra het zaaksysteem bevestigt dat de zaak is vernietigd.',
             'form' => [
                 'confirmation' => [
                     'label' => 'Typ de naam van de lijst ter bevestiging',

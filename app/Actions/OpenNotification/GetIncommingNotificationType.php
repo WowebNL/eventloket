@@ -23,7 +23,13 @@ class GetIncommingNotificationType
         // `create` is included: an eigenschap added to the zaak in the
         // zaaksysteem carries a value we display, so it has to refresh the
         // reference data just like a changed one.
-        if (in_array($data['actie'], ['create', 'update', 'partial_update'], true) && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaakeigenschap') {
+        if ($data['actie'] === 'destroy' && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaak') {
+            // The zaak is gone from the zaaksysteem, so everything Eventloket
+            // still holds about it has to go too. Fires for our own OpenZaak as
+            // well as for a municipality's own instance, which is the point:
+            // both sides are cleaned up by the same route.
+            return OpenNotificationType::ZaakDestroyed;
+        } elseif (in_array($data['actie'], ['create', 'update', 'partial_update'], true) && $data['kanaal'] === 'zaken' && $data['resource'] === 'zaakeigenschap') {
             return OpenNotificationType::UpdateZaakEigenschap;
         } elseif ($data['actie'] === 'create' && $data['kanaal'] === 'zaken' && $data['resource'] === 'status') {
             // zaak status created, this happens when a status is changed on a zaak

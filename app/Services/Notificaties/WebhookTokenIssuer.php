@@ -42,6 +42,10 @@ class WebhookTokenIssuer
             'name' => self::APPLICATION_NAME,
             'secret' => $secret,
             'grant_types' => ['client_credentials'],
+            // Passport restricts a client to the scopes it is minted with, so
+            // naming the one this client needs keeps its credential to the
+            // webhook and nothing else.
+            'scopes' => [self::SCOPE],
             'redirect_uris' => [],
             'revoked' => false,
         ]);

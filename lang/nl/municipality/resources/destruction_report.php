@@ -5,6 +5,9 @@ return [
     'plural_label' => 'Vernietigingsrapporten',
 
     'columns' => [
+        'type' => [
+            'label' => 'Soort',
+        ],
         'batch_number' => [
             'label' => 'Batchnummer',
         ],
@@ -34,6 +37,9 @@ return [
         ],
         'items' => [
             'label' => 'Vernietigde zaken',
+        ],
+        'data_object_status' => [
+            'label' => 'Formulierinzending-object',
         ],
     ],
 
