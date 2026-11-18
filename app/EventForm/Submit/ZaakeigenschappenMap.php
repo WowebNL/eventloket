@@ -258,9 +258,9 @@ final class ZaakeigenschappenMap
             'line' => LocationKinds::valueFor($state, LocationKinds::ROUTE),
             'bag_addresses' => LocationKinds::valueFor($state, LocationKinds::GEBOUW),
             // `watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt` is the generic
-            // event-location name migrated from Open Formulieren (see
-            // `BackfillSnapshotsFromObjects`); it is not bound to a single kind
-            // and is not hidden by unticking one, so it stays a direct read.
+            // event-location name migrated from Open Formulieren; it is not bound
+            // to a single kind and is not hidden by unticking one, so it stays a
+            // direct read.
             'name' => $this->stringOrNull($state->get('watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt')),
         ], fn ($v) => $v !== null && $v !== '' && $v !== []);
     }

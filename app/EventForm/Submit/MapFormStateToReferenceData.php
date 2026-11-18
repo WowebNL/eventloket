@@ -149,9 +149,9 @@ final class MapFormStateToReferenceData
         }
 
         // Generic fallback name migrated from Open Formulieren
-        // (`watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt` → `naamVanDeLocatie`,
-        // see `BackfillSnapshotsFromObjects`). It is not bound to a single kind
-        // and is not hidden by unticking one, so it stays a direct read.
+        // (`watIsDeNaamVanDeLocatieSWaarUwEvenementPlaatsvindt` → `naamVanDeLocatie`).
+        // It is not bound to a single kind and is not hidden by unticking one,
+        // so it stays a direct read.
         return $this->stringOrNull($state->get('naamVanDeLocatie'));
     }
 
