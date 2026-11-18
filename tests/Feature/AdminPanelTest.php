@@ -165,7 +165,7 @@ test('admin can update welcome page settings', function () {
     livewire(ManageWelcome::class)->fillForm([
         'title' => 'New Title',
         'tagline' => 'New Tagline',
-        'intro' => 'New Intro',
+        'intro' => '<p>New Intro</p>',
     ])->call('save');
 
     $settings = app(WelcomeSettings::class);
@@ -178,7 +178,7 @@ test('admin can update organiser panel settings', function () {
     $this->actingAs($this->admin);
 
     livewire(ManageOrganiserPanel::class)->fillForm([
-        'intro' => 'New Intro',
+        'intro' => '<p>New Intro</p>',
     ])->call('save');
 
     $settings = app(OrganiserPanelSettings::class);
