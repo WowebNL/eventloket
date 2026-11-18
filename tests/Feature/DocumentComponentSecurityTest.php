@@ -93,6 +93,16 @@ test('MessageForm component has #[Locked] on $thread to prevent IDOR via payload
     );
 });
 
+test('MessageForm component has #[Locked] on $documents so attachments cannot be injected', function () {
+    $attributes = (new ReflectionClass(MessageForm::class))
+        ->getProperty('documents')
+        ->getAttributes(Locked::class);
+
+    expect($attributes)->not->toBeEmpty(
+        'Property $documents must carry #[Locked]: only the attach action may add attachments'
+    );
+});
+
 test('MessageForm component mounts correctly with a valid thread', function () {
     $municipality = Municipality::factory()->create();
     $organisation = Organisation::factory()->create();

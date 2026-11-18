@@ -68,7 +68,7 @@ Key relationships: `Zaak` belongs to `Organisation`, `Municipality`, and `Zaakty
 
 ### ZGW Integration (OpenZaak / Objects API)
 
-The custom `woweb/openzaak` package handles API communication. Jobs in `app/Jobs/` handle async creation/updates:
+The `woweb/laravel-zgw-client` package (`Zgw` facade, one connection per ZGW backend) handles API communication. Jobs in `app/Jobs/` handle async creation/updates:
 - `CreateZaak`, `AddZaakeigenschappenZGW`, `AddGeometryZGW`, `AddBesluitZGW`, etc.
 - Value objects in `app/ValueObjects/` model ZGW API responses (`OzZaak`, `OzZaaktype`, `Informatieobject`, `Besluit`, `Rol`)
 

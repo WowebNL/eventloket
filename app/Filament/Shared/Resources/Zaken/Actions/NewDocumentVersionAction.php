@@ -34,7 +34,7 @@ class NewDocumentVersionAction
             ->visible(fn (array $record): bool => DocumentVersionAuthorizer::canAddVersion(auth()->user(), $zaak, $record['uuid']))
             ->action(function (array $record, array $data, Action $action) use ($zaak): void {
                 try {
-                    self::createNewDocumentVersion($record['uuid'], $data, $zaak);
+                    self::createNewDocumentVersion($record['uuid'], $data, $zaak, "mountedActions.{$action->getNestingIndex()}.data.file");
                 } catch (DocumentVersionRejectedException $e) {
                     self::handleRejectedVersion($e);
 
@@ -64,7 +64,7 @@ class NewDocumentVersionAction
                 ->maxSize(61440) // 60MB
                 ->mimeTypeMap(config('app.document_mime_type_mappings'))
                 ->rule(DocumentUploadType::fileUploadRule())
-                ->directory('documents')
+                ->directory(DocumentUploadType::STORED_UPLOAD_DIRECTORY)
                 ->visibility('private')
                 ->storeFileNamesIn('file_name')
                 // Only accept a fresh upload as the file.
@@ -110,8 +110,16 @@ class NewDocumentVersionAction
         return __('Vraag de beheerder van de zaaksysteemkoppeling dit na te kijken.');
     }
 
-    public static function createNewDocumentVersion(string $documentUuid, array $data, Zaak $zaak)
+    /**
+     * $fileErrorKey is where a validation error on the file lands, so a
+     * caller in a form passes the state path of its upload field.
+     */
+    public static function createNewDocumentVersion(string $documentUuid, array $data, Zaak $zaak, string $fileErrorKey = 'file')
     {
+        // Checked before anything else, so a value that is not a stored upload
+        // is never read, sent or deleted by the cleanup below.
+        [$data['file']] = DocumentUploadType::ensureStoredUploadPaths([$data['file'] ?? null], $fileErrorKey);
+
         // The stored upload only exists to be sent to the Documenten API, so it
         // is removed whether or not the API accepted the new version. A refused
         // lock or patch otherwise left the file behind on local storage.

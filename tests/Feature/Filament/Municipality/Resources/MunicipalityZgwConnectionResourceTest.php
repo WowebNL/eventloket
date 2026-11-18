@@ -324,6 +324,60 @@ it('shows the per-role vertrouwelijkheid fields when at least one upload tab is 
         ->assertFormFieldIsVisible('vertrouwelijkheid_map.visibility.reviewer');
 });
 
+it('shows the per-role vertrouwelijkheid fields when only read-only documents for advisories are enabled', function () {
+    // The advisor group maximum decides which documents those advisories read,
+    // so the fields must stay reachable with all three tabs off.
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->bestandenReadOnlyForAdvisories()->create([
+        'show_adviesvragen_tab' => false,
+        'show_organisatievragen_tab' => false,
+    ]);
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->assertFormFieldIsVisible('vertrouwelijkheid_map.visibility.advisor')
+        ->assertFormFieldIsVisible('vertrouwelijkheid_map.visibility.organiser');
+});
+
+it('only offers read-only documents for advisories while the bestanden tab is off', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create(['show_bestanden_tab' => true]);
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->assertFormFieldIsDisabled('show_bestanden_tab_read_only_for_advisories')
+        ->fillForm(['show_bestanden_tab' => false])
+        ->assertFormFieldIsEnabled('show_bestanden_tab_read_only_for_advisories');
+});
+
+it('stores read-only documents for advisories with the bestanden tab off', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->active()->create(['show_bestanden_tab' => true]);
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->fillForm(['show_bestanden_tab' => false])
+        ->fillForm(['show_bestanden_tab_read_only_for_advisories' => true])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $connection->refresh();
+
+    expect($connection->show_bestanden_tab)->toBeFalse()
+        ->and($connection->show_bestanden_tab_read_only_for_advisories)->toBeTrue()
+        ->and($connection->isActive())->toBeTrue();
+});
+
+it('switches read-only documents for advisories off when the bestanden tab is switched back on', function () {
+    $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->bestandenReadOnlyForAdvisories()->create();
+
+    livewire(EditMunicipalityZgwConnection::class, ['record' => $connection->getKey()])
+        ->assertFormSet(['show_bestanden_tab_read_only_for_advisories' => true])
+        ->fillForm(['show_bestanden_tab' => true])
+        ->assertFormSet(['show_bestanden_tab_read_only_for_advisories' => false])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $connection->refresh();
+
+    expect($connection->show_bestanden_tab)->toBeTrue()
+        ->and($connection->show_bestanden_tab_read_only_for_advisories)->toBeFalse();
+});
+
 it('exposes the verify connection row action', function () {
     $connection = MunicipalityZgwConnection::factory()->for($this->municipality)->create();
 

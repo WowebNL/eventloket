@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\EventForm\State\FormState;
+use App\EventForm\Support\SafeDateTime;
 use Carbon\Carbon;
 
 beforeEach(function () {
@@ -129,4 +130,188 @@ test('exactly on deadline boundary is within deadline', function () {
     $status = $this->state->get('indieningstermijnStatus');
 
     expect($status['withinDeadline'])->toBeTrue();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reports
+|--------------------------------------------------------------------------
+|
+| The report path has no risk classification, so until now someone filing
+| one never saw a deadline at all. It has a municipality variable of its
+| own, and `basedOn` tells the places that show the deadline where it came
+| from.
+|
+*/
+
+function meldingState(array $values = [], array $gemeenteVariabelen = []): FormState
+{
+    return new FormState(values: array_merge([
+        'gemeenteVariabelen' => array_merge([
+            'indieningstermijn_melding' => 4,
+        ], $gemeenteVariabelen),
+        'wordenErGebiedsontsluitingswegenEnOfDoorgaandeWegenAfgeslotenVoorHetVerkeer' => 'Nee',
+        'EvenementStart' => '2026-09-01T10:00:00+02:00',
+    ], $values));
+}
+
+test('een melding krijgt een termijn uit de melding-variabele van de gemeente', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    $status = meldingState()->get('indieningstermijnStatus');
+
+    expect($status)->not->toBeNull()
+        ->and($status['weeks'])->toBe(4)
+        ->and($status['basedOn'])->toBe('report')
+        ->and($status['withinDeadline'])->toBeTrue();
+});
+
+test('een melding buiten de termijn wordt als zodanig herkend', function () {
+    Carbon::setTestNow('2026-08-20');
+
+    $status = meldingState()->get('indieningstermijnStatus');
+
+    expect($status)->not->toBeNull()
+        ->and($status['basedOn'])->toBe('report')
+        ->and($status['withinDeadline'])->toBeFalse();
+});
+
+test('een melding krijgt een termijn zonder dat er een risicoscan is ingevuld', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    $state = meldingState();
+
+    // This is exactly the gap being closed: no classification, and
+    // therefore no deadline either.
+    expect($state->get('risicoClassificatie'))->toBeNull()
+        ->and($state->get('indieningstermijnStatus'))->not->toBeNull();
+});
+
+test('een melding zonder ingestelde termijn krijgt geen status', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    $state = meldingState(gemeenteVariabelen: ['indieningstermijn_melding' => 0]);
+
+    expect($state->get('indieningstermijnStatus'))->toBeNull();
+});
+
+test('het nieuwe vragensysteem levert dezelfde melding-termijn op', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    $state = new FormState(values: [
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                ['id' => 2, 'order' => 2, 'question' => 'Vraag 2'],
+            ],
+            'indieningstermijn_melding' => 4,
+        ],
+        'reportQuestion_1' => 'Ja',
+        'reportQuestion_2' => 'Ja',
+        'EvenementStart' => '2026-09-01T10:00:00+02:00',
+    ]);
+
+    $status = $state->get('indieningstermijnStatus');
+
+    expect($status)->not->toBeNull()
+        ->and($status['weeks'])->toBe(4)
+        ->and($status['basedOn'])->toBe('report');
+});
+
+test('een lopende scan levert nog geen melding-termijn op', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    $state = new FormState(values: [
+        'gemeenteVariabelen' => [
+            'use_new_report_questions' => true,
+            'report_questions' => [
+                ['id' => 1, 'order' => 1, 'question' => 'Vraag 1'],
+                ['id' => 2, 'order' => 2, 'question' => 'Vraag 2'],
+            ],
+            'indieningstermijn_melding' => 4,
+        ],
+        'reportQuestion_1' => 'Ja',
+        'EvenementStart' => '2026-09-01T10:00:00+02:00',
+    ]);
+
+    expect($state->get('indieningstermijnStatus'))->toBeNull();
+});
+
+test('een vergunningaanvraag blijft op de risicoclassificatie rusten', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    // The same municipality also has a report deadline configured; it
+    // must not take over on the permit path.
+    $this->state->setVariable('gemeenteVariabelen', [
+        'indieningstermijn_a' => 8,
+        'indieningstermijn_melding' => 4,
+    ]);
+    $this->state->setField('EvenementStart', '2026-09-01T10:00:00+02:00');
+
+    $status = $this->state->get('indieningstermijnStatus');
+
+    expect($this->state->get('risicoClassificatie'))->toBe('A')
+        ->and($status['weeks'])->toBe(8)
+        ->and($status['basedOn'])->toBe('classification');
+});
+
+/*
+|--------------------------------------------------------------------------
+| An unreadable start date
+|--------------------------------------------------------------------------
+|
+| The date parse used to sit behind the classification gate: without all
+| fourteen risk-scan fields filled it was never reached. The report path has
+| no classification, so it is now reachable from a step that re-renders on
+| every keystroke and from the queued job that builds the PDF. An unreadable
+| value has to mean "no deadline" there, never an exception.
+|
+*/
+
+test('een onleesbare startdatum geeft geen termijn op het meldingpad', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    foreach (['geen-datum', '20256-09-20T16:00', 'null', '   '] as $rommel) {
+        $state = meldingState(['EvenementStart' => $rommel]);
+
+        expect($state->get('indieningstermijnStatus'))->toBeNull("startdatum {$rommel}");
+    }
+});
+
+test('een onleesbare startdatum geeft geen termijn op het vergunningpad', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    $this->state->setVariable('gemeenteVariabelen', ['indieningstermijn_a' => 8]);
+
+    foreach (['geen-datum', '20256-09-20T16:00'] as $rommel) {
+        $this->state->setField('EvenementStart', $rommel);
+
+        expect($this->state->get('indieningstermijnStatus'))->toBeNull("startdatum {$rommel}");
+    }
+});
+
+test('een startdatum met tijdzone uit een prefill levert nog steeds een termijn', function () {
+    // A form prefilled from an existing case gets the stored ISO string
+    // straight into `EvenementStart`, timezone designator and all. That
+    // shape is not on the SafeDateTime whitelist, so without a fallback the
+    // deadline would silently disappear here.
+    Carbon::setTestNow('2026-06-01');
+
+    expect(SafeDateTime::parse('2026-09-01T10:00:00+02:00'))->toBeNull();
+
+    $status = meldingState(['EvenementStart' => '2026-09-01T10:00:00+02:00'])->get('indieningstermijnStatus');
+
+    expect($status)->not->toBeNull()
+        ->and($status['weeks'])->toBe(4)
+        ->and($status['basedOn'])->toBe('report');
+});
+
+test('een startdatum in picker-formaat levert een termijn', function () {
+    Carbon::setTestNow('2026-06-01');
+
+    $status = meldingState(['EvenementStart' => '2026-09-01T10:00'])->get('indieningstermijnStatus');
+
+    expect($status)->not->toBeNull()
+        ->and($status['basedOn'])->toBe('report');
 });

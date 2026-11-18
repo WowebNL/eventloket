@@ -40,6 +40,8 @@ return [
     'actions' => [
         'detach' => [
             'skipped_last_advisory' => '{1} 1 gebruiker is overgeslagen omdat deze alleen bij deze organisatie hoort.|[2,*] :count gebruikers zijn overgeslagen omdat zij alleen bij deze organisatie horen.',
+            'skipped_last_admin' => '{1} 1 gebruiker is overgeslagen omdat deze organisatie anders geen beheerder meer heeft.|[2,*] :count gebruikers zijn overgeslagen omdat deze organisatie anders geen beheerder meer heeft.',
+            'skipped_self' => '{1} Je kunt jezelf niet ontkoppelen.|[2,*] Je kunt jezelf niet ontkoppelen.',
             'notifications' => [
                 'partially_detached' => [
                     'title' => 'Niet alle gebruikers zijn ontkoppeld',

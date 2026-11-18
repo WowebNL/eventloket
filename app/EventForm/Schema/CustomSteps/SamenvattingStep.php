@@ -7,6 +7,7 @@ namespace App\EventForm\Schema\CustomSteps;
 use App\EventForm\Reporting\SubmissionReport;
 use App\EventForm\Schema\EventFormSchema;
 use App\EventForm\State\FormState;
+use App\EventForm\Support\Indieningstermijnen;
 use Filament\Forms\Components\Checkbox;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Wizard\Step;
@@ -65,17 +66,21 @@ final class SamenvattingStep
      */
     private static function renderHtml(FormState $state): string
     {
-        $sections = app(SubmissionReport::class)->build($state, EventFormSchema::stepsForReport());
+        // Rendered inside the organiser's request, so tile downloads for the
+        // map backgrounds use the short interactive timeout.
+        $sections = app(SubmissionReport::class)
+            ->forInteractiveRequest()
+            ->build($state, EventFormSchema::stepsForReport());
         $risicoClassificatie = $state->get('risicoClassificatie');
         $indieningstermijnStatus = $state->get('indieningstermijnStatus');
 
         $gemeente = $state->get('evenementInGemeente');
         $gemeenteNaam = is_array($gemeente) ? ($gemeente['name'] ?? null) : null;
-        $indieningstermijnen = [
-            'a' => $state->get('gemeenteVariabelen.indieningstermijn_a'),
-            'b' => $state->get('gemeenteVariabelen.indieningstermijn_b'),
-            'c' => $state->get('gemeenteVariabelen.indieningstermijn_c'),
-        ];
+
+        // Whatever the municipality configured for the path this submission
+        // is on, in display order. A permit application gets its risk
+        // classifications, a report gets its own deadline.
+        $indieningstermijnen = Indieningstermijnen::forState($state);
 
         return view('event-form.samenvatting', [
             'sections' => $sections,

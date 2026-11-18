@@ -35,13 +35,14 @@ class AdvisorUserResource extends Resource
         // The cluster only checks access for navigation, so a resource page
         // inside it needs the same tenant-bound check of its own: being an
         // admin of another advisory must not grant access to the current one.
-        /** @var Advisory $tenant */
+        // Deny instead of failing when there is no current advisory or the
+        // signed-in user is not an advisor.
         $tenant = Filament::getTenant();
-
-        /** @var AdvisorUser $user */
         $user = auth()->user();
 
-        return $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
+        return $tenant instanceof Advisory
+            && $user instanceof AdvisorUser
+            && $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
     }
 
     public static function getModelLabel(): string

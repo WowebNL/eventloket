@@ -20,9 +20,8 @@ use Throwable;
  * reason for a rejected status, role or document is invisible in production.
  *
  * The listener hooks the HTTP client rather than the call sites. Every ZGW call in this
- * application goes through Laravel's HTTP client: the woweb/openzaak package builds each
- * request with `Http::withHeaders(...)`, the woweb/laravel-zgw-client package does the same in
- * `ZgwConnection::request()`, and the handful of console commands that talk to the catalogi API
+ * application goes through Laravel's HTTP client: the woweb/laravel-zgw-client package builds
+ * each request in `ZgwConnection::request()`, and the handful of console commands that talk to the catalogi API
  * directly use the `Http` facade too. One listener on `ResponseReceived` therefore covers all
  * of them, including call sites added later.
  *

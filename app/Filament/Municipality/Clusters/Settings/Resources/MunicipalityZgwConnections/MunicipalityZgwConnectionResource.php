@@ -137,7 +137,22 @@ class MunicipalityZgwConnectionResource extends Resource
                             ->label(__('municipality/resources/zgw_connection.fields.show_bestanden_tab.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.show_bestanden_tab.helper'))
                             ->default(true)
-                            ->live(),
+                            ->live()
+                            // Read-only documents for advisories only exist while
+                            // the tab is off, so showing the tab clears the opt-in.
+                            // The model does the same on save; this only makes
+                            // it visible in the form straight away.
+                            ->afterStateUpdated(function (Set $set, ?bool $state): void {
+                                if ($state) {
+                                    $set('show_bestanden_tab_read_only_for_advisories', false);
+                                }
+                            }),
+                        Toggle::make('show_bestanden_tab_read_only_for_advisories')
+                            ->label(__('municipality/resources/zgw_connection.fields.show_bestanden_tab_read_only_for_advisories.label'))
+                            ->helperText(__('municipality/resources/zgw_connection.fields.show_bestanden_tab_read_only_for_advisories.helper'))
+                            ->default(false)
+                            ->live()
+                            ->disabled(fn (Get $get): bool => (bool) $get('show_bestanden_tab')),
                         Toggle::make('show_adviesvragen_tab')
                             ->label(__('municipality/resources/zgw_connection.fields.show_adviesvragen_tab.label'))
                             ->helperText(__('municipality/resources/zgw_connection.fields.show_adviesvragen_tab.helper'))
@@ -194,7 +209,7 @@ class MunicipalityZgwConnectionResource extends Resource
     {
         return Placeholder::make('vertrouwelijkheid_explanation')
             ->label(__('municipality/resources/zgw_connection.sections.vertrouwelijkheid.explanation.title'))
-            ->visible(fn (Get $get): bool => self::documentUploadTabsEnabled($get))
+            ->visible(fn (Get $get): bool => self::documentTabsEnabled($get))
             ->content(new HtmlString(implode('', array_map(
                 static fn (string $paragraph): string => '<p class="mb-2">'.e($paragraph).'</p>',
                 [
@@ -272,7 +287,7 @@ class MunicipalityZgwConnectionResource extends Resource
 
             $fields[] = Fieldset::make($group['label'])
                 ->columns(2)
-                ->visible(fn (Get $get): bool => self::documentUploadTabsEnabled($get))
+                ->visible(fn (Get $get): bool => self::documentTabsEnabled($get))
                 ->schema([
                     $visibility,
                     Select::make("vertrouwelijkheid_map.upload_default.{$canonical}")
@@ -308,15 +323,18 @@ class MunicipalityZgwConnectionResource extends Resource
     }
 
     /**
-     * Whether any document upload tab is enabled for this connection. With all
-     * three off no role can upload a document through Eventloket, so the per-role
+     * Whether any setting puts documents in front of a role group: one of the
+     * three document tabs, or read-only documents for advisories (whose
+     * selection follows the advisor group's maximum level). With all of them off
+     * no role sees or uploads a document through these tabs, so the per-role
      * visibility and upload defaults are moot and hidden. The system upload
      * default stays relevant: the application PDF and form attachments are still
      * pushed to ZGW regardless of these tabs.
      */
-    protected static function documentUploadTabsEnabled(Get $get): bool
+    protected static function documentTabsEnabled(Get $get): bool
     {
         return (bool) $get('show_bestanden_tab')
+            || (bool) $get('show_bestanden_tab_read_only_for_advisories')
             || (bool) $get('show_adviesvragen_tab')
             || (bool) $get('show_organisatievragen_tab');
     }
