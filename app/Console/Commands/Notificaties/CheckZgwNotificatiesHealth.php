@@ -133,13 +133,16 @@ class CheckZgwNotificatiesHealth extends Command
     }
 
     /**
-     * Healthy needs nothing, and a token inside its renewal window is what the
-     * renewal job exists for, so neither counts as a defect.
+     * Healthy needs nothing, a token inside its renewal window is what the
+     * renewal job exists for, and a connection that receives its notifications
+     * through another connection's abonnement is set up as intended, so none of
+     * these counts as a defect.
      */
     private function needsNoAttention(AbonnementCheckStatus $status): bool
     {
         return $status === AbonnementCheckStatus::Healthy
-            || $status === AbonnementCheckStatus::TokenExpiringSoon;
+            || $status === AbonnementCheckStatus::TokenExpiringSoon
+            || $status->isDeliveredThroughAnotherConnection();
     }
 
     /**

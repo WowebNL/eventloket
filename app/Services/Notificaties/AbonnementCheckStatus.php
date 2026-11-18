@@ -11,8 +11,16 @@ namespace App\Services\Notificaties;
 enum AbonnementCheckStatus
 {
     case NoNotificatiesUrl;
+    /** The notificaties URL is inherited from the main connection, whose abonnement lives there. */
+    case NotificatiesUrlInherited;
+    /** Another connection already holds the abonnement on this Notificaties API. */
+    case NotificatiesInstanceInUse;
     case NoLocalRecord;
+    /** Another connection has the same abonnement URL stored, so both claim one abonnement. */
+    case SharedAbonnement;
     case RemoteMissing;
+    /** The remote abonnement presents a webhook token that is not this connection's. */
+    case AuthMismatch;
     case KanalenMismatch;
     case TokenExpired;
 
@@ -33,12 +41,36 @@ enum AbonnementCheckStatus
 
     public function isWarning(): bool
     {
-        return in_array($this, [self::NoNotificatiesUrl, self::KanalenMismatch, self::TokenExpiringSoon], true);
+        return in_array($this, [
+            self::NoNotificatiesUrl,
+            self::NotificatiesUrlInherited,
+            self::NotificatiesInstanceInUse,
+            self::KanalenMismatch,
+            self::TokenExpiringSoon,
+        ], true);
+    }
+
+    /**
+     * Whether this connection receives its notifications through the abonnement
+     * another connection holds on the same Notificaties API. That is the
+     * intended set-up of one abonnement per instance, not a fault: the check of
+     * the connection that holds the abonnement watches the delivery.
+     */
+    public function isDeliveredThroughAnotherConnection(): bool
+    {
+        return $this === self::NotificatiesUrlInherited || $this === self::NotificatiesInstanceInUse;
     }
 
     public function isDanger(): bool
     {
-        return in_array($this, [self::NoLocalRecord, self::RemoteMissing, self::TokenExpired, self::TokenNotUsable], true);
+        return in_array($this, [
+            self::NoLocalRecord,
+            self::SharedAbonnement,
+            self::RemoteMissing,
+            self::AuthMismatch,
+            self::TokenExpired,
+            self::TokenNotUsable,
+        ], true);
     }
 
     /**
@@ -48,8 +80,12 @@ enum AbonnementCheckStatus
     {
         return match ($this) {
             self::NoNotificatiesUrl => 'no_notificaties_url',
+            self::NotificatiesUrlInherited => 'notificaties_url_inherited',
+            self::NotificatiesInstanceInUse => 'notificaties_instance_in_use',
             self::NoLocalRecord => 'no_local_record',
+            self::SharedAbonnement => 'shared_abonnement',
             self::RemoteMissing => 'remote_missing',
+            self::AuthMismatch => 'auth_mismatch',
             self::KanalenMismatch => 'kanalen_mismatch',
             self::TokenExpired => 'token_expired',
             self::TokenNotUsable => 'token_not_usable',

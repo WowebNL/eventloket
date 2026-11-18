@@ -9,7 +9,7 @@ use Illuminate\Support\Carbon;
 /**
  * The structured result of {@see AbonnementHealthCheck::run()}: the status plus
  * the details a caller needs to explain it (which channels are missing, when the
- * token expires).
+ * token expires, which other connection is involved).
  */
 final readonly class AbonnementCheckResult
 {
@@ -20,5 +20,7 @@ final readonly class AbonnementCheckResult
         public AbonnementCheckStatus $status,
         public array $missingKanalen = [],
         public ?Carbon $expiresAt = null,
+        /** The other connection involved, for the shared-instance and shared-abonnement statuses. */
+        public ?string $otherConnection = null,
     ) {}
 }

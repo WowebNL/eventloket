@@ -58,6 +58,7 @@ class RegisterZgwAbonnement extends Command
             AbonnementRegistrationOutcome::Created => 'Nieuw abonnement aangemaakt.',
             AbonnementRegistrationOutcome::Updated => 'Bestaand abonnement bijgewerkt met een nieuw token.',
             AbonnementRegistrationOutcome::SkippedNoNotificatiesUrl => 'Geen notificaties-URL geconfigureerd, overgeslagen.',
+            AbonnementRegistrationOutcome::RefusedSharedInstance => 'Overgeslagen: op deze Notificaties API staat al het abonnement van een andere connectie (ook als de URL van main is overgenomen). Geef deze connectie een eigen Notificaties API.',
             AbonnementRegistrationOutcome::DryRun => '[DRY-RUN] Zou een scoped token aanvragen en een abonnement aanmaken/bijwerken.',
         };
     }
