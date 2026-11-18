@@ -15,6 +15,14 @@ enum AbonnementCheckStatus
     case RemoteMissing;
     case KanalenMismatch;
     case TokenExpired;
+
+    /**
+     * The credential the remote side presents on our webhook cannot pass that
+     * route: it is gone, it has been revoked, or it does not carry the scope the
+     * route requires. Distinct from {@see TokenExpired}, which the renewal job
+     * resolves on its own; this one needs the abonnement registered again.
+     */
+    case TokenNotUsable;
     case TokenExpiringSoon;
     case Healthy;
 
@@ -30,7 +38,7 @@ enum AbonnementCheckStatus
 
     public function isDanger(): bool
     {
-        return in_array($this, [self::NoLocalRecord, self::RemoteMissing, self::TokenExpired], true);
+        return in_array($this, [self::NoLocalRecord, self::RemoteMissing, self::TokenExpired, self::TokenNotUsable], true);
     }
 
     /**
@@ -44,6 +52,7 @@ enum AbonnementCheckStatus
             self::RemoteMissing => 'remote_missing',
             self::KanalenMismatch => 'kanalen_mismatch',
             self::TokenExpired => 'token_expired',
+            self::TokenNotUsable => 'token_not_usable',
             self::TokenExpiringSoon => 'token_expiring_soon',
             self::Healthy => 'healthy',
         };
