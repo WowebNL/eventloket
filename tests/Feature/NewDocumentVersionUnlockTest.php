@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\OrganisationRole;
 use App\Enums\Role;
+use App\Exceptions\DocumentVersionRejectedException;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Models\Organisation;
 use App\Models\User;
@@ -57,7 +58,10 @@ test('a failing patch still releases the document lock and rethrows', function (
         'titel' => 'Bijgewerkt document',
         'file' => 'documents/new-version.pdf',
         'file_name' => 'new-version.pdf',
-    ], $zaak))->toThrow(ValidationException::class);
+    ], $zaak))->toThrow(function (DocumentVersionRejectedException $e) {
+        expect($e->step)->toBe('patch')
+            ->and($e->getPrevious())->toBeInstanceOf(ValidationException::class);
+    });
 
     // The lock was released despite the failed patch, so the next attempt can lock again.
     Http::assertSent(fn ($request) => str_contains($request->url(), '/enkelvoudiginformatieobjecten/existing-doc-uuid/unlock')

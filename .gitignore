@@ -32,3 +32,6 @@ test-results/
 boost.json
 /database/openforms_migrations
 input/
+
+# Local package checkouts are not part of this repository
+/packages

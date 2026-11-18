@@ -47,6 +47,7 @@ use Throwable;
  * @property bool $lock_status_for_behandelaar
  * @property bool $show_besluiten_tab
  * @property bool $show_bestanden_tab
+ * @property bool $show_bestanden_tab_read_only_for_advisories
  * @property bool $show_adviesvragen_tab
  * @property bool $show_organisatievragen_tab
  * @property bool $suppress_notifications
@@ -83,6 +84,7 @@ class MunicipalityZgwConnection extends Model
         'lock_status_for_behandelaar',
         'show_besluiten_tab',
         'show_bestanden_tab',
+        'show_bestanden_tab_read_only_for_advisories',
         'show_adviesvragen_tab',
         'show_organisatievragen_tab',
         'suppress_notifications',
@@ -129,6 +131,7 @@ class MunicipalityZgwConnection extends Model
             'lock_status_for_behandelaar' => 'boolean',
             'show_besluiten_tab' => 'boolean',
             'show_bestanden_tab' => 'boolean',
+            'show_bestanden_tab_read_only_for_advisories' => 'boolean',
             'show_adviesvragen_tab' => 'boolean',
             'show_organisatievragen_tab' => 'boolean',
             'suppress_notifications' => 'boolean',

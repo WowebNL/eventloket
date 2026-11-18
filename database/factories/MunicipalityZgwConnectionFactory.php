@@ -42,6 +42,7 @@ class MunicipalityZgwConnectionFactory extends Factory
             'lock_status_for_behandelaar' => false,
             'show_besluiten_tab' => true,
             'show_bestanden_tab' => true,
+            'show_bestanden_tab_read_only_for_advisories' => false,
             'show_adviesvragen_tab' => true,
             'show_organisatievragen_tab' => true,
             'suppress_notifications' => false,
@@ -59,6 +60,18 @@ class MunicipalityZgwConnectionFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'last_verified_at' => now(),
             'activated_at' => now(),
+        ]);
+    }
+
+    /**
+     * The bestanden tab switched off, with read-only documents for advisories
+     * that may view any zaak. The only valid combination for the opt-in.
+     */
+    public function bestandenReadOnlyForAdvisories(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'show_bestanden_tab' => false,
+            'show_bestanden_tab_read_only_for_advisories' => true,
         ]);
     }
 }

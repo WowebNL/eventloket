@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Role;
+use App\Enums\ZaakRelatieType;
 use App\Enums\ZaaktypeRole;
 use App\EventForm\Persistence\Draft;
 use App\EventForm\Persistence\DraftStore;
@@ -13,10 +14,12 @@ use App\EventForm\State\FormState;
 use App\Filament\Organiser\Pages\EventFormDraftsPage;
 use App\Filament\Organiser\Pages\EventFormPage;
 use App\Models\Municipality;
+use App\Models\MunicipalityFormQuestion;
 use App\Models\MunicipalityZaaktypeMapping;
 use App\Models\Organisation;
 use App\Models\User;
 use App\Models\Zaak;
+use App\Models\ZaakRelatie;
 use App\Models\Zaaktype;
 use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
@@ -303,4 +306,165 @@ test('prefill vanaf een via de koppeling herkende vooraankondiging zet de omzett
     expect($state->get('waarvoorWiltUEventloketGebruiken'))->toBe('evenement')
         ->and($state->get(Vragenboom2Step::HEEFT_VOORAANKONDIGING_FIELD))->toBe('Ja')
         ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBe($vooraankondiging->id);
+});
+
+/**
+ * The answers to the municipality's own extra questions. The generic prefill
+ * drops them, but converting a vooraankondiging into the definitive aanvraag
+ * keeps the event at the same municipality, so they are carried over.
+ */
+function vooraankondigingMetEigenVragen(User $user, Organisation $organisation, callable $questions): array
+{
+    $vooraankondiging = vooraankondigingMetSnapshotVoor($user, $organisation, []);
+    $municipality = $vooraankondiging->municipality;
+
+    $made = $questions($municipality);
+
+    return [$vooraankondiging, $municipality, $made];
+}
+
+function zetSnapshot(Zaak $zaak, array $values): void
+{
+    $zaak->update(['form_state_snapshot' => ['values' => [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Kermis 2027',
+        'waarvoorWiltUEventloketGebruiken' => 'vooraankondiging',
+        ...$values,
+    ], 'system' => []]]);
+}
+
+function conceptStateNaPrefill(Zaak $zaak, User $user, Organisation $organisation): FormState
+{
+    Livewire::withQueryParams(['prefill_from_zaak' => $zaak->id])
+        ->test(EventFormDraftsPage::class);
+
+    return FormState::fromSnapshot(Draft::ownedBy($user, $organisation)->sole()->state);
+}
+
+test('omzetten van een vooraankondiging neemt de antwoorden op de eigen vragen mee', function () {
+    [$vooraankondiging, , $q] = vooraankondigingMetEigenVragen($this->user, $this->organisation, fn (Municipality $m): array => [
+        'tekst' => MunicipalityFormQuestion::factory()->for($m)->create(['order' => 1]),
+        'radio' => MunicipalityFormQuestion::factory()->for($m)->radio(['Ja', 'Nee'])->create(['order' => 2]),
+        'vinkjes' => MunicipalityFormQuestion::factory()->for($m)->checkboxes(['Podium', 'Tent', 'Kraam'])->create(['order' => 3]),
+        'beidePaden' => MunicipalityFormQuestion::factory()->for($m)
+            ->forAanvraagTypes([ZaaktypeRole::Vooraankondiging->value, ZaaktypeRole::Vergunning->value])->create(['order' => 4]),
+    ]);
+
+    zetSnapshot($vooraankondiging, [
+        "extraVraag_{$q['tekst']->id}" => 'Een springkussen',
+        "extraVraag_{$q['radio']->id}" => 'Ja',
+        "extraVraag_{$q['vinkjes']->id}" => ['Podium', 'Kraam'],
+        "extraVraag_{$q['beidePaden']->id}" => 'Op beide paden',
+    ]);
+
+    $state = conceptStateNaPrefill($vooraankondiging, $this->user, $this->organisation);
+
+    expect($state->get("extraVraag_{$q['tekst']->id}"))->toBe('Een springkussen')
+        ->and($state->get("extraVraag_{$q['radio']->id}"))->toBe('Ja')
+        ->and($state->get("extraVraag_{$q['vinkjes']->id}"))->toBe(['Podium', 'Kraam'])
+        ->and($state->get("extraVraag_{$q['beidePaden']->id}"))->toBe('Op beide paden')
+        // The other presets of the conversion still apply.
+        ->and($state->get('waarvoorWiltUEventloketGebruiken'))->toBe('evenement')
+        ->and($state->get(Vragenboom2Step::VOORAANKONDIGING_ZAAK_FIELD))->toBe($vooraankondiging->id);
+});
+
+test('omzetten neemt geen antwoord mee op een vraag die niet op het vergunningpad staat', function () {
+    [$vooraankondiging, , $q] = vooraankondigingMetEigenVragen($this->user, $this->organisation, fn (Municipality $m): array => [
+        'alleenVooraankondiging' => MunicipalityFormQuestion::factory()->for($m)
+            ->forAanvraagTypes([ZaaktypeRole::Vooraankondiging->value])->create(['order' => 1]),
+        'alleenMelding' => MunicipalityFormQuestion::factory()->for($m)
+            ->forAanvraagTypes([ZaaktypeRole::Melding->value])->create(['order' => 2]),
+    ]);
+
+    zetSnapshot($vooraankondiging, [
+        "extraVraag_{$q['alleenVooraankondiging']->id}" => 'Alleen bij de vooraankondiging',
+        "extraVraag_{$q['alleenMelding']->id}" => 'Alleen bij een melding',
+    ]);
+
+    $state = conceptStateNaPrefill($vooraankondiging, $this->user, $this->organisation);
+
+    expect($state->get("extraVraag_{$q['alleenVooraankondiging']->id}"))->toBeNull()
+        ->and($state->get("extraVraag_{$q['alleenMelding']->id}"))->toBeNull();
+});
+
+test('omzetten neemt geen antwoord mee op een vraag die de gemeente niet meer actief heeft', function () {
+    [$vooraankondiging, , $q] = vooraankondigingMetEigenVragen($this->user, $this->organisation, fn (Municipality $m): array => [
+        'inactief' => MunicipalityFormQuestion::factory()->for($m)->inactive()->create(['order' => 1]),
+    ]);
+
+    zetSnapshot($vooraankondiging, [
+        "extraVraag_{$q['inactief']->id}" => 'Een vraag die uit staat',
+    ]);
+
+    $state = conceptStateNaPrefill($vooraankondiging, $this->user, $this->organisation);
+
+    expect($state->get("extraVraag_{$q['inactief']->id}"))->toBeNull();
+});
+
+test('omzetten neemt geen antwoord mee op een vraag van een andere gemeente', function () {
+    [$vooraankondiging] = vooraankondigingMetEigenVragen($this->user, $this->organisation, fn (): array => []);
+    $vanElders = MunicipalityFormQuestion::factory()->for(Municipality::factory())->create(['order' => 1]);
+
+    zetSnapshot($vooraankondiging, [
+        "extraVraag_{$vanElders->id}" => 'Hoort bij een andere gemeente',
+    ]);
+
+    $state = conceptStateNaPrefill($vooraankondiging, $this->user, $this->organisation);
+
+    expect($state->get("extraVraag_{$vanElders->id}"))->toBeNull();
+});
+
+test('omzetten laat keuzes vallen die de vraag niet meer aanbiedt', function () {
+    [$vooraankondiging, , $q] = vooraankondigingMetEigenVragen($this->user, $this->organisation, fn (Municipality $m): array => [
+        'radio' => MunicipalityFormQuestion::factory()->for($m)->radio(['Ja', 'Nee'])->create(['order' => 1]),
+        'vinkjes' => MunicipalityFormQuestion::factory()->for($m)->checkboxes(['Podium', 'Tent'])->create(['order' => 2]),
+        'vinkjesWeg' => MunicipalityFormQuestion::factory()->for($m)->checkboxes(['Podium', 'Tent'])->create(['order' => 3]),
+        'leeg' => MunicipalityFormQuestion::factory()->for($m)->create(['order' => 4]),
+    ]);
+
+    zetSnapshot($vooraankondiging, [
+        "extraVraag_{$q['radio']->id}" => 'Misschien',
+        "extraVraag_{$q['vinkjes']->id}" => ['Podium', 'Kraam'],
+        "extraVraag_{$q['vinkjesWeg']->id}" => ['Kraam'],
+        "extraVraag_{$q['leeg']->id}" => '   ',
+    ]);
+
+    $state = conceptStateNaPrefill($vooraankondiging, $this->user, $this->organisation);
+
+    expect($state->get("extraVraag_{$q['radio']->id}"))->toBeNull()
+        ->and($state->get("extraVraag_{$q['vinkjes']->id}"))->toBe(['Podium'])
+        ->and($state->get("extraVraag_{$q['vinkjesWeg']->id}"))->toBeNull()
+        ->and($state->get("extraVraag_{$q['leeg']->id}"))->toBeNull();
+});
+
+test('herhalen van een gewone aanvraag neemt de antwoorden op de eigen vragen nog steeds niet mee', function () {
+    $zaak = zaakMetSnapshotVoor($this->user, $this->organisation, []);
+    $vraag = MunicipalityFormQuestion::factory()->for($zaak->municipality)->create(['order' => 1]);
+    $zaak->update(['form_state_snapshot' => ['values' => [
+        'watIsDeNaamVanHetEvenementVergunning' => 'Buurtfeest 2027',
+        'waarvoorWiltUEventloketGebruiken' => 'evenement',
+        "extraVraag_{$vraag->id}" => 'Een springkussen',
+    ], 'system' => []]]);
+
+    $state = conceptStateNaPrefill($zaak, $this->user, $this->organisation);
+
+    expect($state->get('watIsDeNaamVanHetEvenementVergunning'))->toBe('Buurtfeest 2027')
+        ->and($state->get("extraVraag_{$vraag->id}"))->toBeNull();
+});
+
+test('een vooraankondiging die al is opgevolgd neemt bij herhalen geen antwoorden op de eigen vragen mee', function () {
+    [$vooraankondiging, , $q] = vooraankondigingMetEigenVragen($this->user, $this->organisation, fn (Municipality $m): array => [
+        'tekst' => MunicipalityFormQuestion::factory()->for($m)->create(['order' => 1]),
+    ]);
+    zetSnapshot($vooraankondiging, ["extraVraag_{$q['tekst']->id}" => 'Een springkussen']);
+
+    $opvolger = zaakMetSnapshotVoor($this->user, $this->organisation, []);
+    ZaakRelatie::create([
+        'zaak_id' => $opvolger->id,
+        'gerelateerde_zaak_id' => $vooraankondiging->id,
+        'type' => ZaakRelatieType::VervangtVooraankondiging,
+    ]);
+
+    $state = conceptStateNaPrefill($vooraankondiging, $this->user, $this->organisation);
+
+    expect($state->get("extraVraag_{$q['tekst']->id}"))->toBeNull();
 });

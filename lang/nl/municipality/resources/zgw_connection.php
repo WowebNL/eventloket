@@ -94,6 +94,10 @@ return [
             'label' => 'Tabblad bestanden tonen',
             'helper' => 'Toon het tabblad bestanden. Bij uitschakelen ziet de organisator nog wel de eigen aanvraag-bestanden, maar kunnen er geen nieuwe bestanden bijkomen.',
         ],
+        'show_bestanden_tab_read_only_for_advisories' => [
+            'label' => 'Bestanden tonen aan adviesdiensten met inzage in alle zaken (alleen lezen)',
+            'helper' => 'Alleen te kiezen als het tabblad bestanden uit staat. Adviesdiensten met "Alle zaken inzien" zien dan bij zaken van deze koppeling het tabblad bestanden, ook als ze niet aan uw gemeente gekoppeld zijn. Ze kunnen bestanden bekijken en downloaden, maar geen bestanden toevoegen en geen nieuwe versie maken. Welke bestanden ze zien, volgt het maximaal zichtbare niveau van de rolgroep adviseur. Andere adviesdiensten, behandelaars en beheerders zien het tabblad niet. Zet u het tabblad bestanden weer aan, dan gaat deze instelling vanzelf uit.',
+        ],
         'show_adviesvragen_tab' => [
             'label' => 'Tabblad adviesvragen tonen',
             'helper' => 'Toon het tabblad adviesvragen bij een zaak.',
@@ -186,6 +190,13 @@ return [
                 'expiring_soon' => 'Het abonnement werkt. Het token verloopt binnenkort en wordt automatisch vernieuwd.',
                 'needs_register' => 'Er is nog geen geldig abonnement geregistreerd.',
                 'no_notificaties_url' => 'Deze koppeling heeft geen Notificaties API-URL, dus er kan geen abonnement geregistreerd worden.',
+                'notificaties_url_inherited' => 'Deze koppeling heeft geen eigen Notificaties API-URL en gebruikt die van de hoofdkoppeling, waar het abonnement van de hoofdkoppeling staat. Per Notificaties API kan maar één koppeling een abonnement hebben, dus voor deze koppeling wordt geen eigen abonnement geregistreerd en komen meldingen binnen via dat van de hoofdkoppeling. Heeft deze koppeling een eigen Notificaties API, vul dan die URL in.',
+                'notificaties_instance_in_use' => 'Op de Notificaties API van deze koppeling staat al het abonnement van :owner. Per Notificaties API kan maar één koppeling een abonnement hebben, dus voor deze koppeling wordt geen eigen abonnement geregistreerd en komen meldingen binnen via dat van :owner.',
+                'shared_abonnement' => 'Het abonnement van deze koppeling is ook bij :owner vastgelegd. Meldingen kunnen daardoor aan de verkeerde koppeling worden toegeschreven. Neem contact op met de beheerder.',
+                'owner' => [
+                    'main' => 'de hoofdkoppeling',
+                    'other' => 'een andere koppeling',
+                ],
                 'register' => 'Abonnement registreren',
                 'error' => 'Er ging iets mis bij het controleren of registreren van het abonnement. Probeer het later opnieuw.',
             ],

@@ -3,11 +3,17 @@
 namespace App\Support\Uploads;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Mime\MimeTypes;
 
 final class DocumentUploadType
 {
+    /**
+     * The directory the document upload fields store their files in.
+     */
+    public const STORED_UPLOAD_DIRECTORY = 'documents';
+
     /**
      * MIME types that should never be accepted as document uploads.
      * This is intentionally conservative and focuses on common executable/script formats.
@@ -218,6 +224,41 @@ final class DocumentUploadType
     }
 
     /**
+     * Whether the value names a file stored by a document upload field: a
+     * string path inside the upload directory that does not climb out of it.
+     */
+    public static function isStoredUploadPath(mixed $path): bool
+    {
+        return is_string($path)
+            && str_starts_with($path, self::STORED_UPLOAD_DIRECTORY.'/')
+            && ! str_contains($path, '..');
+    }
+
+    /**
+     * The stored upload paths from a submitted upload field, or a validation
+     * error on that field when it holds no path or any value that is not a
+     * stored upload. Nothing may be read, sent or deleted for such a value.
+     *
+     * @param  array<array-key, mixed>  $paths
+     * @return array<int, string>
+     *
+     * @throws ValidationException
+     */
+    public static function ensureStoredUploadPaths(array $paths, string $errorKey): array
+    {
+        $paths = array_values($paths);
+        $invalid = array_filter($paths, fn (mixed $path): bool => ! self::isStoredUploadPath($path));
+
+        if ($paths === [] || $invalid !== []) {
+            throw ValidationException::withMessages([
+                $errorKey => __('validation.uploaded', ['attribute' => __('File')]),
+            ]);
+        }
+
+        return $paths;
+    }
+
+    /**
      * Determines the MIME type to send to external APIs (e.g. OpenZaak) based on the original filename.
      * Falls back to storage MIME detection when no mapping exists.
      */
@@ -292,15 +333,22 @@ final class DocumentUploadType
     }
 
     /**
-     * Confirms that a file is a genuine GPX document by inspecting its bytes.
+     * Confirms that a file is a genuine GPX document by inspecting its leading
+     * bytes.
+     *
+     * This is a check over the start of the file, not over the whole of it:
+     * every condition below is evaluated against the first chunk only.
      *
      * GPX is an XML dialect, so we require an XML prologue, the <gpx> root
      * element and the mandatory Topografix GPX namespace. Requiring all three
      * means a plain text/xml file (which we intentionally keep off the
      * allowlist) cannot pass by accident, while every schema-valid GPX export
      * does.
+     *
+     * Public so that anything else reading a GPX document can apply the exact
+     * same check first, and can never be more permissive than the upload rule.
      */
-    private static function looksLikeGpx(string $path): bool
+    public static function looksLikeGpx(string $path): bool
     {
         if ($path === '') {
             return false;
@@ -338,7 +386,10 @@ final class DocumentUploadType
         }
 
         // Never accept documents that declare a DOCTYPE: real GPX files carry
-        // none, and refusing them avoids XML entity-expansion tricks.
+        // none. Note that this, like every check in this method, only sees the
+        // leading bytes read above, so it says nothing about the rest of the
+        // file. Anything that goes on to parse the document has to refuse a
+        // declaration itself.
         if (preg_match('/<!DOCTYPE/i', $head) === 1) {
             return false;
         }

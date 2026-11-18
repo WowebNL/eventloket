@@ -16,6 +16,17 @@ it('formats a datum_tijd eigenschap as a 14-char datetime', function () {
         ->toBe('20260718000000');
 });
 
+it('formats a datum_tijd eigenschap whatever form the source value is in', function (string $waarde, string $expected) {
+    // A value copied from another zaak arrives in that zaak's wire form, which
+    // may be a date, a date-time or ISO 8601 text.
+    expect(ZgwConnectionConfig::formatEigenschapWaarde($waarde, 'datum_tijd'))->toBe($expected);
+})->with([
+    'already in the datum_tijd wire form' => ['20260718180000', '20260718180000'],
+    'in the datum wire form' => ['20260718', '20260718000000'],
+    'ISO 8601 with an offset' => ['2026-07-18T18:00:00+02:00', '20260718180000'],
+    'a date and time with a space' => ['2026-07-18 18:00', '20260718180000'],
+]);
+
 it('leaves a tekst eigenschap unchanged even when it parses as a date', function () {
     // A text value that happens to look like a date must never be mangled.
     expect(ZgwConnectionConfig::formatEigenschapWaarde('20260702', 'tekst'))->toBe('20260702');

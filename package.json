@@ -7,14 +7,15 @@
         "dev": "vite",
         "walkthrough": "playwright test",
         "walkthrough:live": "./vendor/bin/sail artisan eventform:reset-draft --email=noah.degraaf@example.net && EF_SLOW_MO=500 playwright test --headed --project=chromium tests/Playwright/doorloop-hele-formulier.spec.mjs --workers=1",
+        "walkthrough:record": "./vendor/bin/sail artisan eventform:reset-draft --email=noah.degraaf@example.net && EF_VIDEO=on EF_SLOW_MO=250 playwright test --project=chromium tests/Playwright/doorloop-hele-formulier.spec.mjs --workers=1",
         "walkthrough:report": "playwright show-report test-results/playwright-report"
     },
     "devDependencies": {
-        "@playwright/test": "^1.63.0",
+        "@playwright/test": "^1.64.1",
         "@tailwindcss/typography": "^0.5.16",
         "@tailwindcss/vite": "^4.3.3",
         "axios": "^1.20.0",
-        "concurrently": "^10.0.5",
+        "concurrently": "^10.0.6",
         "json-logic-js": "^2.0.5",
         "laravel-vite-plugin": "^3.2.0",
         "leaflet": "^1.9.4",

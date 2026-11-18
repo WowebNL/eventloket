@@ -348,29 +348,15 @@ final class AanvraagOfMeldingStep
     }
 
     /**
-     * `MeldingTekst` (= "melding volstaat") verschijnt pas wanneer alle
-     * actieve scan-vragen positief beantwoord zijn. In het oude pad regelt
-     * FormFieldVisibility dat; in het nieuwe pad checken we expliciet of
-     * álle `reportQuestion_N` op 'Ja' staan voor de gemeente-config.
+     * `MeldingTekst` (= "a report suffices") appears once the scan reaches
+     * that conclusion. The conclusion does not belong to this step: it also
+     * decides which steps follow and which submission deadline applies, so
+     * it lives as the derived `isMelding` in FormDerivedState and covers
+     * both question systems there.
      */
     public static function meldingTekstHidden(FormState $state): bool
     {
-        if ($state->get('gemeenteVariabelen.use_new_report_questions') === true) {
-            $questions = $state->get('gemeenteVariabelen.report_questions');
-            if (! is_array($questions) || $questions === []) {
-                return true;
-            }
-            foreach ($questions as $index => $_question) {
-                $position = (int) $index + 1;
-                if ($state->get(sprintf('reportQuestion_%d', $position)) !== 'Ja') {
-                    return true;
-                }
-            }
-
-            return false; // alle vragen Ja → toon melding-tekst
-        }
-
-        return $state->isFieldHidden('MeldingTekst') !== false;
+        return $state->get('isMelding') !== true;
     }
 
     /**

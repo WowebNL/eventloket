@@ -14,20 +14,21 @@ use App\Models\Zaak;
 use Spatie\Activitylog\Models\Activity;
 
 /**
- * Bepaalt of een gebruiker een nieuwe versie van een document mag toevoegen.
+ * Decides whether a user may add a new version of a document.
  *
- * Een nieuwe versie mag alleen worden toegevoegd wanneer de eerste versie van
- * het document is aangemaakt door iemand binnen dezelfde groep als de huidige
- * gebruiker (organisatie, gemeente of adviesdienst). De maker van de eerste
- * versie wordt afgeleid uit de activity log ('created'-event met document_uuid).
+ * The document has to belong to the zaak the version is added through. A new
+ * version may then only be added when the first version of the document was
+ * created by someone in the same group as the current user (organisation,
+ * municipality or advisory). The creator of the first version is derived from
+ * the activity log (the 'created' event with the document_uuid).
  *
- * Of de gebruiker überhaupt documenten aan de zaak mag toevoegen wordt
- * elders bepaald (ZaakPolicy::uploadDocument); deze checker voegt daar de
- * per-document groepsregel aan toe.
+ * Whether the user may add documents to the zaak at all is decided elsewhere
+ * (ZaakPolicy::uploadDocument); this checker adds the per-document group rule
+ * on top of that.
  *
- * Twee documenten hebben geen groeps-eigenaar en mogen daarom alleen door de
- * platform-admin worden vervangen: de systeem-aanvraagformulier-PDF, en elk
- * document waarvan de maker niet uit de activity log te bepalen is.
+ * Two kinds of document have no group owner and may therefore only be replaced
+ * by the platform admin: the system aanvraagformulier PDF, and every document
+ * whose creator cannot be determined from the activity log.
  */
 class DocumentVersionAuthorizer
 {
@@ -39,6 +40,14 @@ class DocumentVersionAuthorizer
 
     public static function canAddVersion(User $user, Zaak $zaak, string $documentUuid): bool
     {
+        // A version is only ever added through a zaak, so the document has to
+        // belong to that zaak, for every role. The display set is used because
+        // this check also runs per row of the documents table, which keeps
+        // rendering when the documents API refuses one of the documents.
+        if (! $zaak->documentenForDisplay()->documenten->contains('uuid', $documentUuid)) {
+            return false;
+        }
+
         // The platform admin may always add a version, including for the system
         // aanvraagformulier and documents without a resolvable owner.
         if ($user->role === Role::Admin) {

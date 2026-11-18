@@ -217,7 +217,7 @@ class ZaakInfolist
             TextEntry::make('reference_data.risico_classificatie')
                 ->label(__('resources/zaak.columns.risico_classificatie.label'))
                 ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
-                ->visible(fn ($state) => ! empty($state)),
+                ->visible(fn (Zaak $record, $state) => $record->hasRisicoClassificatie() && ! empty($state)),
             TextEntry::make('municipality.name')
                 ->label(__('Ingediend bij gemeente')),
             TextEntry::make('reference_data.status_name')
@@ -320,6 +320,7 @@ class ZaakInfolist
                                 TextEntry::make('reference_data.risico_classificatie')
                                     ->label(__('resources/zaak.columns.risico_classificatie.label'))
                                     ->formatStateUsing(fn (?string $state) => RisicoClassificatie::label($state))
+                                    ->visible(fn (Zaak $record): bool => $record->hasRisicoClassificatie())
                                     ->suffix(function (Zaak $record) {
                                         if (! empty($record->reference_data->risico_toelichting)) {
                                             return new HtmlString(
@@ -672,7 +673,9 @@ class ZaakInfolist
                                     ->schema([
                                         Livewire::make(ZaakDocumentsTable::class, ['zaak' => $schema->model])->key('documents-table-'.($schema->model->id ?? 'new')),
                                     ])
-                                    ->visible(fn (Zaak $record) => $record->showsTab('bestanden')),
+                                    // Not showsTab() alone: with the tab off, advisories that
+                                    // may view any zaak can still get it read-only.
+                                    ->visible(fn (Zaak $record) => $record->documentAccessFor(auth()->user())->showsDocumentsTab()),
                                 Tab::make('Organisatievragen')
                                     ->label(__('municipality/resources/zaak.infolist.tabs.messages.label'))
                                     ->icon('heroicon-o-chat-bubble-left')

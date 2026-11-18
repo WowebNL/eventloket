@@ -5,6 +5,7 @@ namespace App\Livewire\Thread;
 use App\Enums\AdviceStatus;
 use App\Enums\Role;
 use App\Enums\ThreadType;
+use App\Exceptions\DocumentVersionRejectedException;
 use App\Filament\Shared\Resources\Threads\Actions\AssignAction;
 use App\Filament\Shared\Resources\Threads\Actions\AssignToSelfAction;
 use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
@@ -48,6 +49,14 @@ class MessageForm extends Component implements HasActions, HasSchemas
 
     public ?array $data = [];
 
+    /**
+     * The documents attached to the message being written. Only the attach
+     * action adds to this list, on the server; it is locked so a client cannot
+     * replace it before the message is stored.
+     *
+     * @var array<int, array{url: string, versie: int}>
+     */
+    #[Locked]
     public array $documents = [];
 
     protected $listeners = ['thread-updated' => '$refresh'];
@@ -198,11 +207,11 @@ class MessageForm extends Component implements HasActions, HasSchemas
                     ->schema(NewDocumentVersionAction::schema()),
 
             ])
-            ->action(function (array $data) {
+            ->action(function (array $data, Action $action) {
                 $this->authorize('post-message', $this->thread);
 
                 if ($data['type'] === 'new') {
-                    $document = UploadDocumentAction::uploadDocument($data, $this->thread->zaak);
+                    $document = UploadDocumentAction::uploadDocument($data, $this->thread->zaak, "mountedActions.{$action->getNestingIndex()}.data.file");
                     $this->documents[] = MessageDocument::make($document->url, (int) $document->versie)->toArray();
 
                     Notification::make()
@@ -218,7 +227,15 @@ class MessageForm extends Component implements HasActions, HasSchemas
                         403,
                     );
 
-                    NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
+                    try {
+                        NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak, "mountedActions.{$action->getNestingIndex()}.data.file");
+                    } catch (DocumentVersionRejectedException $e) {
+                        // Nothing is attached to the message when the version
+                        // was not stored.
+                        NewDocumentVersionAction::handleRejectedVersion($e);
+
+                        return;
+                    }
 
                     $this->thread->zaak->refresh(); // Need to refresh to re-initialize documenten
                     $document = $this->thread->zaak->documenten->firstWhere('uuid', $data['existing_document']);

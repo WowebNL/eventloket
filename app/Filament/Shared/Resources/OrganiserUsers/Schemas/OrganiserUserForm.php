@@ -4,6 +4,7 @@ namespace App\Filament\Shared\Resources\OrganiserUsers\Schemas;
 
 use App\Enums\OrganisationRole;
 use App\Filament\Shared\Pages\EditProfile;
+use App\Rules\UniqueUserEmail;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -21,7 +22,7 @@ class OrganiserUserForm
                     ->email()
                     ->required()
                     ->maxLength(255)
-                    ->unique('users', 'email'),
+                    ->rule(UniqueUserEmail::forField()),
                 TextInput::make('phone')
                     ->label(__('admin/resources/organisation.user.form.phone.label'))
                     ->maxLength(20),

@@ -9,6 +9,7 @@ use App\Models\AdvisoryInvite;
 use App\Models\MunicipalityInvite;
 use App\Models\OrganisationInvite;
 use App\Models\User;
+use App\Rules\UniqueUserEmail;
 use Filament\Auth\Events\Registered;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\TextInput;
@@ -145,7 +146,7 @@ abstract class AbstractAcceptInvite extends SimplePage implements HasSchemas
                     ->email()
                     ->required()
                     ->maxLength(255)
-                    ->unique('users'),
+                    ->rule(UniqueUserEmail::forField()),
                 TextInput::make('phone')
                     ->label(__('organiser/pages/auth/register.form.phone.label'))
                     ->required()
