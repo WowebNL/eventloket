@@ -38,9 +38,12 @@ export default defineConfig({
         baseURL: process.env.EF_BASE_URL || 'http://localhost',
         trace: 'on',
         screenshot: 'on',
-        video: 'retain-on-failure',
-        // Slow-mo bij zichtbare browser zodat je het kunt volgen. In headless
-        // CI-runs blijft dit 0 (snelheid = maximaal).
+        // Recording is opt-in through EF_VIDEO=on, which the `walkthrough:record`
+        // script sets. CI keeps retain-on-failure: with retries: 2 a run that
+        // records everything would triple the artifacts for no added insight.
+        video: (process.env.EF_VIDEO || '').toLowerCase() === 'on' ? 'on' : 'retain-on-failure',
+        // Slow motion so a recorded or visible run is watchable. Default 0, so
+        // CI stays at full speed.
         launchOptions: {
             slowMo: process.env.EF_SLOW_MO ? parseInt(process.env.EF_SLOW_MO, 10) : 0,
         },
