@@ -28,6 +28,7 @@ use App\Filament\Infolists\GeoJsonMapEntry;
 use App\Support\Maps\Basemap;
 use Dotswan\MapPicker\Fields\Map;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\View;
 
 /**
  * Read the tile layer configuration a map field will hand to Leaflet.
@@ -168,6 +169,33 @@ test('every map field in the event form goes through the basemap component', fun
         expect($config['tilesUrl'])->toBe(Basemap::tilesUrl(), "map field {$field->getName()} uses another tile source")
             ->and(trim((string) $config['attribution']))->not->toBe('', "map field {$field->getName()} renders without attribution");
     }
+});
+
+test('every map field renders through the application override of the map view', function () {
+    // The override adds what the upstream view lacks: committing drawn shapes
+    // right away, keeping several maps on one page apart, the address search
+    // and redrawing geometry that arrives from the server. A field that
+    // renders any other view loses all of that while still showing a map, and
+    // only a browser would notice.
+    $found = [];
+
+    foreach (EventFormSchema::steps() as $step) {
+        collectMapFields($step, $found);
+    }
+    collectMapFields(LocatieVanHetEvenement2Step::make(), $found);
+
+    expect($found)->not->toBeEmpty('no map fields were found, so this test proves nothing');
+
+    foreach ($found as $field) {
+        expect($field->getView())->toBe('map-picker::fields.osm-map-picker', "map field {$field->getName()} renders another view");
+    }
+
+    // The component itself, so map fields outside the event form, such as
+    // the one in the location form, are covered as well.
+    expect(BasemapMap::make('geometry')->getView())->toBe('map-picker::fields.osm-map-picker');
+
+    expect(realpath(View::getFinder()->find('map-picker::fields.osm-map-picker')))
+        ->toBe(realpath(resource_path('views/vendor/map-picker/fields/osm-map-picker.blade.php')));
 });
 
 test('no map field is built straight from the upstream component', function () {
