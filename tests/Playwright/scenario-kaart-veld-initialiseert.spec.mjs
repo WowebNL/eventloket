@@ -52,7 +52,7 @@ const scenarios = [
 ];
 
 for (const scenario of scenarios) {
-    test(`map: the ${scenario.naam} map initialises after its option is ticked`, async ({ page }) => {
+    test(`map: the ${scenario.naam} map initialises after its option is ticked`, { tag: '@smoke' }, async ({ page }) => {
         test.setTimeout(120_000);
         const fouten = verzamelFouten(page);
 
@@ -70,7 +70,7 @@ for (const scenario of scenarios) {
     });
 }
 
-test('map: a route read from an uploaded GPX file is drawn on the map', async ({ page }) => {
+test('map: a route read from an uploaded GPX file is drawn on the map', { tag: '@smoke' }, async ({ page }) => {
     test.setTimeout(120_000);
     const fouten = verzamelFouten(page);
 
