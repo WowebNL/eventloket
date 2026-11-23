@@ -40,6 +40,13 @@ enum AbonnementCheckStatus
      * abonnement alone until it is registered again.
      */
     case WebhookAuthMismatch;
+
+    /**
+     * {@see WebhookAuthMismatch} inside the renewal window: the renewal job
+     * will not rotate the token, so deliveries stop at its expiry unless the
+     * abonnement is registered again first.
+     */
+    case WebhookAuthMismatchExpiring;
     case Healthy;
 
     public function isOk(): bool
@@ -79,6 +86,7 @@ enum AbonnementCheckStatus
             self::AuthMismatch,
             self::TokenExpired,
             self::TokenNotUsable,
+            self::WebhookAuthMismatchExpiring,
         ], true);
     }
 
@@ -100,6 +108,7 @@ enum AbonnementCheckStatus
             self::TokenNotUsable => 'token_not_usable',
             self::TokenExpiringSoon => 'token_expiring_soon',
             self::WebhookAuthMismatch => 'webhook_auth_mismatch',
+            self::WebhookAuthMismatchExpiring => 'webhook_auth_mismatch_expiring',
             self::Healthy => 'healthy',
         };
     }

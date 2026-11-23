@@ -83,8 +83,15 @@ class AbonnementHealthCheck
 
         // A changed setting only takes effect on the next registration, and the
         // renewal job leaves such an abonnement alone, so it has to be reported.
+        // Inside the renewal window the mismatch gets its own, louder status:
+        // the token will not be renewed and stops working at its expiry.
         if (WebhookAuthType::configuredFor($connectionName) !== WebhookAuthType::ofAbonnement($local)) {
-            return new AbonnementCheckResult(AbonnementCheckStatus::WebhookAuthMismatch, expiresAt: $local->expires_at);
+            $expiring = $local->expires_at !== null && $local->expires_at->lte(now()->addDays(self::RENEWAL_WINDOW_DAYS));
+
+            return new AbonnementCheckResult(
+                $expiring ? AbonnementCheckStatus::WebhookAuthMismatchExpiring : AbonnementCheckStatus::WebhookAuthMismatch,
+                expiresAt: $local->expires_at,
+            );
         }
 
         if ($local->expires_at !== null) {
