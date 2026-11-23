@@ -7,6 +7,7 @@ use App\Jobs\Notificaties\RenewZgwAbonnementen;
 use App\Jobs\ProcessSyncGeometryOnMunicipality;
 use App\Jobs\SendAdviceReminders;
 use App\Models\Municipality;
+use App\Models\ZgwWebhookToken;
 use Illuminate\Support\Facades\Schedule;
 
 // Capture Horizon queue metrics so the dashboard charts populate
@@ -29,6 +30,9 @@ Schedule::command('zgw:prune-request-logs')->daily();
 
 // Rotate Open Notificaties webhook tokens before they expire
 Schedule::job(new RenewZgwAbonnementen)->daily();
+
+// Remove static webhook tokens that were revoked or expired weeks ago
+Schedule::command('model:prune', ['--model' => [ZgwWebhookToken::class]])->daily();
 
 // Verify that incoming notifications can still reach us, and report anything
 // that is not in order. Runs early in the morning so a fault that appeared

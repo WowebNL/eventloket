@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\ZgwWebhookIngressState;
+use App\Models\ZgwWebhookToken;
+use App\Services\Notificaties\StaticWebhookTokenIssuer;
 use App\Services\Notificaties\WebhookTokenIssuer;
 use Closure;
 use Illuminate\Http\Request;
@@ -78,9 +80,11 @@ class LogOpenNotificationRejection
      * fault the health check has to see.
      *
      * The token id is read from the bearer token to look it up among the issued
-     * tokens. The signature is not checked here, because this only decides what
+     * tokens: the jti of a Passport token, or the lookup of a static token. The
+     * signature or secret is not checked here, because this only decides what
      * to count; authentication happens in the middleware that produced the
-     * rejection. The credential itself is never logged or stored.
+     * rejection. A revoked static token keeps its lookup, so a refusal of it
+     * still counts. The credential itself is never logged or stored.
      *
      * Keeping score must never change the response: a failure to record is
      * logged, and the caller still gets the rejection it earned rather than a
@@ -105,6 +109,12 @@ class LogOpenNotificationRejection
 
         if (! is_string($bearer) || $bearer === '') {
             return false;
+        }
+
+        if (StaticWebhookTokenIssuer::looksLikeStaticToken($bearer)) {
+            $lookup = StaticWebhookTokenIssuer::lookupOf($bearer);
+
+            return $lookup !== null && ZgwWebhookToken::query()->where('lookup', $lookup)->exists();
         }
 
         $tokenId = WebhookTokenIssuer::tokenIdFromJwt($bearer);

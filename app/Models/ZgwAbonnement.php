@@ -16,14 +16,16 @@ use Illuminate\Support\Carbon;
  * An Open Notificaties abonnement registered against a single ZGW connection.
  *
  * The token the remote Notificaties API presents on our shared webhook is a
- * scoped Passport access token; {@see expires_at} drives the auto-renew job
- * that rotates it before it lapses.
+ * scoped Passport access token or, for {@see auth_type} "static", a short
+ * opaque token kept in {@see ZgwWebhookToken}; {@see expires_at} drives the
+ * auto-renew job that rotates it before it lapses.
  *
  * @property string $connection
  * @property int|null $municipality_id
  * @property string $notificaties_base_url
  * @property string $callback_url
  * @property string|null $abonnement_url
+ * @property string $auth_type
  * @property string|null $token_id
  * @property string|null $client_id
  * @property Carbon|null $expires_at
@@ -34,12 +36,23 @@ class ZgwAbonnement extends Model
     /** @use HasFactory<ZgwAbonnementFactory> */
     use HasFactory;
 
+    /**
+     * Matches the column default, so a row created in this request already
+     * reports its type.
+     *
+     * @var array<string, string>
+     */
+    protected $attributes = [
+        'auth_type' => 'passport',
+    ];
+
     protected $fillable = [
         'connection',
         'municipality_id',
         'notificaties_base_url',
         'callback_url',
         'abonnement_url',
+        'auth_type',
         'token_id',
         'client_id',
         'expires_at',

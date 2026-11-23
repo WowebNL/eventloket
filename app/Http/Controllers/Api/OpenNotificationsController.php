@@ -7,7 +7,6 @@ use App\Http\Middleware\IdentifyWebhookClient;
 use App\Http\Requests\Api\OpenNotificationRequest;
 use App\Jobs\ProcessOpenNotification;
 use App\Listeners\LogZgwRequest;
-use App\Models\ZgwAbonnement;
 use App\Models\ZgwRequestLog;
 use App\Models\ZgwWebhookIngressState;
 use App\Services\Zgw\ZgwConnectionResolver;
@@ -62,23 +61,16 @@ class OpenNotificationsController extends Controller
     }
 
     /**
-     * The connection the calling credential belongs to.
-     *
-     * Each connection's webhook token is minted for its own one-off Passport
-     * client, and the abonnement row records which. Looking the client up there
-     * is therefore the same question as "which connection is this", answered
-     * without trusting the caller. Null when the client matches no abonnement,
-     * which leaves the notification unattributed.
+     * The connection the calling credential belongs to, as established by
+     * {@see IdentifyWebhookClient} from the verified credential. Null when the
+     * credential matches no abonnement, which leaves the notification
+     * unattributed.
      */
     private function senderConnection(OpenNotificationRequest $request): ?string
     {
-        $clientId = $request->attributes->get(IdentifyWebhookClient::CLIENT_ID_ATTRIBUTE);
+        $connection = $request->attributes->get(IdentifyWebhookClient::CONNECTION_ATTRIBUTE);
 
-        if (! is_string($clientId) || $clientId === '') {
-            return null;
-        }
-
-        return ZgwAbonnement::query()->where('client_id', $clientId)->value('connection');
+        return is_string($connection) && $connection !== '' ? $connection : null;
     }
 
     /**

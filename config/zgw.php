@@ -99,6 +99,15 @@ return [
             // its own RSIN on the connection instead.
             'bronorganisatie_rsin' => env('OPENZAAK_BRONORGANISATIE_RSIN', '820151130'),
 
+            // Which credential the abonnement on this connection's Notificaties
+            // API carries in its `auth` field: "passport" (a scoped Passport
+            // access token, the default) or "static" (a short opaque token, for a
+            // Notificaties API that limits the length of that field). A
+            // per-municipality connection does not inherit this value: an empty
+            // column on its row means "passport". Any other value is refused when
+            // a token is issued. A change takes effect on the next registration.
+            'webhook_auth' => env('ZGW_WEBHOOK_AUTH', 'passport'),
+
         ],
 
     ],
@@ -110,5 +119,17 @@ return [
     | configurable so it can be tied to the organisation's logging policy.
     */
     'request_log_retention_days' => (int) env('ZGW_REQUEST_LOG_RETENTION_DAYS', 90),
+
+    /*
+    | Short ("static") webhook tokens. The lifetime matches the Passport webhook
+    | tokens but is its own setting, so a change to the API token lifetime does
+    | not silently change this one; it is capped at 366 days. The overlap is how
+    | long the previous token keeps working after a successful rotation, for
+    | deliveries already in flight; it is capped at 15 minutes.
+    */
+    'webhook' => [
+        'static_token_lifetime_days' => (int) env('ZGW_WEBHOOK_STATIC_TOKEN_LIFETIME_DAYS', 365),
+        'static_token_overlap_minutes' => (int) env('ZGW_WEBHOOK_STATIC_TOKEN_OVERLAP_MINUTES', 5),
+    ],
 
 ];

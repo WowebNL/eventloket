@@ -32,6 +32,14 @@ enum AbonnementCheckStatus
      */
     case TokenNotUsable;
     case TokenExpiringSoon;
+
+    /**
+     * The connection is set to another webhook credential type than the one the
+     * abonnement was registered with, or to a value that is not a known type.
+     * The registered credential keeps working, but the renewal job leaves the
+     * abonnement alone until it is registered again.
+     */
+    case WebhookAuthMismatch;
     case Healthy;
 
     public function isOk(): bool
@@ -47,6 +55,7 @@ enum AbonnementCheckStatus
             self::NotificatiesInstanceInUse,
             self::KanalenMismatch,
             self::TokenExpiringSoon,
+            self::WebhookAuthMismatch,
         ], true);
     }
 
@@ -90,6 +99,7 @@ enum AbonnementCheckStatus
             self::TokenExpired => 'token_expired',
             self::TokenNotUsable => 'token_not_usable',
             self::TokenExpiringSoon => 'token_expiring_soon',
+            self::WebhookAuthMismatch => 'webhook_auth_mismatch',
             self::Healthy => 'healthy',
         };
     }

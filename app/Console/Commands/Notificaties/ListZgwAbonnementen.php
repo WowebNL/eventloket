@@ -28,6 +28,14 @@ class ListZgwAbonnementen extends Command
         $rows = [];
         $failed = 0;
 
+        // The credential type is only known for abonnementen this application
+        // registered; the token itself is never shown.
+        /** @var array<string, string> $localTypes */
+        $localTypes = ZgwAbonnement::query()
+            ->whereNotNull('abonnement_url')
+            ->pluck('auth_type', 'abonnement_url')
+            ->all();
+
         foreach ($connectionNames as $connectionName) {
             $api = new NotificatiesApi($connectionName);
 
@@ -41,14 +49,17 @@ class ListZgwAbonnementen extends Command
 
             try {
                 foreach ($api->abonnementen() as $abonnement) {
+                    $url = is_string($abonnement['url'] ?? null) ? $abonnement['url'] : '';
+
                     $rows[] = [
                         'connection' => $connectionName,
-                        'url' => is_string($abonnement['url'] ?? null) ? $abonnement['url'] : '',
+                        'url' => $url,
                         'callbackUrl' => (string) ($abonnement['callbackUrl'] ?? ''),
                         'kanalen' => collect($abonnement['kanalen'] ?? [])
                             ->map(fn ($kanaal): string => is_array($kanaal) ? (string) ($kanaal['naam'] ?? '') : '')
                             ->filter()
                             ->implode(', '),
+                        'token' => $localTypes[$url] ?? '-',
                     ];
                 }
             } catch (Throwable $exception) {
@@ -61,7 +72,7 @@ class ListZgwAbonnementen extends Command
             $this->info('Geen abonnementen gevonden.');
         } else {
             $this->table(
-                ['Connectie', 'Abonnement-URL', 'Callback-URL', 'Kanalen'],
+                ['Connectie', 'Abonnement-URL', 'Callback-URL', 'Kanalen', 'Token'],
                 array_map(fn (array $row): array => array_values($row), $rows),
             );
         }
@@ -76,7 +87,7 @@ class ListZgwAbonnementen extends Command
     }
 
     /**
-     * @param  list<array{connection: string, url: string, callbackUrl: string, kanalen: string}>  $rows
+     * @param  list<array{connection: string, url: string, callbackUrl: string, kanalen: string, token: string}>  $rows
      */
     private function deleteAbonnement(string $deleteUrl, array $rows): int
     {

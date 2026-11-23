@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\OpenNotificationsController;
+use App\Http\Middleware\AnswerOpenNotificatiesTestNotification;
 use App\Http\Middleware\IdentifyWebhookClient;
 use App\Http\Middleware\LogOpenNotificationRejection;
 use App\Services\Notificaties\WebhookTokenIssuer;
@@ -28,5 +29,9 @@ Route::post('/open-notifications/listen', [OpenNotificationsController::class, '
         // without raising it there would turn every incoming notification into
         // a refusal.
         IdentifyWebhookClient::class.':'.WebhookTokenIssuer::SCOPE,
+        // Answers the test notification a Notificaties API sends when an
+        // abonnement is saved. Only reached by an authenticated caller, and it
+        // ends the request before validation and processing.
+        AnswerOpenNotificatiesTestNotification::class,
     ])
     ->name('api.open-notifications.listen');
