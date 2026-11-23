@@ -7,6 +7,7 @@ namespace App\Console\Commands\Notificaties;
 use App\Models\ZgwAbonnement;
 use App\Services\Notificaties\AbonnementRegistrar;
 use App\Services\Notificaties\NotificatiesApi;
+use App\Services\Notificaties\StaticWebhookTokenIssuer;
 use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Console\Command;
 use Throwable;
@@ -114,7 +115,15 @@ class ListZgwAbonnementen extends Command
             return Command::FAILURE;
         }
 
+        $localConnections = ZgwAbonnement::where('abonnement_url', $deleteUrl)->pluck('connection')->all();
         $removed = ZgwAbonnement::where('abonnement_url', $deleteUrl)->delete();
+
+        // A static token names its connection by itself, so unlike a Passport
+        // token it would keep authenticating as that connection after its
+        // abonnement is gone. Revoke it with the abonnement.
+        foreach ($localConnections as $localConnection) {
+            app(StaticWebhookTokenIssuer::class)->retireOthers($localConnection, null, withOverlap: false);
+        }
 
         $this->info('Abonnement verwijderd.'.($removed > 0 ? ' Lokale registratie ook opgeschoond.' : ''));
 
