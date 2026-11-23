@@ -2,6 +2,7 @@
 
 use App\Models\Application;
 use App\Models\ZgwAbonnement;
+use App\Services\Notificaties\AbonnementRegistrar;
 use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
@@ -84,6 +85,37 @@ test('retires the previous client when re-registering an existing abonnement', f
     expect(Client::find($previousClient->getKey()))->toBeNull()
         ->and((string) $abonnement->client_id)->not->toBe((string) $previousClient->getKey())
         ->and(Client::where('name', WebhookTokenIssuer::APPLICATION_NAME)->count())->toBe(1);
+});
+
+test('patches an existing abonnement with its channels and the new token', function () {
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
+        'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'token_id' => 'old-token',
+    ]);
+
+    // The stored abonnement still exists on the remote side, so it is patched.
+    Http::fake(['https://nc.example.com/api/v1/abonnement/abc' => Http::response([
+        'url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'callbackUrl' => 'https://eventloket.example.com/api/open-notifications/listen',
+        'kanalen' => array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => []], AbonnementRegistrar::KANALEN),
+    ], 200)]);
+
+    $this->artisan('app:register-zgw-abonnementen --connection=main')->assertSuccessful();
+
+    expect(ZgwAbonnement::where('connection', 'main')->first()->token_id)->toBe('tok-123');
+
+    // Open Notificaties replaces an abonnement's channels on every update, so
+    // a patch that leaves `kanalen` out would strip them all.
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://nc.example.com/api/v1/abonnement/abc'
+        && $request->method() === 'PATCH'
+        && $request['auth'] === 'Bearer '.$this->jwt
+        && (json_decode($request->body(), true)['kanalen'] ?? null) === array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => []], AbonnementRegistrar::KANALEN)
+        && substr_count($request->body(), '"filters":{}') === count(AbonnementRegistrar::KANALEN));
+
+    Http::assertNotSent(fn (Request $request) => $request->url() === 'https://nc.example.com/api/v1/abonnement'
+        && $request->method() === 'POST');
 });
 
 test('skips a connection without a notificaties url', function () {

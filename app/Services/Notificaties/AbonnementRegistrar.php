@@ -35,6 +35,23 @@ class AbonnementRegistrar
      */
     public const KANALEN = ['zaken', 'besluiten', 'documenten', 'zaaktypen'];
 
+    /**
+     * The `kanalen` payload for an abonnement, built from KANALEN.
+     *
+     * Every create and every PATCH of an abonnement must send this. Open
+     * Notificaties replaces all channels and filters of an abonnement on each
+     * update with the ones in the request, so a PATCH without `kanalen`
+     * (for instance one that only rotates the `auth` token) leaves the
+     * abonnement without channels, and no notification reaches the callback
+     * any more.
+     *
+     * @return list<array{naam: string, filters: object}>
+     */
+    public static function kanalenPayload(): array
+    {
+        return array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => (object) []], self::KANALEN);
+    }
+
     public function __construct(private readonly WebhookTokenIssuer $issuer) {}
 
     /**
@@ -195,13 +212,16 @@ class AbonnementRegistrar
         try {
             if (is_array($existing) && isset($existing['url'])) {
                 $abonnementUrl = (string) $existing['url'];
-                $api->patchAbonnement($abonnementUrl, ['auth' => 'Bearer '.$token->token]);
+                $api->patchAbonnement($abonnementUrl, [
+                    'auth' => 'Bearer '.$token->token,
+                    'kanalen' => self::kanalenPayload(),
+                ]);
                 $outcome = AbonnementRegistrationOutcome::Updated;
             } else {
                 $created = $api->createAbonnement([
                     'callbackUrl' => $callbackUrl,
                     'auth' => 'Bearer '.$token->token,
-                    'kanalen' => array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => (object) []], self::KANALEN),
+                    'kanalen' => self::kanalenPayload(),
                 ]);
                 $abonnementUrl = isset($created['url']) ? (string) $created['url'] : null;
                 $outcome = AbonnementRegistrationOutcome::Created;
