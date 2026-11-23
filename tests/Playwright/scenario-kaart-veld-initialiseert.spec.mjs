@@ -87,3 +87,55 @@ test('map: a route read from an uploaded GPX file is drawn on the map', { tag: '
     await expect(kaart.locator('path.leaflet-interactive').first()).toBeAttached({ timeout: 20_000 });
     expect(fouten, fouten.join('\n')).toEqual([]);
 });
+
+test('map: a newly drawn route is kept as drawn once the server has the state', { tag: '@smoke' }, async ({ page }) => {
+    test.setTimeout(120_000);
+    const fouten = verzamelFouten(page);
+
+    await naarLocatieStap(page);
+    await page.getByRole('checkbox', { name: /Op een route/i }).check();
+
+    const kaart = page.locator('[x-ref="map"]').first();
+    await expect(kaart).toHaveClass(/leaflet-container/, { timeout: 15_000 });
+    await expect.poll(() => kaart.evaluate((el) => Boolean(el.__leafletMap && el.__featureGroup)), { timeout: 10_000 }).toBe(true);
+
+    // Draw a line the way the drawing toolbar hands it over, from a view the
+    // line does not fill, so a redraw that fits the shapes would move the map.
+    const voor = await kaart.evaluate((el) => {
+        const map = el.__leafletMap;
+        map.setView([50.85, 5.69], 12, { animate: false });
+        const layer = window.L.polyline([[50.853, 5.690], [50.856, 5.694], [50.858, 5.697]]);
+        el.__drawnLayer = layer;
+        map.fire('pm:create', { layer, shape: 'Line' });
+
+        return { zoom: map.getZoom(), center: map.getCenter() };
+    });
+
+    // The map commits the drawn shape itself; wait until the server has it
+    // and its response has been applied.
+    await expect.poll(() => kaart.evaluate((el) => {
+        const wire = window.Livewire.find(el.closest('[wire\\:id]').getAttribute('wire:id'));
+        const state = wire.get('data.routesOpKaart');
+
+        return state && state.geojson ? state.geojson.features.length : 0;
+    }), { timeout: 15_000 }).toBe(1);
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(1_500);
+
+    const na = await kaart.evaluate((el) => {
+        const map = el.__leafletMap;
+
+        return {
+            zoom: map.getZoom(),
+            center: map.getCenter(),
+            drawnLayerKept: el.__featureGroup.hasLayer(el.__drawnLayer),
+            layerCount: el.__featureGroup.getLayers().length,
+        };
+    });
+
+    expect(na.drawnLayerKept, 'the drawn layer must not be replaced by a redraw').toBe(true);
+    expect(na.layerCount).toBe(1);
+    expect(na.zoom).toBe(voor.zoom);
+    expect(na.center).toEqual(voor.center);
+    expect(fouten, fouten.join('\n')).toEqual([]);
+});
