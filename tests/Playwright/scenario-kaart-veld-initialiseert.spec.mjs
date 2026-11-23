@@ -63,7 +63,7 @@ for (const scenario of scenarios) {
         await kaart.waitFor({ state: 'attached', timeout: 15_000 });
         await kaart.scrollIntoViewIfNeeded();
         await expect(kaart).toHaveClass(/leaflet-container/, { timeout: 10_000 });
-        await expect(page.getByRole('textbox', { name: 'Adres zoeken' }).first()).toBeVisible();
+        await expect(page.getByRole('combobox', { name: 'Adres zoeken' }).first()).toBeVisible();
 
         await page.waitForTimeout(1_000);
         expect(fouten, fouten.join('\n')).toEqual([]);

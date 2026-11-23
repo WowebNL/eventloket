@@ -18,11 +18,13 @@ use Dotswan\MapPicker\Fields\Map;
  * Use this class instead of the upstream field everywhere, so that no map
  * can be added that renders without a basemap and without its attribution.
  *
- * It also renders through its own view, which wraps the upstream Alpine
- * object. That wrapper adds two things the upstream one does not do: it
- * redraws the geometry when the state changes server side (the upstream field
- * reads the geometry once, while building the map), and it keeps the geometry
- * in the state when the map is moved. See the view for details.
+ * The field keeps the upstream view name on purpose. The application
+ * overrides that view in resources/views/vendor/map-picker, and the override
+ * carries the map behaviour this form depends on: drawn shapes are committed
+ * right away, several maps on one page stay apart, there is an address
+ * search, moving the map keeps the geometry, and geometry that reaches the
+ * state from the server (a route read from an uploaded file) is redrawn.
+ * Setting another view here would silently bypass all of that.
  */
 class BasemapMap extends Map
 {
@@ -30,8 +32,7 @@ class BasemapMap extends Map
     {
         parent::setUp();
 
-        $this->view('filament.forms.components.basemap-map')
-            ->tilesUrl(Basemap::tilesUrl())
+        $this->tilesUrl(Basemap::tilesUrl())
             ->extraTileControl(Basemap::leafletTileOptions());
     }
 }

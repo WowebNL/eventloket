@@ -556,6 +556,19 @@
                 map.off('pm:remove');
                 map.off('pm:update');
 
+                // Fingerprint of the geometry this map last drew or wrote,
+                // so the state watcher below can tell a change that came
+                // from the server apart from the echo of its own write.
+                const emptyGeoJson = { type: 'FeatureCollection', features: [] };
+                const fingerprint = (value) => {
+                    try {
+                        return JSON.stringify(value ?? null);
+                    } catch (e) {
+                        return null;
+                    }
+                };
+                let renderedGeoJson = fingerprint(initialGeoJson);
+
                 // Sync onze FeatureGroup naar _expectedStatePath.
                 const syncToState = async () => {
                     const features = [];
@@ -564,6 +577,7 @@
                             features.push(layer.toGeoJSON());
                         }
                     });
+                    renderedGeoJson = fingerprint({ type: 'FeatureCollection', features });
                     const current = $wire.get(_expectedStatePath) || {};
                     const center = map.getCenter();
                     // Map::make() heeft geen ->live(), dus Filament rendert
@@ -604,6 +618,32 @@
                         fg.removeLayer(e.layer);
                     }
                     syncToState();
+                });
+
+                // Geometry can also reach the state from the server, for
+                // example a route read from an uploaded GPX file. The shapes
+                // above are only read from the state once, so redraw them
+                // whenever the geometry in the state differs from what this
+                // map last drew or wrote itself.
+                $wire.watch(_expectedStatePath, () => {
+                    const state = $wire.get(_expectedStatePath) || {};
+                    const geojson = state.geojson || emptyGeoJson;
+                    const incoming = fingerprint(geojson);
+
+                    if (incoming === renderedGeoJson) {
+                        return;
+                    }
+
+                    renderedGeoJson = incoming;
+
+                    fg.clearLayers();
+                    fg.addData(geojson);
+
+                    if (hasSize() || !window.ResizeObserver) {
+                        fitToShapes();
+                    } else {
+                        fitPending = true;
+                    }
                 });
 
                 // Geen moveend-handler: lat/lng/zoom persistentie van de
