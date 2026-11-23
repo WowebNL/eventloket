@@ -15,8 +15,9 @@ use Throwable;
 
 /**
  * Rotates the scoped webhook token of every ZGW abonnement whose token is close
- * to expiring: issues a fresh token, PATCHes the abonnement's `auth` field via
- * the Notificaties API, updates storage and revokes the previous token.
+ * to expiring: issues a fresh token, PATCHes the abonnement's `auth` field (with
+ * its `kanalen`, see {@see AbonnementRegistrar::kanalenPayload()}) via the
+ * Notificaties API, updates storage and revokes the previous token.
  *
  * Each abonnement is renewed independently; a failure on one is logged and
  * reported but does not abort the rest, so the scheduled run is safe to retry.
@@ -90,7 +91,12 @@ class RenewZgwAbonnementen implements ShouldQueue
 
         try {
             (new NotificatiesApi($abonnement->connection))
-                ->patchAbonnement((string) $abonnement->abonnement_url, ['auth' => 'Bearer '.$token->token]);
+                ->patchAbonnement((string) $abonnement->abonnement_url, [
+                    'auth' => 'Bearer '.$token->token,
+                    // The update replaces the abonnement's channels, so they are
+                    // sent along with the new token to keep them in place.
+                    'kanalen' => AbonnementRegistrar::kanalenPayload(),
+                ]);
         } catch (Throwable $e) {
             // The patch failed, so the previous token still works. Retire the
             // credential we just minted so it does not leak, and let the caller

@@ -3,6 +3,7 @@
 use App\Jobs\Notificaties\RenewZgwAbonnementen;
 use App\Models\Application;
 use App\Models\ZgwAbonnement;
+use App\Services\Notificaties\AbonnementRegistrar;
 use App\Services\Notificaties\WebhookTokenIssuer;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\Client\RequestException;
@@ -83,6 +84,28 @@ test('renews an abonnement whose token expires within the window', function () {
     Http::assertSent(fn (Request $request) => $request->url() === 'https://nc.example.com/api/v1/abonnement/abc'
         && $request->method() === 'PATCH'
         && $request['auth'] === 'Bearer '.$this->jwt);
+});
+
+test('the renewal patch keeps every channel of the abonnement', function () {
+    Http::fake(renewStubs($this->jwt));
+
+    ZgwAbonnement::factory()->create([
+        'connection' => 'main',
+        'notificaties_base_url' => 'https://nc.example.com/api/v1/',
+        'abonnement_url' => 'https://nc.example.com/api/v1/abonnement/abc',
+        'token_id' => 'old-token',
+        'expires_at' => now()->addDays(5),
+    ]);
+
+    dispatch_sync(new RenewZgwAbonnementen);
+
+    // Open Notificaties replaces an abonnement's channels on every update, so
+    // a patch that leaves `kanalen` out would strip them all.
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://nc.example.com/api/v1/abonnement/abc'
+        && $request->method() === 'PATCH'
+        && $request['auth'] === 'Bearer '.$this->jwt
+        && (json_decode($request->body(), true)['kanalen'] ?? null) === array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => []], AbonnementRegistrar::KANALEN)
+        && substr_count($request->body(), '"filters":{}') === count(AbonnementRegistrar::KANALEN));
 });
 
 test('leaves an abonnement whose token expires far in the future untouched', function () {
