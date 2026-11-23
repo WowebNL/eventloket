@@ -26,8 +26,16 @@ class WebhookCredentials
     /**
      * Upper bound on how long one registration or renewal may hold the lock of
      * its connection, and how long another one waits for it.
+     *
+     * One registration makes several outgoing requests in sequence (reading the
+     * stored abonnement, listing the abonnementen, the POST or PATCH during which
+     * the remote side calls our webhook back, and for Passport the token grant),
+     * each with its own timeout of up to 30 seconds. The lock has to outlive all
+     * of them together, or a slow remote side lets a second rotation start while
+     * the first is still running; a lock that outlives a crashed process only
+     * delays the next attempt.
      */
-    private const LOCK_SECONDS = 120;
+    private const LOCK_SECONDS = 300;
 
     private const LOCK_WAIT_SECONDS = 15;
 
