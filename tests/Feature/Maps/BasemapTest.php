@@ -190,6 +190,10 @@ test('every map field renders through the application override of the map view',
         expect($field->getView())->toBe('map-picker::fields.osm-map-picker', "map field {$field->getName()} renders another view");
     }
 
+    // The component itself, so map fields outside the event form, such as
+    // the one in the location form, are covered as well.
+    expect(BasemapMap::make('geometry')->getView())->toBe('map-picker::fields.osm-map-picker');
+
     expect(realpath(View::getFinder()->find('map-picker::fields.osm-map-picker')))
         ->toBe(realpath(resource_path('views/vendor/map-picker/fields/osm-map-picker.blade.php')));
 });
