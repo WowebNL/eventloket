@@ -7,23 +7,13 @@ name: Browser smoke tests
 #
 # Only scenarios that need no external case system and no Sail container, and
 # that pass reliably against `php artisan serve`, are tagged @smoke.
+#
+# It runs on every pull request, without a paths filter, so it can be a
+# required check: a filtered workflow reports no status at all on a pull
+# request it skips, and a required check without a status blocks the merge.
 
 on:
   pull_request:
-    paths:
-      - 'app/**'
-      - 'resources/**'
-      - 'routes/**'
-      - 'config/**'
-      - 'database/**'
-      - 'public/**'
-      - 'composer.lock'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.js'
-      - 'playwright.config.mjs'
-      - 'tests/Playwright/**'
-      - '.github/workflows/browser.yml'
   workflow_dispatch:
 
 permissions:
