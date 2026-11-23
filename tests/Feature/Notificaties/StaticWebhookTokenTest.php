@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Exceptions\NotificatiesHealthException;
 use App\Jobs\Notificaties\RenewZgwAbonnementen;
 use App\Jobs\ProcessOpenNotification;
 use App\Models\Application;
@@ -22,6 +23,7 @@ use App\Services\Notificaties\WebhookTokenIssuer;
 use App\Services\Zgw\ZgwConnectionResolver;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -703,4 +705,91 @@ test('the overview shows the token type of each local abonnement', function () {
             ['Connectie', 'Abonnement-URL', 'Callback-URL', 'Kanalen', 'Token'],
             [['main', SWT_ABO_URL, 'https://eventloket.example.com/api/open-notifications/listen', implode(', ', AbonnementRegistrar::KANALEN), 'static']],
         );
+});
+
+// --- review round 2 ---------------------------------------------------------
+
+test('a registration that dies between the patch and activation is not reported healthy', function () {
+    ['token' => $old] = swtRegisteredStatic();
+
+    // The Notificaties API accepted the new token, but the process stops before
+    // it is given its full lifetime.
+    $this->partialMock(StaticWebhookTokenIssuer::class, function ($mock): void {
+        $mock->shouldReceive('activate')->andThrow(new RuntimeException('worker stopped'));
+    });
+    swtFakeOpenNotificaties(existing: swtRemoteAbonnement());
+
+    expect(fn () => app(AbonnementRegistrar::class)->register('main'))->toThrow(RuntimeException::class);
+
+    $this->travel(StaticWebhookTokenIssuer::PENDING_MINUTES + 1)->minutes();
+
+    Http::fake([SWT_ABO_URL => Http::response(swtRemoteAbonnement(), 200)]);
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)->toBe(AbonnementCheckStatus::TokenNotUsable);
+
+    // The previous token still works on our side; it is the token the remote
+    // side now presents that has lapsed.
+    Queue::fake();
+    $this->postJson(SWT_LISTEN, swtNotification(), ['Authorization' => 'Bearer '.$old])->assertStatus(200);
+});
+
+test('a type mismatch inside the renewal window gets its own status and names the expiry', function () {
+    Exceptions::fake();
+    ['abonnement' => $abonnement] = swtRegisteredStatic();
+    Http::fake([SWT_ABO_URL => Http::response(swtRemoteAbonnement(), 200)]);
+    config()->set('zgw.connections.main.webhook_auth', 'passport');
+
+    expect(app(AbonnementHealthCheck::class)->run('main')->status)->toBe(AbonnementCheckStatus::WebhookAuthMismatch);
+
+    $expiresAt = now()->addDays(3)->startOfMinute();
+    $abonnement->update(['expires_at' => $expiresAt]);
+    ZgwWebhookToken::query()->update(['expires_at' => $expiresAt]);
+
+    $result = app(AbonnementHealthCheck::class)->run('main');
+
+    expect($result->status)->toBe(AbonnementCheckStatus::WebhookAuthMismatchExpiring)
+        ->and($result->status->isDanger())->toBeTrue()
+        ->and($result->status->isWarning())->toBeFalse();
+
+    $this->artisan('app:check-zgw-notificaties')->assertFailed();
+
+    Exceptions::assertReported(
+        fn (NotificatiesHealthException $e): bool => str_contains($e->getMessage(), 'webhook_auth_mismatch_expiring')
+            && str_contains($e->getMessage(), $expiresAt->toDateString()),
+    );
+});
+
+test('deleting an abonnement through the overview revokes its static token', function () {
+    ['token' => $token] = swtRegisteredStatic();
+    Http::fake([
+        SWT_NC.'abonnement' => Http::response([
+            'count' => 1, 'next' => null, 'previous' => null,
+            'results' => [swtRemoteAbonnement()],
+        ], 200),
+        SWT_ABO_URL => Http::response([], 204),
+    ]);
+
+    $this->artisan('app:list-zgw-abonnementen', [
+        '--connection' => 'main',
+        '--delete' => SWT_ABO_URL,
+        '--force' => true,
+    ])->assertSuccessful();
+
+    $this->postJson(SWT_LISTEN, swtNotification(), ['Authorization' => 'Bearer '.$token])->assertStatus(401);
+});
+
+test('an issued token does not show its value when dumped or encoded', function () {
+    $token = app(StaticWebhookTokenIssuer::class)->issue('main');
+    $secret = explode('.', $token->token)[2];
+
+    expect(json_encode($token))->not->toContain($secret)
+        ->and(print_r($token, true))->not->toContain($secret)
+        ->and(fn () => serialize($token))->toThrow(LogicException::class);
+
+    ob_start();
+    var_dump($token);
+    $dumped = (string) ob_get_clean();
+
+    expect($dumped)->not->toContain($secret)
+        ->and($dumped)->toContain('[redacted]');
 });
