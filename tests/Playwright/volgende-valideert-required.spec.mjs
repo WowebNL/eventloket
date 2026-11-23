@@ -6,7 +6,7 @@ import { leegDraftDb } from './helpers/wizard-flow.mjs';
  * Klikken op "Volgende" zonder verplichte velden ingevuld te hebben moet
  * de stap-wissel blokkeren en rood-gemarkeerde fouten tonen.
  */
-test('volgende-knop blijft op dezelfde stap bij ontbrekende verplichte velden', async ({ page }) => {
+test('volgende-knop blijft op dezelfde stap bij ontbrekende verplichte velden', { tag: '@smoke' }, async ({ page }) => {
     // Schoon vertrekpunt zodat een oude draft de Contactgegevens-stap
     // niet pre-fillt — anders zou Volgende juist wél door mogen.
     await leegDraftDb();
