@@ -243,16 +243,22 @@ class AbonnementHealthCheck
     }
 
     /**
-     * The usable static token of a connection that lives longest, or null when
-     * it has none.
+     * The newest static token of a connection that has not been revoked, or
+     * null when it is missing or no longer usable.
+     *
+     * The newest one, not the one that lives longest, is what the Notificaties
+     * API presents: every new token is handed over in the request that created
+     * it, and a failed request revokes it. A process that stops after the
+     * Notificaties API accepted a new token but before that token got its full
+     * lifetime leaves the previous token alive, so judging on the longest-lived
+     * token would call the abonnement healthy while every delivery is refused.
      */
     private static function currentStaticToken(string $connectionName): ?ZgwWebhookToken
     {
         $token = ZgwWebhookToken::query()
             ->where('connection', $connectionName)
             ->whereNull('revoked_at')
-            ->whereNotNull('secret_hash')
-            ->orderByDesc('expires_at')
+            ->orderByDesc('id')
             ->first();
 
         return $token instanceof ZgwWebhookToken && $token->isUsable() ? $token : null;
