@@ -16,8 +16,9 @@ use Woweb\Zgw\Exceptions\InvalidConfigurationException;
 
 /**
  * Registers (or refreshes) the Open Notificaties abonnement for a single ZGW
- * connection: it issues a scoped webhook token, creates or patches the remote
- * abonnement on our shared callback, and persists the {@see ZgwAbonnement} row.
+ * connection: it issues a webhook credential of the type the connection is set
+ * to (see {@see WebhookAuthType}), creates or patches the remote abonnement on
+ * our shared callback, and persists the {@see ZgwAbonnement} row.
  *
  * Lives in one place so the registration command and the per-connection UI
  * action share the exact same path (and the health check can reuse KANALEN and
@@ -52,7 +53,7 @@ class AbonnementRegistrar
         return array_map(fn (string $naam): array => ['naam' => $naam, 'filters' => (object) []], self::KANALEN);
     }
 
-    public function __construct(private readonly WebhookTokenIssuer $issuer) {}
+    public function __construct(private readonly WebhookCredentials $credentials) {}
 
     /**
      * The connection names to act on: an explicit single connection, otherwise
@@ -174,7 +175,8 @@ class AbonnementRegistrar
 
     /**
      * Register or refresh the abonnement for the given connection. Returns what
-     * happened so callers can report it; throws on a real API failure.
+     * happened so callers can report it; throws on a real API failure, and on a
+     * webhook_auth setting that is not a known credential type.
      */
     public function register(string $connectionName, bool $dryRun = false): AbonnementRegistrationOutcome
     {
@@ -190,12 +192,23 @@ class AbonnementRegistrar
             return AbonnementRegistrationOutcome::RefusedSharedInstance;
         }
 
+        // Refuse an unknown setting before anything is issued, also on a dry run.
+        $type = WebhookAuthType::requireConfiguredFor($connectionName);
+
         $callbackUrl = $this->callbackUrl();
 
         if ($dryRun) {
             return AbonnementRegistrationOutcome::DryRun;
         }
 
+        return $this->credentials->withLock(
+            $connectionName,
+            fn (): AbonnementRegistrationOutcome => $this->registerWithCredential($api, $connectionName, $baseUrl, $callbackUrl, $type),
+        );
+    }
+
+    private function registerWithCredential(NotificatiesApi $api, string $connectionName, string $baseUrl, string $callbackUrl, WebhookAuthType $type): AbonnementRegistrationOutcome
+    {
         $previous = ZgwAbonnement::where('connection', $connectionName)->first();
         ['own' => $existing, 'claimed' => $claimed] = $this->locateRemote($api, $callbackUrl, $connectionName);
 
@@ -207,7 +220,9 @@ class AbonnementRegistrar
             return AbonnementRegistrationOutcome::RefusedSharedInstance;
         }
 
-        $token = $this->issuer->issue();
+        // The credential is valid before the request goes out: the Notificaties
+        // API calls our webhook with it while it handles the request.
+        $token = $this->credentials->issue($connectionName, $type);
 
         try {
             if (is_array($existing) && isset($existing['url'])) {
@@ -228,11 +243,14 @@ class AbonnementRegistrar
             }
         } catch (Throwable $e) {
             // Registration failed, so retire the credential we just minted rather
-            // than leaving an orphaned client_credentials client behind.
-            $this->issuer->revoke($token->tokenId, $token->clientId);
+            // than leaving an orphaned client_credentials client (or a pending
+            // static token) behind.
+            $this->credentials->discard($token);
 
-            throw $e;
+            throw WebhookCredentials::redact($e, $token);
         }
+
+        $this->credentials->activate($token);
 
         ZgwAbonnement::updateOrCreate(
             ['connection' => $connectionName],
@@ -241,6 +259,7 @@ class AbonnementRegistrar
                 'notificaties_base_url' => $baseUrl,
                 'callback_url' => $callbackUrl,
                 'abonnement_url' => $abonnementUrl,
+                'auth_type' => $token->type->value,
                 'token_id' => $token->tokenId,
                 'client_id' => $token->clientId,
                 'expires_at' => $token->expiresAt,
@@ -249,7 +268,7 @@ class AbonnementRegistrar
         );
 
         // The new credential is registered, so any previous one can be retired.
-        $this->issuer->revoke($previous?->token_id, $previous?->client_id);
+        $this->credentials->retirePrevious($connectionName, $previous?->token_id, $previous?->client_id, $token);
 
         return $outcome;
     }

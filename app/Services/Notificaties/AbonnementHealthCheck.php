@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Notificaties;
 
 use App\Models\ZgwAbonnement;
+use App\Models\ZgwWebhookToken;
 use Laravel\Passport\Token;
 use Throwable;
 use Woweb\Zgw\Exceptions\InvalidConfigurationException;
@@ -16,7 +17,8 @@ use Woweb\Zgw\Exceptions\InvalidConfigurationException;
  * abonnement with no other connection, the remote abonnement is still present
  * and carries this connection's own webhook token, it subscribes to every
  * expected channel, the credential it presents on our webhook still satisfies
- * that route, and the webhook token has not (nearly) lapsed.
+ * that route, the webhook token has not (nearly) lapsed, and the connection is
+ * still set to the credential type the abonnement was registered with.
  */
 class AbonnementHealthCheck
 {
@@ -75,11 +77,24 @@ class AbonnementHealthCheck
             return new AbonnementCheckResult(AbonnementCheckStatus::KanalenMismatch, missingKanalen: $missingKanalen);
         }
 
-        if ($local->expires_at !== null) {
-            if ($local->expires_at->isPast()) {
-                return new AbonnementCheckResult(AbonnementCheckStatus::TokenExpired, expiresAt: $local->expires_at);
-            }
+        if ($local->expires_at !== null && $local->expires_at->isPast()) {
+            return new AbonnementCheckResult(AbonnementCheckStatus::TokenExpired, expiresAt: $local->expires_at);
+        }
 
+        // A changed setting only takes effect on the next registration, and the
+        // renewal job leaves such an abonnement alone, so it has to be reported.
+        // Inside the renewal window the mismatch gets its own, louder status:
+        // the token will not be renewed and stops working at its expiry.
+        if (WebhookAuthType::configuredFor($connectionName) !== WebhookAuthType::ofAbonnement($local)) {
+            $expiring = $local->expires_at !== null && $local->expires_at->lte(now()->addDays(self::RENEWAL_WINDOW_DAYS));
+
+            return new AbonnementCheckResult(
+                $expiring ? AbonnementCheckStatus::WebhookAuthMismatchExpiring : AbonnementCheckStatus::WebhookAuthMismatch,
+                expiresAt: $local->expires_at,
+            );
+        }
+
+        if ($local->expires_at !== null) {
             if ($local->expires_at->lte(now()->addDays(self::RENEWAL_WINDOW_DAYS))) {
                 return new AbonnementCheckResult(AbonnementCheckStatus::TokenExpiringSoon, expiresAt: $local->expires_at);
             }
@@ -116,9 +131,18 @@ class AbonnementHealthCheck
      *
      * A record without a stored token id predates token tracking and cannot be
      * judged either way, so it is left alone instead of reported as a fault.
+     *
+     * A static abonnement is judged on its own token rows: it needs a live one
+     * with a stored hash, and an abonnement without an expiry never passes,
+     * because the renewal job skips rows without one and the token would then
+     * never be rotated.
      */
     private function tokenCannotPassTheWebhook(ZgwAbonnement $local): bool
     {
+        if (WebhookAuthType::ofAbonnement($local) === WebhookAuthType::Static) {
+            return $local->expires_at === null || self::currentStaticToken($local->connection) === null;
+        }
+
         if (! is_string($local->token_id) || $local->token_id === '') {
             return false;
         }
@@ -199,6 +223,23 @@ class AbonnementHealthCheck
     {
         $auth = $remote['auth'] ?? null;
 
+        // Decided before the JWT reading below, which a static token would not
+        // survive. Anything but one of this connection's own static tokens is
+        // foreign here.
+        if (WebhookAuthType::ofAbonnement($local) === WebhookAuthType::Static) {
+            if (! is_string($auth)) {
+                return false;
+            }
+
+            $lookup = StaticWebhookTokenIssuer::lookupOf((string) preg_replace('/^Bearer\s+/i', '', trim($auth)));
+
+            return $lookup === null || ! ZgwWebhookToken::query()
+                ->where('connection', $local->connection)
+                ->where('lookup', $lookup)
+                ->whereNull('revoked_at')
+                ->exists();
+        }
+
         if (! is_string($auth) || $local->token_id === null || $local->token_id === '') {
             return false;
         }
@@ -206,6 +247,28 @@ class AbonnementHealthCheck
         $tokenId = WebhookTokenIssuer::tokenIdFromJwt((string) preg_replace('/^Bearer\s+/i', '', trim($auth)));
 
         return $tokenId !== null && $tokenId !== $local->token_id;
+    }
+
+    /**
+     * The newest static token of a connection that has not been revoked, or
+     * null when it is missing or no longer usable.
+     *
+     * The newest one, not the one that lives longest, is what the Notificaties
+     * API presents: every new token is handed over in the request that created
+     * it, and a failed request revokes it. A process that stops after the
+     * Notificaties API accepted a new token but before that token got its full
+     * lifetime leaves the previous token alive, so judging on the longest-lived
+     * token would call the abonnement healthy while every delivery is refused.
+     */
+    private static function currentStaticToken(string $connectionName): ?ZgwWebhookToken
+    {
+        $token = ZgwWebhookToken::query()
+            ->where('connection', $connectionName)
+            ->whereNull('revoked_at')
+            ->orderByDesc('id')
+            ->first();
+
+        return $token instanceof ZgwWebhookToken && $token->isUsable() ? $token : null;
     }
 
     /**

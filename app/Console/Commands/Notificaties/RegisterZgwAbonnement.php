@@ -16,7 +16,7 @@ class RegisterZgwAbonnement extends Command
         {--connection= : Beperk tot één connectie (bijv. main of gemeente_5)}
         {--dry-run : Simuleer zonder iets aan te maken of op te slaan}';
 
-    protected $description = 'Registreert per ZGW-connectie een Open Notificaties abonnement op onze gedeelde webhook, met een scoped Passport-token in het auth-veld';
+    protected $description = 'Registreert per ZGW-connectie een Open Notificaties abonnement op onze gedeelde webhook, met in het auth-veld een scoped Passport-token of, bij webhook_auth=static, een kort token';
 
     public function handle(ZgwConnectionResolver $resolver, AbonnementRegistrar $registrar): int
     {

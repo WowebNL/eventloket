@@ -36,6 +36,7 @@ use Throwable;
  * @property string|null $besluiten_url
  * @property string|null $autorisaties_url
  * @property string|null $notificaties_url
+ * @property string|null $webhook_auth
  * @property string|null $version
  * @property string|null $client_id
  * @property string|null $client_secret
@@ -73,6 +74,7 @@ class MunicipalityZgwConnection extends Model
         'besluiten_url',
         'autorisaties_url',
         'notificaties_url',
+        'webhook_auth',
         'version',
         'client_id',
         'client_secret',
@@ -290,6 +292,15 @@ class MunicipalityZgwConnection extends Model
                 $config[$key] = $value;
             }
         }
+
+        // Never inherited from main: an empty column means "passport", so setting
+        // the main connection to another credential type leaves every
+        // municipality as it is. The value is not validated here, because a
+        // failure in this method makes the resolver fall back to main for all
+        // of this municipality's traffic; it is checked where a token is issued.
+        $config['webhook_auth'] = is_string($this->webhook_auth) && $this->webhook_auth !== ''
+            ? $this->webhook_auth
+            : 'passport';
 
         $this->assertSecretMeetsMinimumLength($config);
 

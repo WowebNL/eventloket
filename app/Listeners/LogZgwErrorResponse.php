@@ -34,7 +34,9 @@ use Throwable;
  *
  * Never logged: the raw body, `detail`, `instance`, any other body field, the request payload,
  * the query string or any submitted value. A body that is not a JSON object, or one without a
- * single whitelisted field, is reduced to its content type and byte length.
+ * single whitelisted field, is reduced to its content type and byte length. A credential the
+ * request carried in an `auth` field (an abonnement's webhook token) is also removed from the
+ * free-form text that is kept, in case the provider repeats it in a validation reason.
  *
  * This is observability only. The response is untouched and the exception the caller sees is
  * exactly the one it saw before.
@@ -62,6 +64,13 @@ final class LogZgwErrorResponse
      */
     private const INVALID_PARAM_FIELDS = ['name', 'code', 'reason'];
 
+    /**
+     * Values from the request that must not appear in the log line.
+     *
+     * @var list<string>
+     */
+    private array $redact = [];
+
     public function handle(ResponseReceived $event): void
     {
         try {
@@ -70,6 +79,8 @@ final class LogZgwErrorResponse
             if (! $response->failed()) {
                 return;
             }
+
+            $this->redact = $this->submittedCredentials($event);
 
             $url = $event->request->url();
 
@@ -190,7 +201,7 @@ final class LogZgwErrorResponse
     private function scalar(mixed $value): string|int|float|bool|null
     {
         if (is_string($value)) {
-            return Str::limit($value, self::MAX_VALUE_LENGTH);
+            return Str::limit($this->redacted($value), self::MAX_VALUE_LENGTH);
         }
 
         if (is_int($value) || is_float($value) || is_bool($value)) {
@@ -198,6 +209,30 @@ final class LogZgwErrorResponse
         }
 
         return null;
+    }
+
+    /**
+     * The `auth` value of the request, with and without its scheme.
+     *
+     * @return list<string>
+     */
+    private function submittedCredentials(ResponseReceived $event): array
+    {
+        $data = $event->request->data();
+        $auth = is_array($data) ? ($data['auth'] ?? null) : null;
+
+        if (! is_string($auth) || trim($auth) === '') {
+            return [];
+        }
+
+        $bare = (string) preg_replace('/^Bearer\s+/i', '', trim($auth));
+
+        return array_values(array_unique(array_filter([trim($auth), $bare], fn (string $value): bool => $value !== '')));
+    }
+
+    private function redacted(string $value): string
+    {
+        return $this->redact === [] ? $value : str_replace($this->redact, '[redacted]', $value);
     }
 
     /**

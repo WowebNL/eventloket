@@ -95,8 +95,14 @@ class CheckZgwNotificatiesHealth extends Command
             return 0;
         }
 
+        // The expiry goes into the message itself, not only into the context,
+        // so the error tracker sees a new issue that names the deadline.
+        $deadline = $result->status === AbonnementCheckStatus::WebhookAuthMismatchExpiring && $result->expiresAt !== null
+            ? " (token verloopt op {$result->expiresAt->format('Y-m-d H:i')} en wordt niet vernieuwd; registreer het abonnement opnieuw)"
+            : '';
+
         $this->reportProblem(
-            "[{$connectionName}] Open Notificaties-abonnement niet in orde: {$result->status->translationKey()}",
+            "[{$connectionName}] Open Notificaties-abonnement niet in orde: {$result->status->translationKey()}{$deadline}",
             array_filter([
                 'connection' => $connectionName,
                 'status' => $result->status->translationKey(),
