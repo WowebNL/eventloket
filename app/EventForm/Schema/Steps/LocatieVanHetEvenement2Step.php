@@ -154,7 +154,7 @@ final class LocatieVanHetEvenement2Step
                     ->hidden(Hidden::rule('locatieSOpKaart')),
                 Fieldset::make('Route')
                     ->schema([
-                        InfoText::info('infoGpx1', '<p>Je kunt de route op twee manieren opgeven: teken de route hieronder in op de kaart, of upload een GPX bestand van de route.</p><p>Upload je een GPX bestand, dan zetten we de route meteen op de kaart en hoef je zelf niets in te tekenen. Je kunt de ingeladen route daarna nog aanpassen op de kaart. De applicatie bepaalt aan de hand van de route op de kaart door welke gemeenten de route gaat, en informeert die gemeenten daarover.</p>'),
+                        InfoText::info('infoGpx1', '<p>Je kunt de route op twee manieren opgeven: teken de route hieronder in op de kaart, of upload een GPX bestand van de route.</p><p>Upload je een GPX bestand, dan zetten we de route meteen op de kaart en hoef je zelf niets in te tekenen. Je kunt de ingeladen route daarna nog aanpassen op de kaart, tenzij de route te veel punten heeft. Pas de route dan aan in je routeprogramma en upload het GPX bestand opnieuw. De applicatie bepaalt aan de hand van de route op de kaart door welke gemeenten de route gaat, en informeert die gemeenten daarover.</p>'),
                         Repeater::make('routesOpKaart')
                             ->label('Route op kaart')
                             ->addActionLabel('Nog een route toevoegen')
@@ -182,7 +182,7 @@ final class LocatieVanHetEvenement2Step
                             ]),
                         EventloketFileUpload::make('gpxBestandVanDeRoute', $organisation)
                             ->label('GPX bestand van de route')
-                            ->helperText('De route uit het bestand komt op de kaart hierboven te staan en kan daar nog aangepast worden.')
+                            ->helperText('De route uit het bestand komt op de kaart hierboven te staan en kan daar nog aangepast worden, tenzij de route te veel punten heeft. Pas de route dan aan in je routeprogramma en upload het bestand opnieuw.')
                             ->live()
                             ->afterStateUpdated(fn (Set $set, mixed $state, $livewire) => self::importGpxRoute($set, $state, $livewire)),
                         TextInput::make('naamVanDeRoute')
@@ -398,7 +398,7 @@ final class LocatieVanHetEvenement2Step
 
         Notification::make()
             ->title('Route op de kaart gezet')
-            ->body('De route uit het GPX bestand staat nu op de kaart en vervangt wat daar stond. U kunt de route op de kaart nog aanpassen.')
+            ->body('De route uit het GPX bestand staat nu op de kaart en vervangt wat daar stond. U kunt de route op de kaart nog aanpassen, tenzij de route te veel punten heeft. Pas de route dan aan in uw routeprogramma en upload het bestand opnieuw.')
             ->success()
             ->send();
     }

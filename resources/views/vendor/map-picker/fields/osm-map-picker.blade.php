@@ -305,6 +305,7 @@
                         </ol>
                         <p>Heeft uw evenement meerdere routes (bijv. een heen- en een terugweg)? Herhaal dan stap 2 t/m 5 voor elke route.</p>
                         <p>Een route verwijderen: klik op het <strong>gum-icoontje</strong> in de werkbalk en klik daarna op de route die u wilt verwijderen.</p>
+                        <p>Heeft een route te veel punten, bijvoorbeeld uit een GPX bestand, dan kunt u die route niet op de kaart aanpassen, wel verwijderen. Pas de route dan aan in uw routeprogramma en upload het GPX bestand opnieuw.</p>
                         <p class="rounded-lg bg-amber-50 dark:bg-amber-900/30 px-4 py-3 text-amber-700 dark:text-amber-300 font-medium">
                             Let op: op deze kaart kunt u alleen routes (lijnen) intekenen. Vlakken en andere vormen zijn hier niet toegestaan.
                         </p>
@@ -363,6 +364,11 @@
         .leaflet-container .leaflet-tooltip-pane { z-index: 650 !important; }
         .leaflet-container .leaflet-popup-pane { z-index: 700 !important; }
     </style>
+    @php
+        // Above this many vertices in total the shapes on this map are drawn
+        // but not made editable, see maps.editing.max_points.
+        $maxEditablePoints = (int) config('maps.editing.max_points');
+    @endphp
     <div
             wire:key="osm-map-picker-{{ $getStatePath() }}"
             x-data="mapPicker($wire, {{ $getMapConfig() }})"
@@ -398,6 +404,51 @@
                 }
             };
             window.addEventListener('map-fly-to', flyToHandler);
+
+            // Vertex editing puts a marker on every vertex and between every
+            // pair of them, and turning it on costs more than linear time in
+            // the number of vertices. A long route (for example read from a
+            // GPX file) would hang the tab, so above this many vertices in
+            // total the shapes on this map are drawn but not made editable.
+            const _maxEditablePoints = {{ $maxEditablePoints }};
+            const countPositions = (coordinates) => {
+                if (!Array.isArray(coordinates)) return 0;
+                if (typeof coordinates[0] === 'number') return 1;
+                let count = 0;
+                for (const part of coordinates) {
+                    count += countPositions(part);
+                }
+
+                return count;
+            };
+            const countGeometryVertices = (geometry) => {
+                if (!geometry) return 0;
+                if (geometry.type === 'GeometryCollection') {
+                    let count = 0;
+                    for (const part of (geometry.geometries || [])) {
+                        count += countGeometryVertices(part);
+                    }
+
+                    return count;
+                }
+
+                return countPositions(geometry.coordinates);
+            };
+            // Vertices of a FeatureCollection, a Feature or a bare geometry.
+            const countVertices = (geojson) => {
+                if (!geojson) return 0;
+                if (Array.isArray(geojson.features)) {
+                    let count = 0;
+                    for (const feature of geojson.features) {
+                        count += countGeometryVertices(feature && feature.geometry);
+                    }
+
+                    return count;
+                }
+
+                return countGeometryVertices(geojson.type === 'Feature' ? geojson.geometry : geojson);
+            };
+            const exceedsEditCap = (geojson) => countVertices(geojson) > _maxEditablePoints;
 
             do {
                 await (new Promise(resolve => setTimeout(resolve, 100)));
@@ -439,6 +490,18 @@
             _self.updateGeoJson = () => {};
             _self.removeMap = () => {};
 
+            // attach() draws the shapes from the state itself and, on an
+            // editable map, turns on vertex editing for each of them. That
+            // happens before the shapes are replaced below, so for a shape
+            // above the vertex cap it would already hang the tab. Hand it no
+            // shapes in that case; the code below draws them without editing.
+            const _origGetGeoJson = _self.getGeoJson;
+            _self.getGeoJson = function () {
+                const geojson = _origGetGeoJson.call(this);
+
+                return exceedsEditCap(geojson) ? null : geojson;
+            };
+
             attach($refs.map);
 
             // FIX 2: vervang de door dotswan geladen (mogelijk verkeerde)
@@ -464,6 +527,42 @@
                 const state = $wire.get(_expectedStatePath) || {};
                 const initialGeoJson = state.geojson || { type: 'FeatureCollection', features: [] };
 
+                // Whether the shapes on this map are above the vertex cap.
+                // Set before shapes are (re)drawn, so onEachFeature can read it.
+                let overEditCap = exceedsEditCap(initialGeoJson);
+
+                // Geoman checks these options on each layer before its edit,
+                // drag, rotate or cut mode takes the layer in, and a direct
+                // pm.enable() turns itself off without allowEditing. Removal
+                // (allowRemoval) stays on, so a shape above the cap can still
+                // be erased. snapIgnore keeps a long shape out of the snap
+                // list while another shape is drawn.
+                const lockedPmOptions = { allowEditing: false, draggable: false, allowRotation: false, allowCutting: false };
+                const lockLayer = (layer) => {
+                    if (!layer.pm || layer._editCapSaved) return;
+                    const pmOptions = {};
+                    for (const key of Object.keys(lockedPmOptions)) {
+                        pmOptions[key] = layer.pm.options[key];
+                    }
+                    layer._editCapSaved = { pmOptions, snapIgnore: layer.options.snapIgnore };
+                    if (layer.pm.enabled && layer.pm.enabled()) {
+                        layer.pm.disable();
+                    }
+                    layer.pm.setOptions(lockedPmOptions);
+                    layer.options.snapIgnore = true;
+                };
+                const unlockLayer = (layer) => {
+                    const saved = layer._editCapSaved;
+                    if (!saved) return;
+                    layer.pm.setOptions(saved.pmOptions);
+                    if (saved.snapIgnore === undefined) {
+                        delete layer.options.snapIgnore;
+                    } else {
+                        layer.options.snapIgnore = saved.snapIgnore;
+                    }
+                    delete layer._editCapSaved;
+                };
+
                 // Lokale FeatureGroup voor DEZE kaart. Geen jacht op
                 // _self.drawItems — die is gedeeld en niet betrouwbaar.
                 const fg = window.L.geoJSON(initialGeoJson, {
@@ -474,12 +573,29 @@
                         return { color: '#3388ff', weight: 3 };
                     },
                     onEachFeature: (feature, layer) => {
+                        if (overEditCap) {
+                            // Locked before the layer is added, so a toolbar
+                            // mode that is already on never takes it in.
+                            lockLayer(layer);
+
+                            return;
+                        }
                         if (layer.pm) {
                             layer.pm.enable({ allowSelfIntersection: false });
                         }
                     }
                 }).addTo(map);
                 mapEl.__featureGroup = fg;
+
+                // Keep the shapes on this map out of vertex editing while they
+                // are above the cap, and say so under the map.
+                const applyEditCap = () => {
+                    fg.eachLayer(overEditCap ? lockLayer : unlockLayer);
+                    if ($refs.editCapMessage) {
+                        $refs.editCapMessage.hidden = !overEditCap;
+                    }
+                };
+                applyEditCap();
 
                 // The map can be created while it has no size, for example
                 // when a prefilled draft opens on an earlier wizard step and
@@ -608,7 +724,14 @@
                         _self.drawItems.removeLayer(e.layer);
                     }
                     fg.addLayer(e.layer);
-                    if (e.layer.pm) {
+                    // A shape drawn by hand can take the map over the cap as
+                    // well; applyEditCap() then locks the new shape too.
+                    if (!overEditCap && exceedsEditCap(fg.toGeoJSON())) {
+                        overEditCap = true;
+                    }
+                    if (overEditCap) {
+                        applyEditCap();
+                    } else if (e.layer.pm) {
                         e.layer.pm.enable({ allowSelfIntersection: false });
                     }
                     syncToState();
@@ -621,6 +744,21 @@
                 map.on('pm:remove', (e) => {
                     if (e.layer && fg.hasLayer(e.layer)) {
                         fg.removeLayer(e.layer);
+                    }
+                    // Removing a shape can bring the map back under the cap:
+                    // unlock what is left and hide the message. With the edit
+                    // mode of the toolbar on, put those shapes in it as Geoman
+                    // would have done.
+                    if (overEditCap && !exceedsEditCap(fg.toGeoJSON())) {
+                        overEditCap = false;
+                        applyEditCap();
+                        if (map.pm.globalEditModeEnabled()) {
+                            fg.eachLayer((layer) => {
+                                if (layer.pm) {
+                                    layer.pm.enable({ allowSelfIntersection: false });
+                                }
+                            });
+                        }
                     }
                     syncToState();
                 });
@@ -641,8 +779,12 @@
 
                     renderedGeoJson = incoming;
 
+                    // A new shape can cross the cap either way, so decide
+                    // again before drawing it.
+                    overEditCap = exceedsEditCap(geojson);
                     fg.clearLayers();
                     fg.addData(geojson);
+                    applyEditCap();
 
                     if (hasSize() || !window.ResizeObserver) {
                         fitToShapes();
@@ -677,6 +819,19 @@
             x-ref="map"
             class="w-full" style="min-height: 30vh; {{ $getExtraStyle() }}">
         </div>
+        <p
+            x-ref="editCapMessage"
+            hidden
+            role="status"
+            data-map-edit-cap-message
+            class="mt-2 rounded-lg bg-amber-50 dark:bg-amber-900/30 px-4 py-3 text-sm text-amber-700 dark:text-amber-300"
+        >
+            @if($isRouteMap)
+                Deze route heeft te veel punten om op de kaart aan te passen. Pas de route aan in je routeprogramma en upload het GPX-bestand opnieuw.
+            @else
+                Deze vorm heeft te veel punten om op de kaart aan te passen.
+            @endif
+        </p>
         <input type="text" id="{{ $getStatePath() }}_fmrest" style="display:none"/>
     </div>
 </x-filament-forms::field-wrapper>

@@ -119,4 +119,18 @@ return [
         ],
     ],
 
+    'editing' => [
+
+        /*
+         * Most vertices a map field may hold, summed over all its shapes, for
+         * those shapes to stay editable on the map. Vertex editing puts a
+         * marker on every vertex and between every pair of them, and the cost
+         * of turning it on grows faster than the number of vertices, so a long
+         * route read from a GPX file can hang the browser tab. Above this
+         * count the shapes are still drawn but cannot be edited on the map;
+         * the field says so and points to replacing the shape instead.
+         */
+        'max_points' => 500,
+    ],
+
 ];

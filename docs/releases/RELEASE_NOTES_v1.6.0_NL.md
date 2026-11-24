@@ -73,7 +73,7 @@ Gemeenten waarvan de meldingen via een gedeelde Notificaties-omgeving binnenkome
 
 **Voor wie:** Organisatoren
 
-Bij de vraag naar de route kun je een GPX-bestand uploaden. De route verschijnt meteen op de kaart en blijft daar te bewerken; je hoeft hem niet meer na te tekenen. Eventloket bepaalt met die route ook door welke gemeenten het evenement gaat, net als bij een getekende route.
+Bij de vraag naar de route kun je een GPX-bestand uploaden. De route verschijnt meteen op de kaart en je hoeft hem niet meer na te tekenen. Op de kaart kun je de route daarna nog aanpassen, tenzij hij te veel punten heeft (meer dan 500). Pas zo'n route aan in je routeprogramma en upload het bestand opnieuw. Verwijderen van de kaart kan altijd, ook bij een lange route. Eventloket bepaalt met die route ook door welke gemeenten het evenement gaat, net als bij een getekende route.
 
 ### Indieningstermijn voor een melding
 
