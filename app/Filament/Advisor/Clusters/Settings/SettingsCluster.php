@@ -28,12 +28,13 @@ class SettingsCluster extends Cluster
 
     public static function canAccess(): bool
     {
-        /** @var Advisory $tenant */
+        // Deny instead of failing when there is no current advisory or the
+        // signed-in user is not an advisor.
         $tenant = Filament::getTenant();
-
-        /** @var AdvisorUser $user */
         $user = auth()->user();
 
-        return $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
+        return $tenant instanceof Advisory
+            && $user instanceof AdvisorUser
+            && $user->canAccessAdvisory($tenant->id, as: AdvisoryRole::Admin);
     }
 }

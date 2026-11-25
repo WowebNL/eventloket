@@ -207,11 +207,11 @@ class MessageForm extends Component implements HasActions, HasSchemas
                     ->schema(NewDocumentVersionAction::schema()),
 
             ])
-            ->action(function (array $data) {
+            ->action(function (array $data, Action $action) {
                 $this->authorize('post-message', $this->thread);
 
                 if ($data['type'] === 'new') {
-                    $document = UploadDocumentAction::uploadDocument($data, $this->thread->zaak);
+                    $document = UploadDocumentAction::uploadDocument($data, $this->thread->zaak, "mountedActions.{$action->getNestingIndex()}.data.file");
                     $this->documents[] = MessageDocument::make($document->url, (int) $document->versie)->toArray();
 
                     Notification::make()
@@ -228,7 +228,7 @@ class MessageForm extends Component implements HasActions, HasSchemas
                     );
 
                     try {
-                        NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak);
+                        NewDocumentVersionAction::createNewDocumentVersion($data['existing_document'], $data, $this->thread->zaak, "mountedActions.{$action->getNestingIndex()}.data.file");
                     } catch (DocumentVersionRejectedException $e) {
                         // Nothing is attached to the message when the version
                         // was not stored.

@@ -3,11 +3,17 @@
 namespace App\Support\Uploads;
 
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\Mime\MimeTypes;
 
 final class DocumentUploadType
 {
+    /**
+     * The directory the document upload fields store their files in.
+     */
+    public const STORED_UPLOAD_DIRECTORY = 'documents';
+
     /**
      * MIME types that should never be accepted as document uploads.
      * This is intentionally conservative and focuses on common executable/script formats.
@@ -215,6 +221,41 @@ final class DocumentUploadType
     public static function fileUploadRule(): DocumentUploadRule
     {
         return new DocumentUploadRule;
+    }
+
+    /**
+     * Whether the value names a file stored by a document upload field: a
+     * string path inside the upload directory that does not climb out of it.
+     */
+    public static function isStoredUploadPath(mixed $path): bool
+    {
+        return is_string($path)
+            && str_starts_with($path, self::STORED_UPLOAD_DIRECTORY.'/')
+            && ! str_contains($path, '..');
+    }
+
+    /**
+     * The stored upload paths from a submitted upload field, or a validation
+     * error on that field when it holds no path or any value that is not a
+     * stored upload. Nothing may be read, sent or deleted for such a value.
+     *
+     * @param  array<array-key, mixed>  $paths
+     * @return array<int, string>
+     *
+     * @throws ValidationException
+     */
+    public static function ensureStoredUploadPaths(array $paths, string $errorKey): array
+    {
+        $paths = array_values($paths);
+        $invalid = array_filter($paths, fn (mixed $path): bool => ! self::isStoredUploadPath($path));
+
+        if ($paths === [] || $invalid !== []) {
+            throw ValidationException::withMessages([
+                $errorKey => __('validation.uploaded', ['attribute' => __('File')]),
+            ]);
+        }
+
+        return $paths;
     }
 
     /**

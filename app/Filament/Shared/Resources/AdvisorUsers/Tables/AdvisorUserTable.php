@@ -38,6 +38,9 @@ class AdvisorUserTable
                     ->label(__('resources/advisor_user.columns.role.label'))
                     ->options(AdvisoryRole::class)
                     ->selectablePlaceholder(false)
+                    // The last admin cannot be demoted, for the same reason they cannot be detached.
+                    // Filament also refuses a state update for a disabled column on the server.
+                    ->disabled(fn (AdvisorUser $record): bool => self::isLastAdminOf($record, $advisory))
                     /** @phpstan-ignore-next-line */
                     ->getStateUsing(fn (AdvisorUser $record) => $record->advisories()->wherePivot('advisory_id', $advisory->id)->first()?->pivot->role)
                     ->updateStateUsing(function (AdvisorUser $record, string $state) use ($advisory): void {
@@ -65,7 +68,7 @@ class AdvisorUserTable
                 RestoreAction::make(),
                 EditAction::make(),
                 DetachAction::make()
-                    ->visible(fn (AdvisorUser $record) => self::canBeDetached($record))
+                    ->visible(fn (AdvisorUser $record) => self::getDetachRestriction($record, $advisory) === null)
                     // This table is also used on a plain resource list page (advisor panel), where the
                     // table has no relationship and Filament's default detach handler would fail on
                     // a null relationship. Detaching from the advisory the table was configured with
@@ -78,21 +81,27 @@ class AdvisorUserTable
                     DetachBulkAction::make()
                         ->using(function (DetachBulkAction $action, EloquentCollection|Collection|LazyCollection $records) use ($advisory): void {
                             $detachableKeys = [];
+                            $detachedAdminCount = 0;
 
                             foreach ($records as $record) {
                                 /** @var AdvisorUser $record */
-                                if (self::canBeDetached($record)) {
+                                $restriction = self::getDetachRestriction($record, $advisory, $detachedAdminCount);
+
+                                if ($restriction === null) {
                                     $detachableKeys[] = $record->getKey();
+
+                                    if (self::isAdminOf($record, $advisory)) {
+                                        $detachedAdminCount++;
+                                    }
 
                                     continue;
                                 }
 
-                                // Same guard as the single action: a user may never be detached from
-                                // their last advisory. Skip those records instead of failing the whole
-                                // batch, and let Filament report how many were skipped.
+                                // Same guards as the single action. Skip those records instead of
+                                // failing the whole batch, and let Filament report how many were skipped.
                                 $action->reportBulkProcessingFailure(
-                                    'last_advisory',
-                                    fn (int $count): string => trans_choice('resources/advisor_user.actions.detach.skipped_last_advisory', $count),
+                                    $restriction,
+                                    fn (int $count): string => trans_choice("resources/advisor_user.actions.detach.skipped_{$restriction}", $count),
                                 );
                             }
 
@@ -105,16 +114,50 @@ class AdvisorUserTable
                         ->failureNotificationTitle(fn (int $successCount): string => $successCount > 0
                             ? __('resources/advisor_user.actions.detach.notifications.partially_detached.title')
                             : __('resources/advisor_user.actions.detach.notifications.none_detached.title')),
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        // Authorize every selected record against the same policy as the single
+                        // delete action, and never include the acting user, which that action hides.
+                        ->authorizeIndividualRecords(function (AdvisorUser $record): bool {
+                            $user = auth()->user();
+
+                            return $user !== null && $record->isNot($user) && $user->can('delete', $record);
+                        }),
                 ]),
             ]);
     }
 
     /**
-     * A user may only be detached from an advisory while they still belong to another one.
+     * Returns why a user may not be detached from the advisory, or null when they may.
+     *
+     * A user may not detach themselves, may only be detached while they still belong to
+     * another advisory, and the last admin of an advisory may not be detached. The bulk
+     * action passes the number of admins it already detaches, so a single batch cannot
+     * remove every admin either.
      */
-    private static function canBeDetached(AdvisorUser $record): bool
+    private static function getDetachRestriction(AdvisorUser $record, Advisory $advisory, int $detachedAdminCount = 0): ?string
     {
-        return $record->advisories()->count() > 1;
+        if ($record->is(auth()->user())) {
+            return 'self';
+        }
+
+        if ($record->advisories()->count() <= 1) {
+            return 'last_advisory';
+        }
+
+        if (self::isAdminOf($record, $advisory) && $advisory->adminUsers()->count() - $detachedAdminCount <= 1) {
+            return 'last_admin';
+        }
+
+        return null;
+    }
+
+    private static function isAdminOf(AdvisorUser $record, Advisory $advisory): bool
+    {
+        return $record->canAccessAdvisory($advisory->id, as: AdvisoryRole::Admin);
+    }
+
+    private static function isLastAdminOf(AdvisorUser $record, Advisory $advisory): bool
+    {
+        return self::isAdminOf($record, $advisory) && $advisory->adminUsers()->count() <= 1;
     }
 }

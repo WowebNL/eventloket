@@ -6,6 +6,7 @@ use App\Models\Advisory;
 use App\Models\Municipality;
 use App\Models\User;
 use App\Policies\AdvisorUserPolicy;
+use Filament\Facades\Filament;
 
 beforeEach(function () {
     $this->policy = new AdvisorUserPolicy;
@@ -18,12 +19,35 @@ describe('viewAny', function () {
         expect($this->policy->viewAny($admin))->toBeTrue();
     });
 
-    it('allows advisory admin to view any advisor users', function () {
+    it('allows advisory admin to view any advisor users of the current advisory', function () {
+        $advisoryAdmin = User::factory()->create(['role' => Role::Advisor]);
+        $advisory = Advisory::factory()->create();
+        $advisoryAdmin->advisories()->attach($advisory, ['role' => AdvisoryRole::Admin]);
+        $this->actingAs($advisoryAdmin);
+        Filament::setTenant($advisory);
+
+        expect($this->policy->viewAny($advisoryAdmin))->toBeTrue();
+    });
+
+    it('denies advisory admin when the current advisory is one they are only a member of', function () {
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $currentAdvisory = Advisory::factory()->create();
+        $otherAdvisory = Advisory::factory()->create();
+        $advisor->advisories()->attach($currentAdvisory, ['role' => AdvisoryRole::Member]);
+        $advisor->advisories()->attach($otherAdvisory, ['role' => AdvisoryRole::Admin]);
+        $this->actingAs($advisor);
+        Filament::setTenant($currentAdvisory);
+
+        expect($this->policy->viewAny($advisor))->toBeFalse();
+    });
+
+    it('denies advisory admin without a current advisory', function () {
         $advisoryAdmin = User::factory()->create(['role' => Role::Advisor]);
         $advisory = Advisory::factory()->create();
         $advisoryAdmin->advisories()->attach($advisory, ['role' => AdvisoryRole::Admin]);
 
-        expect($this->policy->viewAny($advisoryAdmin))->toBeTrue();
+        expect(Filament::getTenant())->toBeNull()
+            ->and($this->policy->viewAny($advisoryAdmin))->toBeFalse();
     });
 
     it('denies advisory member from viewing any advisor users', function () {
@@ -328,6 +352,36 @@ describe('delete', function () {
         $advisor->advisories()->attach($advisory, ['role' => AdvisoryRole::Member]);
 
         expect($this->policy->delete($advisoryMember, $advisor))->toBeFalse();
+    });
+});
+
+describe('deleteAny', function () {
+    it('allows admin to bulk delete advisor users', function () {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        expect($this->policy->deleteAny($admin))->toBeTrue();
+    });
+
+    it('allows advisory admin to bulk delete within the current advisory', function () {
+        $advisoryAdmin = User::factory()->create(['role' => Role::Advisor]);
+        $advisory = Advisory::factory()->create();
+        $advisoryAdmin->advisories()->attach($advisory, ['role' => AdvisoryRole::Admin]);
+        $this->actingAs($advisoryAdmin);
+        Filament::setTenant($advisory);
+
+        expect($this->policy->deleteAny($advisoryAdmin))->toBeTrue();
+    });
+
+    it('denies advisory admin to bulk delete within an advisory they are only a member of', function () {
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+        $currentAdvisory = Advisory::factory()->create();
+        $otherAdvisory = Advisory::factory()->create();
+        $advisor->advisories()->attach($currentAdvisory, ['role' => AdvisoryRole::Member]);
+        $advisor->advisories()->attach($otherAdvisory, ['role' => AdvisoryRole::Admin]);
+        $this->actingAs($advisor);
+        Filament::setTenant($currentAdvisory);
+
+        expect($this->policy->deleteAny($advisor))->toBeFalse();
     });
 });
 

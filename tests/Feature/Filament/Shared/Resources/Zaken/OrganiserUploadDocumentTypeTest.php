@@ -17,6 +17,7 @@ use App\Models\Zaaktype;
 use App\Services\Zgw\UploadDocumentTypeResolver;
 use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Repeater;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -206,8 +207,7 @@ test('an organiser upload takes the documenttype from the koppeling, not from th
     $types = fakeTwoDocumentTypes();
     mapBijlageDocumentType($this->municipality, 'Aanvraagformulier');
 
-    $path = 'documents/organiser-file.pdf';
-    Storage::put($path, '%PDF-1.4 organiser file');
+    $upload = UploadedFile::fake()->createWithContent('organiser-file.pdf', '%PDF-1.4 organiser file');
 
     $zaak = ($this->makeZaak)();
 
@@ -215,11 +215,11 @@ test('an organiser upload takes the documenttype from the koppeling, not from th
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'document_metadata' => [
                 // The select is gone for an organiser; a value submitted anyway
                 // must not decide the type.
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Plattegrond', 'informatieobjecttype' => $types['bijlage']],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Plattegrond', 'informatieobjecttype' => $types['bijlage']],
             ],
         ])
         ->assertHasNoTableActionErrors();
@@ -236,8 +236,7 @@ test('an organiser upload falls back to the heuristic when the koppeling leaves 
 
     $types = fakeTwoDocumentTypes();
 
-    $path = 'documents/organiser-file.pdf';
-    Storage::put($path, '%PDF-1.4 organiser file');
+    $upload = UploadedFile::fake()->createWithContent('organiser-file.pdf', '%PDF-1.4 organiser file');
 
     $zaak = ($this->makeZaak)();
 
@@ -245,9 +244,9 @@ test('an organiser upload falls back to the heuristic when the koppeling leaves 
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Plattegrond', 'informatieobjecttype' => $types['aanvraagformulier']],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Plattegrond', 'informatieobjecttype' => $types['aanvraagformulier']],
             ],
         ])
         ->assertHasNoTableActionErrors();
@@ -271,8 +270,7 @@ test('an organiser upload takes the documenttype from the koppeling even when th
     $types = fakeTwoDocumentTypes('openbaar');
     mapBijlageDocumentType($this->municipality, 'Aanvraagformulier');
 
-    $path = 'documents/organiser-file.pdf';
-    Storage::put($path, '%PDF-1.4 organiser file');
+    $upload = UploadedFile::fake()->createWithContent('organiser-file.pdf', '%PDF-1.4 organiser file');
 
     $zaak = ($this->makeZaak)();
 
@@ -283,9 +281,9 @@ test('an organiser upload takes the documenttype from the koppeling even when th
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Plattegrond', 'informatieobjecttype' => $types['bijlage']],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Plattegrond', 'informatieobjecttype' => $types['bijlage']],
             ],
         ])
         ->assertHasNoTableActionErrors();
@@ -322,8 +320,7 @@ test('a coordinator upload keeps the chosen documenttype', function () {
     $types = fakeTwoDocumentTypes();
     mapBijlageDocumentType($this->municipality, 'Aanvraagformulier');
 
-    $path = 'documents/coordinator-file.pdf';
-    Storage::put($path, '%PDF-1.4 coordinator file');
+    $upload = UploadedFile::fake()->createWithContent('coordinator-file.pdf', '%PDF-1.4 coordinator file');
 
     $zaak = ($this->makeZaak)();
 
@@ -331,10 +328,10 @@ test('a coordinator upload keeps the chosen documenttype', function () {
 
     livewire(ZaakDocumentsTable::class, ['zaak' => $zaak])
         ->callTableAction('upload', data: [
-            'files' => [$path],
+            'files' => [$upload],
             'vertrouwelijkheidaanduiding' => 'vertrouwelijk',
             'document_metadata' => [
-                ['_temp_path' => '/tmp/php1', 'path' => $path, 'titel' => 'Intern advies', 'informatieobjecttype' => $types['bijlage']],
+                ['_temp_path' => '/tmp/php1', 'titel' => 'Intern advies', 'informatieobjecttype' => $types['bijlage']],
             ],
         ])
         ->assertHasNoTableActionErrors();
