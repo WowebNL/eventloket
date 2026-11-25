@@ -15,6 +15,7 @@ use App\Models\Users\MunicipalityUser;
 use App\Models\Users\OrganiserUser;
 use App\Observers\ZaakObserver;
 use App\Policies\ZaakPolicy;
+use App\Services\Zgw\SubmissionDocumentDetector;
 use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
@@ -326,6 +327,97 @@ class Zaak extends Model implements Eventable
         }
 
         return $this->showsTab('besluiten') && $this->isDocumentOfVisibleBesluit($document);
+    }
+
+    /**
+     * Whether the organiser may open (or be told about) this document.
+     *
+     * With full access to the documents of the zaak this is unchanged: every
+     * document the vertrouwelijkheid filter lets through. With submission-only
+     * access the documents tab lists only the files delivered with the
+     * application, so the organiser may open those, plus a document that
+     * another screen shows them: an attachment to a message in an organiser
+     * thread of this zaak, or a document of a besluit they can see while the
+     * besluiten tab is shown.
+     *
+     * The vertrouwelijkheid filter for the role is not applied here: the
+     * document is expected to come from {@see documenten}, or the caller
+     * checks it.
+     */
+    public function organiserCanOpenDocument(OrganiserUser $user, Informatieobject $document): bool
+    {
+        if ($this->documentAccessFor($user) !== ZaakDocumentAccess::SubmissionOnly) {
+            return true;
+        }
+
+        if ($this->isOrganiserSubmissionDocument($document)) {
+            return true;
+        }
+
+        if ($this->isAttachedToOrganiserThread($document)) {
+            return true;
+        }
+
+        return $this->showsTab('besluiten') && $this->isDocumentOfVisibleBesluit($document);
+    }
+
+    /**
+     * Whether the document is one the organiser delivered with the application:
+     * the application PDF or a file from a file upload field of the form.
+     *
+     * Recognised by uuid: the submission jobs log a 'created' document activity
+     * with the document's uuid, caused by the organiser. A file name is not
+     * used for such a zaak, because a file name says nothing about where a
+     * document came from. Only a zaak without any such entry (submitted before
+     * the submission uploads were logged) falls back to the file names, so its
+     * own application files do not disappear for the organiser.
+     */
+    public function isOrganiserSubmissionDocument(Informatieobject $document): bool
+    {
+        $submitted = $this->organiserSubmissionUploadUuids();
+
+        if ($submitted->isNotEmpty()) {
+            return $submitted->contains($document->uuid);
+        }
+
+        return SubmissionDocumentDetector::matchesSubmittedFileName($document, $this);
+    }
+
+    /**
+     * The uuids the submission jobs logged for this zaak. Those entries are
+     * caused by the zaak's organiser and, unlike a later upload by the
+     * organiser through the upload action, carry no vertrouwelijkheidaanduiding
+     * property. Keep that difference when either of them changes.
+     *
+     * @return Collection<int, non-empty-string>
+     */
+    private function organiserSubmissionUploadUuids(): Collection
+    {
+        if (! $this->organiser_user_id) {
+            return collect();
+        }
+
+        return Activity::query()
+            ->where('log_name', 'document')
+            ->where('event', 'created')
+            ->where('subject_type', $this->getMorphClass())
+            ->where('subject_id', $this->getKey())
+            ->where('causer_id', $this->organiser_user_id)
+            ->get()
+            ->reject(fn (Activity $activity): bool => $activity->properties->has('vertrouwelijkheidaanduiding'))
+            ->map(fn (Activity $activity) => data_get($activity->properties, 'document_uuid'))
+            ->filter(fn ($uuid): bool => is_string($uuid) && $uuid !== '')
+            ->values();
+    }
+
+    private function isAttachedToOrganiserThread(Informatieobject $document): bool
+    {
+        return Message::query()
+            ->whereJsonContains('documents', [['url' => $document->url]])
+            ->whereHas('thread', fn (Builder $thread) => $thread
+                ->where('zaak_id', $this->getKey())
+                ->where('type', ThreadType::Organiser))
+            ->exists();
     }
 
     private function isAttachedToOwnAdviceQuestion(AdvisorUser $user, Informatieobject $document): bool

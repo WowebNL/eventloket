@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ZaakDocumentAccess;
 use App\Http\Requests\DocumentRequest;
 use App\Models\Users\AdvisorUser;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
@@ -35,11 +36,29 @@ class DocumentController extends Controller
             404,
         );
 
+        // The same holds for an organiser who only sees the files delivered
+        // with the application: a document that no screen shows them gets the
+        // 404 of an unknown document, for every version.
+        abort_if(
+            $user instanceof OrganiserUser && ! $zaak->organiserCanOpenDocument($user, $document),
+            404,
+        );
+
         $validated = $request->validated();
         $requestedVersion = isset($validated['version']) ? (int) $validated['version'] : null;
         if ($requestedVersion !== null && $requestedVersion !== (int) $document->versie) {
             // get the specified version
             $document = new Informatieobject(...ZgwResource::showDocumentVersion($zaak->zgwConnectionName(), $documentuuid, $requestedVersion));
+
+            // The current version already passed the visibility rule through
+            // documenten; an older one has not. For the organiser who only sees
+            // the application files, a draft or expired version is not found.
+            abort_if(
+                $user instanceof OrganiserUser
+                    && $zaak->documentAccessFor($user) === ZaakDocumentAccess::SubmissionOnly
+                    && ! $document->isZichtbaar(),
+                404,
+            );
         }
 
         $event = $type === 'download' ? 'download' : 'view';
