@@ -195,7 +195,14 @@ class MessageForm extends Component implements HasActions, HasSchemas
                     ->live()
                     ->afterStateUpdated(function (Get $get, Set $set, $state) use ($zaak) {
                         if ($state) {
-                            $documentTitle = $zaak->documenten->firstWhere('uuid', $get('existing_document'))?->titel;
+                            // The state comes from the browser and is only checked
+                            // against the options on submit, so the title is looked
+                            // up within the same set as the options; anything else
+                            // gets no title.
+                            $uuid = (string) $get('existing_document');
+                            $documentTitle = DocumentVersionAuthorizer::canAddVersion(auth()->user(), $zaak, $uuid)
+                                ? $zaak->documenten->firstWhere('uuid', $uuid)?->titel
+                                : null;
 
                             $set('titel', $documentTitle);
                         }
