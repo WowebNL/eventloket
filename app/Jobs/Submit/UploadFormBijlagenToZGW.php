@@ -4,32 +4,29 @@ declare(strict_types=1);
 
 namespace App\Jobs\Submit;
 
-use App\EventForm\Schema\EventFormSchema;
+use App\EventForm\Schema\FileUploadFields;
 use App\Models\Zaak;
 use App\Services\Zgw\ZaaktypeBlueprint;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwResource;
 use App\Support\Uploads\DocumentUploadType;
 use App\ValueObjects\ZGW\Informatieobject;
-use Filament\Forms\Components\FileUpload;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use ReflectionObject;
 use RuntimeException;
 use Woweb\Zgw\Facades\Zgw;
 
 /**
- * Upload alle FileUpload-bijlagen die de organisator op de bijlagen-
- * stap heeft ge-upload als zaakinformatieobjecten naar OpenZaak. Per
- * bestand: één POST op enkelvoudiginformatieobjecten + één POST op
- * zaakinformatieobjecten (zelfde patroon als UploadDocumentAction).
+ * Uploads every file the organiser attached through a file upload field of
+ * the form as a zaakinformatieobject. Per file: one POST to
+ * enkelvoudiginformatieobjecten and one POST to zaakinformatieobjecten (the
+ * same pattern as UploadDocumentAction).
  *
- * We walken EventFormSchema om de FileUpload-veld-keys te vinden i.p.v.
- * ze hard te coderen — wanneer er een FileUpload bijkomt valt 'ie zo
- * automatisch onder deze job.
+ * The file upload fields come from {@see FileUploadFields}, so a file upload
+ * that is added to the form is picked up by this job automatically.
  */
 final class UploadFormBijlagenToZGW implements ShouldQueue
 {
@@ -61,7 +58,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         // 't terug op basename() van het pad.
         /** @var array<string, string> $bestandPaden  pad => originele naam */
         $bestandPaden = [];
-        foreach ($this->collectFileUploadKeys() as $key) {
+        foreach (FileUploadFields::keys() as $key) {
             $value = $values[$key] ?? null;
             $namen = $values["{$key}_namen"] ?? null;
 
@@ -176,52 +173,6 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         }
 
         $this->zaak->clearZgwCache();
-    }
-
-    /**
-     * Walk EventFormSchema en verzamel alle veld-keys van FileUpload-
-     * componenten. Reflectie nodig omdat we geen Livewire-container
-     * hebben in een queue-job.
-     *
-     * @return list<string>
-     */
-    private function collectFileUploadKeys(): array
-    {
-        $keys = [];
-        $walk = function (object $component) use (&$walk, &$keys): void {
-            if ($component instanceof FileUpload) {
-                $name = $component->getName();
-                if ($name !== '') {
-                    $keys[] = $name;
-                }
-            }
-            if (! property_exists($component, 'childComponents')) {
-                return;
-            }
-            $reflection = new ReflectionObject($component);
-            $prop = $reflection->getProperty('childComponents');
-            $prop->setAccessible(true);
-            $children = $prop->getValue($component);
-            if (! is_array($children)) {
-                return;
-            }
-            foreach ($children as $list) {
-                if (! is_array($list)) {
-                    continue;
-                }
-                foreach ($list as $child) {
-                    if (is_object($child)) {
-                        $walk($child);
-                    }
-                }
-            }
-        };
-
-        foreach (EventFormSchema::steps() as $step) {
-            $walk($step);
-        }
-
-        return array_values(array_unique($keys));
     }
 
     /**
