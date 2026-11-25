@@ -9,7 +9,6 @@ use App\Filament\Shared\Resources\Zaken\Actions\NewDocumentVersionAction;
 use App\Filament\Shared\Resources\Zaken\Actions\UploadDocumentAction;
 use App\Models\Users\AdvisorUser;
 use App\Models\Zaak;
-use App\Services\Zgw\SubmissionDocumentDetector;
 use App\ValueObjects\ZGW\Informatieobject;
 use App\ValueObjects\ZGW\ZaakDocumentSet;
 use Filament\Actions\Action;
@@ -80,9 +79,12 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     public function mount(Zaak $zaak, bool $submissionOnly = false): void
     {
         $this->zaak = $zaak;
-        $this->submissionOnly = $submissionOnly;
 
         $access = $zaak->documentAccessFor(auth()->user());
+
+        // Derived from the zaak, like readOnly below: the caller may narrow the
+        // view to the submission files, never widen it.
+        $this->submissionOnly = $submissionOnly || $access === ZaakDocumentAccess::SubmissionOnly;
 
         // The tab is hidden for an advisor without document access; refusing
         // the component as well keeps it from being loaded on its own.
@@ -118,7 +120,7 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
 
         if ($this->submissionOnly) {
             return $documenten->filter(
-                fn (Informatieobject $document) => SubmissionDocumentDetector::isSubmissionDocument($document, $this->zaak)
+                fn (Informatieobject $document) => $this->zaak->isOrganiserSubmissionDocument($document)
             )->values();
         }
 
@@ -229,16 +231,20 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
     }
 
     /**
-     * An empty table has four quite different causes, which used to be
+     * An empty table has three quite different causes, which used to be
      * indistinguishable: nothing has arrived from ZGW yet, everything that did
-     * arrive is hidden by the visibility rules, (in submission mode) the zaak
-     * only holds documents that were not part of the application, or the
-     * documents API refused every document there is. Saying "hold on, the files
-     * are coming" in the other three cases sends the reader waiting for
-     * something that is never going to appear.
+     * arrive is hidden by the visibility rules, or the documents API refused
+     * every document there is. Saying "hold on, the files are coming" in the
+     * other two cases sends the reader waiting for something that is never
+     * going to appear. Submission-only mode has its own empty state, see
+     * submissionOnlyEmptyStateHeading().
      */
     private function emptyStateHeading(): string
     {
+        if ($this->submissionOnly) {
+            return $this->submissionOnlyEmptyStateHeading();
+        }
+
         if ($this->nothingCouldBeRead()) {
             // A heading that says "not right now" would be wrong when nothing was
             // withheld "right now": if no document failed for a reason that may
@@ -249,10 +255,6 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
                 : __('resources/zaak.documents.forbidden.empty_state_heading');
         }
 
-        if ($this->documents()->documenten->isNotEmpty()) {
-            return __('Geen bestanden om te tonen');
-        }
-
         return $this->zaakHasDocumentsInZgw()
             ? __('Geen bestanden om te tonen')
             : __('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...');
@@ -260,21 +262,34 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
 
     private function emptyStateDescription(): ?string
     {
+        if ($this->submissionOnly) {
+            // See submissionOnlyEmptyStateHeading(): anything more would describe
+            // the documents outside the application.
+            return null;
+        }
+
         if ($this->nothingCouldBeRead()) {
             // The notice above the table already explains this one; repeating it
             // here would only say the same thing twice.
             return null;
         }
 
-        if ($this->documents()->documenten->isNotEmpty()) {
-            // Documents exist and are visible, but none of them belong to the
-            // application itself.
-            return __('Bij deze aanvraag zijn geen aanvraagdocumenten ingediend.');
-        }
-
         return $this->zaakHasDocumentsInZgw()
             ? __('Deze zaak bevat wel bestanden, maar die zijn niet zichtbaar met uw rechten of hun status. Neem contact op met de beheerder als u ze wel zou moeten zien.')
             : null;
+    }
+
+    /**
+     * In submission-only mode the organiser may only learn about the files
+     * delivered with the application. Every other empty state above is decided
+     * on the whole zaak (documents outside the application, documents the API
+     * did not hand over), so it would tell the organiser that such documents
+     * exist. An empty table here therefore only says that the application
+     * files are not there yet, which is decided on those files alone.
+     */
+    private function submissionOnlyEmptyStateHeading(): string
+    {
+        return __('Een ogenblik geduld, de bestanden van de aanvraag komen zometeen beschikbaar...');
     }
 
     /**
@@ -300,6 +315,19 @@ class ZaakDocumentsTable extends Component implements HasActions, HasSchemas, Ha
 
     public function render(): View
     {
+        if ($this->submissionOnly) {
+            // The counts describe every document of the zaak, and a document the
+            // API did not hand over cannot be told apart as an application file
+            // or not. Showing them (or putting them in the component state, which
+            // reaches the browser) would tell the organiser about documents
+            // outside the application, so in this mode they are left out.
+            $this->hasDocuments = $this->records()->isNotEmpty();
+            $this->unavailableDocumentCount = 0;
+            $this->hasForbiddenDocuments = false;
+
+            return view('livewire.zaken.zaak-documents-table');
+        }
+
         $documents = $this->documents();
 
         $this->hasDocuments = $documents->documenten->isNotEmpty();

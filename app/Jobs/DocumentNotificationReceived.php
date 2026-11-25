@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\Role;
+use App\Models\Users\OrganiserUser;
 use App\Models\Zaak;
 use App\Notifications\NewZaakDocument;
 use App\Services\Zgw\NotificationResourceReader;
@@ -125,12 +126,16 @@ class DocumentNotificationReceived implements ShouldQueue
                 }
 
                 $users = $zaak->relatedUsers();
+                $organiserMayOpen = null;
                 foreach ($users as $user) {
                     /** @var Role $role */
                     $role = $user->role;
                     if (
                         in_array($informatieobject->vertrouwelijkheidaanduiding, ZgwConnectionConfig::documentVisibilityForRole($zaak->zgwConnectionName(), $role)) // user has acces to document
                         && $user->name != $informatieobject->auteur // not own update
+                        // an organiser who only sees the application files is not
+                        // told about a document no screen shows them
+                        && (! $user instanceof OrganiserUser || ($organiserMayOpen ??= $this->organiserMayOpen($zaak, $user, $informatieobject)))
                     ) {
                         // Notify user about new document
                         $user->notify(new NewZaakDocument($zaak, $informatieobject->titel, $isNew));
@@ -141,6 +146,31 @@ class DocumentNotificationReceived implements ShouldQueue
             }
         } else {
             Log::warning("Received document notification for informatieobject {$this->notification->hoofdObject} which is not linked to a zaak.");
+        }
+    }
+
+    /**
+     * Whether the organisers of the zaak may be told about this document. The
+     * answer is the same for every organiser of the zaak, so it is decided once
+     * per notification.
+     *
+     * A failure while deciding (for instance reading the besluiten) counts as
+     * "no": the organisers get no notification about this document, and the
+     * other recipients still get theirs, instead of the whole round stopping
+     * half-way and being retried with duplicate notifications.
+     */
+    private function organiserMayOpen(Zaak $zaak, OrganiserUser $user, Informatieobject $informatieobject): bool
+    {
+        try {
+            return $zaak->organiserCanOpenDocument($user, $informatieobject);
+        } catch (\Throwable $e) {
+            Log::warning('Could not decide whether the organiser may open a document; the organiser is not notified about it.', [
+                'zaak_id' => $zaak->id,
+                'document' => $informatieobject->url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
         }
     }
 
