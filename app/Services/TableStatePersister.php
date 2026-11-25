@@ -50,6 +50,11 @@ class TableStatePersister
     /**
      * Restore the user's saved state into the session for the keys this table
      * uses, without overwriting anything already present in the session.
+     *
+     * This runs before the component has configured its table, and Filament
+     * derives the session keys from that table, so they cannot be resolved
+     * here. The stored keys are used instead: they were captured by
+     * snapshot() from this same component class, so they are this table's keys.
      */
     public function seed(object $component): void
     {
@@ -71,9 +76,9 @@ class TableStatePersister
                 return;
             }
 
-            foreach ($this->sessionKeys($component) as $key) {
-                if (array_key_exists($key, $stored) && ! session()->has($key)) {
-                    session()->put($key, $stored[$key]);
+            foreach ($stored as $key => $value) {
+                if (is_string($key) && $key !== '' && ! session()->has($key)) {
+                    session()->put($key, $value);
                 }
             }
         } catch (Throwable) {

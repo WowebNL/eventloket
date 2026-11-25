@@ -49,7 +49,7 @@ beforeEach(function (): void {
  * Click a calendar item with the given extendedProps. A record that cannot be
  * resolved results in a 404 response, as it would in a real request.
  */
-function clickCalendarItem(Testable $component, string $model, string $key): Testable
+function clickCalendarItem(Testable $component, string $model, string $key, bool $signed = true): Testable
 {
     return $component->call('onEventClickJs', [
         'event' => [
@@ -59,7 +59,9 @@ function clickCalendarItem(Testable $component, string $model, string $key): Tes
             'allDay' => false,
             'styles' => [],
             'classNames' => [],
-            'extendedProps' => ['model' => $model, 'key' => $key],
+            'extendedProps' => $signed
+                ? signedCalendarExtendedProps($model, $key)
+                : ['model' => $model, 'key' => $key],
             'display' => 'auto',
             'resourceIds' => [],
         ],
@@ -158,4 +160,13 @@ test('clicking an event in the calendar opens it', function () {
     expect($component->instance()->getEventRecord())
         ->toBeInstanceOf(Event::class)
         ->getKey()->toBe($this->ownZaak->id);
+});
+
+test('a calendar click without the signature of a rendered item is refused', function () {
+    $component = actingAsMunicipalityAdmin($this->ownMunicipality);
+
+    expect(fn () => clickCalendarItem($component, Event::class, $this->ownZaak->id, signed: false))
+        ->toThrow(Exception::class, 'The event signature is missing or invalid');
+
+    expect($component->instance()->getEventRecord())->toBeNull();
 });

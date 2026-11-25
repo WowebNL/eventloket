@@ -20,6 +20,7 @@ use App\Services\Zgw\ZaakReadModel;
 use App\Services\Zgw\ZgwConnectionConfig;
 use App\Services\Zgw\ZgwConnectionResolver;
 use App\Services\Zgw\ZgwResource;
+use App\Support\Calendar\WallClockCalendarEvent;
 use App\ValueObjects\ModelAttributes\ZaakReferenceData;
 use App\ValueObjects\ZGW\Besluit;
 use App\ValueObjects\ZGW\Informatieobject;
@@ -1416,7 +1417,7 @@ class Zaak extends Model implements Eventable
     public function toCalendarEvent(): CalendarEvent
     {
         // Status tekstueel toevoegen
-        $event = CalendarEvent::make($this)
+        $event = WallClockCalendarEvent::make($this)
             ->title($this->reference_data->naam_evenement ?? $this->public_id);
 
         // The evenement dates are optional (the zaaktype does not have to carry

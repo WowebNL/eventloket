@@ -95,3 +95,19 @@ describe('view', function () {
         expect($this->policy->view($advisor, $this->thread))->toBeFalse();
     });
 });
+
+describe('viewAny', function () {
+    // The zaak page shows the organiser threads to admins, and the embedded
+    // relation manager checks viewAny() before it mounts.
+    it('allows admin to list organiser threads', function () {
+        $admin = User::factory()->create(['role' => Role::Admin]);
+
+        expect($this->policy->viewAny($admin))->toBeTrue();
+    });
+
+    it('denies advisor from listing organiser threads', function () {
+        $advisor = User::factory()->create(['role' => Role::Advisor]);
+
+        expect($this->policy->viewAny($advisor))->toBeFalse();
+    });
+});

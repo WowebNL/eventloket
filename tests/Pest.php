@@ -5,6 +5,8 @@ use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+use function Guava\Calendar\calendar_event_signature;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -94,6 +96,29 @@ function findDateTimePickers(Step $step): array
     $walk($step);
 
     return $found;
+}
+
+/**
+ * The extendedProps of a calendar item as the calendar sends them to the
+ * browser. The calendar signs the model and key of every item it renders and
+ * refuses a click on an item without a valid signature, so a test that clicks
+ * an item has to send the signed form. Signing an arbitrary model and key
+ * stands for an item the server did render; whether the widget then resolves
+ * it is up to the widget's own scoping.
+ *
+ * Shared here for the same reason as findDateTimePickers().
+ *
+ * @return array<string, mixed>
+ */
+function signedCalendarExtendedProps(string $model, string $key): array
+{
+    return [
+        'model' => $model,
+        'key' => $key,
+        'dragLocked' => false,
+        'resizeLocked' => false,
+        'signature' => calendar_event_signature($model, $key),
+    ];
 }
 
 function something()
