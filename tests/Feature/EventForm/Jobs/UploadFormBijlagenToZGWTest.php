@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 
 use App\Enums\Role;
+use App\Exceptions\FormAttachmentUploadFailedException;
 use App\Jobs\Submit\UploadFormBijlagenToZGW;
 use App\Models\Organisation;
 use App\Models\User;
@@ -18,12 +19,15 @@ use App\Models\Zaak;
 use App\Models\Zaaktype;
 use App\Services\Zgw\ZaakReadModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Activitylog\Models\Activity;
 use Woweb\Zgw\Data\Generated\Catalogi\InformatieObjectTypeData;
 
 uses(RefreshDatabase::class);
@@ -276,4 +280,309 @@ test('security: bijlage met niet-toegestaan bestandstype wordt geweigerd', funct
         ->withArgs(fn (string $message) => str_contains($message, 'niet-toegestaan bestandstype geweigerd'))
         ->once();
     Http::assertNothingSent();
+});
+
+/**
+ * Creates a zaak with the given attachments (file name => content) on disk in
+ * one multiple FileUpload field, and seeds the caches the job reads, so only
+ * the upload requests go over HTTP.
+ *
+ * @param  array<string, string>  $files
+ */
+function zaakWithAttachments(array $files): Zaak
+{
+    test()->actingAs(User::factory()->create(['role' => Role::Organiser]));
+
+    $org = Organisation::factory()->create();
+    $paths = [];
+    foreach ($files as $name => $content) {
+        $paths[$name] = "event-form-uploads/{$org->uuid}/{$name}";
+        Storage::disk('local')->put($paths[$name], $content);
+    }
+
+    $zaak = Zaak::factory()->create([
+        'zgw_zaak_url' => 'https://zgw.example.com/zaken/api/v1/zaken/abc-123',
+        'organisation_id' => $org->id,
+        'zaaktype_id' => Zaaktype::factory()->create()->id,
+        'form_state_snapshot' => ['values' => [
+            'bijlagen1' => array_values($paths),
+        ]],
+    ]);
+
+    Cache::put("zaak.{$zaak->id}.openzaak.v2", ZaakReadModel::fromArray([
+        'uuid' => 'abc-123',
+        'url' => $zaak->zgw_zaak_url,
+        'identificatie' => $zaak->public_id,
+        'zaaktype' => 'https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1',
+        'omschrijving' => 'Test',
+        'startdatum' => '2026-05-01',
+        'registratiedatum' => '2026-05-01',
+        'einddatum' => null,
+        'einddatumGepland' => null,
+        'uiterlijkeEinddatumAfdoening' => null,
+        'bronorganisatie' => '820151130',
+        'zaakgeometrie' => null,
+    ]));
+    Cache::put('zaaktype_document_types_v2_'.md5('main|https://zgw.example.com/catalogi/api/v1/zaaktypen/zt-1'), collect([
+        InformatieObjectTypeData::from([
+            'uuid' => 'iot-1',
+            'url' => 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',
+            'omschrijving' => 'Bijlage',
+            'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+        ]),
+    ]));
+
+    return $zaak;
+}
+
+function documentUrlFor(string $name): string
+{
+    return 'https://zgw.example.com/documenten/api/v1/enkelvoudiginformatieobjecten/doc-'.md5($name);
+}
+
+/**
+ * Fakes the Documenten and Zaken API.
+ *
+ * - The document POST answers per file name: a name listed in
+ *   $documentFailures gets that HTTP status, any other file is created at
+ *   documentUrlFor($name). The uuid in the response body differs from the one
+ *   in the url on purpose, to prove the cleanup only trusts the url.
+ * - The link POST answers with $linkStatus.
+ * - The link lookup answers per $linkLookup: 'exists' returns the link of
+ *   this document, 'other' returns only a link of another document (a backend
+ *   that ignores the filter), 'none' returns no links and 'error' a 500.
+ *
+ * Pass an ArrayObject to change the failures between two runs of the job:
+ * Http::fake() stacks, so a second call would not replace the first.
+ *
+ * @param  array<string, int>|ArrayObject<string, int>  $documentFailures  file name => HTTP status
+ */
+function fakeZgwUploads(array|ArrayObject $documentFailures = [], int $linkStatus = 201, string $linkLookup = 'none'): void
+{
+    Http::fake(function (Request $request) use ($documentFailures, $linkStatus, $linkLookup) {
+        $url = $request->url();
+        $path = (string) parse_url($url, PHP_URL_PATH);
+
+        if ($request->method() === 'POST' && str_ends_with($path, '/documenten/api/v1/enkelvoudiginformatieobjecten')) {
+            $name = $request->data()['bestandsnaam'];
+            if (isset($documentFailures[$name])) {
+                $status = $documentFailures[$name];
+
+                return $status === 400
+                    ? Http::response([
+                        'code' => 'invalid',
+                        'title' => 'Invalid input.',
+                        'invalidParams' => [['name' => 'informatieobjecttype', 'code' => 'invalid', 'reason' => 'Niet toegestaan.']],
+                    ], 400)
+                    : Http::response(['code' => 'error'], $status);
+            }
+
+            return Http::response([
+                'uuid' => 'body-'.md5($name),
+                'url' => documentUrlFor($name),
+                'creatiedatum' => '2026-05-06',
+                'titel' => $name,
+                'vertrouwelijkheidaanduiding' => 'zaakvertrouwelijk',
+                'auteur' => 'Organisator',
+                'versie' => 1,
+                'bestandsnaam' => $name,
+                'inhoud' => documentUrlFor($name).'/download',
+                'beschrijving' => '',
+                'informatieobjecttype' => 'https://zgw.example.com/catalogi/api/v1/informatieobjecttypen/iot-1',
+                'formaat' => 'application/pdf',
+                'locked' => false,
+            ], 201);
+        }
+
+        if ($request->method() === 'DELETE' && str_contains($path, '/documenten/api/v1/enkelvoudiginformatieobjecten/')) {
+            return Http::response(null, 204);
+        }
+
+        if (str_ends_with($path, '/zaken/api/v1/zaakinformatieobjecten')) {
+            if ($request->method() === 'GET') {
+                if ($linkLookup === 'error') {
+                    return Http::response(['code' => 'error'], 500);
+                }
+                parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+                $links = match ($linkLookup) {
+                    'exists' => [[
+                        'url' => 'https://zgw.example.com/zaken/api/v1/zaakinformatieobjecten/zio-1',
+                        'zaak' => $query['zaak'] ?? '',
+                        'informatieobject' => $query['informatieobject'] ?? '',
+                    ]],
+                    'other' => [[
+                        'url' => 'https://zgw.example.com/zaken/api/v1/zaakinformatieobjecten/zio-2',
+                        'zaak' => $query['zaak'] ?? '',
+                        'informatieobject' => documentUrlFor('iets-anders.pdf'),
+                    ]],
+                    default => [],
+                };
+
+                return Http::response($links, 200);
+            }
+
+            return $linkStatus === 201
+                ? Http::response(['url' => 'https://zgw.example.com/zaken/api/v1/zaakinformatieobjecten/zio-1'], 201)
+                : Http::response(['code' => 'error'], $linkStatus);
+        }
+
+        return Http::response(null, 404);
+    });
+}
+
+function documentPostsFor(string $name): int
+{
+    return Http::recorded(fn (Request $request) => $request->method() === 'POST'
+        && str_ends_with((string) parse_url($request->url(), PHP_URL_PATH), '/enkelvoudiginformatieobjecten')
+        && $request->data()['bestandsnaam'] === $name)->count();
+}
+
+function documentDeletes(): int
+{
+    return Http::recorded(fn (Request $request) => $request->method() === 'DELETE')->count();
+}
+
+function uploadedFileNames(Zaak $zaak): array
+{
+    return Activity::query()
+        ->where('log_name', 'document')
+        ->where('subject_id', $zaak->id)
+        ->pluck('properties')
+        ->map(fn ($properties) => data_get($properties, 'filename'))
+        ->sort()
+        ->values()
+        ->all();
+}
+
+test('a file the API refuses with a 400 does not stop the other files, and fails the job without retry', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments([
+        'a-plan.pdf' => 'a',
+        'b-geweigerd.pdf' => 'b',
+        'c-kaart.pdf' => 'c',
+    ]);
+    fakeZgwUploads(['b-geweigerd.pdf' => 400]);
+
+    $job = (new UploadFormBijlagenToZGW($zaak))->withFakeQueueInteractions();
+    $job->handle();
+
+    expect(documentPostsFor('a-plan.pdf'))->toBe(1)
+        ->and(documentPostsFor('b-geweigerd.pdf'))->toBe(1)
+        ->and(documentPostsFor('c-kaart.pdf'))->toBe(1)
+        ->and(uploadedFileNames($zaak))->toBe(['a-plan.pdf', 'c-kaart.pdf']);
+
+    // Failed for good, so it lands in the failed jobs for a manual retry.
+    $job->assertFailed();
+
+    Exceptions::assertReported(fn (FormAttachmentUploadFailedException $e) => $e->status === 400
+        && $e->step === FormAttachmentUploadFailedException::STEP_DOCUMENT
+        && $e->invalidParams === [['name' => 'informatieobjecttype', 'code' => 'invalid']]);
+});
+
+test('a retry skips the files an earlier attempt already uploaded', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments([
+        'a-plan.pdf' => 'a',
+        'b-tijdelijk.pdf' => 'b',
+    ]);
+
+    // First attempt: the API is briefly unavailable for one file.
+    $failures = new ArrayObject(['b-tijdelijk.pdf' => 503]);
+    fakeZgwUploads($failures);
+
+    expect(fn () => (new UploadFormBijlagenToZGW($zaak))->handle())
+        ->toThrow(RuntimeException::class, 'failed with a temporary error');
+    expect(uploadedFileNames($zaak))->toBe(['a-plan.pdf']);
+
+    // Second attempt: the API is back. Only the missing file is sent again.
+    $failures->exchangeArray([]);
+
+    $job = (new UploadFormBijlagenToZGW($zaak))->withFakeQueueInteractions();
+    $job->handle();
+
+    expect(documentPostsFor('a-plan.pdf'))->toBe(1)
+        ->and(documentPostsFor('b-tijdelijk.pdf'))->toBe(2)
+        ->and(uploadedFileNames($zaak))->toBe(['a-plan.pdf', 'b-tijdelijk.pdf']);
+    $job->assertNotFailed();
+});
+
+test('a 429 or 408 from the API is temporary, so the job is retried', function (int $status) {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments(['a-plan.pdf' => 'a']);
+    fakeZgwUploads(['a-plan.pdf' => $status]);
+
+    $job = (new UploadFormBijlagenToZGW($zaak))->withFakeQueueInteractions();
+
+    expect(fn () => $job->handle())->toThrow(RuntimeException::class, 'failed with a temporary error');
+    $job->assertNotFailed();
+})->with([429, 408]);
+
+test('a refused link removes the document again, by the uuid from its url', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments(['a-plan.pdf' => 'a']);
+    fakeZgwUploads(linkStatus: 400);
+
+    $job = (new UploadFormBijlagenToZGW($zaak))->withFakeQueueInteractions();
+    $job->handle();
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'DELETE'
+        && $request->url() === documentUrlFor('a-plan.pdf'));
+    // A refused link was certainly not created, so there is nothing to look up.
+    Http::assertNotSent(fn (Request $request) => $request->method() === 'GET');
+    Exceptions::assertReported(fn (FormAttachmentUploadFailedException $e) => $e->step === FormAttachmentUploadFailedException::STEP_LINK);
+    expect(uploadedFileNames($zaak))->toBe([]);
+    $job->assertFailed();
+});
+
+test('a link that timed out but was created anyway counts as uploaded', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments(['a-plan.pdf' => 'a']);
+    fakeZgwUploads(linkStatus: 504, linkLookup: 'exists');
+
+    $job = (new UploadFormBijlagenToZGW($zaak))->withFakeQueueInteractions();
+    $job->handle();
+
+    expect(documentDeletes())->toBe(0)
+        ->and(uploadedFileNames($zaak))->toBe(['a-plan.pdf']);
+    $job->assertNotFailed();
+});
+
+test('a link that timed out and was not created removes the document and retries', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments(['a-plan.pdf' => 'a']);
+    fakeZgwUploads(linkStatus: 504, linkLookup: 'none');
+
+    expect(fn () => (new UploadFormBijlagenToZGW($zaak))->handle())
+        ->toThrow(RuntimeException::class, 'failed with a temporary error');
+
+    expect(documentDeletes())->toBe(1)
+        ->and(uploadedFileNames($zaak))->toBe([]);
+});
+
+test('a link lookup that only returns another document counts as not linked', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments(['a-plan.pdf' => 'a']);
+    // A backend that ignores the informatieobject filter returns the links of
+    // other documents; those must not count as the link of this one.
+    fakeZgwUploads(linkStatus: 504, linkLookup: 'other');
+
+    expect(fn () => (new UploadFormBijlagenToZGW($zaak))->handle())
+        ->toThrow(RuntimeException::class, 'failed with a temporary error');
+
+    expect(documentDeletes())->toBe(1)
+        ->and(uploadedFileNames($zaak))->toBe([]);
+});
+
+test('a link lookup that fails keeps the document in place', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments(['a-plan.pdf' => 'a']);
+    // Whether the link exists is unknown, so removing the document could
+    // break a link the case already has.
+    fakeZgwUploads(linkStatus: 504, linkLookup: 'error');
+
+    expect(fn () => (new UploadFormBijlagenToZGW($zaak))->handle())
+        ->toThrow(RuntimeException::class, 'failed with a temporary error');
+
+    expect(documentDeletes())->toBe(0)
+        ->and(uploadedFileNames($zaak))->toBe([]);
 });
