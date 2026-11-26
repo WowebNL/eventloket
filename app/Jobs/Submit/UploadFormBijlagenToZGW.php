@@ -147,7 +147,7 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
         }
 
         // Skip the files an earlier attempt of this job already uploaded.
-        $aanwezig = array_diff_key($aanwezig, $this->alreadyUploadedPaths());
+        $aanwezig = array_diff_key($aanwezig, $this->alreadyUploadedPaths($aanwezig));
         if ($aanwezig === []) {
             return;
         }
@@ -328,23 +328,49 @@ final class UploadFormBijlagenToZGW implements ShouldQueue
      * Storage paths of the files an earlier attempt of this job already
      * uploaded for this zaak, read from the activity log.
      *
+     * Earlier versions of this job recorded only the file name of an upload,
+     * not its storage path. A document activity without a storage path
+     * therefore marks every file with that original name as uploaded, so a
+     * retry of a job that failed under such a version does not add those
+     * files again. Two different files with the same name in one application
+     * are indistinguishable in those records; the second one is skipped.
+     *
+     * @param  array<string, string>  $aanwezig  path => original name
      * @return array<string, bool>
      */
-    private function alreadyUploadedPaths(): array
+    private function alreadyUploadedPaths(array $aanwezig): array
     {
-        /** @var list<string> $paths */
-        $paths = Activity::query()
+        $uploaded = [];
+        $legacyNames = [];
+
+        $activities = Activity::query()
             ->where('log_name', 'document')
             ->where('event', 'created')
             ->where('subject_type', $this->zaak->getMorphClass())
             ->where('subject_id', $this->zaak->getKey())
-            ->get()
-            ->map(fn (Activity $activity) => data_get($activity->properties, 'source_path'))
-            ->filter(fn ($pad): bool => is_string($pad) && $pad !== '')
-            ->values()
-            ->all();
+            ->get();
 
-        return array_fill_keys($paths, true);
+        foreach ($activities as $activity) {
+            $pad = data_get($activity->properties, 'source_path');
+            if (is_string($pad) && $pad !== '') {
+                $uploaded[$pad] = true;
+
+                continue;
+            }
+
+            $naam = data_get($activity->properties, 'filename');
+            if (is_string($naam) && $naam !== '') {
+                $legacyNames[$naam] = true;
+            }
+        }
+
+        foreach ($aanwezig as $pad => $origineleNaam) {
+            if (isset($legacyNames[$origineleNaam])) {
+                $uploaded[$pad] = true;
+            }
+        }
+
+        return $uploaded;
     }
 
     /**
