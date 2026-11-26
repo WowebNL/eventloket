@@ -586,3 +586,31 @@ test('a link lookup that fails keeps the document in place', function () {
     expect(documentDeletes())->toBe(0)
         ->and(uploadedFileNames($zaak))->toBe([]);
 });
+
+test('a retry of a job that failed under an earlier version skips the files that version uploaded', function () {
+    Exceptions::fake();
+    $zaak = zaakWithAttachments([
+        'a-plan.pdf' => 'a',
+        'b-ontbreekt.pdf' => 'b',
+    ]);
+
+    // Earlier versions recorded only the file name, without the storage path.
+    activity('document')
+        ->event('created')
+        ->performedOn($zaak)
+        ->withProperties([
+            'document_uuid' => 'doc-oud',
+            'filename' => 'a-plan.pdf',
+            'titel' => 'a-plan.pdf',
+        ])
+        ->log('created');
+
+    fakeZgwUploads();
+
+    $job = (new UploadFormBijlagenToZGW($zaak))->withFakeQueueInteractions();
+    $job->handle();
+
+    expect(documentPostsFor('a-plan.pdf'))->toBe(0)
+        ->and(documentPostsFor('b-ontbreekt.pdf'))->toBe(1);
+    $job->assertNotFailed();
+});
